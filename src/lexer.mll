@@ -14,6 +14,14 @@ rule token =
 
   | num as n     { INT (int_of_string n) }
 
+  | ">"          { GT }
+  | "<"          { LT }
+  | ">="         { GEQ }
+  | "<="         { LEQ }
+
+  | "true"       { TRUE }
+  | "false"      { FALSE }
+
   | "let"        { LET }
   | ";"          { SEMICOLON }
   | "="          { EQUAL }
