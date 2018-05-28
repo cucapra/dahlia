@@ -1,7 +1,7 @@
 open Ast
 
 let make_assignment id expr =
-  Assignment (id, expr)
+  CAssignment (id, expr)
 
 let make_int x =
   EInt (x)

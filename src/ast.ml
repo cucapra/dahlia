@@ -13,7 +13,12 @@ type expression =
   | EVar of id
   | EBool of bool
   | EBinop of binop * expression * expression
-  | ERange of int * int
+  | ERange of int * int (* TODO: expressions instead of ints? *)
+
+type value =
+  | VInt of int
+  | VBool of bool
+  | VRange of int * int
   
 type command =
-  | Assignment of id * expression
+  | CAssignment of id * expression
