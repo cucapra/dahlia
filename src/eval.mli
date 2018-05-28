@@ -17,5 +17,3 @@ val eval_expression : expression * env -> value * env
 val eval_command : command * env -> env
 
 val string_of_env : env -> string
-
-

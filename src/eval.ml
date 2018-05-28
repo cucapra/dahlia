@@ -18,23 +18,50 @@ type env = value EnvMap.t
 
 let initial_env = EnvMap.empty
 
-let rec eval_binop binop e1 e2 = failwith "Implement me"
 
-let rec eval_expression : expression * env -> value * env = fun (exp, e) ->
+let expr_of_int i = EInt i
+
+let int_of_val = function
+  | VInt i -> i
+  | _ -> failwith "Implement type checking"
+
+let val_of_int i = VInt i
+
+let rec eval_for x x1 x2 cmds env i = 
+  if i <= x2 then
+    let env_with_x = eval_command ((CAssignment (x, (expr_of_int i)), env)) in
+    eval_for x x1 x2 cmds (eval_cmd_list cmds env_with_x) (i+1)
+  else
+    env
+
+and eval_binop binop e1 e2 env =
+  match binop with
+  | BopPlus -> 
+    let v1, env1 = eval_expression (e1, env) in
+    let v2, env2 = eval_expression (e2, env1) in
+    val_of_int ((int_of_val v1) + (int_of_val v2)), env2
+  | _ -> failwith "Implement other binops"
+
+and eval_expression : expression * env -> value * env = fun (exp, e) ->
   let open EnvMap in
   match exp with
   | EInt x -> VInt x, e
   | EVar x -> ((find x e), e)
   | EBool x -> VBool x, e
-  | EBinop (binop, e1, e2) -> eval_binop binop e1 e2, e
-  | ERange (x1, x2) -> VRange (x1, x2), e
+  | EBinop (binop, e1, e2) -> eval_binop binop e1 e2 e
 
-let rec eval_command : command * env -> env = fun (cmd, e) ->
+and eval_cmd_list cmds env =
+  match cmds with
+  | h::t -> eval_cmd_list t (eval_command (h, env))
+  | [] -> env
+
+and eval_command : command * env -> env = fun (cmd, e) ->
   let open EnvMap in
   match cmd with
   | CAssignment (x, exp) -> 
     let v, env = eval_expression (exp, e) in
     add x v env
+  | CFor (x, x1, x2, cmds) -> eval_for x x1 x2 cmds e 0
 
 let string_of_val = function
   | VInt i -> string_of_int i

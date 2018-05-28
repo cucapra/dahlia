@@ -12,6 +12,8 @@ let make_bool b =
 let make_binop bop e1 e2 =
   EBinop (bop, e1, e2)
 
-let make_range x1 x2 =
-  ERange (x1, x2)
+let make_for x x1 x2 e =
+  CFor (x, x1, x2, e)
 
+let make_var id =
+  EVar id

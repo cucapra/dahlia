@@ -15,17 +15,28 @@ rule token =
   | num as n     { INT (int_of_string n) }
 
   | ".."         { RANGE_DOTS }
+
   | ">"          { GT }
   | "<"          { LT }
   | ">="         { GEQ }
   | "<="         { LEQ }
+  | "+"          { PLUS }
+  | "-"          { MINUS }
+  | "*"          { TIMES }
 
+
+  | "for"        { FOR }
+  | "let"        { LET }
   | "true"       { TRUE }
   | "false"      { FALSE }
 
-  | "let"        { LET }
   | ";"          { SEMICOLON }
   | "="          { EQUAL }
+
+  | "("          { LPAREN }
+  | ")"          { RPAREN }
+  | "{"          { LBRACK }
+  | "}"          { RBRACK }
 
   | id as i      { ID (i) }
 

@@ -7,13 +7,15 @@ type binop =
   | BopLeq
   | BopLt
   | BopGt
+  | BopPlus
+  | BopMinus 
+  | BopTimes
 
 type expression =
   | EInt of int
   | EVar of id
   | EBool of bool
   | EBinop of binop * expression * expression
-  | ERange of int * int (* TODO: expressions instead of ints? *)
 
 type value =
   | VInt of int
@@ -22,3 +24,4 @@ type value =
   
 type command =
   | CAssignment of id * expression
+  | CFor of id * int * int * command list

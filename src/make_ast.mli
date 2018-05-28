@@ -8,4 +8,6 @@ val make_bool : bool -> expression
 
 val make_binop : binop -> expression -> expression -> expression
 
-val make_range : int -> int -> expression
+val make_for : id -> int -> int -> command list -> command
+
+val make_var : id -> expression
