@@ -14,6 +14,7 @@ rule token =
 
   | num as n     { INT (int_of_string n) }
 
+  | ".."         { RANGE_DOTS }
   | ">"          { GT }
   | "<"          { LT }
   | ">="         { GEQ }

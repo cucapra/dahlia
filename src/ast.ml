@@ -11,8 +11,9 @@ type binop =
 type expression =
   | EInt of int
   | EVar of id
-  | EBinop of binop * expression * expression
   | EBool of bool
+  | EBinop of binop * expression * expression
+  | ERange of int * int
   
 type command =
   | Assignment of id * expression

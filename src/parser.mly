@@ -22,6 +22,8 @@ open Make_ast
 %token TRUE
 %token FALSE
 
+%token RANGE_DOTS
+
 %start <Ast.command list> prog
 
 %%
@@ -35,6 +37,8 @@ cmd:
     { make_assignment x e1 } ;
 
 expr:
+  | x1 = INT; RANGE_DOTS; x2 = INT
+    { make_range x1 x2 }
   | x = INT
     { make_int x }
   | TRUE
