@@ -15,6 +15,8 @@ type type_node =
 
 type context = type_node ContextMap.t
 
+let empty_context = ContextMap.empty
+
 let allow_ints = function
   | BopEq
   | BopNeq
