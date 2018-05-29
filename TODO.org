@@ -1,5 +1,7 @@
 * Todo
 
+This is a list of features to be implemented.
+
 ** First
 
 - Unroll keyword [ ]
@@ -11,10 +13,10 @@
 ** Second
 
 - Memory types 
-  + Banking
-  + Two index form
-  + Index types
-  + Affine type
+  + Banking [ ] 
+  + Two index form [ ]
+  + Index types [ ]
+  + Affine type [ ]
 
 ** Third
 
