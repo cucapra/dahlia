@@ -1,0 +1,23 @@
+* Todo
+
+** First
+
+- Unroll keyword [ ]
+- Implement arrays [ ]
+- Refactor code [ ]
+- Implement transpiler [ ]
+- Create library of test files [ ]
+
+** Second
+
+- Memory types 
+  + Banking
+  + Two index form
+  + Index types
+  + Affine type
+
+** Third
+
+- Document language formalism [ ]
+
+

@@ -17,6 +17,21 @@ type context = type_node ContextMap.t
 
 let empty_context = ContextMap.empty
 
+let string_of_binop = function
+  | BopEq -> "="
+  | BopNeq -> "!="
+  | BopGeq -> ">="
+  | BopLeq -> "<="
+  | BopLt -> "<"
+  | BopGt -> ">"
+  | BopPlus -> "+"
+  | BopMinus -> "-"
+  | BopTimes -> "*"
+
+let string_of_type = function
+  | TBool -> "bool"
+  | TInt -> "int"
+
 let allow_ints = function
   | BopEq
   | BopNeq
@@ -28,14 +43,17 @@ let allow_ints = function
   | BopMinus
   | BopTimes -> true
 
-let check_binop binop e1 e2 =
-  match e1, e2 with
+let check_binop binop t1 t2 =
+  match t1, t2 with
   | TInt, TInt ->
     if allow_ints binop then
       TInt 
     else 
       raise (TypeError "Cannot apply binary operation to pair of ints")
-  | _ -> failwith "Implement rest of types"
+  | _ -> 
+    raise (TypeError 
+      ("Can't apply operator '" ^ (string_of_binop binop) ^ 
+       "' to " ^ (string_of_type t1) ^ " and " ^ (string_of_type t2)))
 
 let rec check_expr exp context =
   match exp with
