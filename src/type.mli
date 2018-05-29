@@ -3,6 +3,8 @@ open Ast
 type context
 type type_node
 
+exception TypeError of string
+
 val check_expr : expression -> context -> type_node
 
 val check_cmds : command list -> context -> context
