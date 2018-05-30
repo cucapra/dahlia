@@ -1,7 +1,6 @@
 open Ast
 
 type context
-type type_node
 
 exception TypeError of string
 

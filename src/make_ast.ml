@@ -17,3 +17,8 @@ let make_for x x1 x2 e =
 
 let make_var id =
   EVar id
+
+let make_array s t =
+  match t with
+  | AInt -> EArray (Array.make s (EInt 0))
+  | ABool -> EArray (Array.make s (EBool false))

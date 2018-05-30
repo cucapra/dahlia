@@ -24,6 +24,9 @@ rule token =
   | "-"          { MINUS }
   | "*"          { TIMES }
 
+  | "int"        { INT_ANNOTATION }
+  | "bool"        { BOOL_ANNOTATION }
+
 
   | "for"        { FOR }
   | "let"        { LET }
@@ -37,6 +40,8 @@ rule token =
   | ")"          { RPAREN }
   | "{"          { LBRACK }
   | "}"          { RBRACK }
+  | "["          { LSQUARE }
+  | "]"          { RSQUARE }
 
   | id as i      { ID (i) }
 

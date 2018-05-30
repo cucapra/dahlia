@@ -9,10 +9,6 @@ module ContextMap = Map.Make(
   end
 )
 
-type type_node =
-  | TInt
-  | TBool
-
 type context = type_node ContextMap.t
 
 let empty_context = ContextMap.empty
@@ -62,6 +58,7 @@ let rec check_expr exp context =
   | EVar x -> ContextMap.find x context
   | EBinop (binop, e1, e2) -> 
     check_binop binop (check_expr e1 context) (check_expr e2 context)
+  | EArray arr -> TArray
 
 let rec check_cmds cmds context =
   match cmds with

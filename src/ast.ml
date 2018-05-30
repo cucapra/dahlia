@@ -1,5 +1,14 @@
 type id = string
 
+type type_annotation =
+  | AInt
+  | ABool
+
+type type_node =
+  | TInt
+  | TBool
+  | TArray
+
 type binop =
   | BopEq
   | BopNeq
@@ -16,11 +25,13 @@ type expression =
   | EVar of id
   | EBool of bool
   | EBinop of binop * expression * expression
+  | EArray of expression array
 
 type value =
   | VInt of int
   | VBool of bool
   | VRange of int * int
+  | VArray of value array
   
 type command =
   | CAssignment of id * expression

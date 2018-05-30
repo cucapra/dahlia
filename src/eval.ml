@@ -49,6 +49,7 @@ and eval_expression : expression * env -> value * env = fun (exp, e) ->
   | EVar x -> ((find x e), e)
   | EBool x -> VBool x, e
   | EBinop (binop, e1, e2) -> eval_binop binop e1 e2 e
+  | EArray arr -> (VArray (Array.map (fun elem -> let v, _ = eval_expression (elem, e) in v) arr)), e
 
 and eval_cmd_list cmds env =
   match cmds with
@@ -63,10 +64,14 @@ and eval_command : command * env -> env = fun (cmd, e) ->
     add x v env
   | CFor (x, x1, x2, cmds) -> eval_for x x1 x2 cmds e 0
 
-let string_of_val = function
+let rec string_of_val = function
   | VInt i -> string_of_int i
   | VBool b -> string_of_bool b
   | VRange (i1, i2) -> (string_of_int i1) ^ ".." ^ (string_of_int i2)
+  | VArray arr -> 
+    let accum = (fun acc elem -> acc ^ ", " ^ (string_of_val elem)) in
+    let unprettified = Array.fold_left accum "" arr in
+    String.sub unprettified 1 ((String.length unprettified) - 1)
 
 let string_of_env env =
   let produce_string = (fun id v acc ->

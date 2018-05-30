@@ -18,6 +18,8 @@ open Make_ast
 %token RPAREN
 %token LBRACK
 %token RBRACK
+%token LSQUARE
+%token RSQUARE
 
 %token NEQ
 %token GEQ
@@ -33,6 +35,9 @@ open Make_ast
 %token TRUE
 %token FALSE
 
+%token INT_ANNOTATION
+%token BOOL_ANNOTATION
+
 %token RANGE_DOTS
 
 %left EQUAL
@@ -46,6 +51,8 @@ prog:
     { e } ;
 
 cmd:
+  | t = type_annotation; x = ID; LSQUARE; s = INT; RSQUARE
+    { make_assignment x (make_array s t) }
   | FOR; LPAREN; LET; x = ID; EQUAL; x1 = INT; RANGE_DOTS; x2 = INT; RPAREN; 
     LBRACK; e = separated_list(SEMICOLON, cmd); RBRACK
     { make_for x x1 x2 e }
@@ -63,6 +70,10 @@ expr:
     { make_var x }
   | e1 = expr; bop = binop; e2 = expr
     { make_binop bop e1 e2 } ;
+
+type_annotation:
+  | BOOL_ANNOTATION { ABool }
+  | INT_ANNOTATION { AInt }
 
 %inline binop:
   | NEQ { BopNeq }

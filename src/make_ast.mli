@@ -11,3 +11,5 @@ val make_binop : binop -> expression -> expression -> expression
 val make_for : id -> int -> int -> command list -> command
 
 val make_var : id -> expression
+
+val make_array : int -> type_annotation -> expression
