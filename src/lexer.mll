@@ -24,8 +24,10 @@ rule token =
   | "-"          { MINUS }
   | "*"          { TIMES }
 
+  | "unroll"     { UNROLL }
+
   | "int"        { INT_ANNOTATION }
-  | "bool"        { BOOL_ANNOTATION }
+  | "bool"       { BOOL_ANNOTATION }
 
 
   | "for"        { FOR }

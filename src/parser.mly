@@ -40,6 +40,8 @@ open Make_ast
 
 %token RANGE_DOTS
 
+%token UNROLL
+
 %left EQUAL
 
 %start <Ast.command list> prog
