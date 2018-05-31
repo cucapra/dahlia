@@ -18,7 +18,6 @@ type env = value EnvMap.t
 
 let initial_env = EnvMap.empty
 
-
 let expr_of_int i = EInt i
 
 let int_of_val = function
@@ -56,6 +55,16 @@ and eval_cmd_list cmds env =
   | h::t -> eval_cmd_list t (eval_command (h, env))
   | [] -> env
 
+and eval_array_update x i expression env =
+  let arr, _ = eval_expression (EVar x, env) in
+  let index, _ = eval_expression (i, env) in
+  let new_arr_val, _ = eval_expression (expression, env) in
+  match arr, index with
+  | VArray arr, VInt i -> Array.set arr i new_arr_val; env
+  | _ -> failwith "Illegal := applied" (* FIXME: refactor this *)
+  
+
+
 and eval_command : command * env -> env = fun (cmd, e) ->
   let open EnvMap in
   match cmd with
@@ -63,6 +72,8 @@ and eval_command : command * env -> env = fun (cmd, e) ->
     let v, env = eval_expression (exp, e) in
     add x v env
   | CFor (x, x1, x2, cmds) -> eval_for x x1 x2 cmds e 0
+  | CArrayUpdate (x, index, expression) -> eval_array_update x index expression e
+
 
 let rec string_of_val = function
   | VInt i -> string_of_int i

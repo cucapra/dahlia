@@ -65,6 +65,7 @@ let rec check_cmds cmds context =
   | h::t ->
     check_cmds t (check_cmd h context)
   | [] -> context
+
   
 and check_cmd cmd context =
   let open ContextMap in
@@ -72,3 +73,4 @@ and check_cmd cmd context =
   | CAssignment (x, e1) -> add x (check_expr e1 context) context
   | CFor (x, r1, r2, cmds) -> (* FIXME: for loops only support iterating with ints *)
     check_cmds cmds (add x TInt context) 
+  | CArrayUpdate (x, index, exp) -> context (* FIXME *)

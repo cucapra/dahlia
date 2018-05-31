@@ -1,5 +1,5 @@
-let x = 5;
+let x = 0;
 
-for (i = 0..5) {
-    x = x + i
+for (let i = 0..9) {
+    let x = x + i
 }

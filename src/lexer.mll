@@ -16,6 +16,8 @@ rule token =
 
   | ".."         { RANGE_DOTS }
 
+  | ":="         { REASSIGN }
+
   | ">"          { GT }
   | "<"          { LT }
   | ">="         { GEQ }

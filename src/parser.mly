@@ -42,6 +42,8 @@ open Make_ast
 
 %token UNROLL
 
+%token REASSIGN
+
 %left EQUAL
 
 %start <Ast.command list> prog
@@ -53,6 +55,8 @@ prog:
     { e } ;
 
 cmd:
+  | id = ID; LSQUARE; index = expr; RSQUARE; REASSIGN; e = expr
+    { make_array_update id index e }
   | t = type_annotation; x = ID; LSQUARE; s = INT; RSQUARE
     { make_assignment x (make_array s t) }
   | FOR; LPAREN; LET; x = ID; EQUAL; x1 = INT; RANGE_DOTS; x2 = INT; RPAREN; 
