@@ -74,3 +74,4 @@ and check_cmd cmd context =
   | CFor (x, r1, r2, cmds) -> (* FIXME: for loops only support iterating with ints *)
     check_cmds cmds (add x TInt context) 
   | CArrayUpdate (x, index, exp) -> context (* FIXME *)
+  | CIf _ -> context (* FIXME *)

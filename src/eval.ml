@@ -25,6 +25,7 @@ let int_of_val = function
   | _ -> failwith "Implement type checking"
 
 let val_of_int i = VInt i
+let val_of_bool b = VBool b
 
 let rec eval_for x x1 x2 cmds env i = 
   if i <= x2 then
@@ -34,11 +35,19 @@ let rec eval_for x x1 x2 cmds env i =
     env
 
 and eval_binop binop e1 e2 env =
+  let v1, env1 = eval_expression (e1, env) in
+  let v2, env2 = eval_expression (e2, env1) in
   match binop with
   | BopPlus -> 
-    let v1, env1 = eval_expression (e1, env) in
-    let v2, env2 = eval_expression (e2, env1) in
     val_of_int ((int_of_val v1) + (int_of_val v2)), env2
+  | BopGeq ->
+    val_of_bool ((int_of_val v1) >= (int_of_val v2)), env2
+  | BopLeq ->
+    val_of_bool ((int_of_val v1) <= (int_of_val v2)), env2
+  | BopGt ->
+    val_of_bool ((int_of_val v1) > (int_of_val v2)), env2
+  | BopLt ->
+    val_of_bool ((int_of_val v1) < (int_of_val v2)), env2
   | _ -> failwith "Implement other binops"
 
 and eval_expression : expression * env -> value * env = fun (exp, e) ->
@@ -62,8 +71,11 @@ and eval_array_update x i expression env =
   match arr, index with
   | VArray arr, VInt i -> Array.set arr i new_arr_val; env
   | _ -> failwith "Illegal := applied" (* FIXME: refactor this *)
-  
 
+and eval_bool b =
+  match b with
+  | VBool b -> b
+  | _ -> failwith "Illegal bool operator applied" (* FIXME: refactor this *)
 
 and eval_command : command * env -> env = fun (cmd, e) ->
   let open EnvMap in
@@ -73,7 +85,10 @@ and eval_command : command * env -> env = fun (cmd, e) ->
     add x v env
   | CFor (x, x1, x2, cmds) -> eval_for x x1 x2 cmds e 0
   | CArrayUpdate (x, index, expression) -> eval_array_update x index expression e
-
+  | CIf (b, body) -> 
+    let truth_value, _ = eval_expression (b, e) in
+    if eval_bool truth_value then (eval_cmd_list body e) else e
+    
 
 let rec string_of_val = function
   | VInt i -> string_of_int i

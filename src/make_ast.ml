@@ -25,3 +25,6 @@ let make_array s t =
 
 let make_array_update id i e =
   CArrayUpdate (id, i, e)
+
+let make_if b body =
+  CIf (b, body)

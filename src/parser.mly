@@ -44,6 +44,8 @@ open Make_ast
 
 %token REASSIGN
 
+%token IF
+
 %left EQUAL
 
 %start <Ast.command list> prog
@@ -55,6 +57,8 @@ prog:
     { e } ;
 
 cmd:
+  | IF; LPAREN; b = expr; RPAREN; LBRACK; body = separated_list(SEMICOLON, cmd); RBRACK
+    { make_if b body }
   | id = ID; LSQUARE; index = expr; RSQUARE; REASSIGN; e = expr
     { make_array_update id index e }
   | t = type_annotation; x = ID; LSQUARE; s = INT; RSQUARE

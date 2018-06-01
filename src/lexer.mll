@@ -32,6 +32,7 @@ rule token =
   | "bool"       { BOOL_ANNOTATION }
 
 
+  | "if"         { IF }
   | "for"        { FOR }
   | "let"        { LET }
   | "true"       { TRUE }

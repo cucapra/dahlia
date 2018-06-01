@@ -15,3 +15,5 @@ val make_var : id -> expression
 val make_array : int -> type_annotation -> expression
 
 val make_array_update : id -> expression -> expression -> command
+
+val make_if : expression -> command list -> command
