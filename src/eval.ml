@@ -83,7 +83,14 @@ and eval_command : command * env -> env = fun (cmd, e) ->
   | CAssignment (x, exp) -> 
     let v, env = eval_expression (exp, e) in
     add x v env
-  | CFor (x, x1, x2, cmds) -> eval_for x x1 x2 cmds e 0
+  | CFor (x, x1, x2, cmds) -> 
+    let i1, _ = eval_expression (x1, e) in
+    let i2, _ = eval_expression (x2, e) in
+    begin
+      match i1, i2 with
+      | VInt v1, VInt v2 -> eval_for x v1 v2 cmds e 0
+      | _ -> failwith "Undefined" (* FIXME: refactor this *)
+    end
   | CArrayUpdate (x, index, expression) -> eval_array_update x index expression e
   | CIf (b, body) -> 
     let truth_value, _ = eval_expression (b, e) in

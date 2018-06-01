@@ -35,6 +35,6 @@ type value =
   
 type command =
   | CAssignment of id * expression
-  | CFor of id * int * int * command list
+  | CFor of id * expression * expression * command list
   | CArrayUpdate of id * expression * expression
   | CIf of expression * command list

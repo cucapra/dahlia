@@ -63,7 +63,7 @@ cmd:
     { make_array_update id index e }
   | t = type_annotation; x = ID; LSQUARE; s = INT; RSQUARE
     { make_assignment x (make_array s t) }
-  | FOR; LPAREN; LET; x = ID; EQUAL; x1 = INT; RANGE_DOTS; x2 = INT; RPAREN; 
+  | FOR; LPAREN; LET; x = ID; EQUAL; x1 = expr; RANGE_DOTS; x2 = expr; RPAREN; 
     LBRACK; e = separated_list(SEMICOLON, cmd); RBRACK
     { make_for x x1 x2 e }
   | LET; x = ID; EQUAL; e1 = expr
