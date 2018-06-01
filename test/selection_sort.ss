@@ -12,17 +12,17 @@ for (let i = 0..5) {
     for (let j = i+1..5) {
 
         if (a[j] < a[min_index]) {
-            let min_index = j
-        }
+            let min_index = j;
+        };
     };
 
     if (min_index != i) {
         let temp = a[i];
         a[i] := a[min_index];
-        a[min_index] := temp
-    }
+        a[min_index] := temp;
+    };
 
-}
+};
 
 
 

@@ -31,3 +31,6 @@ let make_if b body =
 
 let make_array_access id index =
   EArrayAccess (id, index)
+
+let make_seq c1 c2 =
+  CSeq (c1, c2)

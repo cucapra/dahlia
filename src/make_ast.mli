@@ -19,3 +19,5 @@ val make_array_update : id -> expression -> expression -> command
 val make_array_access : id -> expression -> expression
 
 val make_if : expression -> command list -> command
+
+val make_seq : command -> command -> command

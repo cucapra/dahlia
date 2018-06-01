@@ -39,3 +39,4 @@ type command =
   | CFor of id * expression * expression * command list
   | CArrayUpdate of id * expression * expression
   | CIf of expression * command list
+  | CSeq of command * command

@@ -48,25 +48,27 @@ open Make_ast
 
 %left EQUAL
 
-%start <Ast.command list> prog
+%start <Ast.command> prog
 
 %%
 
 prog:
-  | e = separated_list(SEMICOLON, cmd); EOF
-    { e } ;
+  | c = cmd; EOF
+    { c } ;
 
 cmd:
-  | IF; LPAREN; b = expr; RPAREN; LBRACK; body = separated_list(SEMICOLON, cmd); RBRACK
+  | c1 = cmd; c2 = cmd;
+    { make_seq c1 c2 }
+  | IF; LPAREN; b = expr; RPAREN; LBRACK; body = separated_list(SEMICOLON, cmd); RBRACK; SEMICOLON
     { make_if b body }
-  | id = ID; LSQUARE; index = expr; RSQUARE; REASSIGN; e = expr
+  | id = ID; LSQUARE; index = expr; RSQUARE; REASSIGN; e = expr; SEMICOLON
     { make_array_update id index e }
-  | t = type_annotation; x = ID; LSQUARE; s = INT; RSQUARE
+  | t = type_annotation; x = ID; LSQUARE; s = INT; RSQUARE; SEMICOLON
     { make_assignment x (make_array s t) }
   | FOR; LPAREN; LET; x = ID; EQUAL; x1 = expr; RANGE_DOTS; x2 = expr; RPAREN; 
-    LBRACK; e = separated_list(SEMICOLON, cmd); RBRACK
+    LBRACK; e = separated_list(SEMICOLON, cmd); RBRACK; SEMICOLON
     { make_for x x1 x2 e }
-  | LET; x = ID; EQUAL; e1 = expr
+  | LET; x = ID; EQUAL; e1 = expr; SEMICOLON
     { make_assignment x e1 } ;
 
 expr:

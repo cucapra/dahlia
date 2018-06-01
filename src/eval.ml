@@ -102,6 +102,9 @@ and eval_command : command * env -> env = fun (cmd, e) ->
   | CIf (b, body) -> 
     let truth_value, _ = eval_expression (b, e) in
     if eval_bool truth_value then (eval_cmd_list body e) else e
+  | CSeq (c1, c2) ->
+    let new_env = eval_command (c1, e) in
+    eval_command (c2, new_env)
     
 
 let rec string_of_val = function
