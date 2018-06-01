@@ -44,6 +44,8 @@ and eval_binop binop e1 e2 env =
     val_of_bool ((int_of_val v1) >= (int_of_val v2)), env2
   | BopLeq ->
     val_of_bool ((int_of_val v1) <= (int_of_val v2)), env2
+  | BopNeq ->
+    val_of_bool ((int_of_val v1) != (int_of_val v2)), env2
   | BopGt ->
     val_of_bool ((int_of_val v1) > (int_of_val v2)), env2
   | BopLt ->
@@ -93,7 +95,7 @@ and eval_command : command * env -> env = fun (cmd, e) ->
     let i2, _ = eval_expression (x2, e) in
     begin
       match i1, i2 with
-      | VInt v1, VInt v2 -> eval_for x v1 v2 cmds e 0
+      | VInt v1, VInt v2 -> eval_for x v1 v2 cmds e v1
       | _ -> failwith "Undefined" (* FIXME: refactor this *)
     end
   | CArrayUpdate (x, index, expression) -> eval_array_update x index expression e

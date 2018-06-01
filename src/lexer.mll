@@ -22,6 +22,7 @@ rule token =
   | "<"          { LT }
   | ">="         { GEQ }
   | "<="         { LEQ }
+  | "!="         { NEQ }
   | "+"          { PLUS }
   | "-"          { MINUS }
   | "*"          { TIMES }

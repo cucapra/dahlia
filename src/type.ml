@@ -59,6 +59,7 @@ let rec check_expr exp context =
   | EBinop (binop, e1, e2) -> 
     check_binop binop (check_expr e1 context) (check_expr e2 context)
   | EArray arr -> TArray
+  | EArrayAccess _ -> TArray (* FIXME *)
 
 let rec check_cmds cmds context =
   match cmds with
