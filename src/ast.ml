@@ -26,6 +26,7 @@ type expression =
   | EBool of bool
   | EBinop of binop * expression * expression
   | EArray of expression array
+  | EArrayAccess of id * expression
 
 type value =
   | VInt of int

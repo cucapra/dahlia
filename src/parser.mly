@@ -70,6 +70,8 @@ cmd:
     { make_assignment x e1 } ;
 
 expr:
+  | x = ID; LSQUARE; index = expr; RSQUARE
+    { make_array_access x index }
   | x = INT
     { make_int x }
   | TRUE

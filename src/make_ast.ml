@@ -28,3 +28,6 @@ let make_array_update id i e =
 
 let make_if b body =
   CIf (b, body)
+
+let make_array_access id index =
+  EArrayAccess (id, index)

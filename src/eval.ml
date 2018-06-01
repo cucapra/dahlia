@@ -58,6 +58,11 @@ and eval_expression : expression * env -> value * env = fun (exp, e) ->
   | EBool x -> VBool x, e
   | EBinop (binop, e1, e2) -> eval_binop binop e1 e2 e
   | EArray arr -> (VArray (Array.map (fun elem -> let v, _ = eval_expression (elem, e) in v) arr)), e
+  | EArrayAccess (id, index) ->
+    let VArray arr, _ = eval_expression (EVar id, e) in
+    let VInt i, _ = eval_expression (index, e) in (* FIXME: consider other cases *)
+    Array.get arr i, e
+
 
 and eval_cmd_list cmds env =
   match cmds with
