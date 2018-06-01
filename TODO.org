@@ -16,9 +16,11 @@ This is a list of features to be implemented.
 
 ** Type Features
 
-- Array banking [ ]
-- Two index form [ ]
-- Index types [ ]
+- Memory types
+  + Array banking [ ]
+  + Two index form [ ]
+  + Index types [ ]
+  + Affine types [ ]
 
 ** Transpiler
 
