@@ -2,24 +2,26 @@
 
 This is a list of features to be implemented.
 
-** First
 
-- Unroll keyword [ ]
-- Implement arrays [ ]
-- Refactor code [ ]
-- Implement transpiler [ ]
-- Create library of test files [ ]
+** Basic Features
 
-** Second
+- Unroll keyword [X]
+- Arrays
+  + Initialization [X]
+  + Access [X]
+  + Updates [X]
+- Conditionals
+  + If statement [X]
+  + Else/Else if [ ]
 
-- Memory types 
-  + Banking [ ] 
-  + Two index form [ ]
-  + Index types [ ]
-  + Affine type [ ]
+** Type Features
 
-** Third
+- Array banking [ ]
+- Two index form [ ]
+- Index types [ ]
 
-- Document language formalism [ ]
+** Transpiler
 
+** Documentation
 
+** Testing
