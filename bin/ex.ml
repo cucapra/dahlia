@@ -9,7 +9,7 @@ let _ =
   let commands = Parser.prog Lexer.token lexbuf in
   try
     (* ignore (check_cmds commands empty_context); *)
-    let final_env = Eval.eval_command (commands, Eval.initial_env) in
+    let final_env = Eval.eval_command (commands, Eval.empty_env) in
     print_endline (Eval.string_of_env final_env)
   with
     TypeError s -> print_endline s

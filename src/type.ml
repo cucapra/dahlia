@@ -58,21 +58,19 @@ let rec check_expr exp context =
   | EVar x -> ContextMap.find x context
   | EBinop (binop, e1, e2) -> 
     check_binop binop (check_expr e1 context) (check_expr e2 context)
-  | EArray arr -> TArray
-  | EArrayAccess _ -> TArray (* FIXME *)
+  | EArray arr -> TArray (TInt)
+  | EArrayAccess _ -> TArray (TInt) (* FIXME *)
 
 let rec check_cmds cmds context =
   match cmds with
   | h::t ->
     check_cmds t (check_cmd h context)
   | [] -> context
-
   
 and check_cmd cmd context =
   let open ContextMap in
   match cmd with
   | CAssignment (x, e1) -> add x (check_expr e1 context) context
-  | CFor (x, r1, r2, cmds) -> (* FIXME: for loops only support iterating with ints *)
-    check_cmds cmds (add x TInt context) 
+  | CFor (x, r1, r2, cmds) -> context (* FIXME: for loops only support iterating with ints *)
   | CArrayUpdate (x, index, exp) -> context (* FIXME *)
   | CIf _ -> context (* FIXME *)

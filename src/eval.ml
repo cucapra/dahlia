@@ -16,7 +16,7 @@ module EnvMap = Map.Make(
 
 type env = value EnvMap.t
 
-let initial_env = EnvMap.empty
+let empty_env = EnvMap.empty
 
 let expr_of_int i = EInt i
 
@@ -27,14 +27,7 @@ let int_of_val = function
 let val_of_int i = VInt i
 let val_of_bool b = VBool b
 
-let rec eval_for x x1 x2 cmds env i = 
-  if i <= x2 then
-    let env_with_x = eval_command ((CAssignment (x, (expr_of_int i)), env)) in
-    eval_for x x1 x2 cmds (eval_cmd_list cmds env_with_x) (i+1)
-  else
-    env
-
-and eval_binop binop e1 e2 env =
+let rec eval_binop binop e1 e2 env =
   let v1, env1 = eval_expression (e1, env) in
   let v2, env2 = eval_expression (e2, env1) in
   match binop with
@@ -82,41 +75,50 @@ and eval_array_update x i expression env =
 and eval_bool b =
   match b with
   | VBool b -> b
-  | _ -> failwith "Illegal bool operator applied" (* FIXME: refactor this *)
+  | _ -> failwith "Type checker failed to catch bool op applied to non-bool"
+
+and eval_assignment x exp env =
+  eval_expression (exp, env) 
+  |> (fun (v, env') -> EnvMap.add x v env)
+
+and eval_for_body x i b cmd env =
+  if i <= b then
+    eval_command (CAssignment (x, EInt i), env)
+    |> (fun env' -> eval_command (cmd, env'))
+    |> (fun env'' -> eval_for_body x (i+1) b cmd env'')
+  else env
+
+and eval_for x a b cmd env =
+  eval_expression (a, env) |> (fun (i1, env1) ->
+  eval_expression (b, env1) |> (fun (i2, env2) ->
+  match i1, i2 with
+  | VInt v1, VInt v2 -> eval_for_body x v1 v2 cmd env
+  | _ -> failwith "Type checker failed to catch non-ints in for-loop range"))
 
 and eval_command : command * env -> env = fun (cmd, e) ->
   let open EnvMap in
   match cmd with
-  | CAssignment (x, exp) -> 
-    let v, env = eval_expression (exp, e) in
-    add x v env
-  | CFor (x, x1, x2, cmds) -> 
-    let i1, _ = eval_expression (x1, e) in
-    let i2, _ = eval_expression (x2, e) in
-    begin
-      match i1, i2 with
-      | VInt v1, VInt v2 -> eval_for x v1 v2 cmds e v1
-      | _ -> failwith "Undefined" (* FIXME: refactor this *)
-    end
+  | CAssignment (x, exp) -> eval_assignment x exp e
+  | CFor (x, a, b, body) -> eval_for x a b body e
   | CArrayUpdate (x, index, expression) -> eval_array_update x index expression e
   | CIf (b, body) -> 
     let truth_value, _ = eval_expression (b, e) in
-    if eval_bool truth_value then (eval_cmd_list body e) else e
+    if eval_bool truth_value then eval_command (body, e) else e
   | CSeq (c1, c2) ->
     let new_env = eval_command (c1, e) in
     eval_command (c2, new_env)
-    
 
-let rec string_of_val = function
+let rec string_of_arr arr =
+  (fun acc elem -> acc ^ ", " ^ (string_of_val elem))
+  |> (fun f -> Array.fold_left f "" arr)
+  |> (fun s -> String.sub s 1 ((String.length s) - 1))
+
+and string_of_val = function
   | VInt i -> string_of_int i
   | VBool b -> string_of_bool b
   | VRange (i1, i2) -> (string_of_int i1) ^ ".." ^ (string_of_int i2)
-  | VArray arr -> 
-    let accum = (fun acc elem -> acc ^ ", " ^ (string_of_val elem)) in
-    let unprettified = Array.fold_left accum "" arr in
-    String.sub unprettified 1 ((String.length unprettified) - 1)
+  | VArray arr -> string_of_arr arr
 
 let string_of_env env =
-  let produce_string = (fun id v acc ->
-    id ^ ": " ^ (string_of_val v) ^ "\n" ^ acc) in
-  String.trim (EnvMap.fold produce_string env "")
+  (fun id v acc -> id ^ ": " ^ (string_of_val v) ^ "\n" ^ acc)
+  |> (fun f -> String.trim (EnvMap.fold f env ""))

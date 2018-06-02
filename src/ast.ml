@@ -7,7 +7,7 @@ type type_annotation =
 type type_node =
   | TInt
   | TBool
-  | TArray
+  | TArray of type_node
 
 type binop =
   | BopEq
@@ -17,7 +17,7 @@ type binop =
   | BopLt
   | BopGt
   | BopPlus
-  | BopMinus 
+  | BopMinus
   | BopTimes
 
 type expression =
@@ -36,7 +36,7 @@ type value =
   
 type command =
   | CAssignment of id * expression
-  | CFor of id * expression * expression * command list
+  | CFor of id * expression * expression * command
   | CArrayUpdate of id * expression * expression
-  | CIf of expression * command list
+  | CIf of expression * command
   | CSeq of command * command
