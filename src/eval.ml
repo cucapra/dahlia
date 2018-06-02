@@ -1,4 +1,3 @@
-
 (* Acknowledgements:
     - Cornell's CS 3110 Fall 2018 A4
     - Cornell's CS 6110 Spring 2018 Lecture 8 notes *)
@@ -18,75 +17,66 @@ type env = value EnvMap.t
 
 let empty_env = EnvMap.empty
 
-let expr_of_int i = EInt i
-
-let int_of_val = function
-  | VInt i -> i
-  | _ -> failwith "Implement type checking"
-
-let val_of_int i = VInt i
-let val_of_bool b = VBool b
-
-let rec eval_binop binop e1 e2 env =
-  let v1, env1 = eval_expression (e1, env) in
-  let v2, env2 = eval_expression (e2, env1) in
-  match binop with
-  | BopPlus -> 
-    val_of_int ((int_of_val v1) + (int_of_val v2)), env2
-  | BopGeq ->
-    val_of_bool ((int_of_val v1) >= (int_of_val v2)), env2
-  | BopLeq ->
-    val_of_bool ((int_of_val v1) <= (int_of_val v2)), env2
-  | BopNeq ->
-    val_of_bool ((int_of_val v1) != (int_of_val v2)), env2
-  | BopGt ->
-    val_of_bool ((int_of_val v1) > (int_of_val v2)), env2
-  | BopLt ->
-    val_of_bool ((int_of_val v1) < (int_of_val v2)), env2
-  | _ -> failwith "Implement other binops"
-
-and eval_expression : expression * env -> value * env = fun (exp, e) ->
+let rec eval_expression : expression * env -> value * env = fun (exp, env) ->
   let open EnvMap in
   match exp with
-  | EInt x -> VInt x, e
-  | EVar x -> ((find x e), e)
-  | EBool x -> VBool x, e
-  | EBinop (binop, e1, e2) -> eval_binop binop e1 e2 e
-  | EArray arr -> (VArray (Array.map (fun elem -> let v, _ = eval_expression (elem, e) in v) arr)), e
-  | EArrayAccess (id, index) ->
-    let VArray arr, _ = eval_expression (EVar id, e) in
-    let VInt i, _ = eval_expression (index, e) in (* FIXME: consider other cases *)
-    Array.get arr i, e
+  | EInt x -> eval_int (x, env)
+  | EBool b -> eval_bool (b, env)
+  | EVar id -> eval_var (id, env)
+  | EBinop (binop, e1, e2) -> eval_binop (binop, e1, e2, env)
+  | EArray a -> eval_array (a, env)
+  | EArrayAccess (id, index) -> eval_array_access (id, index, env)
 
+and eval_int (i, env) = VInt i, env
+and eval_bool (b, env) = VBool b, env
+and eval_var (x, env) = EnvMap.find x env, env
 
-and eval_cmd_list cmds env =
-  match cmds with
-  | h::t -> eval_cmd_list t (eval_command (h, env))
-  | [] -> env
+(* FIXME: the environment is not affected by evaluating each element
+   of the array, need to find out if this is necessary *)
+and eval_array (a, env) =
+  (fun exp -> (eval_expression (exp, env) |> (fun (v, _) -> v)))
+  |> (fun f -> VArray (Array.map f a), env)
 
-and eval_array_update x i expression env =
-  let arr, _ = eval_expression (EVar x, env) in
-  let index, _ = eval_expression (i, env) in
-  let new_arr_val, _ = eval_expression (expression, env) in
-  match arr, index with
-  | VArray arr, VInt i -> Array.set arr i new_arr_val; env
-  | _ -> failwith "Illegal := applied" (* FIXME: refactor this *)
+and eval_array_access (id, index, env) =
+  (eval_var (id, env) |> (fun (arr_val, env') -> 
+  (eval_expression (index, env')) |> (fun (index_val, env'') ->
+  match arr_val, index_val with
+  | VArray arr, VInt i -> Array.get arr i, env''
+  | _ -> failwith "Type checker failed to catch non-int idx or non-array access")))
 
-and eval_bool b =
-  match b with
-  | VBool b -> b
-  | _ -> failwith "Type checker failed to catch bool op applied to non-bool"
+and eval_binop (binop, e1, e2, env) =
+  match binop, eval_expression (e1, env), eval_expression (e2, env) with
+  | BopPlus, (VInt i1, env1), (VInt i2, env2) -> VInt (i1 + i2), env
+  | BopMinus, (VInt i1, env1), (VInt i2, env2) -> VInt (i1 - i2), env
+  | BopTimes, (VInt i1, env1), (VInt i2, env2) -> VInt (i1 * i2), env
+  | BopGt, (VInt i1, env1), (VInt i2, env2) -> VBool (i1 > i2), env
+  | BopLt, (VInt i1, env1), (VInt i2, env2) -> VBool (i1 < i2), env
+  | BopEq, (VInt i1, env1), (VInt i2, env2) -> VBool (i1 = i2), env
+  | BopGeq, (VInt i1, env1), (VInt i2, env2) -> VBool (i1 >= i2), env
+  | BopLeq, (VInt i1, env1), (VInt i2, env2) -> VBool (i1 <= i2), env
+  | BopNeq, (VInt i1, env1), (VInt i2, env2) -> VBool (i1 != i2), env
+  | _ -> failwith "Type checker failed to catch illegal operation application "
+
+let rec eval_command : command * env -> env = fun (cmd, env) ->
+  match cmd with
+  | CAssignment (x, exp) -> eval_assignment x exp env
+  | CIf (b, body) -> eval_if b body env
+  | CSeq (c1, c2) -> eval_seq c1 c2 env
+  | CFor (x, a, b, body) -> eval_for x a b body env
+  | CArrayUpdate (x, index, exp) -> eval_array_update x index exp env
 
 and eval_assignment x exp env =
   eval_expression (exp, env) 
   |> (fun (v, env') -> EnvMap.add x v env)
 
-and eval_for_body x i b cmd env =
-  if i <= b then
-    eval_command (CAssignment (x, EInt i), env)
-    |> (fun env' -> eval_command (cmd, env'))
-    |> (fun env'' -> eval_for_body x (i+1) b cmd env'')
-  else env
+and eval_if cond body env =
+  eval_expression (cond, env) |> (fun (v_cond, env') ->
+  match v_cond with
+  | VBool b -> if b then eval_command (body, env') else env'
+  | _ -> failwith "Type checker failed to catch non-bool in if-condition")
+
+and eval_seq c1 c2 env =
+  eval_command (c1, env) |> (fun env' -> eval_command (c2, env'))
 
 and eval_for x a b cmd env =
   eval_expression (a, env) |> (fun (i1, env1) ->
@@ -95,29 +85,31 @@ and eval_for x a b cmd env =
   | VInt v1, VInt v2 -> eval_for_body x v1 v2 cmd env
   | _ -> failwith "Type checker failed to catch non-ints in for-loop range"))
 
-and eval_command : command * env -> env = fun (cmd, e) ->
-  let open EnvMap in
-  match cmd with
-  | CAssignment (x, exp) -> eval_assignment x exp e
-  | CFor (x, a, b, body) -> eval_for x a b body e
-  | CArrayUpdate (x, index, expression) -> eval_array_update x index expression e
-  | CIf (b, body) -> 
-    let truth_value, _ = eval_expression (b, e) in
-    if eval_bool truth_value then eval_command (body, e) else e
-  | CSeq (c1, c2) ->
-    let new_env = eval_command (c1, e) in
-    eval_command (c2, new_env)
+and eval_for_body x i b cmd env =
+  if i <= b then
+    eval_command (CAssignment (x, EInt i), env)
+    |> (fun env' -> eval_command (cmd, env'))
+    |> (fun env'' -> eval_for_body x (i+1) b cmd env'')
+  else env
 
-let rec string_of_arr arr =
-  (fun acc elem -> acc ^ ", " ^ (string_of_val elem))
-  |> (fun f -> Array.fold_left f "" arr)
-  |> (fun s -> String.sub s 1 ((String.length s) - 1))
+and eval_array_update x i exp env =
+  (eval_var (x, env)) |> (fun (arr, env') -> 
+  (eval_expression (i, env') |> fun (idx_val, env'') ->
+  (eval_expression (exp, env'') |> fun (v, env''') ->
+  match arr, idx_val with
+  | VArray arr, VInt i -> Array.set arr i v; env'''
+  | _ -> failwith "Type checker failed to catch illegal update operation")))
 
-and string_of_val = function
+let rec string_of_val = function
   | VInt i -> string_of_int i
   | VBool b -> string_of_bool b
   | VRange (i1, i2) -> (string_of_int i1) ^ ".." ^ (string_of_int i2)
   | VArray arr -> string_of_arr arr
+
+and string_of_arr arr =
+  (fun acc elem -> acc ^ ", " ^ (string_of_val elem))
+  |> (fun f -> Array.fold_left f "" arr)
+  |> (fun s -> String.sub s 1 ((String.length s) - 1))
 
 let string_of_env env =
   (fun id v acc -> id ^ ": " ^ (string_of_val v) ^ "\n" ^ acc)
