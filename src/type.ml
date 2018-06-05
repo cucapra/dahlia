@@ -24,9 +24,10 @@ let string_of_binop = function
   | BopMinus -> "-"
   | BopTimes -> "*"
 
-let string_of_type = function
+let rec string_of_type = function
   | TBool -> "bool"
   | TInt -> "int"
+  | TArray t -> (string_of_type t) ^ " array"
 
 let allow_ints = function
   | BopEq
@@ -61,16 +62,52 @@ let rec check_expr exp context =
   | EArray arr -> TArray (TInt)
   | EArrayAccess _ -> TArray (TInt) (* FIXME *)
 
-let rec check_cmds cmds context =
-  match cmds with
-  | h::t ->
-    check_cmds t (check_cmd h context)
-  | [] -> context
-  
-and check_cmd cmd context =
-  let open ContextMap in
+let array_elem_error arr_id arr_t elem_t =
+  ("Array " ^ arr_id ^ "is of type " ^ (string_of_type arr_t) ^ 
+  "; tried to add element of type " ^ (string_of_type elem_t))
+
+let arr_idx_type_error =
+  "Tried to index into array with non-integer index"
+
+let arr_type_error =
+  "Tried to index into non-array"
+
+let cond_type_error =
+  "Non-boolean conditional"
+
+let rec check_cmd cmd context =
   match cmd with
-  | CAssignment (x, e1) -> add x (check_expr e1 context) context
-  | CFor (x, r1, r2, cmds) -> context (* FIXME: for loops only support iterating with ints *)
-  | CArrayUpdate (x, index, exp) -> context (* FIXME *)
-  | CIf _ -> context (* FIXME *)
+  | CSeq (c1, c2) -> check_seq c1 c2 context
+  | CAssignment (x, e1) -> check_assignment x e1 context
+  | CFor (x, r1, r2, body) -> check_for x r1 r2 body context
+  | CArrayUpdate (arr_id, idx, exp) -> check_array_update arr_id idx exp context
+  | CIf (cond, cmd) -> check_if cond cmd context
+
+and check_seq c1 c2 context =
+  check_cmd c1 context
+  |> (fun context' -> check_cmd c2 context')
+
+and check_assignment id exp context =
+  ContextMap.add id (check_expr exp context) context
+
+and check_for id r1 r2 body context =
+  failwith "Implement for loop type checking"
+
+and check_array_update id index exp context =
+  ContextMap.find id context |> (fun array_type ->
+  check_expr index context   |> (fun index_type ->
+  check_expr exp context     |> (fun expr_type  ->
+  match array_type, index_type with
+  | TArray t, TInt ->
+    if t = expr_type then context
+    else raise (TypeError (array_elem_error id t expr_type))
+  | TArray _, _ ->
+    raise (TypeError arr_idx_type_error)
+  | _, _ ->
+    raise (TypeError arr_type_error)
+  )))
+
+and check_if cond cmd context =
+  match check_expr cond context with
+  | TBool -> check_cmd cmd context
+  | _ -> raise (TypeError cond_type_error)
