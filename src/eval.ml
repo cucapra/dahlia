@@ -46,15 +46,17 @@ and eval_array_access (id, index, env) =
 
 and eval_binop (binop, e1, e2, env) =
   match binop, eval_expression (e1, env), eval_expression (e2, env) with
-  | BopPlus,  (VInt i1, env1), (VInt i2, env2) -> VInt (i1 + i2),   env
-  | BopMinus, (VInt i1, env1), (VInt i2, env2) -> VInt (i1 - i2),   env
-  | BopTimes, (VInt i1, env1), (VInt i2, env2) -> VInt (i1 * i2),   env
-  | BopGt,    (VInt i1, env1), (VInt i2, env2) -> VBool (i1 > i2),  env
-  | BopLt,    (VInt i1, env1), (VInt i2, env2) -> VBool (i1 < i2),  env
-  | BopEq,    (VInt i1, env1), (VInt i2, env2) -> VBool (i1 = i2),  env
-  | BopGeq,   (VInt i1, env1), (VInt i2, env2) -> VBool (i1 >= i2), env
-  | BopLeq,   (VInt i1, env1), (VInt i2, env2) -> VBool (i1 <= i2), env
-  | BopNeq,   (VInt i1, env1), (VInt i2, env2) -> VBool (i1 != i2), env
+  | BopPlus,  (VInt i1, env1), (VInt i2, env2)   -> VInt (i1 + i2),   env
+  | BopMinus, (VInt i1, env1), (VInt i2, env2)   -> VInt (i1 - i2),   env
+  | BopTimes, (VInt i1, env1), (VInt i2, env2)   -> VInt (i1 * i2),   env
+  | BopGt,    (VInt i1, env1), (VInt i2, env2)   -> VBool (i1 > i2),  env
+  | BopLt,    (VInt i1, env1), (VInt i2, env2)   -> VBool (i1 < i2),  env
+  | BopEq,    (VInt i1, env1), (VInt i2, env2)   -> VBool (i1 = i2),  env
+  | BopGeq,   (VInt i1, env1), (VInt i2, env2)   -> VBool (i1 >= i2), env
+  | BopLeq,   (VInt i1, env1), (VInt i2, env2)   -> VBool (i1 <= i2), env
+  | BopNeq,   (VInt i1, env1), (VInt i2, env2)   -> VBool (i1 != i2), env
+  | BopAnd,   (VBool b1, env1), (VBool b2, env2) -> VBool (b1 && b2), env
+  | BopOr,    (VBool b1, env1), (VBool b2, env2) -> VBool (b1 || b2), env
   | _ -> failwith "Type checker failed to catch illegal operation application "
 
 let rec eval_command : command * env -> env = fun (cmd, env) ->

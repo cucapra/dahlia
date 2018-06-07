@@ -27,6 +27,9 @@ rule token =
   | "-"          { MINUS }
   | "*"          { TIMES }
 
+  | "&&"         { AND }
+  | "||"         { OR }
+
   | "unroll"     { UNROLL }
 
   | "int"        { INT_ANNOTATION }

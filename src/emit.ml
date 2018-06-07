@@ -11,6 +11,8 @@ let string_of_binop = function
   | BopPlus -> "+"
   | BopMinus -> "-"
   | BopTimes -> "*"
+  | BopAnd -> "&&"
+  | BopOr -> "||"
 
 let rec transpile_exp = function
   | EInt i -> string_of_int i

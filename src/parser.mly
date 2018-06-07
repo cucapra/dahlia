@@ -32,6 +32,9 @@ open Make_ast
 %token MINUS
 %token TIMES
 
+%token AND
+%token OR
+
 %token TRUE
 %token FALSE
 
@@ -99,3 +102,6 @@ type_annotation:
   | PLUS { BopPlus }
   | MINUS { BopMinus }
   | TIMES { BopTimes } ;
+  | AND { BopAnd } ;
+  | OR { BopOr } ;
+

@@ -19,6 +19,8 @@ type binop =
   | BopPlus
   | BopMinus
   | BopTimes
+  | BopAnd
+  | BopOr
 
 type expression =
   | EInt of int

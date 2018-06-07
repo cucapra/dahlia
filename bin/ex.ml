@@ -10,9 +10,9 @@ let _ =
   try
     (* ignore (check_cmds commands empty_context); *)
     let final_env = Eval.eval_command (commands, Eval.empty_env) in
-    (* print_endline (Eval.string_of_env final_env) *)
+    print_endline (Eval.string_of_env final_env)
 
-    print_endline (Emit.generate_c commands)
+    (* print_endline (Emit.generate_c commands) *)
     
   with
     TypeError s -> print_endline s
