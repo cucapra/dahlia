@@ -4,8 +4,6 @@ Under development! Seashell is a language that provides a type system that makes
 
 ## Setup/Use
 
-Run the following to build:
-``` make build ```
+``` make build ``` : Build Seashell
 
-Use the following command to interpret a program. The final environment will be printed out:
-``` cat my_program | make run ```
+``` cat my_program | make run ``` : Interpret a program and see resulting environment
