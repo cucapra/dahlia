@@ -85,7 +85,7 @@ let rec check_cmd cmd context =
 
 and check_seq c1 c2 context =
   check_cmd c1 context
-  |> (fun context' -> check_cmd c2 context')
+  |> fun context' -> check_cmd c2 context'
 
 and check_assignment id exp context =
   ContextMap.add id (check_expr exp context) context
@@ -94,9 +94,9 @@ and check_for id r1 r2 body context =
   failwith "Implement for loop type checking"
 
 and check_array_update id index exp context =
-  ContextMap.find id context |> (fun array_type ->
-  check_expr index context   |> (fun index_type ->
-  check_expr exp context     |> (fun expr_type  ->
+  ContextMap.find id context |> fun array_type ->
+  check_expr index context   |> fun index_type ->
+  check_expr exp context     |> fun expr_type  ->
   match array_type, index_type with
   | TArray t, TInt ->
     if t = expr_type then context
@@ -105,7 +105,7 @@ and check_array_update id index exp context =
     raise (TypeError arr_idx_type_error)
   | _, _ ->
     raise (TypeError arr_type_error)
-  )))
+ 
 
 and check_if cond cmd context =
   match check_expr cond context with
