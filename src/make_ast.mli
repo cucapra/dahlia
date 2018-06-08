@@ -12,7 +12,7 @@ val make_for : id -> expression -> expression -> command -> command
 
 val make_var : id -> expression
 
-val make_array : int -> type_annotation -> expression
+val make_array : int -> type_node -> expression
 
 val make_array_update : id -> expression -> expression -> command
 

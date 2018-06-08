@@ -1,9 +1,5 @@
 type id = string
 
-type type_annotation =
-  | AInt
-  | ABool
-
 type type_node =
   | TInt
   | TBool
@@ -27,7 +23,7 @@ type expression =
   | EVar of id
   | EBool of bool
   | EBinop of binop * expression * expression
-  | EArray of expression array
+  | EArray of type_node * expression array
   | EArrayAccess of id * expression
 
 type value =

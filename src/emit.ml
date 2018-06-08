@@ -18,7 +18,7 @@ let rec transpile_exp = function
   | EInt i -> string_of_int i
   | EBool b -> if b then "1" else "0"
   | EVar id -> id
-  | EArray arr -> failwith "Implement array transpilation"
+  | EArray _ -> failwith "Implement array transpilation"
   | EArrayAccess (id, idx) -> transpile_array_access id idx
   | EBinop (b, e1, e2) -> transpile_binop b e1 e2
   

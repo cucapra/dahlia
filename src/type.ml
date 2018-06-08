@@ -23,6 +23,8 @@ let string_of_binop = function
   | BopPlus -> "+"
   | BopMinus -> "-"
   | BopTimes -> "*"
+  | BopOr -> "||"
+  | BopAnd -> "&&"
 
 let rec string_of_type = function
   | TBool -> "bool"
@@ -39,6 +41,7 @@ let allow_ints = function
   | BopPlus
   | BopMinus
   | BopTimes -> true
+  | _ -> false
 
 let check_binop binop t1 t2 =
   match t1, t2 with
@@ -59,7 +62,7 @@ let rec check_expr exp context =
   | EVar x -> ContextMap.find x context
   | EBinop (binop, e1, e2) -> 
     check_binop binop (check_expr e1 context) (check_expr e2 context)
-  | EArray arr -> TArray (TInt)
+  | EArray _ -> raise (TypeError "Can't refer to array literal")
   | EArrayAccess _ -> TArray (TInt) (* FIXME *)
 
 let array_elem_error arr_id arr_t elem_t =
@@ -88,10 +91,18 @@ and check_seq c1 c2 context =
   |> fun context' -> check_cmd c2 context'
 
 and check_assignment id exp context =
-  ContextMap.add id (check_expr exp context) context
+  match exp with
+  | EArray (t, _) -> ContextMap.add id (TArray t) context
+  | other_exp -> ContextMap.add id (check_expr other_exp context) context
 
 and check_for id r1 r2 body context =
-  failwith "Implement for loop type checking"
+  check_expr r1 context |> fun r1_type ->
+  check_expr r2 context |> fun r2_type ->
+  match r1_type, r2_type with
+  | TInt, TInt -> check_cmd body (ContextMap.add id TInt context)
+  | _ -> raise (TypeError "Range start/end must be integers")
+
+
 
 and check_array_update id index exp context =
   ContextMap.find id context |> fun array_type ->
@@ -106,7 +117,6 @@ and check_array_update id index exp context =
   | _, _ ->
     raise (TypeError arr_type_error)
  
-
 and check_if cond cmd context =
   match check_expr cond context with
   | TBool -> check_cmd cmd context

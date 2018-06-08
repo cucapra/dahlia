@@ -20,8 +20,8 @@ let make_var id =
 
 let make_array s t =
   match t with
-  | AInt -> EArray (Array.make s (EInt 0))
-  | ABool -> EArray (Array.make s (EBool false))
+  | TInt -> EArray (TInt, (Array.make s (EInt 0)))
+  | TBool -> EArray (TBool, (Array.make s (EBool false)))
 
 let make_array_update id i e =
   CArrayUpdate (id, i, e)

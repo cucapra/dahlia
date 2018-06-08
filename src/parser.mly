@@ -89,8 +89,8 @@ expr:
     { make_binop bop e1 e2 } ;
 
 type_annotation:
-  | BOOL_ANNOTATION { ABool }
-  | INT_ANNOTATION { AInt }
+  | BOOL_ANNOTATION { TBool }
+  | INT_ANNOTATION { TInt }
 
 %inline binop:
   | NEQ { BopNeq }

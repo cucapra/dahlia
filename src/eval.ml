@@ -24,7 +24,7 @@ let rec eval_expression : expression * env -> value * env = fun (exp, env) ->
   | EBool b                  -> eval_bool (b, env)
   | EVar id                  -> eval_var (id, env)
   | EBinop (binop, e1, e2)   -> eval_binop (binop, e1, e2, env)
-  | EArray a                 -> eval_array (a, env)
+  | EArray (_, a)            -> eval_array (a, env)
   | EArrayAccess (id, index) -> eval_array_access (id, index, env)
 
 and eval_int (i, env) = VInt i, env
