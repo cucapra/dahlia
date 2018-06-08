@@ -12,3 +12,5 @@ Transpile a program:
 
 Interpret a program:
 ``` cat my_program | jbuilder exec bin/ex.bc -- -tr ```
+
+Turn off type checking with ``` -nt ```.

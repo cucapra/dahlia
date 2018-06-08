@@ -5,11 +5,13 @@ open Lexing
 open Type
 
 let transpile = ref false
+let no_typecheck = ref false 
 
 let usage = "usage: " ^ Sys.argv.(0) ^ "[-tr]"
 
 let specs = [
   ("-tr", Arg.Set transpile, ": transpile program (rather than interpret)");
+  ("-nt", Arg.Set no_typecheck, ": do not typecheck program");
 ]
 
 let _ =
@@ -22,7 +24,10 @@ let _ =
   let lexbuf = Lexing.from_channel stdin in
   let commands = Parser.prog Lexer.token lexbuf in
   try
-    ignore (check_cmd commands empty_context);
+    if not (!no_typecheck) then
+      ignore (check_cmd commands empty_context)
+    else ();
+
 
     if !transpile then
       let final_env = Eval.eval_command (commands, Eval.empty_env) in
