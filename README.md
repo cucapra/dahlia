@@ -4,6 +4,11 @@ Under development! Seashell is a language that provides a type system that makes
 
 ## Setup/Use
 
-``` make build ``` : Build Seashell
+Build Seashell:
+``` jbuilder build bin/ex.bc ```
 
-``` cat my_program | make run ``` : Interpret a program and see resulting environment
+Transpile a program:
+``` cat my_program | jbuilder exec bin/ex.bc ```
+
+Interpret a program:
+``` cat my_program | jbuilder exec bin/ex.bc -- -tr ```
