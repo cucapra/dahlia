@@ -23,3 +23,5 @@ val eval_command : command * env -> env
 
 (* [string_of_env env] is a string representation of [env]. *)
 val string_of_env : env -> string
+
+val stringified_binding : id -> env -> string

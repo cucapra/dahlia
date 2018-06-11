@@ -24,7 +24,7 @@ let _ =
   let lexbuf = Lexing.from_channel stdin in
   let commands = Parser.prog Lexer.token lexbuf in
   try
-    if not (!no_typecheck) then
+    if not !no_typecheck then
       ignore (check_cmd commands empty_context)
     else ();
 

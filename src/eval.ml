@@ -115,11 +115,9 @@ and string_of_arr arr =
 
 let string_of_env env =
   (fun id v acc -> id ^ ": " ^ (string_of_val v) ^ "\n" ^ acc)
-  |> (fun f -> String.trim (EnvMap.fold f env ""))
+  |> fun f -> String.trim (EnvMap.fold f env "")
 
-(* [string_of_env2 env] is a map [s] that maps string representations
-   of variables to string representations of expressions bound to them. *)
-let string_of_env2 env =
-  (fun id v acc -> EnvMap.add id (string_of_val v) acc)
-  |> (fun f -> EnvMap.fold f env EnvMap.empty)
+let stringified_binding id env =
+  EnvMap.find id env
+  |> string_of_val
 
