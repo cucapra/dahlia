@@ -12,7 +12,7 @@ let result id prog =
   |> fun c -> Eval.eval_command (c, Eval.empty_env)
   |> Eval.stringified_binding id
 
-let tests = "Interpreter tests" >::: [
+let boolops0 = [
 
   "bools0_tat" >:: (fun _ -> assert_equal "true" (result "t_and_t" "bools0.ss"));
   "bools0_taf" >:: (fun _ -> assert_equal "false" (result "t_and_f" "bools0.ss"));
@@ -26,4 +26,15 @@ let tests = "Interpreter tests" >::: [
 
 ]
 
-let _ = run_test_tt_main tests
+let assign0 = [
+
+  "assign0_x" >:: (fun _ -> assert_equal "5" (result "x" "assignment.ss"));
+  "assign0_y" >:: (fun _ -> assert_equal "2" (result "y" "assignment.ss"));
+  "assign0_z" >:: (fun _ -> assert_equal "2" (result "z" "assignment.ss"));
+
+]
+
+let suite = "Intepreter test suite" >:::
+  boolops0 @ assign0
+
+let _ = run_test_tt_main suite
