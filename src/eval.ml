@@ -90,8 +90,8 @@ and eval_for x a b cmd env =
 and eval_for_body x i b cmd env =
   if i <= b then
     eval_command (CAssignment (x, EInt i), env)
-    |> (fun env' -> eval_command (cmd, env'))
-    |> (fun env'' -> eval_for_body x (i+1) b cmd env'')
+    |> fun env' -> eval_command (cmd, env')
+    |> fun env'' -> eval_for_body x (i+1) b cmd env''
   else env
 
 and eval_array_update x i exp env =
@@ -116,3 +116,10 @@ and string_of_arr arr =
 let string_of_env env =
   (fun id v acc -> id ^ ": " ^ (string_of_val v) ^ "\n" ^ acc)
   |> (fun f -> String.trim (EnvMap.fold f env ""))
+
+(* [string_of_env2 env] is a map [s] that maps string representations
+   of variables to string representations of expressions bound to them. *)
+let string_of_env2 env =
+  (fun id v acc -> EnvMap.add id (string_of_val v) acc)
+  |> (fun f -> EnvMap.fold f env EnvMap.empty)
+

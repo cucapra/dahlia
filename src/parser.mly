@@ -8,46 +8,25 @@ open Make_ast
 %token <int> INT
 %token <string> ID
 
-%token LET
-%token EQUAL
-%token SEMICOLON
+(* Keywords *)
+%token LET UNROLL FOR TRUE FALSE INT_ANNOTATION 
+       BOOL_ANNOTATION IF
 
-%token FOR
+(* Parentheses, brackets, etc *)
+%token LPAREN RPAREN LBRACK RBRACK LSQUARE RSQUARE
 
-%token LPAREN
-%token RPAREN
-%token LBRACK
-%token RBRACK
-%token LSQUARE
-%token RSQUARE
+(* Operations *)
+%token EQUAL NEQ GEQ LEQ LT GT EQ PLUS MINUS TIMES
+       AND OR REASSIGN 
 
-%token NEQ
-%token GEQ
-%token LEQ
-%token LT
-%token GT
-%token EQ
+(* Other *)
+%token SEMICOLON RANGE_DOTS
 
-%token PLUS
-%token MINUS
-%token TIMES
 
-%token AND
-%token OR
-
-%token TRUE
-%token FALSE
-
-%token INT_ANNOTATION
-%token BOOL_ANNOTATION
-
-%token RANGE_DOTS
-
-%token UNROLL
-
-%token REASSIGN
-
-%token IF
+%left AND OR
+%left NEQ GEQ LEQ LT GT EQ
+%left PLUS MINUS
+%left TIMES
 
 %left EQUAL
 
@@ -60,22 +39,24 @@ prog:
     { c } ;
 
 cmd:
-  | c1 = cmd; c2 = cmd;
+  | c1 = cmd c2 = cmd
     { make_seq c1 c2 }
-  | IF; LPAREN; b = expr; RPAREN; LBRACK; body = cmd; RBRACK;
+  | LET x = ID EQUAL e1 = expr SEMICOLON
+    { make_assignment x e1 }
+  | IF LPAREN b = expr RPAREN LBRACK body = cmd RBRACK
     { make_if b body }
-  | id = ID; LSQUARE; index = expr; RSQUARE; REASSIGN; e = expr; SEMICOLON
+  | id = ID LSQUARE index = expr RSQUARE REASSIGN e = expr SEMICOLON
     { make_array_update id index e }
-  | t = type_annotation; x = ID; LSQUARE; s = INT; RSQUARE; SEMICOLON
+  | t = type_annotation x = ID LSQUARE s = INT RSQUARE SEMICOLON
     { make_assignment x (make_array s t) }
-  | FOR; LPAREN; LET; x = ID; EQUAL; x1 = expr; RANGE_DOTS; x2 = expr; RPAREN; 
-    LBRACK; c = cmd; RBRACK
-    { make_for x x1 x2 c }
-  | LET; x = ID; EQUAL; e1 = expr; SEMICOLON
-    { make_assignment x e1 } ;
+  | FOR LPAREN LET x = ID EQUAL x1 = expr RANGE_DOTS x2 = expr RPAREN 
+    LBRACK c = cmd RBRACK
+    { make_for x x1 x2 c } ;
 
 expr:
-  | x = ID; LSQUARE; index = expr; RSQUARE
+  | LPAREN e = expr RPAREN
+    { e }
+  | x = ID LSQUARE index = expr RSQUARE
     { make_array_access x index }
   | x = INT
     { make_int x }
@@ -85,12 +66,12 @@ expr:
     { make_bool false }
   | x = ID
     { make_var x }
-  | e1 = expr; bop = binop; e2 = expr
+  | e1 = expr bop = binop e2 = expr
     { make_binop bop e1 e2 } ;
 
 type_annotation:
   | BOOL_ANNOTATION { TBool }
-  | INT_ANNOTATION { TInt }
+  | INT_ANNOTATION { TInt } ;
 
 %inline binop:
   | NEQ { BopNeq }
@@ -101,7 +82,7 @@ type_annotation:
   | EQ  { BopEq }
   | PLUS { BopPlus }
   | MINUS { BopMinus }
-  | TIMES { BopTimes } ;
-  | AND { BopAnd } ;
+  | TIMES { BopTimes }
+  | AND { BopAnd }
   | OR { BopOr } ;
 

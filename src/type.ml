@@ -43,6 +43,11 @@ let allow_ints = function
   | BopTimes -> true
   | _ -> false
 
+let allow_bools = function
+  | BopAnd
+  | BopOr -> true
+  | _ -> false
+
 let check_binop binop t1 t2 =
   match t1, t2 with
   | TInt, TInt ->
@@ -50,6 +55,11 @@ let check_binop binop t1 t2 =
       TInt 
     else 
       raise (TypeError "Cannot apply binary operation to pair of ints")
+  | TBool, TBool ->
+    if allow_bools binop then
+      TBool
+     else
+      raise (TypeError "Cannot apply binary operation to pair of bools")
   | _ -> 
     raise (TypeError 
       ("Can't apply operator '" ^ (string_of_binop binop) ^ 
@@ -101,8 +111,6 @@ and check_for id r1 r2 body context =
   match r1_type, r2_type with
   | TInt, TInt -> check_cmd body (ContextMap.add id TInt context)
   | _ -> raise (TypeError "Range start/end must be integers")
-
-
 
 and check_array_update id index exp context =
   ContextMap.find id context |> fun array_type ->

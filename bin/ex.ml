@@ -28,7 +28,7 @@ let _ =
       ignore (check_cmd commands empty_context)
     else ();
 
-    if !transpile then
+    if not !transpile then
       let final_env = Eval.eval_command (commands, Eval.empty_env) in
       print_endline (Eval.string_of_env final_env)
     else
