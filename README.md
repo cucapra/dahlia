@@ -19,7 +19,7 @@ cat my_program | jbuilder exec bin/ex.bc -- -tr
 Interpret a program:
 
 ``` 
-cat my_program | jbuilder exec bin/ex.bc -- 
+cat my_program | jbuilder exec bin/ex.bc
 ```
 
 Build/run the test cases:
