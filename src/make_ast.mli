@@ -12,12 +12,14 @@ val make_for : id -> expression -> expression -> command -> command
 
 val make_var : id -> expression
 
-val make_array : int -> type_node -> expression
-
-val make_array_update : id -> expression -> expression -> command
+val make_array : int -> int -> type_node -> expression
 
 val make_array_access : id -> expression -> expression
 
 val make_if : expression -> command -> command
 
 val make_seq : command -> command -> command
+
+val make_array_access_expl : id -> expression -> expression -> expression
+
+val make_reassignment : expression -> expression -> command

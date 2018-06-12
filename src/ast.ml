@@ -23,8 +23,9 @@ type expression =
   | EVar of id
   | EBool of bool
   | EBinop of binop * expression * expression
-  | EArray of type_node * expression array
+  | EArray of type_node * int * expression array
   | EArrayAccess of id * expression
+  | EArrayExplAccess of id * expression * expression
 
 type value =
   | VInt of int
@@ -35,6 +36,6 @@ type value =
 type command =
   | CAssignment of id * expression
   | CFor of id * expression * expression * command
-  | CArrayUpdate of id * expression * expression
+  | CReassign of expression * expression
   | CIf of expression * command
   | CSeq of command * command

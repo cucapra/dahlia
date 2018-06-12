@@ -23,6 +23,7 @@ rule token =
   | ">="         { GEQ }
   | "<="         { LEQ }
   | "!="         { NEQ }
+  | "=="         { EQ }
   | "+"          { PLUS }
   | "-"          { MINUS }
   | "*"          { TIMES }
@@ -30,10 +31,13 @@ rule token =
   | "&&"         { AND }
   | "||"         { OR }
 
+  | "memory"     { MEMORY }
+  | "bank"       { BANK }
   | "unroll"     { UNROLL }
 
   | "int"        { INT_ANNOTATION }
   | "bool"       { BOOL_ANNOTATION }
+  | "idx"        { IDX_ANNOTATION }
 
 
   | "if"         { IF }
@@ -43,6 +47,7 @@ rule token =
   | "false"      { FALSE }
 
   | ";"          { SEMICOLON }
+  | ":"          { COLON }
   | "="          { EQUAL }
 
   | "("          { LPAREN }

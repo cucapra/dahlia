@@ -4,14 +4,14 @@ open Lexing
 
 open Type
 
-let transpile = ref false
-let no_typecheck = ref false 
+let mode = ref ""
+let no_typecheck = ref false
 
 let usage = "usage: " ^ Sys.argv.(0) ^ "[-tr]"
 
 let specs = [
-  ("-tr", Arg.Set transpile, ": transpile program (rather than interpret)");
-  ("-nt", Arg.Set no_typecheck, ": do not typecheck program");
+  ("-m", Arg.Set_string mode, ": set mode (t=transp, i=interp, n=nothing)");
+  ("-nt", Arg.Set no_typecheck, ": turn off typechecking")
 ]
 
 let _ =
@@ -28,11 +28,15 @@ let _ =
       ignore (check_cmd commands empty_context)
     else ();
 
-    if not !transpile then
+    match String.lowercase_ascii !mode with
+    | "i" ->
       let final_env = Eval.eval_command (commands, Eval.empty_env) in
       print_endline (Eval.string_of_env final_env)
-    else
+    | "t" ->
       print_endline (Emit.generate_c commands)
+    | "n" -> ()
+    | _ ->
+      print_endline "Error: not a mode"
     
   with
     TypeError s -> print_endline s

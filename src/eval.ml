@@ -24,7 +24,7 @@ let rec eval_expression : expression * env -> value * env = fun (exp, env) ->
   | EBool b                  -> eval_bool (b, env)
   | EVar id                  -> eval_var (id, env)
   | EBinop (binop, e1, e2)   -> eval_binop (binop, e1, e2, env)
-  | EArray (_, a)            -> eval_array (a, env)
+  | EArray (_, _, a)          -> eval_array (a, env)
   | EArrayAccess (id, index) -> eval_array_access (id, index, env)
 
 and eval_int (i, env) = VInt i, env
@@ -65,7 +65,7 @@ let rec eval_command : command * env -> env = fun (cmd, env) ->
   | CIf (b, body)                -> eval_if b body env
   | CSeq (c1, c2)                -> eval_seq c1 c2 env
   | CFor (x, a, b, body)         -> eval_for x a b body env
-  | CArrayUpdate (x, index, exp) -> eval_array_update x index exp env
+  | CReassign _ -> failwith "Implement me"
 
 and eval_assignment x exp env =
   eval_expression (exp, env) 

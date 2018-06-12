@@ -33,7 +33,7 @@ let rec transpile_cmd = function
   | CAssignment (id, exp) -> transpile_assignment id exp
   | CSeq (c1, c2) -> transpile_seq c1 c2
   | CIf (cond, body) -> transpile_if cond body
-  | CArrayUpdate (id, idx, exp) -> transpile_array_update id idx exp
+  | CReassign _ -> failwith "Implement reassignment transpilation"
 
 and transpile_for id a b body =
   "for (int " ^ id ^ " = " ^ (transpile_exp a) ^ 

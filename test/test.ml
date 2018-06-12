@@ -34,7 +34,13 @@ let assign0 = [
 
 ]
 
+let array_access = [
+  
+  "access_in_cond" >:: (fun _ -> assert_equal "2" (result "x" "array_access1.ss"));
+
+]
+
 let suite = "Intepreter test suite" >:::
-  boolops0 @ assign0
+  boolops0 @ assign0 @ array_access
 
 let _ = run_test_tt_main suite

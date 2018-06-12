@@ -48,16 +48,34 @@ let allow_bools = function
   | BopOr -> true
   | _ -> false
 
+let bop_type = function
+  | BopEq -> TBool
+  | BopNeq -> TBool
+  | BopGeq -> TBool
+  | BopLeq -> TBool
+  | BopLt -> TBool
+  | BopGt -> TBool
+  | BopPlus -> TInt
+  | BopMinus -> TInt
+  | BopTimes -> TInt
+  | BopAnd -> TBool
+  | BopOr -> TBool
+
+(* FIXME: refactor/change this *)
+let is_int_literal = function
+  | EInt _ -> true
+  | _ -> false
+
 let check_binop binop t1 t2 =
   match t1, t2 with
   | TInt, TInt ->
     if allow_ints binop then
-      TInt 
+      bop_type binop
     else 
       raise (TypeError "Cannot apply binary operation to pair of ints")
   | TBool, TBool ->
     if allow_bools binop then
-      TBool
+      bop_type binop
      else
       raise (TypeError "Cannot apply binary operation to pair of bools")
   | _ -> 
@@ -73,7 +91,19 @@ let rec check_expr exp context =
   | EBinop (binop, e1, e2) -> 
     check_binop binop (check_expr e1 context) (check_expr e2 context)
   | EArray _ -> raise (TypeError "Can't refer to array literal")
-  | EArrayAccess _ -> TArray (TInt) (* FIXME *)
+  | EArrayAccess (id, _) -> check_array_access id context
+  | EArrayExplAccess (id, idx1, idx2) -> check_array_access_expl id idx1 idx2 context
+
+
+and check_array_access id context =
+  match check_expr (EVar id) context with
+  | TArray t -> t
+  | _ -> raise (TypeError "Tried to index into non-array")
+
+and check_array_access_expl id idx1 idx2 context =
+  check_expr (EVar id) context |> fun arr_type ->
+  is_int_literal idx1          |> fun fst_idx_is_stat ->
+  failwith "Implement array access check"
 
 let array_elem_error arr_id arr_t elem_t =
   ("Array " ^ arr_id ^ "is of type " ^ (string_of_type arr_t) ^ 
@@ -90,10 +120,10 @@ let cond_type_error =
 
 let rec check_cmd cmd context =
   match cmd with
+  | CReassign _ -> failwith "Implement reassignment type checking"
   | CSeq (c1, c2) -> check_seq c1 c2 context
   | CAssignment (x, e1) -> check_assignment x e1 context
   | CFor (x, r1, r2, body) -> check_for x r1 r2 body context
-  | CArrayUpdate (arr_id, idx, exp) -> check_array_update arr_id idx exp context
   | CIf (cond, cmd) -> check_if cond cmd context
 
 and check_seq c1 c2 context =
@@ -102,7 +132,7 @@ and check_seq c1 c2 context =
 
 and check_assignment id exp context =
   match exp with
-  | EArray (t, _) -> ContextMap.add id (TArray t) context
+  | EArray (t, b, _) -> ContextMap.add id (TArray t) context
   | other_exp -> ContextMap.add id (check_expr other_exp context) context
 
 and check_for id r1 r2 body context =
@@ -112,20 +142,7 @@ and check_for id r1 r2 body context =
   | TInt, TInt -> check_cmd body (ContextMap.add id TInt context)
   | _ -> raise (TypeError "Range start/end must be integers")
 
-and check_array_update id index exp context =
-  ContextMap.find id context |> fun array_type ->
-  check_expr index context   |> fun index_type ->
-  check_expr exp context     |> fun expr_type  ->
-  match array_type, index_type with
-  | TArray t, TInt ->
-    if t = expr_type then context
-    else raise (TypeError (array_elem_error id t expr_type))
-  | TArray _, _ ->
-    raise (TypeError arr_idx_type_error)
-  | _, _ ->
-    raise (TypeError arr_type_error)
- 
 and check_if cond cmd context =
   match check_expr cond context with
   | TBool -> check_cmd cmd context
-  | _ -> raise (TypeError cond_type_error)
+  | t -> raise (TypeError cond_type_error)

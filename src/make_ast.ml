@@ -18,13 +18,13 @@ let make_for x x1 x2 e =
 let make_var id =
   EVar id
 
-let make_array s t =
+let make_array s b t =
   match t with
-  | TInt -> EArray (TInt, (Array.make s (EInt 0)))
-  | TBool -> EArray (TBool, (Array.make s (EBool false)))
+  | TInt -> EArray (TInt, b, (Array.make s (EInt 0)))
+  | TBool -> EArray (TBool, b, (Array.make s (EBool false)))
 
-let make_array_update id i e =
-  CArrayUpdate (id, i, e)
+let make_reassignment e1 e2 =
+  CReassign (e1, e2)
 
 let make_if b body =
   CIf (b, body)
@@ -34,3 +34,6 @@ let make_array_access id index =
 
 let make_seq c1 c2 =
   CSeq (c1, c2)
+
+let make_array_access_expl id e1 e2 =
+  EArrayExplAccess (id, e1, e2)
