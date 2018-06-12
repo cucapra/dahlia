@@ -14,7 +14,7 @@ Transpile a program:
 
 Interpret a program:
 
-	$ cat my_program | jbuilder exec bin/ex.bc -m i
+	$ cat my_program | jbuilder exec bin/ex.bc -- -m i
 
 Build/run the test cases:
 
@@ -23,4 +23,4 @@ Build/run the test cases:
 
 Just typecheck :
 
-	$ cat my_program | jbuilder exec bin/ex.bc -m n -nt
+	$ cat my_program | jbuilder exec bin/ex.bc -- -m n -nt
