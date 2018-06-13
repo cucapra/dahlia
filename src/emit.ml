@@ -1,5 +1,10 @@
 open Ast
 
+let type_map = ref (fun _ -> failwith "TypeMap has not been set")
+
+let set_type_map t =
+  type_map := !t; ()
+
 (* FIXME: this is defined in type.ml too, maybe make some string util module? *)
 let string_of_binop = function
   | BopEq -> "="
@@ -40,10 +45,11 @@ and transpile_for id a b body =
   "; " ^ id ^ " < " ^ (transpile_exp b) ^ "; " ^ 
   id ^ " += 1) {" ^ (transpile_cmd body) ^ "}"
 
-(* FIXME: only works for ints. How to get types? From typechecker pass? *)
-(* FIXME: also only works for initial assignments *)
 and transpile_assignment id exp =
-  "int " ^ id ^ " = " ^ (transpile_exp exp) ^ ";"
+  match !type_map id with
+  | TInt -> "int " ^ " " ^ id ^ " = " ^ (transpile_exp exp) ^ ";"
+  | TBool -> "int " ^ " " ^ id ^ " = " ^ (transpile_exp exp) ^ ";"
+  | TArray t -> failwith "Implement meee"
 
 and transpile_seq c1 c2 =
   (transpile_cmd c1) ^ " " ^ (transpile_cmd c2)

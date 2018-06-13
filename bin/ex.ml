@@ -2,8 +2,6 @@ open Seashell
 open Lexer
 open Lexing
 
-open Type
-
 let mode = ref ""
 let no_typecheck = ref false
 
@@ -25,7 +23,8 @@ let _ =
   let commands = Parser.prog Lexer.token lexbuf in
   try
     if not !no_typecheck then
-      ignore (check_cmd commands empty_context)
+      (ignore (Type.check_cmd commands Type.empty_context);
+       Emit.set_type_map Type.type_map)
     else ();
 
     match String.lowercase_ascii !mode with
@@ -39,4 +38,4 @@ let _ =
       print_endline "Error: not a mode"
     
   with
-    TypeError s -> print_endline s
+    Type.TypeError s -> print_endline s

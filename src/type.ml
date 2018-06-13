@@ -13,6 +13,14 @@ type context = type_node ContextMap.t
 
 let empty_context = ContextMap.empty
 
+let global_context = ref ContextMap.empty
+let rec type_map = ref (fun id -> ContextMap.find id !global_context)
+
+and string_of_type = function
+  | TBool -> "bool"
+  | TInt -> "int"
+  | TArray t -> (string_of_type t) ^ " array"
+
 let string_of_binop = function
   | BopEq -> "="
   | BopNeq -> "!="
@@ -25,11 +33,6 @@ let string_of_binop = function
   | BopTimes -> "*"
   | BopOr -> "||"
   | BopAnd -> "&&"
-
-let rec string_of_type = function
-  | TBool -> "bool"
-  | TInt -> "int"
-  | TArray t -> (string_of_type t) ^ " array"
 
 let allow_ints = function
   | BopEq
@@ -121,12 +124,13 @@ let cond_type_error =
   "Non-boolean conditional"
 
 let rec check_cmd cmd context =
-  match cmd with
+  (match cmd with
   | CReassign (target, exp) -> check_reassign target exp context
   | CSeq (c1, c2)           -> check_seq c1 c2 context
   | CAssignment (x, e1)     -> check_assignment x e1 context
   | CFor (x, r1, r2, body)  -> check_for x r1 r2 body context
-  | CIf (cond, cmd)         -> check_if cond cmd context
+  | CIf (cond, cmd)         -> check_if cond cmd context)
+  |> fun c -> global_context := c; c
 
 and check_reassign target exp context =
   match target, exp with
