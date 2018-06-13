@@ -66,16 +66,16 @@ let is_int_literal = function
   | EInt _ -> true
   | _ -> false
 
-let check_binop binop t1 t2 =
+let check_binop binop (t1, c) (t2, c) =
   match t1, t2 with
   | TInt, TInt ->
     if allow_ints binop then
-      bop_type binop
+      bop_type binop, c
     else 
       raise (TypeError "Cannot apply binary operation to pair of ints")
   | TBool, TBool ->
     if allow_bools binop then
-      bop_type binop
+      bop_type binop, c
      else
       raise (TypeError "Cannot apply binary operation to pair of bools")
   | _ -> 
@@ -85,20 +85,22 @@ let check_binop binop t1 t2 =
 
 let rec check_expr exp context =
   match exp with
-  | EInt _ -> TInt
-  | EBool _ -> TBool
-  | EVar x -> ContextMap.find x context
+  | EInt _                 -> TInt, context
+  | EBool _                -> TBool, context
+  | EVar x                 -> ContextMap.find x context, context
   | EBinop (binop, e1, e2) -> 
     check_binop binop (check_expr e1 context) (check_expr e2 context)
-  | EArray _ -> raise (TypeError "Can't refer to array literal")
-  | EArrayAccess (id, _) -> check_array_access id context
-  | EArrayExplAccess (id, idx1, idx2) -> check_array_access_expl id idx1 idx2 context
-
+  | EArray _               -> raise (TypeError "Can't refer to array literal")
+  | EArrayAccess (id, _)   -> check_array_access id context
+  | _ -> failwith "Implement rest of expressions"
 
 and check_array_access id context =
-  match check_expr (EVar id) context with
-  | TArray t -> t
-  | _ -> raise (TypeError "Tried to index into non-array")
+  try
+    match check_expr (EVar id) context with
+    | (TArray t, c) -> t, ContextMap.remove id c
+    | _ -> raise (TypeError "Tried to index into non-array")
+  with
+    Not_found -> raise (TypeError "Tried to access array illegal number of times")
 
 and check_array_access_expl id idx1 idx2 context =
   check_expr (EVar id) context |> fun arr_type ->
@@ -120,11 +122,20 @@ let cond_type_error =
 
 let rec check_cmd cmd context =
   match cmd with
-  | CReassign _ -> failwith "Implement reassignment type checking"
-  | CSeq (c1, c2) -> check_seq c1 c2 context
-  | CAssignment (x, e1) -> check_assignment x e1 context
-  | CFor (x, r1, r2, body) -> check_for x r1 r2 body context
-  | CIf (cond, cmd) -> check_if cond cmd context
+  | CReassign (target, exp) -> check_reassign target exp context
+  | CSeq (c1, c2)           -> check_seq c1 c2 context
+  | CAssignment (x, e1)     -> check_assignment x e1 context
+  | CFor (x, r1, r2, body)  -> check_for x r1 r2 body context
+  | CIf (cond, cmd)         -> check_if cond cmd context
+
+and check_reassign target exp context =
+  match target, exp with
+  | EArrayAccess (id, _), expr -> 
+    check_array_access id context |> fun (t_arr, c')  ->
+    check_expr exp c'             |> fun (t_exp, c'') ->
+    if t_arr=t_exp then c'' else raise (TypeError "Tried to populate array with incorrect type")
+  | EVar id, expr -> context
+  | _ -> raise (TypeError "Used reassign operator on illegal types")
 
 and check_seq c1 c2 context =
   check_cmd c1 context
@@ -133,16 +144,17 @@ and check_seq c1 c2 context =
 and check_assignment id exp context =
   match exp with
   | EArray (t, b, _) -> ContextMap.add id (TArray t) context
-  | other_exp -> ContextMap.add id (check_expr other_exp context) context
+  | other_exp -> check_expr other_exp context |> fun (t, c) ->
+    ContextMap.add id t c
 
 and check_for id r1 r2 body context =
-  check_expr r1 context |> fun r1_type ->
-  check_expr r2 context |> fun r2_type ->
+  check_expr r1 context |> fun (r1_type, c') ->
+  check_expr r2 c'      |> fun (r2_type, c'') ->
   match r1_type, r2_type with
-  | TInt, TInt -> check_cmd body (ContextMap.add id TInt context)
+  | TInt, TInt -> check_cmd body (ContextMap.add id TInt c'')
   | _ -> raise (TypeError "Range start/end must be integers")
 
 and check_if cond cmd context =
   match check_expr cond context with
-  | TBool -> check_cmd cmd context
+  | TBool, c -> check_cmd cmd c
   | t -> raise (TypeError cond_type_error)

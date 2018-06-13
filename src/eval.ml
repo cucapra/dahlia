@@ -65,7 +65,7 @@ let rec eval_command : command * env -> env = fun (cmd, env) ->
   | CIf (b, body)                -> eval_if b body env
   | CSeq (c1, c2)                -> eval_seq c1 c2 env
   | CFor (x, a, b, body)         -> eval_for x a b body env
-  | CReassign _ -> failwith "Implement me"
+  | CReassign (target, exp)      -> eval_reassign target exp env
 
 and eval_assignment x exp env =
   eval_expression (exp, env) 
@@ -93,6 +93,12 @@ and eval_for_body x i b cmd env =
     |> fun env' -> eval_command (cmd, env')
     |> fun env'' -> eval_for_body x (i+1) b cmd env''
   else env
+
+and eval_reassign target exp env =
+  match target with
+  | EVar id -> eval_assignment id exp env
+  | EArrayAccess (x, idx) -> eval_array_update x idx exp env
+  | _ -> failwith "Type checker failed to catch illegal update operation"
 
 and eval_array_update x i exp env =
   eval_var (x, env)            |> fun (arr, env') -> 
