@@ -1,4 +1,4 @@
-int a[6];
+memory a: int[6] bank(5);
 
 a[0] := 8;
 a[1] := 5;
@@ -12,7 +12,7 @@ for (let i = 0..5) {
     for (let j = i+1..5) {
 
         if (a[j] < a[min_index]) {
-            let min_index = j;
+            min_index := j;
         }
     }
 
