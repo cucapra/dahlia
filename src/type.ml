@@ -100,7 +100,7 @@ let rec check_expr exp context =
 and check_array_access id context =
   try
     match check_expr (EVar id) context with
-    | (TArray t, c) -> t, ContextMap.remove id c
+    | (TArray t, c) -> t, c (* FIXME: fix so affine works with transp... ContextMap.remove id c *)
     | _ -> raise (TypeError "Tried to index into non-array")
   with
     Not_found -> raise (TypeError "Tried to access array illegal number of times")

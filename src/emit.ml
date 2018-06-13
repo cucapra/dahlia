@@ -38,18 +38,20 @@ let rec transpile_cmd = function
   | CAssignment (id, exp) -> transpile_assignment id exp
   | CSeq (c1, c2) -> transpile_seq c1 c2
   | CIf (cond, body) -> transpile_if cond body
-  | CReassign _ -> failwith "Implement reassignment transpilation"
+  | CReassign (target, exp) -> transpile_reassign target exp
 
 and transpile_for id a b body =
   "for (int " ^ id ^ " = " ^ (transpile_exp a) ^ 
   "; " ^ id ^ " < " ^ (transpile_exp b) ^ "; " ^ 
   id ^ " += 1) {" ^ (transpile_cmd body) ^ "}"
 
+(* FIXME: only works with ints/bools *)
 and transpile_assignment id exp =
-  match !type_map id with
-  | TInt -> "int " ^ " " ^ id ^ " = " ^ (transpile_exp exp) ^ ";"
-  | TBool -> "int " ^ " " ^ id ^ " = " ^ (transpile_exp exp) ^ ";"
-  | TArray t -> failwith "Implement meee"
+  match !type_map id, exp with
+  | TInt, _
+  | TBool, _ -> "int " ^ " " ^ id ^ " = " ^ (transpile_exp exp) ^ ";"
+  | TArray t, EArray (_, s, _) -> "int " ^ id ^ "[" ^ (string_of_int s) ^ "];"
+  | _ -> failwith "Impossible"
 
 and transpile_seq c1 c2 =
   (transpile_cmd c1) ^ " " ^ (transpile_cmd c2)
@@ -59,6 +61,13 @@ and transpile_if cond body =
 
 and transpile_array_update id idx exp =
   id ^ "[" ^ (transpile_exp idx) ^ "] = " ^ (transpile_exp exp) ^ ";"
+
+and transpile_reassign target exp =
+  (match target with
+  | EArrayAccess (id, idx) -> transpile_array_access id idx
+  | EVar id -> id
+  | _ -> failwith "Impossible")
+  |> fun left -> left ^ " = " ^ (transpile_exp exp) ^ ";" 
 
 let generate_c prog =
   "int main() { " ^ (transpile_cmd prog) ^ " return 0; }"
