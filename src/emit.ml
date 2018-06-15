@@ -20,7 +20,7 @@ let string_of_binop = function
   | BopOr -> "||"
 
 let rec transpile_exp = function
-  | EInt i -> string_of_int i
+  | EInt (i, _) -> string_of_int i
   | EBool b -> if b then "1" else "0"
   | EVar id -> id
   | EArray _ -> failwith "Implement array transpilation"
@@ -45,10 +45,10 @@ and transpile_for id a b body =
   "; " ^ id ^ " < " ^ (transpile_exp b) ^ "; " ^ 
   id ^ " += 1) {" ^ (transpile_cmd body) ^ "}"
 
-(* FIXME: only works with ints/bools *)
+(* FIXME: only works with arrays/ints/bools *)
 and transpile_assignment id exp =
   match !type_map id, exp with
-  | TInt, _
+  | TInt _, _
   | TBool, _ -> "int " ^ " " ^ id ^ " = " ^ (transpile_exp exp) ^ ";"
   | TArray t, EArray (_, s, _) -> "int " ^ id ^ "[" ^ (string_of_int s) ^ "];"
   | _ -> failwith "Impossible"
@@ -63,10 +63,10 @@ and transpile_array_update id idx exp =
   id ^ "[" ^ (transpile_exp idx) ^ "] = " ^ (transpile_exp exp) ^ ";"
 
 and transpile_reassign target exp =
-  (match target with
+  match target with
   | EArrayAccess (id, idx) -> transpile_array_access id idx
   | EVar id -> id
-  | _ -> failwith "Impossible")
+  | _ -> failwith "Impossible"
   |> fun left -> left ^ " = " ^ (transpile_exp exp) ^ ";" 
 
 let generate_c prog =

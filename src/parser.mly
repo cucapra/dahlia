@@ -74,7 +74,7 @@ expr:
 
 type_annotation:
   | BOOL_ANNOTATION { TBool }
-  | INT_ANNOTATION { TInt } ;
+  | INT_ANNOTATION { TInt false } ;
 
 %inline binop:
   | NEQ { BopNeq }

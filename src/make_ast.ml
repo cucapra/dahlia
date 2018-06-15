@@ -4,7 +4,7 @@ let make_assignment id expr =
   CAssignment (id, expr)
 
 let make_int x =
-  EInt (x)
+  EInt (x, true)
 
 let make_bool b =
   EBool (b)
@@ -20,7 +20,7 @@ let make_var id =
 
 let make_array s b t =
   match t with
-  | TInt -> EArray (TInt, b, (Array.make s (EInt 0)))
+  | TInt _ -> EArray (TInt false, b, (Array.make s (EInt (0, true))))
   | TBool -> EArray (TBool, b, (Array.make s (EBool false)))
 
 let make_reassignment e1 e2 =

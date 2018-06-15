@@ -1,7 +1,7 @@
 type id = string
 
 type type_node =
-  | TInt
+  | TInt of bool
   | TBool
   | TArray of type_node
 
@@ -19,7 +19,7 @@ type binop =
   | BopOr
 
 type expression =
-  | EInt of int
+  | EInt of int * bool (* true indicates static *)
   | EVar of id
   | EBool of bool
   | EBinop of binop * expression * expression

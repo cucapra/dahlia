@@ -20,11 +20,11 @@ let empty_env = EnvMap.empty
 let rec eval_expression : expression * env -> value * env = fun (exp, env) ->
   let open EnvMap in
   match exp with
-  | EInt x                   -> eval_int (x, env)
+  | EInt (x, _)              -> eval_int (x, env)
   | EBool b                  -> eval_bool (b, env)
   | EVar id                  -> eval_var (id, env)
   | EBinop (binop, e1, e2)   -> eval_binop (binop, e1, e2, env)
-  | EArray (_, _, a)          -> eval_array (a, env)
+  | EArray (_, _, a)         -> eval_array (a, env)
   | EArrayAccess (id, index) -> eval_array_access (id, index, env)
 
 and eval_int (i, env) = VInt i, env
@@ -89,7 +89,7 @@ and eval_for x a b cmd env =
 
 and eval_for_body x i b cmd env =
   if i <= b then
-    eval_command (CAssignment (x, EInt i), env)
+    eval_command (CAssignment (x, (EInt (i, true))), env)
     |> fun env' -> eval_command (cmd, env')
     |> fun env'' -> eval_for_body x (i+1) b cmd env''
   else env
