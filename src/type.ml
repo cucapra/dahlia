@@ -2,10 +2,23 @@ open Ast
 
 exception TypeError of string
 
+let compare_opts i1 i2 =
+  match i1, i2 with
+  | None, None -> 0
+  | Some i1, None -> 1
+  | None, Some i2 -> -1
+  | Some i1, Some i2 ->
+    if i1>i2 then 1
+    else if i1<i2 then -1
+    else 0
+
+(* FIXME: use a HashTbl*)
 module ContextMap = Map.Make(
   struct
-    type t = id
-    let compare = String.compare
+    type t = id * int option
+    let compare (ida, i1) (idb, i2) =
+      if (String.compare ida idb) != 0 then String.compare ida idb
+      else compare_opts i1 i2
   end
 )
 
@@ -14,7 +27,7 @@ type context = type_node ContextMap.t
 let empty_context = ContextMap.empty
 
 let global_context = ref ContextMap.empty
-let rec type_map = ref (fun id -> ContextMap.find id !global_context)
+let rec type_map = ref (fun id -> ContextMap.find (id, None) !global_context)
 
 and string_of_type = function
   | TBool -> "bool"
@@ -88,9 +101,9 @@ let check_binop binop (t1, c) (t2, c) =
 
 let rec check_expr exp context =
   match exp with
-  | EInt (_, s)                 -> TInt s, context
+  | EInt (_, s)            -> TInt s, context
   | EBool _                -> TBool, context
-  | EVar x                 -> ContextMap.find x context, context
+  | EVar x                 -> ContextMap.find (x, None) context, context
   | EBinop (binop, e1, e2) -> 
     check_binop binop (check_expr e1 context) (check_expr e2 context)
   | EArray _               -> raise (TypeError "Can't refer to array literal")
@@ -102,7 +115,15 @@ and check_array_access_explicit id idx1 idx2 context =
   check_expr idx2 c'      |> fun (idx2_t, c'') ->
   match idx1_t, idx2_t with
   | TInt s1, TInt _ -> 
-    if s1 then TInt true else raise (TypeError "Bank accessor must be static") 
+    if s1 then
+    begin
+      match idx1 with
+      | EInt (idx, _) -> 
+        if ContextMap.mem (id, Some idx) c'' then
+          TInt s1, ContextMap.remove (id, Some idx) c''
+        else raise (TypeError ("Illegal bank access: " ^ (string_of_int idx)))
+    end
+    else raise (TypeError "Bank accessor must be static") 
   | _ -> raise (TypeError "Array indices must be integers")
 
 and check_array_access id context =
@@ -143,8 +164,8 @@ and check_reassign target exp context =
     if t_arr=t_exp then c'' else raise (TypeError "Tried to populate array with incorrect type")
   | EArrayExplAccess (id, idx1, idx2), expr ->
     begin
-    check_array_access_explicit id idx1 idx2 context |> fun t_arr ->
-    check_expr exp context                           |> fun (t_exp, c') ->
+    check_array_access_explicit id idx1 idx2 context |> fun (t_arr, c) ->
+    check_expr exp c                                 |> fun (t_exp, c') ->
     match t_arr, t_exp with
     | TInt _, TInt _ -> c'
     | t1, t2 -> if t1=t2 then c' else raise (TypeError "Tried to populate array with incorrect type")
@@ -156,17 +177,23 @@ and check_seq c1 c2 context =
   check_cmd c1 context
   |> fun context' -> check_cmd c2 context'
 
+and add_array_banks id bank_num context t i =
+  if i=bank_num then context
+  else add_array_banks id bank_num (ContextMap.add (id, Some i) (TArray t) context) t (i+1)
+
 and check_assignment id exp context =
   match exp with
-  | EArray (t, b, _) -> ContextMap.add id (TArray t) context
+  | EArray (t, b, _) -> 
+    (* For each element of the array, add a copy to the context *)
+    add_array_banks id b context t 0
   | other_exp -> check_expr other_exp context |> fun (t, c) ->
-    ContextMap.add id t c
+    ContextMap.add (id, None) t c
 
 and check_for id r1 r2 body context =
   check_expr r1 context |> fun (r1_type, c') ->
   check_expr r2 c'      |> fun (r2_type, c'') ->
   match r1_type, r2_type with
-  | TInt _, TInt _ -> check_cmd body (ContextMap.add id (TInt false) c'')
+  | TInt _, TInt _ -> check_cmd body (ContextMap.add (id, None) (TInt false) c'')
   | _ -> raise (TypeError "Range start/end must be integers")
 
 and check_if cond cmd context =
