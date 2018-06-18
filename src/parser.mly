@@ -48,6 +48,9 @@ cmd:
     { make_if b body }
   | e1 = expr; REASSIGN; e2 = expr; SEMICOLON
     { make_reassignment e1 e2 } 
+  | FOR LPAREN LET x = ID EQUAL x1 = expr RANGE_DOTS x2 = expr RPAREN
+    UNROLL LBRACK c = cmd RBRACK
+
   | FOR LPAREN LET x = ID EQUAL x1 = expr RANGE_DOTS x2 = expr RPAREN 
     LBRACK c = cmd RBRACK
     { make_for x x1 x2 c } ;
@@ -55,6 +58,8 @@ cmd:
     { make_seq c1 c2 }
 
 expr:
+  | x = ID; LSQUARE; idx = expr; RSQUARE
+    { make_array_access_impl x idx }
   | x = ID; LSQUARE; idx1 = expr; RSQUARE; LSQUARE; idx2 = expr; RSQUARE
     { make_array_access_expl x idx1 idx2 }
   | LPAREN e = expr RPAREN
