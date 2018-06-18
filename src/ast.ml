@@ -3,7 +3,7 @@ type id = string
 type type_node =
   | TInt of bool
   | TBool
-  | TArray of type_node
+  | TArray of type_node * int
 
 type binop =
   | BopEq

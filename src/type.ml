@@ -32,7 +32,7 @@ let rec type_map = ref (fun id -> ContextMap.find (id, None) !global_context)
 and string_of_type = function
   | TBool -> "bool"
   | TInt _ -> "int"
-  | TArray t -> (string_of_type t) ^ " array"
+  | TArray (t, _) -> (string_of_type t) ^ " array"
 
 let string_of_binop = function
   | BopEq -> "="
@@ -107,7 +107,6 @@ let rec check_expr exp context =
   | EBinop (binop, e1, e2) -> 
     check_binop binop (check_expr e1 context) (check_expr e2 context)
   | EArray _               -> raise (TypeError "Can't refer to array literal")
-  | EArrayAccess (id, _)   -> check_array_access id context
   | _ -> failwith "Implement rest of expressions"
 
 and check_array_access_explicit id idx1 idx2 context =
@@ -125,14 +124,6 @@ and check_array_access_explicit id idx1 idx2 context =
     end
     else raise (TypeError "Bank accessor must be static") 
   | _ -> raise (TypeError "Array indices must be integers")
-
-and check_array_access id context =
-  try
-    match check_expr (EVar id) context with
-    | (TArray t, c) -> t, c (* FIXME: fix so affine works with transp... ContextMap.remove id c *)
-    | _ -> raise (TypeError "Tried to index into non-array")
-  with
-    Not_found -> raise (TypeError "Tried to access array illegal number of times")
 
 let array_elem_error arr_id arr_t elem_t =
   ("Array " ^ arr_id ^ "is of type " ^ (string_of_type arr_t) ^ 
@@ -158,10 +149,6 @@ let rec check_cmd cmd context =
 
 and check_reassign target exp context =
   match target, exp with
-  | EArrayAccess (id, _), expr -> 
-    check_array_access id context |> fun (t_arr, c')  ->
-    check_expr exp c'             |> fun (t_exp, c'') ->
-    if t_arr=t_exp then c'' else raise (TypeError "Tried to populate array with incorrect type")
   | EArrayExplAccess (id, idx1, idx2), expr ->
     begin
     check_array_access_explicit id idx1 idx2 context |> fun (t_arr, c) ->
@@ -177,15 +164,15 @@ and check_seq c1 c2 context =
   check_cmd c1 context
   |> fun context' -> check_cmd c2 context'
 
-and add_array_banks id bank_num context t i =
+and add_array_banks bf id bank_num context t i =
   if i=bank_num then context
-  else add_array_banks id bank_num (ContextMap.add (id, Some i) (TArray t) context) t (i+1)
+  else add_array_banks bf id bank_num (ContextMap.add (id, Some i) (TArray (t, bf)) context) t (i+1)
 
 and check_assignment id exp context =
   match exp with
   | EArray (t, b, _) -> 
     (* For each element of the array, add a copy to the context *)
-    add_array_banks id b context t 0
+    ContextMap.add (id, None) (TArray (t, b)) (add_array_banks b id b context t 0)
   | other_exp -> check_expr other_exp context |> fun (t, c) ->
     ContextMap.add (id, None) t c
 
