@@ -27,6 +27,7 @@ rule token =
   | "+"          { PLUS }
   | "-"          { MINUS }
   | "*"          { TIMES }
+  | "/"          { FORWARD_SLASH }
 
   | "&&"         { AND }
   | "||"         { OR }

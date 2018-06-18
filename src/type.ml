@@ -92,6 +92,7 @@ let rec check_expr exp context =
   | EBinop (binop, e1, e2) -> 
     check_binop binop (check_expr e1 context) (check_expr e2 context)
   | EArray _               -> raise (TypeError "Can't refer to array literal")
+  | EArrayExplAccess (id, idx1, idx2) -> check_array_access_explicit id idx1 idx2 context
   | _ -> failwith "Implement rest of expressions"
 
 and check_array_access_implicit id idx context =

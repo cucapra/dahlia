@@ -26,6 +26,7 @@ let rec transpile_exp = function
   | EArray _ -> failwith "Implement array transpilation"
   | EArrayAccess (id, idx) -> transpile_array_access id idx
   | EBinop (b, e1, e2) -> transpile_binop b e1 e2
+  | EArrayExplAccess (id, idx1, idx2) -> transpile_explicit_array_access id idx1 idx2
   
 and transpile_array_access id idx =
   id ^ "[" ^ (transpile_exp idx) ^ "]"
@@ -33,7 +34,7 @@ and transpile_array_access id idx =
 and transpile_binop b e1 e2 =
   (transpile_exp e1) ^ " " ^ (string_of_binop b) ^ " " ^ (transpile_exp e2)
 
-let rec transpile_cmd = function
+and transpile_cmd = function
   | CFor (id, a, b, body) -> transpile_for id a b body
   | CAssignment (id, exp) -> transpile_assignment id exp
   | CSeq (c1, c2) -> transpile_seq c1 c2
