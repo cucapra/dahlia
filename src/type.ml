@@ -2,8 +2,6 @@ open Ast
 
 exception TypeError of string
 
-let flip f x y = f y x
-
 type context = ((id * int option), type_node) Hashtbl.t
 
 let empty_context = Hashtbl.create 100
