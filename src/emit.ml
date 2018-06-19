@@ -3,7 +3,7 @@ open Ast
 let type_map = ref (fun _ -> failwith "TypeMap has not been set")
 
 let set_type_map t =
-  type_map := !t; ()
+  type_map := t; ()
 
 (* FIXME: this is defined in type.ml too, maybe make some string util module? *)
 let string_of_binop = function
@@ -24,22 +24,21 @@ let rec transpile_exp = function
   | EBool b -> if b then "1" else "0"
   | EVar id -> id
   | EArray _ -> failwith "Implement array transpilation"
-  | EArrayAccess (id, idx) -> transpile_array_access id idx
   | EBinop (b, e1, e2) -> transpile_binop b e1 e2
   | EArrayExplAccess (id, idx1, idx2) -> transpile_explicit_array_access id idx1 idx2
+  | EArrayImplAccess _ -> failwith "Implement implicit array compilation"
+  | EIndex _ -> failwith "Implement index compilation"
   
-and transpile_array_access id idx =
-  id ^ "[" ^ (transpile_exp idx) ^ "]"
-
 and transpile_binop b e1 e2 =
   (transpile_exp e1) ^ " " ^ (string_of_binop b) ^ " " ^ (transpile_exp e2)
 
 and transpile_cmd = function
   | CFor (id, a, b, body) -> transpile_for id a b body
-  | CAssignment (id, exp) -> transpile_assignment id exp
+  | CAssign (id, exp) -> transpile_assignment id exp
   | CSeq (c1, c2) -> transpile_seq c1 c2
   | CIf (cond, body) -> transpile_if cond body
   | CReassign (target, exp) -> transpile_reassign target exp
+  | CForImpl _ -> failwith "Implement for loop implicit"
 
 and transpile_for id a b body =
   "for (int " ^ id ^ " = " ^ (transpile_exp a) ^ 
@@ -63,6 +62,7 @@ and transpile_if cond body =
 and transpile_explicit_array_access id b i =
   match !type_map id with
   | (TArray (_, bf)) -> id ^ "[" ^ (transpile_exp b) ^ "+" ^ (string_of_int bf) ^ "*" ^ (transpile_exp i) ^ "]"
+  | failwith -> "Improper type passed in emitter"
 
 and transpile_reassign target exp =
   (match target with

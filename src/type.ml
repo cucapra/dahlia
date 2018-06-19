@@ -8,7 +8,7 @@ type context = ((id * int option), type_node) Hashtbl.t
 
 let empty_context = Hashtbl.create 100
 
-let type_of_id = flip Hashtbl.find
+let type_of_id id context = Hashtbl.find context (id, None)
 
 let rec string_of_type = function
   | TBool -> "bool"
@@ -48,6 +48,13 @@ let is_int = function
 
 let is_bool = (=) TBool
 
+let rec types_equal t1 t2 =
+  match t1, t2 with
+  | TInt _, TInt _ -> true
+  | TArray (a1, bf1), TArray (a2, bf2) -> types_equal a1 a2
+  | TIndex _, TIndex _ -> true
+  | t1, t2 -> t1=t2
+
 let legal_op t1 t2 = function
   | BopEq    -> is_int t1 && is_int t2
   | BopNeq   -> is_int t1 && is_int t2
@@ -70,9 +77,9 @@ let rec check_expr exp context =
   | EArray _                          -> raise (TypeError "Can't refer to array literal")
   | EArrayExplAccess (id, idx1, idx2) -> check_aa_expl id idx1 idx2 context
   | EIndex _
-  | EArrayImplAccess _ -> failwith "Implement implicit access"
+  | EArrayImplAccess _                -> failwith "Implement implicit access"
 
-and check_int i s ctx = (if s then TInt (Some i) else TInt (None)), ctx
+and check_int i is_stat ctx = (if is_stat then TInt (Some i) else TInt (None)), ctx
 
 and check_binop binop e1 e2 c =
   check_expr e1 c  |> fun (t1, c1) ->
@@ -100,22 +107,12 @@ and check_aa_expl id idx1 idx2 c =
     else raise (TypeError ("Illegal bank access: " ^ (string_of_int i)))
   | _ -> raise (TypeError "Bank accessor must be static") 
 
-let array_elem_error arr_id arr_t elem_t =
-  ("Array " ^ arr_id ^ "is of type " ^ (string_of_type arr_t) ^ 
-  "; tried to add element of type " ^ (string_of_type elem_t))
-
-let arr_idx_type_error =
-  "Tried to index into array with non-integer index"
-
-let arr_type_error =
-  "Tried to index into non-array"
-
 let rec check_cmd cmd context =
   match cmd with
   | CSeq (c1, c2)              -> check_seq c1 c2 context
   | CIf (cond, cmd)            -> check_if cond cmd context
   | CFor (x, r1, r2, body)     -> check_for x r1 r2 body context
-  | CAssignment (x, e1)        -> check_assignment x e1 context
+  | CAssign (x, e1)            -> check_assignment x e1 context
   | CReassign (target, exp)    -> check_reassign target exp context
   | CForImpl (x, r1, r2, body) -> check_for_impl x r1 r2 body context
 
@@ -128,12 +125,6 @@ and check_if cond cmd context =
   | TBool, c -> check_cmd cmd c
   | _ -> raise (TypeError "Non-boolean conditional")
   
-and add_array_banks bf id bank_num context t i =
-  if i=bank_num then context
-  else 
-    (Hashtbl.add context (id, Some i) (TArray (t, bf)); 
-     (add_array_banks bf id bank_num context t (i+1)))
-
 and check_for id r1 r2 body c =
   check_expr r1 c       |> fun (r1_type, c1) ->
   check_expr r2 c1      |> fun (r2_type, c2) ->
@@ -141,6 +132,15 @@ and check_for id r1 r2 body c =
   | TInt _, TInt _ -> 
     Hashtbl.add c2 (id, None) (TInt None); check_cmd body c2
   | _ -> raise (TypeError "Range start/end must be integers")
+
+and check_for_impl id idx1 idx2 body context =
+  failwith "Implement index for loop"
+
+and add_array_banks bf id bank_num context t i =
+  if i=bank_num then context
+  else 
+    (Hashtbl.add context (id, Some i) (TArray (t, bf)); 
+     (add_array_banks bf id bank_num context t (i+1)))
 
 and check_assignment id exp context =
   match exp with
@@ -154,24 +154,11 @@ and check_assignment id exp context =
 and check_reassign target exp context =
   match target, exp with
   | EArrayExplAccess (id, idx1, idx2), expr ->
-    begin
-    check_array_access_explicit id idx1 idx2 context |> fun (t_arr, c) ->
-    check_expr exp c                                 |> fun (t_exp, c') ->
-    match t_arr, t_exp with
-    | TInt _, TInt _ -> c'
-    | t1, t2 -> if t1=t2 then c' else raise (TypeError "Tried to populate array with incorrect type")
-    end
-  | EArrayImplAccess (id, idx), expr ->
-    check_array_access_implicit id idx context       |> fun (t_arr, c) ->
-    check_expr exp c                                 |> fun (t_exp, c') ->
-    begin
-    match t_arr, t_exp with
-    | TInt _, TInt _ -> c'
-    | t1, t2 -> if t1=t2 then c' else raise (TypeError "Tried to populate array with incorrect type")
-    end
+    check_aa_expl id idx1 idx2 context |> fun (t_arr, c) ->
+    check_expr exp c                   |> fun (t_exp, c') ->
+    if types_equal t_arr t_exp then c'
+    else raise (TypeError "Tried to populate array with incorrect type")
   | EVar id, expr -> context
+  | EArrayImplAccess (id, idx), expr -> failwith "Implement implicit array access"
   | _ -> raise (TypeError "Used reassign operator on illegal types")
-
-and check_for_impl id idx1 idx2 body context =
-  failwith "Implement index for loop"
 

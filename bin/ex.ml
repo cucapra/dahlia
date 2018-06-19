@@ -23,8 +23,8 @@ let _ =
   let commands = Parser.prog Lexer.token lexbuf in
   try
     if not !no_typecheck then
-      (ignore (Type.check_cmd commands Type.empty_context);
-       Emit.set_type_map Type.type_map)
+      let ctx = Type.check_cmd commands Type.empty_context in
+      Emit.set_type_map (fun id -> Type.type_of_id id ctx)
     else ();
 
     match String.lowercase_ascii !mode with

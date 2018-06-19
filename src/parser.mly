@@ -48,9 +48,6 @@ cmd:
     { make_if b body }
   | e1 = expr; REASSIGN; e2 = expr; SEMICOLON
     { make_reassignment e1 e2 } 
-  | FOR LPAREN LET x = ID EQUAL x1 = expr RANGE_DOTS x2 = expr RPAREN
-    UNROLL LBRACK c = cmd RBRACK
-
   | FOR LPAREN LET x = ID EQUAL x1 = expr RANGE_DOTS x2 = expr RPAREN 
     LBRACK c = cmd RBRACK
     { make_for x x1 x2 c } ;
@@ -79,7 +76,7 @@ expr:
 
 type_annotation:
   | BOOL_ANNOTATION { TBool }
-  | INT_ANNOTATION { TInt false } ;
+  | INT_ANNOTATION { TInt None } ;
 
 %inline binop:
   | NEQ { BopNeq }

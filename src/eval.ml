@@ -25,7 +25,9 @@ let rec eval_expression : expression * env -> value * env = fun (exp, env) ->
   | EVar id                  -> eval_var (id, env)
   | EBinop (binop, e1, e2)   -> eval_binop (binop, e1, e2, env)
   | EArray (_, _, a)         -> eval_array (a, env)
-  | EArrayAccess (id, index) -> eval_array_access (id, index, env)
+  | EIndex _                 -> failwith "Implement index evaluation"
+  | EArrayExplAccess _       -> failwith "Implement explicit array access eval"
+  | EArrayImplAccess _       -> failwith "Implement explicit array access eval"
 
 and eval_int (i, env) = VInt i, env
 and eval_bool (b, env) = VBool b, env
@@ -61,11 +63,12 @@ and eval_binop (binop, e1, e2, env) =
 
 let rec eval_command : command * env -> env = fun (cmd, env) ->
   match cmd with
-  | CAssignment (x, exp)         -> eval_assignment x exp env
+  | CAssign (x, exp)             -> eval_assignment x exp env
   | CIf (b, body)                -> eval_if b body env
   | CSeq (c1, c2)                -> eval_seq c1 c2 env
   | CFor (x, a, b, body)         -> eval_for x a b body env
   | CReassign (target, exp)      -> eval_reassign target exp env
+  | CForImpl _                   -> failwith "Implement for implicit eval"
 
 and eval_assignment x exp env =
   eval_expression (exp, env) 
@@ -89,7 +92,7 @@ and eval_for x a b cmd env =
 
 and eval_for_body x i b cmd env =
   if i <= b then
-    eval_command (CAssignment (x, (EInt (i, true))), env)
+    eval_command (CAssign (x, (EInt (i, true))), env)
     |> fun env' -> eval_command (cmd, env')
     |> fun env'' -> eval_for_body x (i+1) b cmd env''
   else env
@@ -97,7 +100,6 @@ and eval_for_body x i b cmd env =
 and eval_reassign target exp env =
   match target with
   | EVar id -> eval_assignment id exp env
-  | EArrayAccess (x, idx) -> eval_array_update x idx exp env
   | _ -> failwith "Type checker failed to catch illegal update operation"
 
 and eval_array_update x i exp env =
@@ -113,6 +115,7 @@ let rec string_of_val = function
   | VBool b -> string_of_bool b
   | VRange (i1, i2) -> (string_of_int i1) ^ ".." ^ (string_of_int i2)
   | VArray arr -> string_of_arr arr
+  | VIndex i -> failwith "Implement index val string"
 
 and string_of_arr arr =
   (fun acc elem -> acc ^ ", " ^ (string_of_val elem))

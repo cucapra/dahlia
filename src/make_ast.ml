@@ -1,7 +1,7 @@
 open Ast
 
 let make_assignment id expr =
-  CAssignment (id, expr)
+  CAssign (id, expr)
 
 let make_int x =
   EInt (x, true)
@@ -20,17 +20,15 @@ let make_var id =
 
 let make_array s b t =
   match t with
-  | TInt _ -> EArray (TInt false, b, (Array.make s (EInt (0, true))))
+  | TInt _ -> EArray (TInt None, b, (Array.make s (EInt (0, true))))
   | TBool -> EArray (TBool, b, (Array.make s (EBool false)))
+  | _ -> failwith "Implement rest of array types"
 
 let make_reassignment e1 e2 =
   CReassign (e1, e2)
 
 let make_if b body =
   CIf (b, body)
-
-let make_array_access id index =
-  EArrayAccess (id, index)
 
 let make_seq c1 c2 =
   CSeq (c1, c2)

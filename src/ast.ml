@@ -1,9 +1,9 @@
 type id = string
 
 type type_node =
-  | TInt of int option
+  | TInt of int option (* Some i => static int with value i *)
   | TBool
-  | TArray of type_node * int
+  | TArray of type_node * int (* (type, banking factor) *)
   | TIndex of int
 
 type binop =
@@ -37,7 +37,7 @@ type value =
   | VIndex of int
   
 type command =
-  | CAssignment of id * expression
+  | CAssign of id * expression
   | CFor of id * expression * expression * command
   | CForImpl of id * expression * expression * command
   | CReassign of expression * expression
