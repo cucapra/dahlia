@@ -50,7 +50,8 @@ and transpile_assignment id exp =
   match !type_map id, exp with
   | TInt _, _
   | TBool, _ -> "int " ^ " " ^ id ^ " = " ^ (transpile_exp exp) ^ ";"
-  | (TArray (t, _)), EArray (_, s, _) -> "int " ^ id ^ "[" ^ (string_of_int s) ^ "];"
+  | (TArray (t, _)), EArray (_, _, a) -> 
+    "int " ^ id ^ "[" ^ (string_of_int (Array.length a)) ^ "];"
   | _ -> failwith "Impossible"
 
 and transpile_seq c1 c2 =
