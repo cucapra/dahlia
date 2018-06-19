@@ -1,7 +1,7 @@
 type id = string
 
 type type_node =
-  | TInt of bool
+  | TInt of int option
   | TBool
   | TArray of type_node * int
   | TIndex of int
@@ -20,13 +20,12 @@ type binop =
   | BopOr
 
 type expression =
-  | EInt of int * bool (* true indicates static *)
+  | EInt of int * bool
   | EIndex of int
   | EVar of id
   | EBool of bool
   | EBinop of binop * expression * expression
   | EArray of type_node * int * expression array
-  | EArrayAccess of id * expression
   | EArrayExplAccess of id * expression * expression
   | EArrayImplAccess of id * expression
 
@@ -40,7 +39,7 @@ type value =
 type command =
   | CAssignment of id * expression
   | CFor of id * expression * expression * command
+  | CForImpl of id * expression * expression * command
   | CReassign of expression * expression
   | CIf of expression * command
   | CSeq of command * command
-  | CForImpl of id * expression * expression * command
