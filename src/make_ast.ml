@@ -15,6 +15,9 @@ let make_binop bop e1 e2 =
 let make_for x x1 x2 e =
   CFor (x, x1, x2, e)
 
+let make_for_impl x x1 x2 u body =
+  CForImpl (x, x1, x2, u, body)
+
 let make_var id =
   EVar id
 
@@ -38,6 +41,3 @@ let make_array_access_expl id e1 e2 =
 
 let make_array_access_impl id e1  =
   EArrayImplAccess (id, e1)
-
-let make_for_impl x x1 x2 e =
-  CForImpl (x, x1, x2, e)

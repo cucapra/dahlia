@@ -49,7 +49,7 @@ let is_bool = (=) TBool
 let rec types_equal t1 t2 =
   match t1, t2 with
   | TInt _, TInt _ -> true
-  | TArray (a1, bf1), TArray (a2, bf2) -> types_equal a1 a2
+  | TArray (a1, _), TArray (a2, _) -> types_equal a1 a2
   | TIndex _, TIndex _ -> true
   | t1, t2 -> t1=t2
 
@@ -74,8 +74,8 @@ let rec check_expr exp context =
   | EBinop (binop, e1, e2)            -> check_binop binop e1 e2 context
   | EArray _                          -> raise (TypeError "Can't refer to array literal")
   | EArrayExplAccess (id, idx1, idx2) -> check_aa_expl id idx1 idx2 context
-  | EIndex _
-  | EArrayImplAccess _                -> failwith "Implement implicit access"
+  | EIndex _                          -> failwith "Implement idx tc"
+  | EArrayImplAccess (id, i)          -> check_aa_impl id i context
 
 and check_int i is_stat ctx = (if is_stat then TInt (Some i) else TInt (None)), ctx
 
@@ -105,14 +105,17 @@ and check_aa_expl id idx1 idx2 c =
     else raise (TypeError ("Illegal bank access: " ^ (string_of_int i)))
   | _ -> raise (TypeError "Bank accessor must be static") 
 
+and check_aa_impl id i c =
+  check_expr i c (* FIXME *)
+
 let rec check_cmd cmd context =
   match cmd with
-  | CSeq (c1, c2)              -> check_seq c1 c2 context
-  | CIf (cond, cmd)            -> check_if cond cmd context
-  | CFor (x, r1, r2, body)     -> check_for x r1 r2 body context
-  | CAssign (x, e1)            -> check_assignment x e1 context
-  | CReassign (target, exp)    -> check_reassign target exp context
-  | CForImpl (x, r1, r2, body) -> check_for_impl x r1 r2 body context
+  | CSeq (c1, c2)                 -> check_seq c1 c2 context
+  | CIf (cond, cmd)               -> check_if cond cmd context
+  | CFor (x, r1, r2, body)        -> check_for x r1 r2 body context
+  | CAssign (x, e1)               -> check_assignment x e1 context
+  | CReassign (target, exp)       -> check_reassign target exp context
+  | CForImpl (x, r1, r2, u, body) -> check_for_impl x r1 r2 body context
 
 and check_seq c1 c2 context =
   check_cmd c1 context
@@ -132,7 +135,7 @@ and check_for id r1 r2 body c =
   | _ -> raise (TypeError "Range start/end must be integers")
 
 and check_for_impl id idx1 idx2 body context =
-  failwith "Implement index for loop"
+  check_for id idx1 idx2 body context (* FIXME *)
 
 and add_array_banks bf id bank_num context t i =
   if i=bank_num then context
@@ -157,6 +160,6 @@ and check_reassign target exp context =
     if types_equal t_arr t_exp then c'
     else raise (TypeError "Tried to populate array with incorrect type")
   | EVar id, expr -> context
-  | EArrayImplAccess (id, idx), expr -> failwith "Implement implicit array access"
+  | EArrayImplAccess (id, idx), expr -> context (* FIXME *)
   | _ -> raise (TypeError "Used reassign operator on illegal types")
 

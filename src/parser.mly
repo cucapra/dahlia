@@ -48,6 +48,9 @@ cmd:
     { make_if b body }
   | e1 = expr; REASSIGN; e2 = expr; SEMICOLON
     { make_reassignment e1 e2 } 
+  | FOR LPAREN LET x = ID EQUAL x1 = expr RANGE_DOTS x2 = expr RPAREN UNROLL u = expr  
+    LBRACK c = cmd RBRACK
+    { make_for_impl x x1 x2 u c }
   | FOR LPAREN LET x = ID EQUAL x1 = expr RANGE_DOTS x2 = expr RPAREN 
     LBRACK c = cmd RBRACK
     { make_for x x1 x2 c } ;
