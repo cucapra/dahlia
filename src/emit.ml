@@ -1,4 +1,4 @@
-open Ast
+ open Ast
 
 let type_map = ref (fun _ -> failwith "TypeMap has not been set")
 
@@ -43,12 +43,12 @@ and transpile_cmd = function
 and transpile_for id a b body u =
   "for (int " ^ id ^ " = " ^ (transpile_exp a) ^ 
   "; " ^ id ^ " < " ^ (transpile_exp b) ^ "; " ^ 
-  id ^ " += 1) {" ^ 
+  id ^ " += 1) {\n" ^ 
   (match u with
    | None -> ""
    | Some unroll -> 
-     "#pragma HLS UNROLL factor=" ^ (transpile_exp unroll) ^ " ") ^
-  (transpile_cmd body) ^ "}"
+     "\t#pragma HLS UNROLL factor=" ^ (transpile_exp unroll) ^ " ") ^ "\n\t" ^
+  (transpile_cmd body) ^ "\n\t}"
 
 (* FIXME: only works with arrays/ints/bools *)
 and transpile_assignment id exp =
@@ -56,13 +56,13 @@ and transpile_assignment id exp =
   | TInt _, _
   | TBool, _ -> "int " ^ " " ^ id ^ " = " ^ (transpile_exp exp) ^ ";"
   | (TArray (t, bf)), EArray (_, _, a) -> 
-    "int " ^ id ^ "[" ^ (string_of_int (Array.length a)) ^ "];\n" ^
+    "int " ^ id ^ "[" ^ (string_of_int (Array.length a)) ^ "];\n\t" ^
     "#pragma HLS ARRAY_PARTITION variable=" ^ id ^ " " ^
     "factor=" ^ (string_of_int bf) ^ "\n"
   | _ -> failwith "Impossible assignment"
 
 and transpile_seq c1 c2 =
-  (transpile_cmd c1) ^ " " ^ (transpile_cmd c2)
+  (transpile_cmd c1) ^ "\n\t" ^ (transpile_cmd c2)
 
 and transpile_if cond body =
   "if (" ^ (transpile_exp cond) ^ ") {" ^ (transpile_cmd body) ^ "}"
@@ -83,4 +83,4 @@ and transpile_reassign target exp =
   |> (fun left -> left ^ " = " ^ (transpile_exp exp) ^ ";") 
 
 let generate_c prog =
-  "int main() { " ^ (transpile_cmd prog) ^ " return 0; }"
+  "int main() {\n\t" ^ (transpile_cmd prog) ^ " \n\treturn 0; \n}"
