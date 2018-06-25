@@ -1,5 +1,6 @@
 ### 2018 June 18
 ## seashell
+```
 memory a: int[4] bank(2);
 memory c: int[4] bank(2);
 let b = 10;
@@ -8,8 +9,10 @@ for (let i = 0..1) {
   c[0][i] := a[0][i] + b;
   c[1][i] := a[1][i] + b;
 }
+```
 
 ## current C out
+```
 int main() 
 { 
 	int a[2]; 
@@ -21,8 +24,10 @@ int main()
 	} 
 	return 0; 
 }
+```
 
 ## ideal C out
+```
 void madd(float A[N*N], float B, float C[N*N])
 {
   int i;
@@ -30,9 +35,10 @@ void madd(float A[N*N], float B, float C[N*N])
   for (i = 0; i < N * N; i++)
       C[i] = A[i] + B;
 }
+```
 
 ## input to HLS flow
-
+```
 void madd(float A[N*N], float B, float C[N*N])
 {
   int i;
@@ -43,3 +49,4 @@ void madd(float A[N*N], float B, float C[N*N])
 #pragma HLS unroll factor=ELE
       C[i] = A[i] + B;
 }
+```
