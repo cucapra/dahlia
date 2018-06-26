@@ -56,6 +56,8 @@ cmd:
   | FOR LPAREN LET x = ID EQUAL x1 = expr RANGE_DOTS x2 = expr RPAREN 
     LBRACK c = cmd RBRACK
     { make_for x x1 x2 c } ;
+  | RETURN e = expr SEMICOLON
+    { make_return e }
   | c1 = cmd c2 = cmd
     { make_seq c1 c2 }
 

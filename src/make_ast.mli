@@ -27,3 +27,5 @@ val make_array_access_impl : id -> expression -> expression
 val make_reassignment : expression -> expression -> command
 
 val make_function : type_node -> id -> expression list -> command -> command
+
+val make_return : expression -> command

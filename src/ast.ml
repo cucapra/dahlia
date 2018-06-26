@@ -44,3 +44,4 @@ type command =
   | CIf of expression * command
   | CSeq of command * command
   | CFun of type_node * id * expression list * command
+  | CReturn of expression
