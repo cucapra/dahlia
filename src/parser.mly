@@ -11,7 +11,7 @@ open Make_ast
 (* Keywords *)
 %token LET IF FOR TRUE FALSE INT_ANNOTATION 
        BOOL_ANNOTATION IDX_ANNOTATION UNROLL 
-       MEMORY BANK
+       MEMORY BANK RETURN
 
 (* Parentheses, brackets, etc *)
 %token LPAREN RPAREN LBRACK RBRACK LSQUARE RSQUARE FORWARD_SLASH
@@ -21,7 +21,7 @@ open Make_ast
        AND OR REASSIGN 
 
 (* Other *)
-%token SEMICOLON COLON RANGE_DOTS
+%token SEMICOLON COLON RANGE_DOTS COMMA
 
 (* Precedences *)
 %right OR
@@ -39,6 +39,8 @@ prog:
     { c } ;
 
 cmd:
+  | t = type_annotation f = ID LPAREN a = separated_list(COMMA, expr) RPAREN LBRACK body = cmd RBRACK
+    { make_function t f a body }
   | MEMORY x = ID COLON t = type_annotation LSQUARE s = INT RSQUARE BANK 
     LPAREN b = INT RPAREN SEMICOLON
     { make_assignment x (make_array s b t) }
@@ -54,6 +56,8 @@ cmd:
   | FOR LPAREN LET x = ID EQUAL x1 = expr RANGE_DOTS x2 = expr RPAREN 
     LBRACK c = cmd RBRACK
     { make_for x x1 x2 c } ;
+  | RETURN e = expr SEMICOLON
+    { make_return e }
   | c1 = cmd c2 = cmd
     { make_seq c1 c2 }
 
