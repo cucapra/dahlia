@@ -41,3 +41,6 @@ let make_array_access_expl id e1 e2 =
 
 let make_array_access_impl id e1  =
   EArrayImplAccess (id, e1)
+
+let make_function t id args body =
+  CFun (t, id, args, body)

@@ -43,3 +43,4 @@ type command =
   | CReassign of expression * expression
   | CIf of expression * command
   | CSeq of command * command
+  | CFun of type_node * id * expression list * command
