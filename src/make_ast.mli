@@ -29,3 +29,5 @@ val make_reassignment : expression -> expression -> command
 val make_function : type_node -> id -> expression list -> command -> command
 
 val make_return : expression -> command
+
+val make_app : id -> expression list -> expression

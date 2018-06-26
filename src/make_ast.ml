@@ -47,3 +47,6 @@ let make_function t id args body =
 
 let make_return e =
   CReturn e
+
+let make_app f a =
+  EApp (f, a)

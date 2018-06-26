@@ -28,6 +28,7 @@ let rec transpile_exp = function
   | EArrayExplAccess (id, idx1, idx2) -> transpile_explicit_array_access id idx1 idx2
   | EArrayImplAccess _ -> failwith "Implement implicit array compilation"
   | EIndex _ -> failwith "Implement index compilation"
+  | EApp (f, a) -> emit_app f a
   
 and transpile_binop b e1 e2 =
   (transpile_exp e1) ^ " " ^ (string_of_binop b) ^ " " ^ (transpile_exp e2)
@@ -93,10 +94,16 @@ and emit_return e = "return " ^ (transpile_exp e)
 
 and remove_last s = String.sub s 0 ((String.length s) - 1)
 
+and emit_csv args =
+  ((List.fold_left (fun acc e -> acc ^ (transpile_exp e) ^ ",") "" args) |> remove_last) 
+
 and emit_fun t id args body =
   (emit_type t) ^ " " ^ id ^ "(" ^ 
-  ((List.fold_left (fun acc e -> acc ^ (transpile_exp e) ^ ",") "" args) |> remove_last) 
+  emit_csv args
   ^ ") {" ^ transpile_cmd body ^ "}"
+
+and emit_app f a =
+  f ^ "(" ^ (emit_csv a) ^ ")"
 
 let generate_c prog =
   transpile_cmd prog

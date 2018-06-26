@@ -28,6 +28,7 @@ type expression =
   | EArray of type_node * int * expression array
   | EArrayExplAccess of id * expression * expression
   | EArrayImplAccess of id * expression
+  | EApp of id * expression list
 
 type value =
   | VInt of int

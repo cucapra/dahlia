@@ -62,6 +62,8 @@ cmd:
     { make_seq c1 c2 }
 
 expr:
+  | f = ID LPAREN a = separated_list(COMMA, expr) RPAREN
+    { make_app f a }
   | x = ID; LSQUARE; idx = expr; RSQUARE
     { make_array_access_impl x idx }
   | x = ID; LSQUARE; idx1 = expr; RSQUARE; LSQUARE; idx2 = expr; RSQUARE
