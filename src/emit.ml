@@ -39,6 +39,8 @@ and transpile_cmd = function
   | CIf (cond, body) -> transpile_if cond body
   | CReassign (target, exp) -> transpile_reassign target exp
   | CForImpl (id, a, b, u, body) -> transpile_for id a b body (Some u)
+  | CReturn e -> emit_return e
+  | CFun (t, fname, args, body) -> emit_fun t fname args body
 
 and transpile_for id a b body u =
   "for (int " ^ id ^ " = " ^ (transpile_exp a) ^ 
@@ -49,6 +51,11 @@ and transpile_for id a b body u =
    | Some unroll -> 
      "\t#pragma HLS UNROLL factor=" ^ (transpile_exp unroll) ^ " ") ^ "\n\t" ^
   (transpile_cmd body) ^ "\n\t}"
+
+and emit_type t =
+  match t with
+  | TInt _ -> "int"
+  | TBool -> "int"
 
 (* FIXME: only works with arrays/ints/bools *)
 and transpile_assignment id exp =
@@ -82,5 +89,14 @@ and transpile_reassign target exp =
   | EVar id -> id)
   |> (fun left -> left ^ " = " ^ (transpile_exp exp) ^ ";") 
 
+and emit_return e = "return " ^ (transpile_exp e)
+
+and remove_last s = String.sub s 0 ((String.length s) - 1)
+
+and emit_fun t id args body =
+  (emit_type t) ^ " " ^ id ^ "(" ^ 
+  ((List.fold_left (fun acc e -> acc ^ (transpile_exp e) ^ ",") "" args) |> remove_last) 
+  ^ ") {" ^ transpile_cmd body ^ "}"
+
 let generate_c prog =
-  "int main() {\n\t" ^ (transpile_cmd prog) ^ " \n\treturn 0; \n}"
+  transpile_cmd prog
