@@ -6,7 +6,7 @@ let set_type_map t =
   type_map := t
 
 let rec indent' n s acc =
-  if n=0 then acc
+  if n=0 then acc ^ s
   else indent' (n-1) s (acc ^ "\t")
 
 let indent n s = indent' n s ""
@@ -15,6 +15,12 @@ let newline = "\n"
 
 let s_pragma_unroll u =
   "#pragma HLS UNROLL factor=" ^ u
+
+let type_str = function
+  | TBool
+  | TInt _        -> "int"
+  | TIndex _      -> failwith "Implement indices"
+  | TArray (t, _) -> failwith "Implement array type stringified version"
 
 let bop_str = function
   | BopEq -> "="
@@ -58,19 +64,42 @@ and emit_binop (b, e1, e2) =
 and emit_aa (id, i) =
   concat [ id; "["; (emit_expr i); "]" ]
 
-and emit_app (id, args) =
+and emit_args args =
   (fun acc e -> concat [ acc; ", "; (emit_expr e) ])
   |> fun f -> List.fold_left f "" args
   |> fun s -> String.sub s 0 ((String.length s) - 2)
 
-let rec emit_cmd i = function
-  | CAssign (id, e)         -> emit_assign (id, e)
-  | CFor (id, r1, r2, body) -> emit_for (id, r1, r2, body) i
-  | CIf (cond, body)        -> emit_if (cond, body) i
+and emit_app (id, args) =
+  concat [ id; "("; (emit_args args); ")" ]
+
+let rec emit_cmd i cmd =
+  (match cmd with
+  | CAssign (id, e)          -> emit_assign (id, e)
+  | CReassign (target, e)    -> emit_reassign (target, e)
+  | CFor (id, r1, r2, body)  -> emit_for (id, r1, r2, body) i
+  | CIf (cond, body)         -> emit_if (cond, body) i
+  | CSeq (c1, c2)            -> emit_seq (c1, c2) i
+  | CFun (t, id, args, body) -> emit_fun (t, id, args, body) i
+  | CReturn e                -> emit_return e)
   |> (indent i)
 
+and emit_assign_int (id, e) =
+  concat [ "int "; id; " = "; (emit_expr e) ]
+
+and emit_assign_arr (id, e, a) =
+  let arr_size = string_of_int (Array.length a) in
+  concat [
+    "int "; id; "["; arr_size; "]"
+  ]
+
 and emit_assign (id, e) =
-  concat [ (!type_map id); " "; id; " = "; (emit_expr e) ]
+  match !type_map id, e with
+  | TInt _, _
+  | TBool, _                         -> emit_assign_int (id, e)
+  | TArray (t, bf), EArray (_, _, a) -> emit_assign_arr (id, e, a)
+
+and emit_reassign (target, e) =
+  concat [ (emit_expr target); " = "; (emit_expr e) ]
 
 and emit_for (id, r1, r2, body) i =
   concat [ 
@@ -85,3 +114,17 @@ and emit_if (cond, body) i =
     newline; "}"
   ]
 
+and emit_seq (c1, c2) i =
+  concat [ (emit_cmd i c1); newline; (emit_cmd i c2) ]
+
+and emit_fun (t, id, args, body) i =
+  concat [ 
+    (type_str t); " "; id; "("; (emit_args args); ") {";
+    newline; (emit_cmd (i+1) body); newline; "}"
+  ]
+
+and emit_return e =
+  concat [ "return "; (emit_expr e) ]
+
+and generate_c cmd =
+  emit_cmd 0 cmd
