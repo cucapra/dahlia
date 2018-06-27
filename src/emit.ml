@@ -1,12 +1,22 @@
- open Ast
+open Ast
 
 let type_map = ref (fun _ -> failwith "TypeMap has not been set")
 
 let set_type_map t =
-  type_map := t; ()
+  type_map := t
 
-(* FIXME: this is defined in type.ml too, maybe make some string util module? *)
-let string_of_binop = function
+let rec indent' n s acc =
+  if n=0 then acc
+  else indent' (n-1) s (acc ^ "\t")
+
+let indent n s = indent' n s ""
+
+let newline = "\n"
+
+let s_pragma_unroll u =
+  "#pragma HLS UNROLL factor=" ^ u
+
+let bop_str = function
   | BopEq -> "="
   | BopNeq -> "!="
   | BopGeq -> ">="
@@ -19,91 +29,59 @@ let string_of_binop = function
   | BopAnd -> "&&"
   | BopOr -> "||"
 
-let rec transpile_exp = function
-  | EInt (i, _) -> string_of_int i
-  | EBool b -> if b then "1" else "0"
-  | EVar id -> id
-  | EArray _ -> failwith "Implement array transpilation"
-  | EBinop (b, e1, e2) -> transpile_binop b e1 e2
-  | EArrayExplAccess (id, idx1, idx2) -> transpile_explicit_array_access id idx1 idx2
-  | EArrayImplAccess _ -> failwith "Implement implicit array compilation"
-  | EIndex _ -> failwith "Implement index compilation"
-  | EApp (f, a) -> emit_app f a
-  
-and transpile_binop b e1 e2 =
-  (transpile_exp e1) ^ " " ^ (string_of_binop b) ^ " " ^ (transpile_exp e2)
+let concat =
+  List.fold_left (fun acc e -> acc ^ e) ""
 
-and transpile_cmd = function
-  | CFor (id, a, b, body) -> transpile_for id a b body None
-  | CAssign (id, exp) -> transpile_assignment id exp
-  | CSeq (c1, c2) -> transpile_seq c1 c2
-  | CIf (cond, body) -> transpile_if cond body
-  | CReassign (target, exp) -> transpile_reassign target exp
-  | CForImpl (id, a, b, u, body) -> transpile_for id a b body (Some u)
-  | CReturn e -> emit_return e
-  | CFun (t, fname, args, body) -> emit_fun t fname args body
+let rec emit_expr = function
+  | EInt (i, _)                 -> emit_int i
+  | EBool b                     -> emit_bool b
+  | EVar v                      -> emit_var v
+  | EArray (_, _, a)            -> emit_array a
+  | EBinop (b, e1, e2)          -> emit_binop (b, e1, e2)
+  | EArrayExplAccess (id, _, i) -> emit_aa (id, i)
+  | EArrayImplAccess (id, i)    -> emit_aa (id, i)
+  | EApp (id, args)             -> emit_app (id, args)
+  | EIndex _ -> failwith "Implement index stuff"
 
-and transpile_for id a b body u =
-  "for (int " ^ id ^ " = " ^ (transpile_exp a) ^ 
-  "; " ^ id ^ " < " ^ (transpile_exp b) ^ "; " ^ 
-  id ^ " += 1) {\n" ^ 
-  (match u with
-   | None -> ""
-   | Some unroll -> 
-     "\t#pragma HLS UNROLL factor=" ^ (transpile_exp unroll) ^ " ") ^ "\n\t" ^
-  (transpile_cmd body) ^ "\n\t}"
+and emit_int i = string_of_int i
 
-and emit_type t =
-  match t with
-  | TInt _ -> "int"
-  | TBool -> "int"
+and emit_bool b = if b then "1" else "0"
 
-(* FIXME: only works with arrays/ints/bools *)
-and transpile_assignment id exp =
-  match !type_map id, exp with
-  | TInt _, _
-  | TBool, _ -> "int " ^ " " ^ id ^ " = " ^ (transpile_exp exp) ^ ";"
-  | (TArray (t, bf)), EArray (_, _, a) -> 
-    "int " ^ id ^ "[" ^ (string_of_int (Array.length a)) ^ "];\n\t" ^
-    "#pragma HLS ARRAY_PARTITION variable=" ^ id ^ " " ^
-    "factor=" ^ (string_of_int bf) ^ "\n"
-  | _ -> failwith "Impossible assignment"
+and emit_var id = id
 
-and transpile_seq c1 c2 =
-  (transpile_cmd c1) ^ "\n\t" ^ (transpile_cmd c2)
+and emit_array _ = 
+  failwith "Typechecker failed to catch literal array access"
 
-and transpile_if cond body =
-  "if (" ^ (transpile_exp cond) ^ ") {" ^ (transpile_cmd body) ^ "}"
+and emit_binop (b, e1, e2) = 
+  concat [ (emit_expr e1); (bop_str b); (emit_expr e2) ]
 
-and transpile_explicit_array_access id b i =
-  match !type_map id with
-  | (TArray (_, bf)) -> id ^ "[" ^ (transpile_exp b) ^ "+" ^ (string_of_int bf) ^ "*" ^ (transpile_exp i) ^ "]"
-  | failwith -> "Improper type passed in emitter"
+and emit_aa (id, i) =
+  concat [ id; "["; (emit_expr i); "]" ]
 
-and emit_aa_impl id i =
-  id ^ "[" ^ (transpile_exp i) ^ "]"
+and emit_app (id, args) =
+  (fun acc e -> concat [ acc; ", "; (emit_expr e) ])
+  |> fun f -> List.fold_left f "" args
+  |> fun s -> String.sub s 0 ((String.length s) - 2)
 
-and transpile_reassign target exp =
-  (match target with
-  | EArrayExplAccess (id, b, i) -> transpile_explicit_array_access id b i
-  | EArrayImplAccess (id, i) -> emit_aa_impl id i
-  | EVar id -> id)
-  |> (fun left -> left ^ " = " ^ (transpile_exp exp) ^ ";") 
+let rec emit_cmd i = function
+  | CAssign (id, e)         -> emit_assign (id, e)
+  | CFor (id, r1, r2, body) -> emit_for (id, r1, r2, body) i
+  | CIf (cond, body)        -> emit_if (cond, body) i
+  |> (indent i)
 
-and emit_return e = "return " ^ (transpile_exp e)
+and emit_assign (id, e) =
+  concat [ (!type_map id); " "; id; " = "; (emit_expr e) ]
 
-and remove_last s = String.sub s 0 ((String.length s) - 1)
+and emit_for (id, r1, r2, body) i =
+  concat [ 
+    "for (int "; id; " = "; (emit_expr r1); ";"; id;
+    " <= "; (emit_expr r2); " "; id; " += 1) {"; newline
+  ] 
+  |> fun s -> concat [ s; (emit_cmd (i+1) body); newline; "}" ]
 
-and emit_csv args =
-  ((List.fold_left (fun acc e -> acc ^ (transpile_exp e) ^ ",") "" args) |> remove_last) 
+and emit_if (cond, body) i =
+  concat [ 
+    "if ("; (emit_expr cond); ") {"; newline; (emit_cmd (i+1) body);
+    newline; "}"
+  ]
 
-and emit_fun t id args body =
-  (emit_type t) ^ " " ^ id ^ "(" ^ 
-  emit_csv args
-  ^ ") {" ^ transpile_cmd body ^ "}"
-
-and emit_app f a =
-  f ^ "(" ^ (emit_csv a) ^ ")"
-
-let generate_c prog =
-  transpile_cmd prog
