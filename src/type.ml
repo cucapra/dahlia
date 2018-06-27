@@ -116,6 +116,8 @@ let rec check_cmd cmd context =
   | CAssign (x, e1)               -> check_assignment x e1 context
   | CReassign (target, exp)       -> check_reassign target exp context
   | CForImpl (x, r1, r2, u, body) -> check_for_impl x r1 r2 body context
+  | CReturn _ -> context (* FIXME *)
+  | CFun (_, _, _, body) -> check_cmd body context (* FIXME *)
 
 and check_seq c1 c2 context =
   check_cmd c1 context
