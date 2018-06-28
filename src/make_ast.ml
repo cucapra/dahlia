@@ -46,9 +46,6 @@ let make_function id args body =
   (* FIXME *)
   CFuncDef (id, args, body)
 
-let make_return e =
-  CReturn e
-
 let make_app f a =
   (* FIXME *)
   EApp (f, List.map (fun (e, _) -> e) a)

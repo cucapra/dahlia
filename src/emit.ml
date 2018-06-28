@@ -93,7 +93,6 @@ let rec emit_cmd i cmd =
   | CIf (cond, body)               -> emit_if (cond, body) i
   | CSeq (c1, c2)                  -> emit_seq (c1, c2) i
   | CFuncDef (id, args, body)      -> emit_fun (id, args, body) i
-  | CReturn e                      -> emit_return e i
 
 and emit_assign_int (id, e) =
   concat [ "int "; id; " = "; (emit_expr e); ";" ]
@@ -143,9 +142,6 @@ and emit_fun (id, args, body) i =
     newline; (emit_cmd (i+1) body); newline; (indent i "}")
   ]
   |> indent i
-
-and emit_return e i =
-  concat [ "return "; (emit_expr e); ";" ] |> indent i
 
 and generate_c cmd =
   emit_cmd 0 cmd

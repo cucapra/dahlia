@@ -45,4 +45,3 @@ type command =
   | CIf of expression * command
   | CSeq of command * command
   | CFuncDef of id * (id * type_node) list * command
-  | CReturn of expression

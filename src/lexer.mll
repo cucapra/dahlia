@@ -41,8 +41,6 @@ rule token =
   | "bool"       { BOOL_ANNOTATION }
   | "idx"        { IDX_ANNOTATION }
 
-  | "return"     { RETURN }
-
   | "if"         { IF }
   | "for"        { FOR }
   | "let"        { LET }
