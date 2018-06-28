@@ -39,9 +39,9 @@ prog:
     { c } ;
 
 cmd:
-  | FUNC f = ID LPAREN a = args RPAREN COLON 
-    t = type_annotation LBRACK body = cmd RBRACK
-    { make_function t f a body }
+  | FUNC f = ID LPAREN a = args RPAREN 
+    LBRACK body = cmd RBRACK
+    { make_function f a body }
   | MEMORY x = ID COLON t = type_annotation LSQUARE s = INT RSQUARE BANK 
     LPAREN b = INT RPAREN SEMICOLON
     { make_assignment x (make_array s b t) }

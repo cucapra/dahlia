@@ -44,5 +44,5 @@ type command =
   | CReassign of expression * expression
   | CIf of expression * command
   | CSeq of command * command
-  | CFuncDef of type_node * id * (id * type_node) list * command
+  | CFuncDef of id * (id * type_node) list * command
   | CReturn of expression

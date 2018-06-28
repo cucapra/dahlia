@@ -92,7 +92,7 @@ let rec emit_cmd i cmd =
   | CForImpl (id, r1, r2, u, body) -> emit_for (id, r1, r2, body, (Some u)) i
   | CIf (cond, body)               -> emit_if (cond, body) i
   | CSeq (c1, c2)                  -> emit_seq (c1, c2) i
-  | CFuncDef (t, id, args, body)   -> emit_fun (t, id, args, body) i
+  | CFuncDef (id, args, body)      -> emit_fun (id, args, body) i
   | CReturn e                      -> emit_return e i
 
 and emit_assign_int (id, e) =
@@ -137,9 +137,9 @@ and emit_if (cond, body) i =
 and emit_seq (c1, c2) i =
   concat [ (emit_cmd i c1); newline; (emit_cmd i c2); ]
 
-and emit_fun (t, id, args, body) i =
+and emit_fun (id, args, body) i =
   concat [ 
-    (type_str t); " "; id; "("; (emit_anno_args args); ") {";
+    "void "; id; "("; (emit_anno_args args); ") {";
     newline; (emit_cmd (i+1) body); newline; (indent i "}")
   ]
   |> indent i

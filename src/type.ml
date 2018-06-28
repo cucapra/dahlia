@@ -117,7 +117,7 @@ let rec check_cmd cmd context =
   | CAssign (x, e1)               -> check_assignment x e1 context
   | CReassign (target, exp)       -> check_reassign target exp context
   | CReturn _ -> context (* FIXME *)
-  | CFuncDef (t, id, args, body)  -> check_funcdef t id args body context
+  | CFuncDef (id, args, body)     -> check_funcdef id args body context
 
 and check_seq c1 c2 context =
   check_cmd c1 context
@@ -165,7 +165,7 @@ and check_reassign target exp context =
   | EArrayImplAccess (id, idx), expr -> context (* FIXME *)
   | _ -> raise (TypeError "Used reassign operator on illegal types")
 
-and check_funcdef t id (args : (id * type_node) list) body context =
+and check_funcdef id (args : (id * type_node) list) body context =
   List.iter (fun (e, t) -> Hashtbl.add context (e, None) t) args;
   check_cmd body context
 
