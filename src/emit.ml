@@ -13,8 +13,18 @@ let indent n s = indent' n s ""
 
 let newline = "\n"
 
-let s_pragma_unroll u =
-  "#pragma HLS UNROLL factor=" ^ u
+let concat =
+  List.fold_left (fun acc e -> acc ^ e) ""
+
+let s_pragma_unroll u i =
+  concat [ "#pragma HLS UNROLL factor="; u ]
+  |> indent i
+
+let s_pragma_bank id bf i =
+  concat [ 
+    "#pragma HLS ARRAY_PARTITION variable="; id;
+    " factor="; (string_of_int bf) 
+  ] |> indent i
 
 let type_str = function
   | TBool
@@ -34,9 +44,6 @@ let bop_str = function
   | BopTimes -> "*"
   | BopAnd -> "&&"
   | BopOr -> "||"
-
-let concat =
-  List.fold_left (fun acc e -> acc ^ e) ""
 
 let rec emit_expr = function
   | EInt (i, _)                 -> emit_int i
@@ -74,36 +81,43 @@ and emit_app (id, args) =
 
 let rec emit_cmd i cmd =
   match cmd with
-  | CAssign (id, e)          -> emit_assign (id, e) i
-  | CReassign (target, e)    -> emit_reassign (target, e) i
-  | CFor (id, r1, r2, body)  -> emit_for (id, r1, r2, body) i
-  | CIf (cond, body)         -> emit_if (cond, body) i
-  | CSeq (c1, c2)            -> emit_seq (c1, c2) i
-  | CFun (t, id, args, body) -> emit_fun (t, id, args, body) i
-  | CReturn e                -> emit_return e i
+  | CAssign (id, e)                -> emit_assign (id, e) i
+  | CReassign (target, e)          -> emit_reassign (target, e) i
+  | CFor (id, r1, r2, body)        -> emit_for (id, r1, r2, body, None) i
+  | CForImpl (id, r1, r2, u, body) -> emit_for (id, r1, r2, body, (Some u)) i
+  | CIf (cond, body)               -> emit_if (cond, body) i
+  | CSeq (c1, c2)                  -> emit_seq (c1, c2) i
+  | CFun (t, id, args, body)       -> emit_fun (t, id, args, body) i
+  | CReturn e                      -> emit_return e i
 
 and emit_assign_int (id, e) =
   concat [ "int "; id; " = "; (emit_expr e); ";" ]
 
-and emit_assign_arr (id, e, a) =
+and emit_assign_arr (id, e, a, bf) i =
   let arr_size = string_of_int (Array.length a) in
   concat [
-    "int "; id; "["; arr_size; "]"; ";"
+    "int "; id; "["; arr_size; "]"; ";"; newline;
+    (s_pragma_bank id bf i)
   ]
 
 and emit_assign (id, e) i =
   match !type_map id, e with
   | TInt _, _
-  | TBool, _                         -> emit_assign_int (id, e)    |> indent i
-  | TArray (t, bf), EArray (_, _, a) -> emit_assign_arr (id, e, a) |> indent i
+  | TBool, _                         -> emit_assign_int (id, e)          |> indent i
+  | TArray (t, bf), EArray (_, _, a) -> emit_assign_arr (id, e, a, bf) i |> indent i
 
 and emit_reassign (target, e) i =
   concat [ (emit_expr target); " = "; (emit_expr e); ";" ] |> indent i
 
-and emit_for (id, r1, r2, body) i =
+and emit_for (id, r1, r2, body, u) i =
+  let unroll_pragma =
+    (match u with
+     | None -> "hi"
+     | Some u' -> (s_pragma_unroll (emit_expr u') (i+1))) in
   concat [ 
     "for (int "; id; " = "; (emit_expr r1); "; "; id;
-    " <= "; (emit_expr r2); "; "; id; " += 1) {"; newline
+    " <= "; (emit_expr r2); "; "; id; " += 1) {"; newline;
+    unroll_pragma; newline
   ] 
   |> fun s -> concat [ s; (emit_cmd (i+1) body); newline; "}" ]
   |> indent i
