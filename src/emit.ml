@@ -67,7 +67,7 @@ and emit_aa (id, i) =
 and emit_args args =
   (fun acc e -> concat [ acc; ", "; (emit_expr e) ])
   |> fun f -> List.fold_left f "" args
-  |> fun s -> String.sub s 0 ((String.length s) - 2)
+  |> fun s -> String.sub s 2 ((String.length s) - 2)
 
 and emit_app (id, args) =
   concat [ id; "("; (emit_args args); ")" ]
