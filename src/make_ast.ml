@@ -43,10 +43,12 @@ let make_array_access_impl id e1  =
   EArrayImplAccess (id, e1)
 
 let make_function t id args body =
-  CFun (t, id, args, body)
+  (* FIXME *)
+  CFuncDef (t, id, args, body)
 
 let make_return e =
   CReturn e
 
 let make_app f a =
-  EApp (f, a)
+  (* FIXME *)
+  EApp (f, List.map (fun (e, _) -> e) a)

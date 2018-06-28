@@ -28,7 +28,7 @@ type expression =
   | EArray of type_node * int * expression array
   | EArrayExplAccess of id * expression * expression
   | EArrayImplAccess of id * expression
-  | EApp of id * expression list
+  | EApp of id * (id list)
 
 type value =
   | VInt of int
@@ -44,5 +44,5 @@ type command =
   | CReassign of expression * expression
   | CIf of expression * command
   | CSeq of command * command
-  | CFun of type_node * id * expression list * command
+  | CFuncDef of type_node * id * (id * type_node) list * command
   | CReturn of expression

@@ -63,7 +63,7 @@ cmd:
     { make_seq c1 c2 }
 
 expr:
-  | f = ID LPAREN a = separated_list(COMMA, expr) RPAREN
+  | f = ID LPAREN a = args RPAREN
     { make_app f a }
   | x = ID; LSQUARE; idx = expr; RSQUARE
     { make_array_access_impl x idx }
@@ -84,12 +84,12 @@ expr:
   | x = ID
     { make_var x }
 
-annotated_expr:
-  | e = expr COLON t = type_annotation
-    { e } 
+annotated_id:
+  | x = ID COLON t = type_annotation
+    { (x, t) } 
 
 args:
-  | a = separated_list(COMMA, annotated_expr) { a }
+  | a = separated_list(COMMA, annotated_id ) { a }
 
 type_annotation:
   | BOOL_ANNOTATION { TBool }

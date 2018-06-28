@@ -71,10 +71,15 @@ and emit_binop (b, e1, e2) =
 and emit_aa (id, i) =
   concat [ id; "["; (emit_expr i); "]" ]
 
+and argnames =
+  List.map ((fun (id, _) -> id))
+
 and emit_args args =
-  (fun acc e -> concat [ acc; ", "; (emit_expr e) ])
-  |> fun f -> List.fold_left f "" args
-  |> fun s -> String.sub s 2 ((String.length s) - 2)
+  (fun acc e -> concat [ acc; ", "; e ]) |> fun f ->
+  List.fold_left f "" args                           |> fun s -> 
+  String.sub s 2 ((String.length s) - 2)
+
+and emit_anno_args a = emit_args (argnames a)
 
 and emit_app (id, args) =
   concat [ id; "("; (emit_args args); ")" ]
@@ -87,7 +92,7 @@ let rec emit_cmd i cmd =
   | CForImpl (id, r1, r2, u, body) -> emit_for (id, r1, r2, body, (Some u)) i
   | CIf (cond, body)               -> emit_if (cond, body) i
   | CSeq (c1, c2)                  -> emit_seq (c1, c2) i
-  | CFun (t, id, args, body)       -> emit_fun (t, id, args, body) i
+  | CFuncDef (t, id, args, body)   -> emit_fun (t, id, args, body) i
   | CReturn e                      -> emit_return e i
 
 and emit_assign_int (id, e) =
@@ -134,7 +139,7 @@ and emit_seq (c1, c2) i =
 
 and emit_fun (t, id, args, body) i =
   concat [ 
-    (type_str t); " "; id; "("; (emit_args args); ") {";
+    (type_str t); " "; id; "("; (emit_anno_args args); ") {";
     newline; (emit_cmd (i+1) body); newline; (indent i "}")
   ]
   |> indent i
