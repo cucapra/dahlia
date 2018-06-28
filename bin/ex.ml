@@ -2,13 +2,11 @@ open Seashell
 open Lexer
 open Lexing
 
-let mode = ref ""
 let no_typecheck = ref false
 
-let usage = "usage: " ^ Sys.argv.(0) ^ "[-tr]"
+let usage = "usage: " ^ Sys.argv.(0) ^ "[-nt]"
 
 let specs = [
-  ("-m", Arg.Set_string mode, ": set mode (t=transp, i=interp, n=nothing)");
   ("-nt", Arg.Set no_typecheck, ": turn off typechecking")
 ]
 
@@ -26,16 +24,8 @@ let _ =
       let ctx = Type.check_cmd commands Type.empty_context in
       Emit.set_type_map (fun id -> Type.type_of_id id ctx)
     else ();
-
-    match String.lowercase_ascii !mode with
-    | "i" ->
-      let final_env = Eval.eval_command (commands, Eval.empty_env) in
-      print_endline (Eval.string_of_env final_env)
-    | "t" ->
-      print_endline (Emit.generate_c commands)
-    | "n" -> ()
-    | _ ->
-      print_endline "Error: not a mode"
+    
+    print_endline (Emit.generate_c commands)
     
   with
     Type.TypeError s -> print_endline s
