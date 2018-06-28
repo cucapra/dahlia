@@ -9,10 +9,6 @@ Requires Dune and Menhir (in addition to OCaml and opam):
 	$ opam install jbuilder
 	$ opam install menhir
 
-Build Seashell:
-
-	$ jbuilder build bin/ex.bc 
-
 Generate an HLS program from your Seashell program:
 
 	$ cat my_program | jbuilder exec bin/ex.bc
