@@ -119,7 +119,7 @@ and emit_for (id, r1, r2, body, u) i =
     " <= "; (emit_expr r2); "; "; id; " += 1) {"; newline;
     unroll_pragma; newline
   ] 
-  |> fun s -> concat [ s; (emit_cmd (i+1) body); newline; "}" ]
+  |> fun s -> concat [ s; (emit_cmd (i+1) body); newline; (indent i "}") ]
   |> indent i
 
 and emit_if (cond, body) i =
@@ -135,7 +135,7 @@ and emit_seq (c1, c2) i =
 and emit_fun (t, id, args, body) i =
   concat [ 
     (type_str t); " "; id; "("; (emit_args args); ") {";
-    newline; (emit_cmd (i+1) body); newline; "}"
+    newline; (emit_cmd (i+1) body); newline; (indent i "}")
   ]
   |> indent i
 

@@ -39,7 +39,7 @@ prog:
     { c } ;
 
 cmd:
-  | FUNC f = ID LPAREN a = separated_list(COMMA, expr) RPAREN COLON 
+  | FUNC f = ID LPAREN a = args RPAREN COLON 
     t = type_annotation LBRACK body = cmd RBRACK
     { make_function t f a body }
   | MEMORY x = ID COLON t = type_annotation LSQUARE s = INT RSQUARE BANK 
@@ -84,9 +84,18 @@ expr:
   | x = ID
     { make_var x }
 
+annotated_expr:
+  | e = expr COLON t = type_annotation
+    { e } 
+
+args:
+  | a = separated_list(COMMA, annotated_expr) { a }
+
 type_annotation:
   | BOOL_ANNOTATION { TBool }
   | INT_ANNOTATION { TInt None } ;
+  | t = type_annotation LSQUARE RSQUARE BANK LPAREN bf = INT RPAREN 
+    { TArray (t, bf) }
 
 %inline binop:
   | NEQ { BopNeq }
