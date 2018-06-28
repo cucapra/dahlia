@@ -11,7 +11,7 @@ open Make_ast
 (* Keywords *)
 %token LET IF FOR TRUE FALSE INT_ANNOTATION 
        BOOL_ANNOTATION IDX_ANNOTATION UNROLL 
-       MEMORY BANK FUNC
+       MEMORY BANK FUNC TYPE
 
 (* Parentheses, brackets, etc *)
 %token LPAREN RPAREN LBRACK RBRACK LSQUARE RSQUARE FORWARD_SLASH
@@ -39,6 +39,8 @@ prog:
     { c } ;
 
 cmd:
+  | TYPE tname = ID EQUAL tval = type_annotation (* FIXME *)
+    { make_typedef tname tval }
   | FUNC f = ID LPAREN a = args RPAREN 
     LBRACK body = cmd RBRACK
     { make_function f a body }

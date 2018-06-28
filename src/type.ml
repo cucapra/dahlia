@@ -76,6 +76,7 @@ let rec check_expr exp context =
   | EArrayExplAccess (id, idx1, idx2) -> check_aa_expl id idx1 idx2 context
   | EIndex _                          -> failwith "Implement idx tc"
   | EArrayImplAccess (id, i)          -> check_aa_impl id i context
+  | EApp (id, args)                   -> check_app id args context
 
 and check_int i is_stat ctx = (if is_stat then TInt (Some i) else TInt (None)), ctx
 
@@ -107,6 +108,9 @@ and check_aa_expl id idx1 idx2 c =
 
 and check_aa_impl id i c =
   check_expr i c (* FIXME *)
+
+and check_app id args context =
+  TInt None, context (* FIXME *)
 
 let rec check_cmd cmd context =
   match cmd with
@@ -164,7 +168,11 @@ and check_reassign target exp context =
   | EArrayImplAccess (id, idx), expr -> context (* FIXME *)
   | _ -> raise (TypeError "Used reassign operator on illegal types")
 
-and check_funcdef id (args : (id * type_node) list) body context =
+and check_funcdef id args body context =
   List.iter (fun (e, t) -> Hashtbl.add context (e, None) t) args;
-  check_cmd body context
+  let context' = check_cmd body context in
+  List.iter (fun (e, t) -> Hashtbl.remove context (e, None)) args;
+  context'
+
+
 

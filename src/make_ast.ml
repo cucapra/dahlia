@@ -43,9 +43,12 @@ let make_array_access_impl id e1  =
   EArrayImplAccess (id, e1)
 
 let make_function id args body =
-  (* FIXME *)
   CFuncDef (id, args, body)
 
 let make_app f a =
   (* FIXME *)
   EApp (f, List.map (fun (e, _) -> e) a)
+
+let make_typedef tname tval =
+  CTypeDef (tname, tval)
+
