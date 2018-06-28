@@ -35,6 +35,7 @@ rule token =
   | "memory"     { MEMORY }
   | "bank"       { BANK }
   | "unroll"     { UNROLL }
+  | "func"        { FUNC }
 
   | "int"        { INT_ANNOTATION }
   | "bool"       { BOOL_ANNOTATION }

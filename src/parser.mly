@@ -11,7 +11,7 @@ open Make_ast
 (* Keywords *)
 %token LET IF FOR TRUE FALSE INT_ANNOTATION 
        BOOL_ANNOTATION IDX_ANNOTATION UNROLL 
-       MEMORY BANK RETURN
+       MEMORY BANK RETURN FUNC
 
 (* Parentheses, brackets, etc *)
 %token LPAREN RPAREN LBRACK RBRACK LSQUARE RSQUARE FORWARD_SLASH
@@ -39,7 +39,8 @@ prog:
     { c } ;
 
 cmd:
-  | t = type_annotation f = ID LPAREN a = separated_list(COMMA, expr) RPAREN LBRACK body = cmd RBRACK
+  | FUNC f = ID LPAREN a = separated_list(COMMA, expr) RPAREN COLON 
+    t = type_annotation LBRACK body = cmd RBRACK
     { make_function t f a body }
   | MEMORY x = ID COLON t = type_annotation LSQUARE s = INT RSQUARE BANK 
     LPAREN b = INT RPAREN SEMICOLON
