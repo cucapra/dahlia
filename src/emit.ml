@@ -80,8 +80,9 @@ and emit_args args =
 
 and emit_anno_args a = emit_args (argnames a)
 
-and emit_app (id, args) =
-  concat [ id; "("; (emit_args (List.map emit_expr args)); ");" ]
+and emit_app (id, args) i =
+  concat [ id; "("; (emit_args (List.map emit_expr args)); ");" ] 
+  |> indent i
 
 let rec emit_cmd i cmd =
   match cmd with
@@ -92,7 +93,7 @@ let rec emit_cmd i cmd =
   | CIf (cond, body)               -> emit_if (cond, body) i
   | CSeq (c1, c2)                  -> emit_seq (c1, c2) i
   | CFuncDef (id, args, body)      -> emit_fun (id, args, body) i
-  | CApp (id, args)                -> emit_app (id, args)
+  | CApp (id, args)                -> emit_app (id, args) i
 
 and emit_assign_int (id, e) =
   concat [ "int "; id; " = "; (emit_expr e); ";" ]
