@@ -49,7 +49,7 @@ let is_bool = (=) TBool
 let rec types_equal t1 t2 =
   match t1, t2 with
   | TInt _, TInt _ -> true
-  | TArray (a1, _), TArray (a2, _) -> types_equal a1 a2
+  | TArray (a1, bf1), TArray (a2, bf2) -> bf1=bf2 && types_equal a1 a2
   | TIndex _, TIndex _ -> true
   | t1, t2 -> t1=t2
 
