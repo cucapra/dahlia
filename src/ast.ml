@@ -5,6 +5,7 @@ type type_node =
   | TBool
   | TArray of type_node * int (* (type, banking factor) *)
   | TIndex of int
+  | TFunc of type_node list (* list of arg types *)
 
 type binop =
   | BopEq
@@ -28,7 +29,6 @@ type expression =
   | EArray of type_node * int * expression array
   | EArrayExplAccess of id * expression * expression
   | EArrayImplAccess of id * expression
-  | EApp of id * (id list)
 
 type value =
   | VInt of int
@@ -46,3 +46,4 @@ type command =
   | CSeq of command * command
   | CFuncDef of id * (id * type_node) list * command
   | CTypeDef of id * type_node
+  | CApp of id * (expression list)

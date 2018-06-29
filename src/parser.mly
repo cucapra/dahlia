@@ -39,9 +39,11 @@ prog:
     { c } ;
 
 cmd:
+  | f = ID LPAREN a = args RPAREN SEMICOLON
+    { make_app f a }
   | TYPE tname = ID EQUAL tval = type_annotation (* FIXME *)
     { make_typedef tname tval }
-  | FUNC f = ID LPAREN a = args RPAREN 
+  | FUNC f = ID LPAREN a = annotated_args RPAREN 
     LBRACK body = cmd RBRACK
     { make_function f a body }
   | MEMORY x = ID COLON t = type_annotation LSQUARE s = INT RSQUARE BANK 
@@ -63,8 +65,6 @@ cmd:
     { make_seq c1 c2 }
 
 expr:
-  | f = ID LPAREN a = args RPAREN
-    { make_app f a }
   | x = ID; LSQUARE; idx = expr; RSQUARE
     { make_array_access_impl x idx }
   | x = ID; LSQUARE; idx1 = expr; RSQUARE; LSQUARE; idx2 = expr; RSQUARE
@@ -88,8 +88,11 @@ annotated_id:
   | x = ID COLON t = type_annotation
     { (x, t) } 
 
-args:
+annotated_args:
   | a = separated_list(COMMA, annotated_id ) { a }
+
+args:
+  | a = separated_list(COMMA, expr) { a }
 
 type_annotation:
   | BOOL_ANNOTATION { TBool }

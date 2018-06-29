@@ -53,7 +53,6 @@ let rec emit_expr = function
   | EBinop (b, e1, e2)          -> emit_binop (b, e1, e2)
   | EArrayExplAccess (id, _, i) -> emit_aa (id, i)
   | EArrayImplAccess (id, i)    -> emit_aa (id, i)
-  | EApp (id, args)             -> emit_app (id, args)
   | EIndex _ -> failwith "Implement index stuff"
 
 and emit_int i = string_of_int i
@@ -76,13 +75,13 @@ and argnames =
 
 and emit_args args =
   (fun acc e -> concat [ acc; ", "; e ]) |> fun f ->
-  List.fold_left f "" args                           |> fun s -> 
+  List.fold_left f "" args               |> fun s -> 
   String.sub s 2 ((String.length s) - 2)
 
 and emit_anno_args a = emit_args (argnames a)
 
 and emit_app (id, args) =
-  concat [ id; "("; (emit_args args); ")" ]
+  concat [ id; "("; (emit_args (List.map emit_expr args)); ");" ]
 
 let rec emit_cmd i cmd =
   match cmd with
@@ -93,6 +92,7 @@ let rec emit_cmd i cmd =
   | CIf (cond, body)               -> emit_if (cond, body) i
   | CSeq (c1, c2)                  -> emit_seq (c1, c2) i
   | CFuncDef (id, args, body)      -> emit_fun (id, args, body) i
+  | CApp (id, args)                -> emit_app (id, args)
 
 and emit_assign_int (id, e) =
   concat [ "int "; id; " = "; (emit_expr e); ";" ]

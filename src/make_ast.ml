@@ -46,8 +46,7 @@ let make_function id args body =
   CFuncDef (id, args, body)
 
 let make_app f a =
-  (* FIXME *)
-  EApp (f, List.map (fun (e, _) -> e) a)
+  CApp (f, a)
 
 let make_typedef tname tval =
   CTypeDef (tname, tval)

@@ -76,7 +76,6 @@ let rec check_expr exp context =
   | EArrayExplAccess (id, idx1, idx2) -> check_aa_expl id idx1 idx2 context
   | EIndex _                          -> failwith "Implement idx tc"
   | EArrayImplAccess (id, i)          -> check_aa_impl id i context
-  | EApp (id, args)                   -> check_app id args context
 
 and check_int i is_stat ctx = (if is_stat then TInt (Some i) else TInt (None)), ctx
 
@@ -109,8 +108,6 @@ and check_aa_expl id idx1 idx2 c =
 and check_aa_impl id i c =
   check_expr i c (* FIXME *)
 
-and check_app id args context =
-  TInt None, context (* FIXME *)
 
 let rec check_cmd cmd context =
   match cmd with
@@ -121,6 +118,7 @@ let rec check_cmd cmd context =
   | CAssign (x, e1)               -> check_assignment x e1 context
   | CReassign (target, exp)       -> check_reassign target exp context
   | CFuncDef (id, args, body)     -> check_funcdef id args body context
+  | CApp (id, args)               -> check_app id args context
 
 and check_seq c1 c2 context =
   check_cmd c1 context
@@ -169,10 +167,20 @@ and check_reassign target exp context =
   | _ -> raise (TypeError "Used reassign operator on illegal types")
 
 and check_funcdef id args body context =
+  (* FIXME: this is a little wonky *)
   List.iter (fun (e, t) -> Hashtbl.add context (e, None) t) args;
   let context' = check_cmd body context in
-  List.iter (fun (e, t) -> Hashtbl.remove context (e, None)) args;
+  List.iter (fun (e, t) -> Hashtbl.remove context' (e, None)) args;
+  Hashtbl.add context' (id, None) (TFunc (List.map (fun (_, t) -> t) args));
   context'
 
-
+and check_app id args context =
+  let argtypes = List.map (fun a -> check_expr a context |> fst) args in
+  match Hashtbl.find context (id, None) with
+  | TFunc param_types -> 
+    if List.exists2 
+      (fun arg param -> not (types_equal arg param)) argtypes param_types
+    then raise (TypeError ("Illegal arg type supplied to " ^ id))
+    else context
+  | _ -> raise (TypeError (id ^ " is not a function and cannot be applied"))
 

@@ -28,6 +28,6 @@ val make_reassignment : expression -> expression -> command
 
 val make_function : id -> (id * type_node) list -> command -> command
 
-val make_app : id -> (id * type_node) list -> expression
+val make_app : id -> expression list -> command
 
 val make_typedef : id -> type_node -> command
