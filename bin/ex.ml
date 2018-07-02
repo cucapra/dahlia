@@ -21,8 +21,9 @@ let _ =
   let commands = Parser.prog Lexer.token lexbuf in
   try
     if not !no_typecheck then
-      let ctx = Type.check_cmd commands Type.empty_context in
-      Emit.set_type_map (fun id -> Type.type_of_id id ctx)
+      let (ctx, _) = 
+        Type.check_cmd commands (Type.empty_context, Type.empty_delta) 
+      in Emit.set_type_map (fun id -> Type.type_of_id id ctx)
     else ();
     
     print_endline (Emit.generate_c commands)
