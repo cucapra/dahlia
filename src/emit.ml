@@ -128,7 +128,7 @@ and emit_for (id, r1, r2, body, u) i =
     (match u with
      | None -> ""
      | Some u' -> 
-       concat [ (s_pragma_unroll (emit_expr u') (i+1)); newline ]) in
+       concat [ newline; (s_pragma_unroll (emit_expr u') (i+1)) ]) in
   concat [ 
     "for (int "; id; " = "; (emit_expr r1); "; "; id;
     " <= "; (emit_expr r2); "; "; id; " += 1) {";
