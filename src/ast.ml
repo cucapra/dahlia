@@ -6,6 +6,7 @@ type type_node =
   | TArray of type_node * int (* (type, banking factor) *)
   | TIndex of int
   | TFunc of type_node list (* list of arg types *)
+  | TAlias of id
 
 type binop =
   | BopEq

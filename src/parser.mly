@@ -99,6 +99,7 @@ type_annotation:
   | INT_ANNOTATION { TInt None } ;
   | t = type_annotation LSQUARE RSQUARE BANK LPAREN bf = INT RPAREN 
     { TArray (t, bf) }
+  | x = ID { TAlias x }
 
 %inline binop:
   | NEQ { BopNeq }

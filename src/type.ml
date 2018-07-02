@@ -3,8 +3,10 @@ open Ast
 exception TypeError of string
 
 type context = ((id * int option), type_node) Hashtbl.t
+type delta   = (id, type_node) Hashtbl.t
 
 let empty_context = Hashtbl.create 100
+let empty_delta   = Hashtbl.create 100
 
 let type_of_id id context = Hashtbl.find context (id, None)
 
@@ -66,21 +68,21 @@ let legal_op t1 t2 = function
   | BopAnd   -> is_bool t1 && is_bool t2
   | BopOr    -> is_bool t1 && is_bool t2
 
-let rec check_expr exp context =
+let rec check_expr exp (context, delta) =
   match exp with
-  | EInt (i, s)                       -> check_int i s context
-  | EBool _                           -> TBool, context
-  | EVar x                            -> Hashtbl.find context (x, None), context
-  | EBinop (binop, e1, e2)            -> check_binop binop e1 e2 context
+  | EInt (i, s)                       -> check_int i s (context, delta)
+  | EBool _                           -> TBool, (context, delta)
+  | EVar x                            -> Hashtbl.find context (x, None), (context, delta)
+  | EBinop (binop, e1, e2)            -> check_binop binop e1 e2 (context, delta)
   | EArray _                          -> raise (TypeError "Can't refer to array literal")
-  | EArrayExplAccess (id, idx1, idx2) -> check_aa_expl id idx1 idx2 context
+  | EArrayExplAccess (id, idx1, idx2) -> check_aa_expl id idx1 idx2 (context, delta)
   | EIndex _                          -> failwith "Implement idx tc"
-  | EArrayImplAccess (id, i)          -> check_aa_impl id i context
+  | EArrayImplAccess (id, i)          -> check_aa_impl id i (context, delta)
 
-and check_int i is_stat ctx = (if is_stat then TInt (Some i) else TInt (None)), ctx
+and check_int i is_stat (ctx, dta) = (if is_stat then TInt (Some i) else TInt (None)), (ctx, dta)
 
-and check_binop binop e1 e2 c =
-  check_expr e1 c  |> fun (t1, c1) ->
+and check_binop binop e1 e2 (c, d) =
+  check_expr e1 (c, d)  |> fun (t1, c1) ->
   check_expr e2 c1 |> fun (t2, c2) ->
   if legal_op t1 t2 binop then bop_type binop, c2
   else raise (TypeError 
@@ -109,27 +111,27 @@ and check_aa_impl id i c =
   check_expr i c (* FIXME *)
 
 
-let rec check_cmd cmd context =
+let rec check_cmd cmd (context, delta) =
   match cmd with
-  | CSeq (c1, c2)                 -> check_seq c1 c2 context
-  | CIf (cond, cmd)               -> check_if cond cmd context
-  | CFor (x, r1, r2, body)        -> check_for x r1 r2 body context
-  | CForImpl (x, r1, r2, u, body) -> check_for_impl x r1 r2 body context
-  | CAssign (x, e1)               -> check_assignment x e1 context
-  | CReassign (target, exp)       -> check_reassign target exp context
-  | CFuncDef (id, args, body)     -> check_funcdef id args body context
-  | CApp (id, args)               -> check_app id args context
+  | CSeq (c1, c2)                 -> check_seq c1 c2 (context, delta)
+  | CIf (cond, cmd)               -> check_if cond cmd (context, delta)
+  | CFor (x, r1, r2, body)        -> check_for x r1 r2 body (context, delta)
+  | CForImpl (x, r1, r2, u, body) -> check_for_impl x r1 r2 body (context, delta)
+  | CAssign (x, e1)               -> check_assignment x e1 (context, delta)
+  | CReassign (target, exp)       -> check_reassign target exp (context, delta)
+  | CFuncDef (id, args, body)     -> check_funcdef id args body (context, delta)
+  | CApp (id, args)               -> check_app id args (context, delta)
 
-and check_seq c1 c2 context =
-  check_cmd c1 context
-  |> fun context' -> check_cmd c2 context'
+and check_seq c1 c2 (context, delta) =
+  check_cmd c1 (context, delta)
+  |> fun (context', delta') -> check_cmd c2 (context', delta')
 
-and check_if cond cmd context =
+and check_if cond cmd (context, delta) =
   match check_expr cond context with
   | TBool, c -> check_cmd cmd c
   | _ -> raise (TypeError "Non-boolean conditional")
   
-and check_for id r1 r2 body c =
+and check_for id r1 r2 body (c, delta) =
   check_expr r1 c       |> fun (r1_type, c1) ->
   check_expr r2 c1      |> fun (r2_type, c2) ->
   match r1_type, r2_type with
@@ -137,16 +139,16 @@ and check_for id r1 r2 body c =
     Hashtbl.add c2 (id, None) (TInt None); check_cmd body c2
   | _ -> raise (TypeError "Range start/end must be integers")
 
-and check_for_impl id idx1 idx2 body context =
+and check_for_impl id idx1 idx2 body (context, delta) =
   check_for id idx1 idx2 body context (* FIXME *)
 
-and add_array_banks bf id bank_num context t i =
+and add_array_banks bf id bank_num (context, delta) t i =
   if i=bank_num then context
   else 
     (Hashtbl.add context (id, Some i) (TArray (t, bf)); 
      (add_array_banks bf id bank_num context t (i+1)))
 
-and check_assignment id exp context =
+and check_assignment id exp (context, delta) =
   match exp with
   | EArray (t, b, _) -> 
     Hashtbl.add context (id, None) (TArray (t, b)); 
@@ -155,7 +157,7 @@ and check_assignment id exp context =
     check_expr other_exp context |> fun (t, c) ->
     Hashtbl.add c (id, None) t; c
 
-and check_reassign target exp context =
+and check_reassign target exp (context, delta) =
   match target, exp with
   | EArrayExplAccess (id, idx1, idx2), expr ->
     check_aa_expl id idx1 idx2 context |> fun (t_arr, c) ->
@@ -166,7 +168,7 @@ and check_reassign target exp context =
   | EArrayImplAccess (id, idx), expr -> context (* FIXME *)
   | _ -> raise (TypeError "Used reassign operator on illegal types")
 
-and check_funcdef id args body context =
+and check_funcdef id args body (context, delta) =
   (* FIXME: this is a little wonky *)
   List.iter (fun (e, t) -> Hashtbl.add context (e, None) t) args;
   let context' = check_cmd body context in
@@ -174,7 +176,7 @@ and check_funcdef id args body context =
   Hashtbl.add context' (id, None) (TFunc (List.map (fun (_, t) -> t) args));
   context'
 
-and check_app id args context =
+and check_app id args (context, delta) =
   let argtypes = List.map (fun a -> check_expr a context |> fst) args in
   match Hashtbl.find context (id, None) with
   | TFunc param_types -> 
