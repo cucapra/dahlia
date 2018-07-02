@@ -126,11 +126,12 @@ and emit_reassign (target, e) i =
 and emit_for (id, r1, r2, body, u) i =
   let unroll_pragma =
     (match u with
-     | None -> "hi"
-     | Some u' -> (s_pragma_unroll (emit_expr u') (i+1))) in
+     | None -> ""
+     | Some u' -> 
+       concat [ (s_pragma_unroll (emit_expr u') (i+1)); newline ]) in
   concat [ 
     "for (int "; id; " = "; (emit_expr r1); "; "; id;
-    " <= "; (emit_expr r2); "; "; id; " += 1) {"; newline;
+    " <= "; (emit_expr r2); "; "; id; " += 1) {";
     unroll_pragma; newline
   ] 
   |> fun s -> concat [ s; (emit_cmd (i+1) body); newline; (indent i "}") ]

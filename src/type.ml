@@ -177,9 +177,18 @@ and check_reassign target exp (context, delta) =
   | EArrayImplAccess (id, idx), expr -> (context, delta) (* FIXME *)
   | _ -> raise (TypeError "Used reassign operator on illegal types")
 
+and bind_type id t (context, delta) =
+  match t with
+  | TArray (t, bf) ->
+    Hashtbl.add context (id, None) (TArray (t, bf)); 
+    add_array_banks bf id bf (context, delta) t 0
+  | other_exp -> 
+    Hashtbl.add context (id, None) other_exp;
+    (context, delta)
+
 and check_funcdef id args body (context, delta) =
   (* FIXME: this is a little wonky *)
-  List.iter (fun (e, t) -> Hashtbl.add context (e, None) t) args;
+  List.iter (fun (e, t) -> ignore (bind_type e t (context, delta))) args;
   let (context', delta') = check_cmd body (context, delta) in
   List.iter (fun (e, t) -> Hashtbl.remove context' (e, None)) args;
   Hashtbl.add context' (id, None) (TFunc (List.map (fun (_, t) -> t) args));
