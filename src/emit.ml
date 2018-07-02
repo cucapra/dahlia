@@ -75,15 +75,18 @@ and emit_binop (b, e1, e2) =
 and emit_aa (id, i) =
   concat [ id; "["; (emit_expr i); "]" ]
 
-and argnames =
-  List.map ((fun (id, _) -> id))
+and argvals =
+  List.map ((fun (id, t) -> 
+    match t with
+    | TArray _ -> concat [ "*"; id ]
+    | _ -> id))
 
 and emit_args args =
   (fun acc e -> concat [ acc; ", "; e ]) |> fun f ->
   List.fold_left f "" args               |> fun s -> 
   String.sub s 2 ((String.length s) - 2)
 
-and emit_anno_args a = emit_args (argnames a)
+and emit_anno_args a = emit_args (argvals a)
 
 and emit_app (id, args) i =
   concat [ id; "("; (emit_args (List.map emit_expr args)); ");" ] 
