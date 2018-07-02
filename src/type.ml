@@ -10,11 +10,14 @@ let empty_delta   = Hashtbl.create 100
 
 let type_of_id id context = Hashtbl.find context (id, None)
 
+let type_of_alias_id id delta = Hashtbl.find delta id
+
 let rec string_of_type = function
   | TBool -> "bool"
   | TInt _ -> "int"
   | TArray (t, _) -> (string_of_type t) ^ " array"
   | TIndex _ -> failwith "Undefined"
+  | TAlias id -> id
 
 let string_of_binop = function
   | BopEq    -> "="
@@ -42,31 +45,37 @@ let bop_type = function
   | BopAnd   -> TBool
   | BopOr    -> TBool
 
-let is_int = function
+let rec is_int delta = function
   | TInt _ -> true
+  | TAlias t -> is_int delta (Hashtbl.find delta t)
   | _ -> false
 
-let is_bool = (=) TBool
+let rec is_bool delta = function
+  | TBool -> true
+  | TAlias t -> is_bool delta (Hashtbl.find delta t)
+  | _ -> false
 
-let rec types_equal t1 t2 =
+let rec types_equal delta t1 t2 =
   match t1, t2 with
   | TInt _, TInt _ -> true
-  | TArray (a1, bf1), TArray (a2, bf2) -> bf1=bf2 && types_equal a1 a2
+  | TArray (a1, bf1), TArray (a2, bf2) -> bf1=bf2 && types_equal delta a1 a2
   | TIndex _, TIndex _ -> true
+  | TAlias t1, t2 -> types_equal delta (Hashtbl.find delta t1) t2
+  | t1, TAlias t2 -> types_equal delta t1 (Hashtbl.find delta t2)
   | t1, t2 -> t1=t2
 
-let legal_op t1 t2 = function
-  | BopEq    -> is_int t1 && is_int t2
-  | BopNeq   -> is_int t1 && is_int t2
-  | BopGeq   -> is_int t1 && is_int t2
-  | BopLeq   -> is_int t1 && is_int t2
-  | BopLt    -> is_int t1 && is_int t2
-  | BopGt    -> is_int t1 && is_int t2
-  | BopPlus  -> is_int t1 && is_int t2
-  | BopMinus -> is_int t1 && is_int t2
-  | BopTimes -> is_int t1 && is_int t2
-  | BopAnd   -> is_bool t1 && is_bool t2
-  | BopOr    -> is_bool t1 && is_bool t2
+let legal_op t1 t2 delta = function
+  | BopEq    -> is_int delta t1 && is_int delta t2
+  | BopNeq   -> is_int delta t1 && is_int delta t2
+  | BopGeq   -> is_int delta t1 && is_int delta t2
+  | BopLeq   -> is_int delta t1 && is_int delta t2
+  | BopLt    -> is_int delta t1 && is_int delta t2
+  | BopGt    -> is_int delta t1 && is_int delta t2
+  | BopPlus  -> is_int delta t1 && is_int delta t2
+  | BopMinus -> is_int delta t1 && is_int delta t2
+  | BopTimes -> is_int delta t1 && is_int delta t2
+  | BopAnd   -> is_bool delta t1 && is_bool delta t2
+  | BopOr    -> is_bool delta t1 && is_bool delta t2
 
 let rec check_expr exp (context, delta) =
   match exp with
@@ -84,7 +93,7 @@ and check_int i is_stat (ctx, dta) = (if is_stat then TInt (Some i) else TInt (N
 and check_binop binop e1 e2 (c, d) =
   check_expr e1 (c, d)   |> fun (t1, (c1, d1)) ->
   check_expr e2 (c1, d1) |> fun (t2, (c2, d2)) ->
-  if legal_op t1 t2 binop then bop_type binop, (c2, d2)
+  if legal_op t1 t2 d2 binop then bop_type binop, (c2, d2)
   else raise (TypeError 
     ("Illegal operation: can't apply operator '" ^
      (string_of_binop binop) ^ 
@@ -120,6 +129,7 @@ let rec check_cmd cmd (context, delta) =
   | CReassign (target, exp)       -> check_reassign target exp (context, delta)
   | CFuncDef (id, args, body)     -> check_funcdef id args body (context, delta)
   | CApp (id, args)               -> check_app id args (context, delta)
+  | CTypeDef (id, t)              -> check_typedef id t (context, delta)
 
 and check_seq c1 c2 (context, delta) =
   check_cmd c1 (context, delta)
@@ -161,7 +171,7 @@ and check_reassign target exp (context, delta) =
   | EArrayExplAccess (id, idx1, idx2), expr ->
     check_aa_expl id idx1 idx2 (context, delta) |> fun (t_arr, (c, d)) ->
     check_expr exp (c, d)                       |> fun (t_exp, (c', d')) ->
-    if types_equal t_arr t_exp then (c', d')
+    if types_equal delta t_arr t_exp then (c', d')
     else raise (TypeError "Tried to populate array with incorrect type")
   | EVar id, expr -> (context, delta)
   | EArrayImplAccess (id, idx), expr -> (context, delta) (* FIXME *)
@@ -180,8 +190,11 @@ and check_app id args (context, delta) =
   match Hashtbl.find context (id, None) with
   | TFunc param_types -> 
     if List.exists2 
-      (fun arg param -> not (types_equal arg param)) argtypes param_types
+      (fun arg param -> not (types_equal delta arg param)) argtypes param_types
     then raise (TypeError ("Illegal arg type supplied to " ^ id))
     else (context, delta)
   | _ -> raise (TypeError (id ^ " is not a function and cannot be applied"))
+
+and check_typedef id t (context, delta) =
+  Hashtbl.add delta id t; (context, delta)
 

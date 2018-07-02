@@ -14,3 +14,5 @@ val empty_context : context
 val empty_delta : delta
 
 val type_of_id : id -> context -> type_node
+
+val type_of_alias_id : id -> delta -> type_node
