@@ -56,7 +56,7 @@ let rec emit_expr = function
   | EVar v                      -> emit_var v
   | EArray (_, _, a)            -> emit_array a
   | EBinop (b, e1, e2)          -> emit_binop (b, e1, e2)
-  | EArrayExplAccess (id, _, i) -> emit_aa (id, i)
+  | EArrayExplAccess (id, b, i) -> emit_aa_expl (id, b, i)
   | EArrayImplAccess (id, i)    -> emit_aa (id, i)
   | EIndex _ -> failwith "Implement index stuff"
 
@@ -71,6 +71,9 @@ and emit_array _ =
 
 and emit_binop (b, e1, e2) = 
   concat [ (emit_expr e1); (bop_str b); (emit_expr e2) ]
+
+and emit_aa_expl (id, b, i) =
+  concat [ id; "["; (emit_expr b); " + 5*("; (emit_expr i); ")]" ]
 
 and emit_aa (id, i) =
   concat [ id; "["; (emit_expr i); "]" ]
