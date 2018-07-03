@@ -18,6 +18,7 @@ let rec string_of_type = function
   | TArray (t, _) -> (string_of_type t) ^ " array"
   | TIndex _ -> failwith "Undefined"
   | TAlias id -> id
+  | TFloat _ -> "float"
 
 let string_of_binop = function
   | BopEq    -> "="
@@ -55,6 +56,11 @@ let rec is_bool delta = function
   | TAlias t -> is_bool delta (Hashtbl.find delta t)
   | _ -> false
 
+let rec is_float delta = function
+  | TFloat _ -> true
+  | TAlias t -> is_float delta (Hashtbl.find delta t)
+  | _ -> false
+
 let rec types_equal delta t1 t2 =
   match t1, t2 with
   | TInt _, TInt _ -> true
@@ -65,15 +71,24 @@ let rec types_equal delta t1 t2 =
   | t1, t2 -> t1=t2
 
 let legal_op t1 t2 delta = function
-  | BopEq    -> is_int delta t1 && is_int delta t2
+  | BopEq    -> (is_int delta t1 && is_int delta t2)
+                || (is_float delta t1 && is_float delta t2)
   | BopNeq   -> is_int delta t1 && is_int delta t2
+                || (is_float delta t1 && is_float delta t2)
   | BopGeq   -> is_int delta t1 && is_int delta t2
+                || (is_float delta t1 && is_float delta t2)
   | BopLeq   -> is_int delta t1 && is_int delta t2
+                || (is_float delta t1 && is_float delta t2)
   | BopLt    -> is_int delta t1 && is_int delta t2
+                || (is_float delta t1 && is_float delta t2)
   | BopGt    -> is_int delta t1 && is_int delta t2
+                || (is_float delta t1 && is_float delta t2)
   | BopPlus  -> is_int delta t1 && is_int delta t2
+                || (is_float delta t1 && is_float delta t2)
   | BopMinus -> is_int delta t1 && is_int delta t2
+                || (is_float delta t1 && is_float delta t2)
   | BopTimes -> is_int delta t1 && is_int delta t2
+                || (is_float delta t1 && is_float delta t2)
   | BopAnd   -> is_bool delta t1 && is_bool delta t2
   | BopOr    -> is_bool delta t1 && is_bool delta t2
 
