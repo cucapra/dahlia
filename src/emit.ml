@@ -78,7 +78,7 @@ and emit_aa (id, i) =
 and argvals =
   List.map ((fun (id, t) -> 
     match t with
-    | TArray _ -> concat [ "*"; id ]
+    | TArray (t, _) -> concat [ (type_str t); " *"; id ]
     | _ -> id))
 
 and emit_args args =

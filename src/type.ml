@@ -102,8 +102,13 @@ and check_binop binop e1 e2 (c, d) =
      " and " ^ 
      (string_of_type t2)))
 
-and check_array_access_implicit id idx context =
-  failwith "Implement implicit loop"
+and check_array_access_implicit id idx (context, delta) =
+  failwith "Implement implicit aa"
+    (*
+  check_expr idx |> fun (t, (c', d')) ->
+  match t with
+  | TInt _ ->
+    if Hashtbl.mem  *)
 
 and check_aa_expl id idx1 idx2 (c, d) =
   check_expr idx1 (c, d)   |> fun (idx1_t, (c1, d1)) ->
