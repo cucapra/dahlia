@@ -18,8 +18,8 @@ type binop =
   | BopGt
   | BopPlus
   | BopMinus
-  | BopTimes
   | BopAnd
+  | BopTimes
   | BopOr
 
 type expression =
