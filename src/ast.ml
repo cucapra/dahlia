@@ -3,7 +3,7 @@ type id = string
 type type_node =
   | TInt of int option (* Some i => static int with value i *)
   | TBool
-  | TArray of type_node * int (* (type, banking factor) *)
+  | TArray of type_node * int * int (* (type, banking factor, size) *)
   | TIndex of int
   | TFunc of type_node list (* list of arg types *)
   | TAlias of id
