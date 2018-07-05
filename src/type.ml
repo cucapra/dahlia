@@ -223,7 +223,7 @@ and check_funcdef id args body (context, delta) =
   (* FIXME: this is a little wonky *)
   List.iter (fun (e, t) -> ignore (bind_type e t (context, delta))) args;
   let (context', delta') = check_cmd body (context, delta) in
-  List.iter (fun (e, t) -> Hashtbl.remove context' (e, None)) args;
+  (* List.iter (fun (e, t) -> Hashtbl.remove context' (e, None)) args; *)
   Hashtbl.add context' (id, None) (TFunc (List.map (fun (_, t) -> t) args));
   (context', delta')
 

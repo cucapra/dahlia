@@ -4,7 +4,7 @@ open Parser
 
 let num = '-'? ['0'-'9'] ['0'-'9']*
 
-let frac = '.' ['0'-'9']*
+let frac = '.' ['0'-'9']+
 let fl = '-'? ['0'-'9'] frac?
 
 let id = ['a'-'z' 'A'-'Z' '_'] ['a'-'z' 'A'-'Z' '_' '0'-'9']*

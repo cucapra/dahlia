@@ -76,8 +76,13 @@ and emit_array _ =
 and emit_binop (b, e1, e2) = 
   concat [ (emit_expr e1); (bop_str b); (emit_expr e2) ]
 
+and banking_factor = function
+  | TArray (_, bf) -> bf
+  | _ -> failwith "Tried to access bf of non-array"
+
 and emit_aa_expl (id, b, i) =
-  concat [ id; "["; (emit_expr b); " + 5*("; (emit_expr i); ")]" ]
+  let bf = banking_factor (!type_map id) in
+  concat [ id; "["; (emit_expr b); " + "; (string_of_int bf); "*("; (emit_expr i); ")]" ]
 
 and emit_aa (id, i) =
   concat [ id; "["; (emit_expr i); "]" ]
