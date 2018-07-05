@@ -164,10 +164,18 @@ and emit_if (cond, body) i =
 and emit_seq (c1, c2) i =
   concat [ (emit_cmd i c1); newline; (emit_cmd i c2); ]
 
+and emit_pragmas lst i =
+  (fun acc elem ->
+     match elem with
+     | id, TArray (_, bf) -> concat [ acc; (s_pragma_bank id bf (i+1)); newline ]
+     | _ -> acc)
+  |> fun f -> List.fold_left f "" lst
+
 and emit_fun (id, args, body) i =
+  let pragmas = emit_pragmas args i in
   concat [ 
     "void "; id; "("; (emit_anno_args args); ") {";
-    newline; (emit_cmd (i+1) body); newline; (indent i "}")
+    newline; pragmas; (emit_cmd (i+1) body); newline; (indent i "}")
   ]
   |> indent i
 
