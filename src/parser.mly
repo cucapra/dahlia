@@ -101,8 +101,8 @@ type_annotation:
   | BOOL_ANNOTATION { TBool }
   | INT_ANNOTATION { TInt None }
   | FLOAT_ANNOTATION { TFloat } 
-  | t = type_annotation LSQUARE RSQUARE BANK LPAREN bf = INT RPAREN 
-    { TArray (t, bf) }
+  | t = type_annotation LSQUARE s = INT RSQUARE BANK LPAREN bf = INT RPAREN 
+    { TArray (t, bf, s) }
   | x = ID { TAlias x }
 
 %inline binop:

@@ -30,12 +30,18 @@ let s_pragma_bank id bf i =
     " factor="; (string_of_int bf) 
   ] |> indent i
 
+let s_pragma_arrlength id s i =
+  concat [
+    "#pragma SDS data copy ("; id; "[0:";
+    (string_of_int s); "])"
+  ] |> indent i
+
 let rec type_str = function
   | TBool
   | TInt _        -> "int"
-  | TFloat _      -> "float"
+  | TFloat        -> "float"
   | TIndex _      -> failwith "Implement indices"
-  | TArray (t, _) -> failwith "Implement array type stringified version"
+  | TArray (t, _, _) -> failwith "Implement array type stringified version"
   | TAlias id -> type_str (!delta_map id)
 
 let bop_str = function
@@ -77,7 +83,7 @@ and emit_binop (b, e1, e2) =
   concat [ (emit_expr e1); (bop_str b); (emit_expr e2) ]
 
 and banking_factor = function
-  | TArray (_, bf) -> bf
+  | TArray (_, bf, _) -> bf
   | _ -> failwith "Tried to access bf of non-array"
 
 and emit_aa_expl (id, b, i) =
@@ -90,8 +96,8 @@ and emit_aa (id, i) =
 and argvals =
   List.map ((fun (id, t) -> 
     match t with
-    | TArray (t, _) -> concat [ (type_str t); " *"; id ]
-    | t             -> concat [ (type_str t); " "; id  ] 
+    | TArray (t, _, _) -> concat [ (type_str t); " *"; id ]
+    | t                -> concat [ (type_str t); " "; id  ] 
   ))
 
 and emit_args args =
@@ -133,9 +139,9 @@ and emit_assign_float (id, e) =
 and emit_assign (id, e) i =
   match !type_map id, e with
   | TInt _, _
-  | TBool, _                         -> emit_assign_int (id, e)          |> indent i
-  | TArray (t, bf), EArray (_, _, a) -> emit_assign_arr (id, e, a, bf) i |> indent i
-  | TFloat, _                        -> emit_assign_float (id, e)        |> indent i
+  | TBool, _                            -> emit_assign_int (id, e)          |> indent i
+  | TArray (t, bf, _), EArray (_, _, a) -> emit_assign_arr (id, e, a, bf) i |> indent i
+  | TFloat, _                           -> emit_assign_float (id, e)        |> indent i
 
 and emit_reassign (target, e) i =
   concat [ (emit_expr target); " = "; (emit_expr e); ";" ] |> indent i
@@ -167,7 +173,11 @@ and emit_seq (c1, c2) i =
 and emit_pragmas lst i =
   (fun acc elem ->
      match elem with
-     | id, TArray (_, bf) -> concat [ acc; (s_pragma_bank id bf (i+1)); newline ]
+     | id, TArray (_, bf, s) -> 
+       concat [ 
+         acc; (s_pragma_bank id bf (i+1)); newline; 
+         (s_pragma_arrlength id s (i+1)); newline 
+       ]
      | _ -> acc)
   |> fun f -> List.fold_left f "" lst
 

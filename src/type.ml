@@ -15,10 +15,10 @@ let type_of_alias_id id delta = Hashtbl.find delta id
 let rec string_of_type = function
   | TBool -> "bool"
   | TInt _ -> "int"
-  | TArray (t, _) -> (string_of_type t) ^ " array"
+  | TArray (t, _, _) -> (string_of_type t) ^ " array"
   | TIndex _ -> failwith "Undefined"
   | TAlias id -> id
-  | TFloat _ -> "float"
+  | TFloat -> "float"
 
 let string_of_binop = function
   | BopEq    -> "="
@@ -67,14 +67,14 @@ let rec is_bool delta = function
   | _ -> false
 
 let rec is_float delta = function
-  | TFloat _ -> true
+  | TFloat -> true
   | TAlias t -> is_float delta (Hashtbl.find delta t)
   | _ -> false
 
 let rec types_equal delta t1 t2 =
   match t1, t2 with
   | TInt _, TInt _ -> true
-  | TArray (a1, bf1), TArray (a2, bf2) -> bf1=bf2 && types_equal delta a1 a2
+  | TArray (a1, bf1, s1), TArray (a2, bf2, s2) -> bf1=bf2 && s1=s2 && types_equal delta a1 a2
   | TIndex _, TIndex _ -> true
   | TAlias t1, t2 -> types_equal delta (Hashtbl.find delta t1) t2
   | t1, TAlias t2 -> types_equal delta t1 (Hashtbl.find delta t2)
@@ -184,17 +184,18 @@ and check_for id r1 r2 body (c, d) =
 and check_for_impl id idx1 idx2 body (context, delta) =
   check_for id idx1 idx2 body (context, delta) (* FIXME *)
 
-and add_array_banks bf id bank_num (context, delta) t i =
+and add_array_banks s bf id bank_num (context, delta) t i =
   if i=bank_num then (context, delta)
   else 
-    (Hashtbl.add context (id, Some i) (TArray (t, bf)); 
-     (add_array_banks bf id bank_num (context, delta) t (i+1)))
+    (Hashtbl.add context (id, Some i) (TArray (t, bf, s)); 
+     (add_array_banks s bf id bank_num (context, delta) t (i+1)))
 
 and check_assignment id exp (context, delta) =
   match exp with
-  | EArray (t, b, _) -> 
-    Hashtbl.add context (id, None) (TArray (t, b)); 
-    add_array_banks b id b (context, delta) t 0
+  | EArray (t, b, a) -> 
+    let s = Array.length a in
+    Hashtbl.add context (id, None) (TArray (t, b, s)); 
+    add_array_banks s b id b (context, delta) t 0
   | other_exp -> 
     check_expr other_exp (context, delta) |> fun (t, (c, d)) ->
     Hashtbl.add c (id, None) t; (c, d)
@@ -212,9 +213,9 @@ and check_reassign target exp (context, delta) =
 
 and bind_type id t (context, delta) =
   match t with
-  | TArray (t, bf) ->
-    Hashtbl.add context (id, None) (TArray (t, bf)); 
-    add_array_banks bf id bf (context, delta) t 0
+  | TArray (t, bf, s) ->
+    Hashtbl.add context (id, None) (TArray (t, bf, s)); 
+    add_array_banks s bf id bf (context, delta) t 0
   | other_exp -> 
     Hashtbl.add context (id, None) other_exp;
     (context, delta)
