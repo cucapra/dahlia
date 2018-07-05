@@ -7,7 +7,7 @@ type type_node =
   | TIndex of int
   | TFunc of type_node list (* list of arg types *)
   | TAlias of id
-  | TFloat of float
+  | TFloat
 
 type binop =
   | BopEq
@@ -24,6 +24,7 @@ type binop =
 
 type expression =
   | EInt of int * bool
+  | EFloat of float
   | EIndex of int
   | EVar of id
   | EBool of bool

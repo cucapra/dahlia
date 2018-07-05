@@ -33,18 +33,28 @@ let string_of_binop = function
   | BopOr    -> "||"
   | BopAnd   -> "&&"
 
-let bop_type = function
-  | BopEq    -> TBool
-  | BopNeq   -> TBool
-  | BopGeq   -> TBool
-  | BopLeq   -> TBool
-  | BopLt    -> TBool
-  | BopGt    -> TBool
-  | BopPlus  -> TInt None
-  | BopMinus -> TInt None
-  | BopTimes -> TInt None
-  | BopAnd   -> TBool
-  | BopOr    -> TBool
+let bop_type a b op =
+  match a, b, op with
+  | _, _, BopEq    -> TBool
+  | _, _, BopNeq   -> TBool
+  | _, _, BopGeq   -> TBool
+  | _, _, BopLeq   -> TBool
+  | _, _, BopLt    -> TBool
+  | _, _, BopGt    -> TBool
+  | (TInt _), (TInt _), BopPlus  -> TInt None
+  | (TInt _), TFloat, BopPlus  -> TFloat
+  | TFloat, (TInt _), BopPlus  -> TFloat
+  | TFloat, TFloat, BopPlus  -> TFloat
+  | TFloat, (TInt _), BopMinus -> TFloat
+  | (TInt _), (TInt _), BopMinus -> TInt None
+  | (TInt _), TFloat, BopMinus -> TFloat
+  | TFloat, TFloat, BopMinus -> TFloat
+  | TFloat, (TInt _), BopTimes -> TFloat
+  | (TInt _), (TInt _), BopTimes -> TInt None
+  | (TInt _), TFloat, BopTimes -> TFloat
+  | TFloat, TFloat, BopTimes -> TFloat
+  | _, _, BopAnd   -> TBool
+  | _, _, BopOr    -> TBool
 
 let rec is_int delta = function
   | TInt _ -> true
@@ -95,6 +105,7 @@ let legal_op t1 t2 delta = function
 let rec check_expr exp (context, delta) =
   match exp with
   | EInt (i, s)                       -> check_int i s (context, delta)
+  | EFloat f                          -> check_float f (context, delta)
   | EBool _                           -> TBool, (context, delta)
   | EVar x                            -> Hashtbl.find context (x, None), (context, delta)
   | EBinop (binop, e1, e2)            -> check_binop binop e1 e2 (context, delta)
@@ -105,10 +116,12 @@ let rec check_expr exp (context, delta) =
 
 and check_int i is_stat (ctx, dta) = (if is_stat then TInt (Some i) else TInt (None)), (ctx, dta)
 
+and check_float f (ctx, dta) = TFloat, (ctx, dta)
+
 and check_binop binop e1 e2 (c, d) =
   check_expr e1 (c, d)   |> fun (t1, (c1, d1)) ->
   check_expr e2 (c1, d1) |> fun (t2, (c2, d2)) ->
-  if legal_op t1 t2 d2 binop then bop_type binop, (c2, d2)
+  if legal_op t1 t2 d2 binop then bop_type t1 t2 binop, (c2, d2)
   else raise (TypeError 
     ("Illegal operation: can't apply operator '" ^
      (string_of_binop binop) ^ 

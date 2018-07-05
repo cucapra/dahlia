@@ -7,11 +7,12 @@ open Make_ast
 
 %token <int> INT
 %token <string> ID
+%token <float> FLOAT
 
 (* Keywords *)
 %token LET IF FOR TRUE FALSE INT_ANNOTATION 
-       BOOL_ANNOTATION IDX_ANNOTATION UNROLL 
-       MEMORY BANK FUNC TYPE
+       BOOL_ANNOTATION IDX_ANNOTATION FLOAT_ANNOTATION
+       UNROLL MEMORY BANK FUNC TYPE
 
 (* Parentheses, brackets, etc *)
 %token LPAREN RPAREN LBRACK RBRACK LSQUARE RSQUARE FORWARD_SLASH
@@ -77,6 +78,8 @@ expr:
     { make_array_access x index }
   | x = INT
     { make_int x }
+  | f = FLOAT
+    { make_float f }
   | TRUE
     { make_bool true }
   | FALSE
@@ -96,7 +99,8 @@ args:
 
 type_annotation:
   | BOOL_ANNOTATION { TBool }
-  | INT_ANNOTATION { TInt None } ;
+  | INT_ANNOTATION { TInt None }
+  | FLOAT_ANNOTATION { TFloat } 
   | t = type_annotation LSQUARE RSQUARE BANK LPAREN bf = INT RPAREN 
     { TArray (t, bf) }
   | x = ID { TAlias x }

@@ -33,6 +33,7 @@ let s_pragma_bank id bf i =
 let rec type_str = function
   | TBool
   | TInt _        -> "int"
+  | TFloat _      -> "float"
   | TIndex _      -> failwith "Implement indices"
   | TArray (t, _) -> failwith "Implement array type stringified version"
   | TAlias id -> type_str (!delta_map id)
@@ -52,6 +53,7 @@ let bop_str = function
 
 let rec emit_expr = function
   | EInt (i, _)                 -> emit_int i
+  | EFloat f                    -> emit_float f
   | EBool b                     -> emit_bool b
   | EVar v                      -> emit_var v
   | EArray (_, _, a)            -> emit_array a
@@ -61,6 +63,8 @@ let rec emit_expr = function
   | EIndex _ -> failwith "Implement index stuff"
 
 and emit_int i = string_of_int i
+
+and emit_float f = string_of_float f
 
 and emit_bool b = if b then "1" else "0"
 
@@ -118,11 +122,15 @@ and emit_assign_arr (id, e, a, bf) i =
     (s_pragma_bank id bf i)
   ]
 
+and emit_assign_float (id, e) =
+  concat [ "float "; id; " = "; (emit_expr e); ";" ]
+
 and emit_assign (id, e) i =
   match !type_map id, e with
   | TInt _, _
   | TBool, _                         -> emit_assign_int (id, e)          |> indent i
   | TArray (t, bf), EArray (_, _, a) -> emit_assign_arr (id, e, a, bf) i |> indent i
+  | TFloat, _                        -> emit_assign_float (id, e)        |> indent i
 
 and emit_reassign (target, e) i =
   concat [ (emit_expr target); " = "; (emit_expr e); ";" ] |> indent i

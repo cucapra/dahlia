@@ -6,6 +6,9 @@ let make_assignment id expr =
 let make_int x =
   EInt (x, true)
 
+let make_float f =
+  EFloat f
+
 let make_bool b =
   EBool (b)
 
