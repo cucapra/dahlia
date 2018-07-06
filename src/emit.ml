@@ -30,12 +30,6 @@ let s_pragma_bank id bf i =
     " factor="; (string_of_int bf) 
   ] |> indent i
 
-let s_pragma_arrlength id s i =
-  concat [
-    "#pragma SDS data copy ("; id; "[0:";
-    (string_of_int s); "])"
-  ] |> indent i
-
 let rec type_str = function
   | TBool
   | TInt _        -> "int"
@@ -96,7 +90,8 @@ and emit_aa (id, i) =
 and argvals =
   List.map ((fun (id, t) -> 
     match t with
-    | TArray (t, _, _) -> concat [ (type_str t); " *"; id ]
+      | TArray (t, _, s) -> 
+        concat [ (type_str t); " *"; id; "["; (string_of_int s); "]" ]
     | t                -> concat [ (type_str t); " "; id  ] 
   ))
 
@@ -174,10 +169,7 @@ and emit_pragmas lst i =
   (fun acc elem ->
      match elem with
      | id, TArray (_, bf, s) -> 
-       concat [ 
-         acc; (s_pragma_bank id bf (i+1)); newline; 
-         (s_pragma_arrlength id s (i+1)); newline 
-       ]
+       concat [ acc; (s_pragma_bank id bf (i+1)); newline; ]
      | _ -> acc)
   |> fun f -> List.fold_left f "" lst
 
