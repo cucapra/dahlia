@@ -19,16 +19,17 @@ let newline = "\n"
 
 let concat =
   List.fold_left (fun acc e -> acc ^ e) ""
-
 let s_pragma_unroll u i =
   concat [ "#pragma HLS UNROLL factor="; u ]
   |> indent i
 
 let s_pragma_bank id bf i =
-  concat [ 
-    "#pragma HLS ARRAY_PARTITION variable="; id;
-    " factor="; (string_of_int bf) 
-  ] |> indent i
+  if bf=1 then ""
+  else
+    concat [ 
+      "#pragma HLS ARRAY_PARTITION variable="; id;
+      " factor="; (string_of_int bf) 
+    ] |> indent i
 
 let rec type_str = function
   | TBool
