@@ -35,26 +35,26 @@ let string_of_binop = function
 
 let bop_type a b op =
   match a, b, op with
-  | _, _, BopEq    -> TBool
-  | _, _, BopNeq   -> TBool
-  | _, _, BopGeq   -> TBool
-  | _, _, BopLeq   -> TBool
-  | _, _, BopLt    -> TBool
-  | _, _, BopGt    -> TBool
+  | _, _, BopEq                  -> TBool
+  | _, _, BopNeq                 -> TBool
+  | _, _, BopGeq                 -> TBool
+  | _, _, BopLeq                 -> TBool
+  | _, _, BopLt                  -> TBool
+  | _, _, BopGt                  -> TBool
   | (TInt _), (TInt _), BopPlus  -> TInt None
-  | (TInt _), TFloat, BopPlus  -> TFloat
-  | TFloat, (TInt _), BopPlus  -> TFloat
-  | TFloat, TFloat, BopPlus  -> TFloat
-  | TFloat, (TInt _), BopMinus -> TFloat
+  | (TInt _), TFloat, BopPlus    -> TFloat
+  | TFloat, (TInt _), BopPlus    -> TFloat
+  | TFloat, TFloat, BopPlus      -> TFloat
+  | TFloat, (TInt _), BopMinus   -> TFloat
   | (TInt _), (TInt _), BopMinus -> TInt None
-  | (TInt _), TFloat, BopMinus -> TFloat
-  | TFloat, TFloat, BopMinus -> TFloat
-  | TFloat, (TInt _), BopTimes -> TFloat
+  | (TInt _), TFloat, BopMinus   -> TFloat
+  | TFloat, TFloat, BopMinus     -> TFloat
+  | TFloat, (TInt _), BopTimes   -> TFloat
   | (TInt _), (TInt _), BopTimes -> TInt None
-  | (TInt _), TFloat, BopTimes -> TFloat
-  | TFloat, TFloat, BopTimes -> TFloat
-  | _, _, BopAnd   -> TBool
-  | _, _, BopOr    -> TBool
+  | (TInt _), TFloat, BopTimes   -> TFloat
+  | TFloat, TFloat, BopTimes     -> TFloat
+  | _, _, BopAnd                 -> TBool
+  | _, _, BopOr                  -> TBool
 
 let rec is_int delta = function
   | TInt _ -> true

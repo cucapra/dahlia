@@ -91,8 +91,8 @@ and argvals =
   List.map ((fun (id, t) -> 
     match t with
       | TArray (t, _, s) -> 
-        concat [ (type_str t); " *"; id; "["; (string_of_int s); "]" ]
-    | t                -> concat [ (type_str t); " "; id  ] 
+        concat [ (type_str t); " "; id; "["; (string_of_int s); "]" ]
+      | t                -> concat [ (type_str t); " "; id  ] 
   ))
 
 and emit_args args =
