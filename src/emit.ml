@@ -123,9 +123,12 @@ and emit_assign_int (id, e) =
 
 and emit_assign_arr (id, e, a, bf) i =
   let arr_size = string_of_int (Array.length a) in
-  concat [
+  let part_pragma =
+    if bf=1 then ""
+    else s_pragma_bank id bf i
+  in concat [
     "int "; id; "["; arr_size; "]"; ";"; newline;
-    (s_pragma_bank id bf i)
+    part_pragma
   ]
 
 and emit_assign_float (id, e) =
