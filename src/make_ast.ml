@@ -42,8 +42,9 @@ let make_seq c1 c2 =
 let make_array_access_expl id e1 e2 =
   EArrayExplAccess (id, e1, e2)
 
-let make_array_access_impl id e1  =
+let make_array_access_impl id e1 =
   EArrayImplAccess (id, e1)
+
 
 let make_function id args body =
   CFuncDef (id, args, body)
