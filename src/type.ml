@@ -166,9 +166,13 @@ and check_aa_expl id idx1 idx2 (c, d) =
   match idx1_t, idx2_t, Hashtbl.find c (id, None) with
   | TInt (None), _, _-> raise (TypeError "Bank accessor must be static")
   | TInt (Some i), TInt _, TArray (a_t, _, _) ->
-    if Hashtbl.mem c2 (id, Some i) then
+    (if Hashtbl.mem c2 (id, Some i) then
       a_t, ((Hashtbl.remove c2 (id, Some i); c2), d2)
-    else raise (TypeError ("Illegal bank access: " ^ (string_of_int i)))
+    else raise (TypeError ("Illegal bank access: " ^ (string_of_int i))))
+  | TInt (Some i), TArray _, TArray (a_t, _, _) -> 
+    (if Hashtbl.mem c2 (id, Some i) then
+      a_t, ((Hashtbl.remove c2 (id, Some i); c2), d2)
+    else raise (TypeError ("Illegal bank access: " ^ (string_of_int i))))
   | _ -> raise (TypeError "Bank accessor must be static") 
 
 and check_idx id idx a_t (c, d) =

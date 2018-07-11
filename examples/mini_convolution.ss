@@ -1,16 +1,16 @@
+func mconvo(a: int[3] bank(3), b: int[9], out: int[9]) {
 
-func mconvo(a: int[3], b: int[9] bank(3), out: int[9]) {
+  for (let i = 0..7) {
 
-  for (let i = 0..9) {
+    let ans = 0;
+    for (let j = 0..3) unroll 3 {
+      ans := ans + a[j] * b[0][i+j];
 
-    for (let j = 0..3) {
-      
-      out[j] := a[i] + a[i+1] + a[i+2]
+    } 
 
-    }
+    out[0][i] := ans;
 
   }
-  
-
 
 }
+
