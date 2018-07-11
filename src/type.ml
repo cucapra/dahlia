@@ -107,7 +107,7 @@ let rec check_expr exp (context, delta) =
   | EInt (i, s)                       -> check_int i s (context, delta)
   | EFloat f                          -> check_float f (context, delta)
   | EBool _                           -> TBool, (context, delta)
-  | EVar x                            -> check_var x (context, delta)
+  | EVar x                            -> Hashtbl.find context (x, None), (context, delta)
   | EBinop (binop, e1, e2)            -> check_binop binop e1 e2 (context, delta)
   | EArray _                          -> raise (TypeError "Can't refer to array literal")
   | EArrayExplAccess (id, idx1, idx2) -> check_aa_expl id idx1 idx2 (context, delta)
@@ -117,12 +117,6 @@ let rec check_expr exp (context, delta) =
 and check_int i is_stat (ctx, dta) = (if is_stat then TInt (Some i) else TInt (None)), (ctx, dta)
 
 and check_float f (ctx, dta) = TFloat, (ctx, dta)
-
-and check_var x (ctx, dta) =
-  print_endline "YOOOO\n";
-  match Hashtbl.find ctx (x, None), (ctx, dta) with
-  | TIndex idx, (c1, d1) -> check_idx x idx (ctx, dta)
-  | t, cd -> t, cd
 
 and check_binop binop e1 e2 (c, d) =
   check_expr e1 (c, d)   |> fun (t1, (c1, d1)) ->
@@ -147,16 +141,10 @@ and check_aa_expl id idx1 idx2 (c, d) =
     else raise (TypeError ("Illegal bank access: " ^ (string_of_int i)))
   | _ -> raise (TypeError "Bank accessor must be static") 
 
-and check_aa_impl id i (c, d) =
-  print_endline "WTF\n";
-  match check_expr i (c, d) with
-  | TIndex _, _ -> check_var id (c, d)
-  | _ -> raise (TypeError "Invalid array accessor")
-
 and check_idx id idx (c, d) =
   if (List.exists 
     (fun bank -> 
-      try ignore (Hashtbl.find c (id, None)); false
+      try ignore (Hashtbl.find c (id, Some bank)); false
       with Not_found -> true) 
     idx)
   then raise (TypeError "Illegal bank access")
@@ -164,6 +152,11 @@ and check_idx id idx (c, d) =
     List.iter (fun i -> Hashtbl.remove c (id, Some i)) idx;
     TInt (None), (c, d)
   
+and check_aa_impl id i (c, d) =
+  match check_expr i (c, d) with
+  | TIndex idxs, _ -> check_idx id idxs (c, d)
+  | _        -> raise (TypeError "Invalid array accessor")
+
 let rec check_cmd cmd (context, delta) =
   match cmd with
   | CSeq (c1, c2)                 -> check_seq c1 c2 (context, delta)
@@ -231,7 +224,9 @@ and check_reassign target exp (context, delta) =
     if types_equal delta t_arr t_exp then (c', d')
     else raise (TypeError "Tried to populate array with incorrect type")
   | EVar id, expr -> (context, delta)
-  | EArrayImplAccess (id, idx), expr -> check_aa_impl id idx (context, delta)
+  | EArrayImplAccess (id, idx), expr -> 
+    let (_, (c'', d'')) = check_aa_impl id idx (context, delta) in
+    (c'', d'')
   | _ -> raise (TypeError "Used reassign operator on illegal types")
 
 and bind_type id t (context, delta) =
@@ -275,12 +270,6 @@ and check_aa_expl id idx1 idx2 (c, d) =
     else raise (TypeError ("Illegal bank access: " ^ (string_of_int i)))
   | _ -> raise (TypeError "Bank accessor must be static") 
 
-and check_aa_impl id i (c, d) =
-  print_endline "WTF\n";
-  match check_expr i (c, d) with
-  | TIndex _, _ -> check_var id (c, d)
-  | _ -> raise (TypeError "Invalid array accessor")
-
 and check_idx id idx (c, d) =
   if (List.exists 
     (fun bank -> 
@@ -291,104 +280,3 @@ and check_idx id idx (c, d) =
   else 
     List.iter (fun i -> Hashtbl.remove c (id, Some i)) idx;
     TInt (None), (c, d)
-  
-let rec check_cmd cmd (context, delta) =
-  match cmd with
-  | CSeq (c1, c2)                 -> check_seq c1 c2 (context, delta)
-  | CIf (cond, cmd)               -> check_if cond cmd (context, delta)
-  | CFor (x, r1, r2, body)        -> check_for x r1 r2 body (context, delta)
-  | CForImpl (x, r1, r2, u, body) -> check_for_impl x r1 r2 body u (context, delta)
-  | CAssign (x, e1)               -> check_assignment x e1 (context, delta)
-  | CReassign (target, exp)       -> check_reassign target exp (context, delta)
-  | CFuncDef (id, args, body)     -> check_funcdef id args body (context, delta)
-  | CApp (id, args)               -> check_app id args (context, delta)
-  | CTypeDef (id, t)              -> check_typedef id t (context, delta)
-
-and check_seq c1 c2 (context, delta) =
-  check_cmd c1 (context, delta)
-  |> fun (context', delta') -> check_cmd c2 (context', delta')
-
-and check_if cond cmd (context, delta) =
-  match check_expr cond (context, delta) with
-  | TBool, (ctx', dta') -> check_cmd cmd (ctx', dta')
-  | _ -> raise (TypeError "Non-boolean conditional")
-  
-and check_for id r1 r2 body (c, d) =
-  check_expr r1 (c, d)   |> fun (r1_type, (c1, d1)) ->
-  check_expr r2 (c1, d1) |> fun (r2_type, (c2, d2)) ->
-  match r1_type, r2_type with
-  | TInt _, TInt _ -> 
-    Hashtbl.add c2 (id, None) (TInt None); check_cmd body (c2, d2)
-  | _ -> raise (TypeError "Range start/end must be integers")
-
-and (--) i j =
-  let rec aux n acc =
-    if n < i then acc else aux (n-1) (n :: acc)
-  in aux j []
-
-and check_for_impl id r1 r2 body u (context, delta) =
-  check_expr r1 (context, delta) |> fun (r1_type, (c1, d1)) ->
-  check_expr r2 (context, delta) |> fun (r2_type, (c2, d2)) ->
-  match r1_type, r2_type with
-  | TInt _, TInt _ ->
-    Hashtbl.add c2 (id, None) (TIndex (0--u));
-    check_cmd body (c2, d2)
-  | _ -> raise (TypeError "Range start/end must be integers")
-
-and add_array_banks s bf id bank_num (context, delta) t i =
-  if i=bank_num then (context, delta)
-  else 
-    (Hashtbl.add context (id, Some i) (TArray (t, bf, s)); 
-     (add_array_banks s bf id bank_num (context, delta) t (i+1)))
-
-and check_assignment id exp (context, delta) =
-  match exp with
-  | EArray (t, b, a) -> 
-    let s = Array.length a in
-    Hashtbl.add context (id, None) (TArray (t, b, s)); 
-    add_array_banks s b id b (context, delta) t 0
-  | other_exp -> 
-    check_expr other_exp (context, delta) |> fun (t, (c, d)) ->
-    Hashtbl.add c (id, None) t; (c, d)
-
-and check_reassign target exp (context, delta) =
-  match target, exp with
-  | EArrayExplAccess (id, idx1, idx2), expr ->
-    check_aa_expl id idx1 idx2 (context, delta) |> fun (t_arr, (c, d)) ->
-    check_expr exp (c, d)                       |> fun (t_exp, (c', d')) ->
-    if types_equal delta t_arr t_exp then (c', d')
-    else raise (TypeError "Tried to populate array with incorrect type")
-  | EVar id, expr -> (context, delta)
-  | EArrayImplAccess (id, idx), expr -> (context, delta) (* FIXME *)
-  | _ -> raise (TypeError "Used reassign operator on illegal types")
-
-and bind_type id t (context, delta) =
-  match t with
-  | TArray (t, bf, s) ->
-    Hashtbl.add context (id, None) (TArray (t, bf, s)); 
-    add_array_banks s bf id bf (context, delta) t 0
-  | other_exp -> 
-    Hashtbl.add context (id, None) other_exp;
-    (context, delta)
-
-and check_funcdef id args body (context, delta) =
-  (* FIXME: this is a little wonky *)
-  List.iter (fun (e, t) -> ignore (bind_type e t (context, delta))) args;
-  let (context', delta') = check_cmd body (context, delta) in
-  (* List.iter (fun (e, t) -> Hashtbl.remove context' (e, None)) args; *)
-  Hashtbl.add context' (id, None) (TFunc (List.map (fun (_, t) -> t) args));
-  (context', delta')
-
-and check_app id args (context, delta) =
-  let argtypes = List.map (fun a -> check_expr a (context, delta) |> fst) args in
-  match Hashtbl.find context (id, None) with
-  | TFunc param_types -> 
-    if List.exists2 
-      (fun arg param -> not (types_equal delta arg param)) argtypes param_types
-    then raise (TypeError ("Illegal arg type supplied to " ^ id))
-    else (context, delta)
-  | _ -> raise (TypeError (id ^ " is not a function and cannot be applied"))
-
-and check_typedef id t (context, delta) =
-  Hashtbl.add delta id t; (context, delta)
-
