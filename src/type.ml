@@ -151,15 +151,15 @@ and check_binop binop e1 e2 (c, d) =
 and check_aa_expl id idx1 idx2 (c, d) =
   check_expr idx1 (c, d)   |> fun (idx1_t, (c1, d1)) ->
   check_expr idx2 (c1, d1) |> fun (idx2_t, (c2, d2)) ->
-  match idx1_t, idx2_t with
-  | TInt (None), _ -> raise (TypeError "Bank accessor must be static")
-  | TInt (Some i), TInt _ ->
+  match idx1_t, idx2_t, Hashtbl.find c (id, None) with
+  | TInt (None), _, _-> raise (TypeError "Bank accessor must be static")
+  | TInt (Some i), TInt _, TArray (a_t, _, _) ->
     if Hashtbl.mem c2 (id, Some i) then
-      TInt (None), ((Hashtbl.remove c2 (id, Some i); c2), d2)
+      a_t, ((Hashtbl.remove c2 (id, Some i); c2), d2)
     else raise (TypeError ("Illegal bank access: " ^ (string_of_int i)))
   | _ -> raise (TypeError "Bank accessor must be static") 
 
-and check_idx id idx (c, d) =
+and check_idx id idx a_t (c, d) =
   if (List.exists 
     (fun bank -> 
       try ignore (Hashtbl.find c (id, Some bank)); false
@@ -168,12 +168,12 @@ and check_idx id idx (c, d) =
   then raise (TypeError "Illegal bank access")
   else 
     List.iter (fun i -> Hashtbl.remove c (id, Some i)) idx;
-    TInt (None), (c, d)
+    a_t, (c, d)
   
 and check_aa_impl id i (c, d) =
-  match check_expr i (c, d) with
-  | TIndex idxs, _ -> check_idx id idxs (c, d)
-  | _        -> raise (TypeError "Invalid array accessor")
+  match check_expr i (c, d), Hashtbl.find c (id, None) with
+  | (TIndex idxs, _), TArray (a_t, _, _) -> check_idx id idxs a_t (c, d)
+  | _                                    -> raise (TypeError "Invalid array accessor")
 
 let rec check_cmd cmd (context, delta) =
   match cmd with
