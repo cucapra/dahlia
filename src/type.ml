@@ -95,16 +95,28 @@ let rec types_equal delta t1 t2 =
 let legal_op t1 t2 delta = function
   | BopEq    -> (is_int delta t1 && is_int delta t2)
                 || (is_float delta t1 && is_float delta t2)
+                || (is_index delta t1 && is_int delta t2)
+                || (is_int delta t1 && is_index delta t2)
   | BopNeq   -> is_int delta t1 && is_int delta t2
                 || (is_float delta t1 && is_float delta t2)
+                || (is_index delta t1 && is_int delta t2)
+                || (is_int delta t1 && is_index delta t2)
   | BopGeq   -> is_int delta t1 && is_int delta t2
                 || (is_float delta t1 && is_float delta t2)
+                || (is_index delta t1 && is_int delta t2)
+                || (is_int delta t1 && is_index delta t2)
   | BopLeq   -> is_int delta t1 && is_int delta t2
                 || (is_float delta t1 && is_float delta t2)
+                || (is_index delta t1 && is_int delta t2)
+                || (is_int delta t1 && is_index delta t2)
   | BopLt    -> is_int delta t1 && is_int delta t2
                 || (is_float delta t1 && is_float delta t2)
+                || (is_index delta t1 && is_int delta t2)
+                || (is_int delta t1 && is_index delta t2)
   | BopGt    -> is_int delta t1 && is_int delta t2
                 || (is_float delta t1 && is_float delta t2)
+                || (is_index delta t1 && is_int delta t2)
+                || (is_int delta t1 && is_index delta t2)
   | BopPlus  -> is_int delta t1 && is_int delta t2
                 || (is_float delta t1 && is_float delta t2)
                 || (is_index delta t1 && is_int delta t2)
@@ -160,6 +172,7 @@ and check_aa_expl id idx1 idx2 (c, d) =
   | _ -> raise (TypeError "Bank accessor must be static") 
 
 and check_idx id idx a_t (c, d) =
+  List.iter (fun i -> print_int i; print_newline ()) idx;
   if (List.exists 
     (fun bank -> 
       try ignore (Hashtbl.find c (id, Some bank)); false
@@ -277,24 +290,3 @@ and check_app id args (context, delta) =
 and check_typedef id t (context, delta) =
   Hashtbl.add delta id t; (context, delta)
 
-and check_aa_expl id idx1 idx2 (c, d) =
-  check_expr idx1 (c, d)   |> fun (idx1_t, (c1, d1)) ->
-  check_expr idx2 (c1, d1) |> fun (idx2_t, (c2, d2)) ->
-  match idx1_t, idx2_t with
-  | TInt (None), _ -> raise (TypeError "Bank accessor must be static")
-  | TInt (Some i), TInt _ ->
-    if Hashtbl.mem c2 (id, Some i) then
-      TInt (None), ((Hashtbl.remove c2 (id, Some i); c2), d2)
-    else raise (TypeError ("Illegal bank access: " ^ (string_of_int i)))
-  | _ -> raise (TypeError "Bank accessor must be static") 
-
-and check_idx id idx (c, d) =
-  if (List.exists 
-    (fun bank -> 
-      try ignore (Hashtbl.find c (id, None)); false
-      with Not_found -> true) 
-    idx)
-  then raise (TypeError "Illegal bank access")
-  else 
-    List.iter (fun i -> Hashtbl.remove c (id, Some i)) idx;
-    TInt (None), (c, d)
