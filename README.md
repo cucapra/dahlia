@@ -6,9 +6,9 @@ Under development! Seashell provides a type system that makes programming FPGAs 
 
 Requires Dune and Menhir (in addition to OCaml and opam):
 
-	$ opam install jbuilder
+	$ opam install dune
 	$ opam install menhir
 
 Generate an HLS program from your Seashell program:
 
-	$ cat my_program | jbuilder exec bin/ex.bc
+	$ cat my_program | dune exec bin/ex.bc

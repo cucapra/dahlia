@@ -172,7 +172,6 @@ and check_aa_expl id idx1 idx2 (c, d) =
   | _ -> raise (TypeError "Bank accessor must be static") 
 
 and check_idx id idx a_t (c, d) =
-  List.iter (fun i -> print_int i; print_newline ()) idx;
   if (List.exists 
     (fun bank -> 
       try ignore (Hashtbl.find c (id, Some bank)); false
