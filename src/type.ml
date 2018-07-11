@@ -196,7 +196,7 @@ and check_for_impl id r1 r2 body u (context, delta) =
   check_expr r2 (context, delta) |> fun (r2_type, (c2, d2)) ->
   match r1_type, r2_type with
   | TInt _, TInt _ ->
-    Hashtbl.add c2 (id, None) (TIndex (0--u));
+    Hashtbl.add c2 (id, None) (TIndex (0--(u-1)));
     check_cmd body (c2, d2)
   | _ -> raise (TypeError "Range start/end must be integers")
 
