@@ -111,7 +111,7 @@ let rec check_expr exp (context, delta) =
   | EBinop (binop, e1, e2)            -> check_binop binop e1 e2 (context, delta)
   | EArray _                          -> raise (TypeError "Can't refer to array literal")
   | EArrayExplAccess (id, idx1, idx2) -> check_aa_expl id idx1 idx2 (context, delta)
-  | EIndex _                          -> failwith "Implement idx tc"
+  | EIndex idx                        -> failwith "Unreachable"
   | EArrayImplAccess (id, i)          -> check_aa_impl id i (context, delta)
 
 and check_int i is_stat (ctx, dta) = (if is_stat then TInt (Some i) else TInt (None)), (ctx, dta)
@@ -130,14 +130,6 @@ and check_binop binop e1 e2 (c, d) =
      " and " ^ 
      (string_of_type t2)))
 
-and check_array_access_implicit id idx (context, delta) =
-  failwith "Implement implicit aa"
-    (*
-  check_expr idx |> fun (t, (c', d')) ->
-  match t with
-  | TInt _ ->
-    if Hashtbl.mem  *)
-
 and check_aa_expl id idx1 idx2 (c, d) =
   check_expr idx1 (c, d)   |> fun (idx1_t, (c1, d1)) ->
   check_expr idx2 (c1, d1) |> fun (idx2_t, (c2, d2)) ->
@@ -149,15 +141,28 @@ and check_aa_expl id idx1 idx2 (c, d) =
     else raise (TypeError ("Illegal bank access: " ^ (string_of_int i)))
   | _ -> raise (TypeError "Bank accessor must be static") 
 
-and check_aa_impl id i c =
-  check_expr i c (* FIXME *)
+and check_idx id idx (c, d) =
+  if (List.exists 
+    (fun bank -> 
+      try ignore (Hashtbl.find c (id, Some bank)); false
+      with Not_found -> true) 
+    idx)
+  then raise (TypeError "Illegal bank access")
+  else 
+    List.iter (fun i -> Hashtbl.remove c (id, Some i)) idx;
+    TInt (None), (c, d)
+  
+and check_aa_impl id i (c, d) =
+  match check_expr i (c, d) with
+  | TIndex idxs, _ -> check_idx id idxs (c, d)
+  | _        -> raise (TypeError "Invalid array accessor")
 
 let rec check_cmd cmd (context, delta) =
   match cmd with
   | CSeq (c1, c2)                 -> check_seq c1 c2 (context, delta)
   | CIf (cond, cmd)               -> check_if cond cmd (context, delta)
   | CFor (x, r1, r2, body)        -> check_for x r1 r2 body (context, delta)
-  | CForImpl (x, r1, r2, u, body) -> check_for_impl x r1 r2 body (context, delta)
+  | CForImpl (x, r1, r2, u, body) -> check_for_impl x r1 r2 body u (context, delta)
   | CAssign (x, e1)               -> check_assignment x e1 (context, delta)
   | CReassign (target, exp)       -> check_reassign target exp (context, delta)
   | CFuncDef (id, args, body)     -> check_funcdef id args body (context, delta)
@@ -181,8 +186,19 @@ and check_for id r1 r2 body (c, d) =
     Hashtbl.add c2 (id, None) (TInt None); check_cmd body (c2, d2)
   | _ -> raise (TypeError "Range start/end must be integers")
 
-and check_for_impl id idx1 idx2 body (context, delta) =
-  check_for id idx1 idx2 body (context, delta) (* FIXME *)
+and (--) i j =
+  let rec aux n acc =
+    if n < i then acc else aux (n-1) (n :: acc)
+  in aux j []
+
+and check_for_impl id r1 r2 body u (context, delta) =
+  check_expr r1 (context, delta) |> fun (r1_type, (c1, d1)) ->
+  check_expr r2 (context, delta) |> fun (r2_type, (c2, d2)) ->
+  match r1_type, r2_type with
+  | TInt _, TInt _ ->
+    Hashtbl.add c2 (id, None) (TIndex (0--(u-1)));
+    check_cmd body (c2, d2)
+  | _ -> raise (TypeError "Range start/end must be integers")
 
 and add_array_banks s bf id bank_num (context, delta) t i =
   if i=bank_num then (context, delta)
@@ -208,7 +224,9 @@ and check_reassign target exp (context, delta) =
     if types_equal delta t_arr t_exp then (c', d')
     else raise (TypeError "Tried to populate array with incorrect type")
   | EVar id, expr -> (context, delta)
-  | EArrayImplAccess (id, idx), expr -> (context, delta) (* FIXME *)
+  | EArrayImplAccess (id, idx), expr -> 
+    let (_, (c'', d'')) = check_aa_impl id idx (context, delta) in
+    (c'', d'')
   | _ -> raise (TypeError "Used reassign operator on illegal types")
 
 and bind_type id t (context, delta) =
@@ -241,3 +259,24 @@ and check_app id args (context, delta) =
 and check_typedef id t (context, delta) =
   Hashtbl.add delta id t; (context, delta)
 
+and check_aa_expl id idx1 idx2 (c, d) =
+  check_expr idx1 (c, d)   |> fun (idx1_t, (c1, d1)) ->
+  check_expr idx2 (c1, d1) |> fun (idx2_t, (c2, d2)) ->
+  match idx1_t, idx2_t with
+  | TInt (None), _ -> raise (TypeError "Bank accessor must be static")
+  | TInt (Some i), TInt _ ->
+    if Hashtbl.mem c2 (id, Some i) then
+      TInt (None), ((Hashtbl.remove c2 (id, Some i); c2), d2)
+    else raise (TypeError ("Illegal bank access: " ^ (string_of_int i)))
+  | _ -> raise (TypeError "Bank accessor must be static") 
+
+and check_idx id idx (c, d) =
+  if (List.exists 
+    (fun bank -> 
+      try ignore (Hashtbl.find c (id, None)); false
+      with Not_found -> true) 
+    idx)
+  then raise (TypeError "Illegal bank access")
+  else 
+    List.iter (fun i -> Hashtbl.remove c (id, Some i)) idx;
+    TInt (None), (c, d)

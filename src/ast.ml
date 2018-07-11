@@ -4,7 +4,7 @@ type type_node =
   | TInt of int option (* Some i => static int with value i *)
   | TBool
   | TArray of type_node * int * int (* (type, banking factor, size) *)
-  | TIndex of int
+  | TIndex of int list
   | TFunc of type_node list (* list of arg types *)
   | TAlias of id
   | TFloat
@@ -25,13 +25,13 @@ type binop =
 type expression =
   | EInt of int * bool
   | EFloat of float
-  | EIndex of int
+  | EIndex of int list
   | EVar of id
   | EBool of bool
   | EBinop of binop * expression * expression
   | EArray of type_node * int * expression array
   | EArrayExplAccess of id * expression * expression
-  | EArrayImplAccess of id * expression
+  | EArrayImplAccess of id * expression 
 
 type value =
   | VInt of int
@@ -43,7 +43,7 @@ type value =
 type command =
   | CAssign of id * expression
   | CFor of id * expression * expression * command
-  | CForImpl of id * expression * expression * expression * command
+  | CForImpl of id * expression * expression * int * command
   | CReassign of expression * expression
   | CIf of expression * command
   | CSeq of command * command

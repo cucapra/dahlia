@@ -12,7 +12,7 @@ val make_binop : binop -> expression -> expression -> expression
 
 val make_for : id -> expression -> expression -> command -> command
 
-val make_for_impl : id -> expression -> expression -> expression -> command -> command
+val make_for_impl : id -> expression -> expression -> int -> command -> command
 
 val make_var : id -> expression
 
