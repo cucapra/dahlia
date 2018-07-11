@@ -55,7 +55,14 @@ let bop_type a b op =
   | TFloat, TFloat, BopTimes     -> TFloat
   | _, _, BopAnd                 -> TBool
   | _, _, BopOr                  -> TBool
+  | (TIndex i), TInt _, BopPlus  -> TIndex i
+  | TInt _, (TIndex i), BopPlus  -> TIndex i
+  | (TIndex i), TInt _, BopMinus -> TIndex i
+  | TInt _, (TIndex i), BopMinus -> TIndex i
+  | (TIndex i), TInt _, BopTimes -> TIndex i
+  | TInt _, (TIndex i), BopTimes -> TIndex i
 
+(* FIXME: refactor this! *)
 let rec is_int delta = function
   | TInt _ -> true
   | TAlias t -> is_int delta (Hashtbl.find delta t)
@@ -69,6 +76,11 @@ let rec is_bool delta = function
 let rec is_float delta = function
   | TFloat -> true
   | TAlias t -> is_float delta (Hashtbl.find delta t)
+  | _ -> false
+
+let rec is_index delta = function
+  | TIndex _ -> true
+  | TAlias t -> is_index delta (Hashtbl.find delta t)
   | _ -> false
 
 let rec types_equal delta t1 t2 =
@@ -95,10 +107,16 @@ let legal_op t1 t2 delta = function
                 || (is_float delta t1 && is_float delta t2)
   | BopPlus  -> is_int delta t1 && is_int delta t2
                 || (is_float delta t1 && is_float delta t2)
+                || (is_index delta t1 && is_int delta t2)
+                || (is_int delta t1 && is_index delta t2)
   | BopMinus -> is_int delta t1 && is_int delta t2
                 || (is_float delta t1 && is_float delta t2)
+                || (is_index delta t1 && is_int delta t2)
+                || (is_int delta t1 && is_index delta t2)
   | BopTimes -> is_int delta t1 && is_int delta t2
                 || (is_float delta t1 && is_float delta t2)
+                || (is_index delta t1 && is_int delta t2)
+                || (is_int delta t1 && is_index delta t2)
   | BopAnd   -> is_bool delta t1 && is_bool delta t2
   | BopOr    -> is_bool delta t1 && is_bool delta t2
 
