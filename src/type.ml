@@ -16,7 +16,7 @@ let rec string_of_type = function
   | TBool -> "bool"
   | TInt _ -> "int"
   | TArray (t, _, _) -> (string_of_type t) ^ " array"
-  | TIndex _ -> failwith "Undefined"
+  | TIndex _ -> "index"
   | TAlias id -> id
   | TFloat -> "float"
 
@@ -35,32 +35,35 @@ let string_of_binop = function
 
 let bop_type a b op =
   match a, b, op with
-  | _, _, BopEq                  -> TBool
-  | _, _, BopNeq                 -> TBool
-  | _, _, BopGeq                 -> TBool
-  | _, _, BopLeq                 -> TBool
-  | _, _, BopLt                  -> TBool
-  | _, _, BopGt                  -> TBool
-  | (TInt _), (TInt _), BopPlus  -> TInt None
-  | (TInt _), TFloat, BopPlus    -> TFloat
-  | TFloat, (TInt _), BopPlus    -> TFloat
-  | TFloat, TFloat, BopPlus      -> TFloat
-  | TFloat, (TInt _), BopMinus   -> TFloat
-  | (TInt _), (TInt _), BopMinus -> TInt None
-  | (TInt _), TFloat, BopMinus   -> TFloat
-  | TFloat, TFloat, BopMinus     -> TFloat
-  | TFloat, (TInt _), BopTimes   -> TFloat
-  | (TInt _), (TInt _), BopTimes -> TInt None
-  | (TInt _), TFloat, BopTimes   -> TFloat
-  | TFloat, TFloat, BopTimes     -> TFloat
-  | _, _, BopAnd                 -> TBool
-  | _, _, BopOr                  -> TBool
-  | (TIndex i), TInt _, BopPlus  -> TIndex i
-  | TInt _, (TIndex i), BopPlus  -> TIndex i
-  | (TIndex i), TInt _, BopMinus -> TIndex i
-  | TInt _, (TIndex i), BopMinus -> TIndex i
-  | (TIndex i), TInt _, BopTimes -> TIndex i
-  | TInt _, (TIndex i), BopTimes -> TIndex i
+  | _, _, BopEq                        -> TBool
+  | _, _, BopNeq                       -> TBool
+  | _, _, BopGeq                       -> TBool
+  | _, _, BopLeq                       -> TBool
+  | _, _, BopLt                        -> TBool
+  | _, _, BopGt                        -> TBool
+  | (TInt _), (TInt _), BopPlus        -> TInt None
+  | (TInt _), TFloat, BopPlus          -> TFloat
+  | TFloat, (TInt _), BopPlus          -> TFloat
+  | TFloat, TFloat, BopPlus            -> TFloat
+  | TFloat, (TInt _), BopMinus         -> TFloat
+  | (TInt _), (TInt _), BopMinus       -> TInt None
+  | (TInt _), TFloat, BopMinus         -> TFloat
+  | TFloat, TFloat, BopMinus           -> TFloat
+  | TFloat, (TInt _), BopTimes         -> TFloat
+  | (TInt _), (TInt _), BopTimes       -> TInt None
+  | (TInt _), TFloat, BopTimes         -> TFloat
+  | TFloat, TFloat, BopTimes           -> TFloat
+  | _, _, BopAnd                       -> TBool
+  | _, _, BopOr                        -> TBool
+  | (TIndex i), TInt _, BopPlus        -> TIndex i
+  | TInt _, (TIndex i), BopPlus        -> TIndex i
+  | (TIndex i), TInt _, BopMinus       -> TIndex i
+  | TInt _, (TIndex i), BopMinus       -> TIndex i
+  | (TIndex i), TInt _, BopTimes       -> TIndex i
+  | TInt _, (TIndex i), BopTimes       -> TIndex i
+  | (TIndex i1), (TIndex i2), BopPlus  -> TIndex i2 (*FIXME*)
+  | (TIndex i1), (TIndex i2), BopMinus -> TIndex i2 (*FIXME*)
+  | (TIndex i1), (TIndex i2), BopTimes -> TIndex i2 (*FIXME*)
 
 (* FIXME: refactor this! *)
 let rec is_int delta = function
@@ -97,38 +100,47 @@ let legal_op t1 t2 delta = function
                 || (is_float delta t1 && is_float delta t2)
                 || (is_index delta t1 && is_int delta t2)
                 || (is_int delta t1 && is_index delta t2)
+                || (is_index delta t1 && is_index delta t2)
   | BopNeq   -> is_int delta t1 && is_int delta t2
                 || (is_float delta t1 && is_float delta t2)
                 || (is_index delta t1 && is_int delta t2)
                 || (is_int delta t1 && is_index delta t2)
+                || (is_index delta t1 && is_index delta t2)
   | BopGeq   -> is_int delta t1 && is_int delta t2
                 || (is_float delta t1 && is_float delta t2)
                 || (is_index delta t1 && is_int delta t2)
                 || (is_int delta t1 && is_index delta t2)
+                || (is_index delta t1 && is_index delta t2)
   | BopLeq   -> is_int delta t1 && is_int delta t2
                 || (is_float delta t1 && is_float delta t2)
                 || (is_index delta t1 && is_int delta t2)
                 || (is_int delta t1 && is_index delta t2)
+                || (is_index delta t1 && is_index delta t2)
   | BopLt    -> is_int delta t1 && is_int delta t2
                 || (is_float delta t1 && is_float delta t2)
                 || (is_index delta t1 && is_int delta t2)
                 || (is_int delta t1 && is_index delta t2)
+                || (is_index delta t1 && is_index delta t2)
   | BopGt    -> is_int delta t1 && is_int delta t2
                 || (is_float delta t1 && is_float delta t2)
                 || (is_index delta t1 && is_int delta t2)
                 || (is_int delta t1 && is_index delta t2)
+                || (is_index delta t1 && is_index delta t2)
   | BopPlus  -> is_int delta t1 && is_int delta t2
                 || (is_float delta t1 && is_float delta t2)
                 || (is_index delta t1 && is_int delta t2)
                 || (is_int delta t1 && is_index delta t2)
+                || (is_index delta t1 && is_index delta t2)
   | BopMinus -> is_int delta t1 && is_int delta t2
                 || (is_float delta t1 && is_float delta t2)
                 || (is_index delta t1 && is_int delta t2)
                 || (is_int delta t1 && is_index delta t2)
+                || (is_index delta t1 && is_index delta t2)
   | BopTimes -> is_int delta t1 && is_int delta t2
                 || (is_float delta t1 && is_float delta t2)
                 || (is_index delta t1 && is_int delta t2)
                 || (is_int delta t1 && is_index delta t2)
+                || (is_index delta t1 && is_index delta t2)
   | BopAnd   -> is_bool delta t1 && is_bool delta t2
   | BopOr    -> is_bool delta t1 && is_bool delta t2
 
