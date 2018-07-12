@@ -51,3 +51,34 @@ void mmul(float a[9], float b[9], float c[3]) {
 
 * This is the same example as before, but using unroll term gives a workaround.
 
+### 3. Exploiting vvadd behaviour with explicit access
+
+```
+func mmul(a: float[9] bank(3), b: float[9] bank(3), c: float[3]) {
+
+  for (let i = 0..3) {
+    for (let j = 0..3) unroll 3 {
+      c[0][i] := a[i*3+j] + b[i*3+j];
+    }
+  }
+
+}
+```
+
+```
+void mmul(float a[9], float b[9], float c[3]) {
+        #pragma HLS ARRAY_PARTITION variable=a factor=3
+        #pragma HLS ARRAY_PARTITION variable=b factor=3
+
+        for (int i = 0; i <= 3; i += 1) {
+                for (int j = 0; j <= 3; j += 1) {
+                        #pragma HLS UNROLL factor=3
+                        c[0 + 1*(i)] = a[i*3+j]+b[i*3+j];
+                }
+        }
+}
+```
+
+* Great! This is the explicit way to write the above progam.
+
+This is to say, the example we conived is now usable to test read/ write multiple access.
