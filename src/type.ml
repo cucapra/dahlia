@@ -203,14 +203,22 @@ and check_idx id idx a_t (c, d) =
          ignore (Hashtbl.find c (id, Some bank))
       with Not_found -> 
         raise 
-          (TypeError ("Illegabl bank access: " ^ (string_of_int bank))))
+          (TypeError ("Illegal bank access: " ^ (string_of_int bank))))
     idx;
   List.iter (fun i -> Hashtbl.remove c (id, Some i)) idx; a_t, (c, d)
   
 and check_aa_impl id i (c, d) =
   match check_expr i (c, d), Hashtbl.find c (id, None) with
-  | (TIndex idxs, _), TArray (a_t, _, _) -> check_idx id idxs a_t (c, d)
-  | _                                    -> raise (TypeError "Invalid array accessor")
+  | (TIndex idxs, _), TArray (a_t, _, _) -> 
+    check_idx id idxs a_t (c, d)
+  | (TIndex _, _), t ->
+    raise
+      (TypeError ("Can't index into non-array type: " ^
+                  (string_of_type t)))
+  | (t, _), _ -> 
+    raise 
+      (TypeError ("Can't implicitly access array by indexing with type: " ^ 
+                  (string_of_type t)))
 
 let rec check_cmd cmd (context, delta) =
   match cmd with
