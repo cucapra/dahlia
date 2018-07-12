@@ -352,7 +352,7 @@ Illegal bank access: 1
 
 * This error makes sense, but shouldn't either 11 or 11a be valid?
 
-### 12. Nested for vvadd
+### 12. Nested for vvadd using one loop index
 
 ```
 func madd(a: float[1024] bank(32), b: float[1024] bank(32), c: float[1024] bank(32)) {
@@ -372,7 +372,7 @@ Invalid array accessor
 
 * Verifying this access is illegal
 
-### 12a. Nested for vvadd
+### 12a. Nested for vvadd using one loop index
 
 ```
 func madd(a: float[1024] bank(32), b: float[1024] bank(32), c: float[1024] bank(32)) {
@@ -402,51 +402,206 @@ void madd(float a[1024], float b[1024], float c[1024]) {
 
 * Neat!! As expected.
 
-### 12b. Nested for vvadd
+### 12b. Nested for vvadd using one loop index
 
 ```
-func madd
-```
+func madd(a: float[1024] bank(16), b: float[1024] bank(16), c: float[1024] bank(16)) {   
+                               
+  for (let i = 0..31) unroll 4 {       
+    for (let j = 0..31) {              
+      c[2*i+1] := a[2*i+1] + b[2*i+1]; 
+    }                                  
+  }                                    
 
-```
-void madd
-```
-
-* question
-
-### x. 
-
-```
-func madd
+}
 ```
 
 ```
-void madd
+void madd(float a[1024], float b[1024], float c[1024]) {
+        #pragma HLS ARRAY_PARTITION variable=a factor=16
+        #pragma HLS ARRAY_PARTITION variable=b factor=16
+        #pragma HLS ARRAY_PARTITION variable=c factor=16
+        for (int i = 0; i <= 31; i += 1) {
+                #pragma HLS UNROLL factor=4
+                for (int j = 0; j <= 31; j += 1) {
+                        c[2*i+1] = a[2*i+1]+b[2*i+1];
+                }
+        }
+        
+}
 ```
 
-* question
-
-### x. 
+### 13a. Nested for vvadd using both indeces no unroll 
 
 ```
-func madd
-```
+func madd(a: float[1024] bank(16), b: float[1024] bank(16), c: float[1024] bank(16)) {
 
-```
-void madd
-```
+  for (let i = 0..31) {
+    for (let j = 0..31) {
+      c[0][i] := a[0][i] + b[0][i];
+    }
+  }
 
-* question
-
-### x. 
-
-```
-func madd
+}
 ```
 
 ```
-void madd
+void madd(float a[1024], float b[1024], float c[1024]) {
+        #pragma HLS ARRAY_PARTITION variable=a factor=16
+        #pragma HLS ARRAY_PARTITION variable=b factor=16
+        #pragma HLS ARRAY_PARTITION variable=c factor=16
+        for (int i = 0; i <= 31; i += 1) {
+                for (int j = 0; j <= 31; j += 1) {
+                        c[0 + 16*(i)] = a[0 + 16*(i)]+b[0 + 16*(i)];
+                }
+        }
+}
 ```
 
-* question
+### 13b. Nested for vvadd using both indeces no unroll 
+
+```
+func madd(a: float[1024] bank(16), b: float[1024] bank(16), c: float[1024] bank(16)) {
+
+  for (let i = 0..31) {
+    for (let j = 0..31) {
+      c[0][i+j] := a[0][i+j] + b[0][i+j];
+    }
+  }
+
+}
+```
+
+```
+void madd(float a[1024], float b[1024], float c[1024]) {
+        #pragma HLS ARRAY_PARTITION variable=a factor=16
+        #pragma HLS ARRAY_PARTITION variable=b factor=16
+        #pragma HLS ARRAY_PARTITION variable=c factor=16
+        for (int i = 0; i <= 31; i += 1) {
+                for (int j = 0; j <= 31; j += 1) {
+                        c[0 + 16*(i+j)] = a[0 + 16*(i+j)]+b[0 + 16*(i+j)];
+                }
+        }
+}
+```
+
+### 14. Two unrolls
+
+```
+func madd(a: float[1024] bank(16), b: float[1024] bank(16), c: float[1024] bank(16)) {
+
+  for (let i = 0..31) unroll 2{
+    for (let j = 0..31) unroll 2 {
+      c[i+j] := a[i+j] + b[i+j];
+    }
+  }
+
+}
+```
+
+```
+Fatal error: exception Failure("Undefined")
+```
+
+### 15. One unroll
+
+```
+func madd(a: float[1024] bank(16), b: float[1024] bank(16), c: float[1024] bank(16)) {
+
+  for (let i = 0..31) unroll 2 {
+    for (let j = 0..31) {
+      c[i+j] := a[i+j] + b[i+j];
+    }
+  }
+
+}
+```
+
+```
+void madd(float a[1024], float b[1024], float c[1024]) {
+        #pragma HLS ARRAY_PARTITION variable=a factor=16
+        #pragma HLS ARRAY_PARTITION variable=b factor=16
+        #pragma HLS ARRAY_PARTITION variable=c factor=16
+        for (int i = 0; i <= 31; i += 1) {
+                #pragma HLS UNROLL factor=2
+                for (int j = 0; j <= 31; j += 1) {
+                        c[i+j] = a[i+j]+b[i+j];
+                }
+        }
+}
+```
+
+* Wasn't this expected to fail?
+
+### 16. One unroll
+
+```
+func madd(a: float[1024] bank(16), b: float[1024] bank(16), c: float[1024] bank(16)) {
+
+  for (let i = 0..31) {
+    for (let j = 0..31) unroll 2 {
+      c[i+j] := a[i+j] + b[i+j];
+    }
+  }
+
+}
+```
+
+```
+void madd(float a[1024], float b[1024], float c[1024]) {
+        #pragma HLS ARRAY_PARTITION variable=a factor=16
+        #pragma HLS ARRAY_PARTITION variable=b factor=16
+        #pragma HLS ARRAY_PARTITION variable=c factor=16
+        for (int i = 0; i <= 31; i += 1) {
+                for (int j = 0; j <= 31; j += 1) {
+                        #pragma HLS UNROLL factor=2
+                        c[i+j] = a[i+j]+b[i+j];
+                }
+        }
+}
+```
+
+* Which loop is unrolled doesn't matter?
+
+### 17. Arithmetic in loop index
+
+```
+func madd(a: float[1024] bank(32), b: float[1024] bank(32), c: float[1024] bank(32)) {
+
+  for (let i = 0..31) {
+    for (let j = 0..31) unroll 32 {
+      c[32*i+j] := a[32*i+j] + b[32*i+j];
+    }
+  }
+
+}
+```
+
+```
+void madd(float a[1024], float b[1024], float c[1024]) {
+        #pragma HLS ARRAY_PARTITION variable=a factor=32
+        #pragma HLS ARRAY_PARTITION variable=b factor=32
+        #pragma HLS ARRAY_PARTITION variable=c factor=32
+        for (int i = 0; i <= 31; i += 1) {
+                for (int j = 0; j <= 31; j += 1) {
+                        #pragma HLS UNROLL factor=32
+                        c[32*i+j] = a[32*i+j]+b[32*i+j];
+                }
+        }
+}
+```
+
+* Multiplier in loop doesn't matter? Only two unrolls seem to hurt seashell.
+
+### 18.  
+
+```
+
+```
+
+```
+
+```
+
+* 
 
