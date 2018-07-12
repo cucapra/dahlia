@@ -33,6 +33,15 @@ let string_of_binop = function
   | BopOr    -> "||"
   | BopAnd   -> "&&"
 
+and (--) i j =
+  let rec aux n acc =
+    if n < i then acc else aux (n-1) (n :: acc)
+  in aux j []
+
+let combine_idxs i1 i2 =
+  let new_length = (List.length i1) * (List.length i2) in
+  0 -- (new_length - 1)
+
 let bop_type a b op =
   match a, b, op with
   | _, _, BopEq                        -> TBool
@@ -61,9 +70,9 @@ let bop_type a b op =
   | TInt _, (TIndex i), BopMinus       -> TIndex i
   | (TIndex i), TInt _, BopTimes       -> TIndex i
   | TInt _, (TIndex i), BopTimes       -> TIndex i
-  | (TIndex i1), (TIndex i2), BopPlus  -> TIndex i2 (*FIXME*)
-  | (TIndex i1), (TIndex i2), BopMinus -> TIndex i2 (*FIXME*)
-  | (TIndex i1), (TIndex i2), BopTimes -> TIndex i2 (*FIXME*)
+  | (TIndex i1), (TIndex i2), BopPlus  -> TIndex (combine_idxs i1 i2) (*FIXME*)
+  | (TIndex i1), (TIndex i2), BopMinus -> TIndex (combine_idxs i1 i2) (*FIXME*)
+  | (TIndex i1), (TIndex i2), BopTimes -> TIndex (combine_idxs i1 i2) (*FIXME*)
 
 (* FIXME: refactor this! *)
 let rec is_int delta = function
@@ -188,15 +197,15 @@ and check_aa_expl id idx1 idx2 (c, d) =
   | _ -> raise (TypeError "Bank accessor must be static") 
 
 and check_idx id idx a_t (c, d) =
-  if (List.exists 
-    (fun bank -> 
-      try ignore (Hashtbl.find c (id, Some bank)); false
-      with Not_found -> true) 
-    idx)
-  then raise (TypeError "Illegal bank access")
-  else 
-    List.iter (fun i -> Hashtbl.remove c (id, Some i)) idx;
-    a_t, (c, d)
+  List.iter
+    (fun bank ->
+      try 
+         ignore (Hashtbl.find c (id, Some bank))
+      with Not_found -> 
+        raise 
+          (TypeError ("Illegabl bank access: " ^ (string_of_int bank))))
+    idx;
+  List.iter (fun i -> Hashtbl.remove c (id, Some i)) idx; a_t, (c, d)
   
 and check_aa_impl id i (c, d) =
   match check_expr i (c, d), Hashtbl.find c (id, None) with
@@ -232,11 +241,6 @@ and check_for id r1 r2 body (c, d) =
     Hashtbl.add c2 (id, None) (TInt None); check_cmd body (c2, d2)
   | _ -> raise (TypeError "Range start/end must be integers")
 
-and (--) i j =
-  let rec aux n acc =
-    if n < i then acc else aux (n-1) (n :: acc)
-  in aux j []
-
 and check_for_impl id r1 r2 body u (context, delta) =
   check_expr r1 (context, delta) |> fun (r1_type, (c1, d1)) ->
   check_expr r2 (context, delta) |> fun (r2_type, (c2, d2)) ->
@@ -271,8 +275,10 @@ and check_reassign target exp (context, delta) =
     else raise (TypeError "Tried to populate array with incorrect type")
   | EVar id, expr -> (context, delta)
   | EArrayImplAccess (id, idx), expr -> 
-    let (_, (c'', d'')) = check_aa_impl id idx (context, delta) in
-    (c'', d'')
+    check_aa_impl id idx (context, delta) |> fun (t_arr, (c, d)) ->
+    check_expr expr (context, delta)      |> fun (t_exp, (c', d')) ->
+    if types_equal delta t_arr t_exp then (c', d')
+    else raise (TypeError "Tried to populate array with incorrect type")
   | _ -> raise (TypeError "Used reassign operator on illegal types")
 
 and bind_type id t (context, delta) =
