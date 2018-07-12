@@ -352,6 +352,68 @@ Illegal bank access: 1
 
 * This error makes sense, but shouldn't either 11 or 11a be valid?
 
+### 12. Nested for vvadd
+
+```
+func madd(a: float[1024] bank(32), b: float[1024] bank(32), c: float[1024] bank(32)) {
+
+  for (let i = 0..31) {
+    for (let j = 0..31) unroll 32 {
+      c[i] := a[i] + b[i];
+    }
+  }
+
+}
+```
+
+```
+Invalid array accessor
+```
+
+* Verifying this access is illegal
+
+### 12a. Nested for vvadd
+
+```
+func madd(a: float[1024] bank(32), b: float[1024] bank(32), c: float[1024] bank(32)) {
+
+  for (let i = 0..31) unroll 32 {
+    for (let j = 0..31) {
+      c[i] := a[i] + b[i];
+    }
+  }
+
+}
+```
+
+```
+void madd(float a[1024], float b[1024], float c[1024]) {
+        #pragma HLS ARRAY_PARTITION variable=a factor=32
+        #pragma HLS ARRAY_PARTITION variable=b factor=32
+        #pragma HLS ARRAY_PARTITION variable=c factor=32
+        for (int i = 0; i <= 31; i += 1) {
+                #pragma HLS UNROLL factor=32
+                for (int j = 0; j <= 31; j += 1) {
+                        c[i] = a[i]+b[i];
+                }
+        }
+}
+```
+
+* Neat!! As expected.
+
+### 12b. Nested for vvadd
+
+```
+func madd
+```
+
+```
+void madd
+```
+
+* question
+
 ### x. 
 
 ```
@@ -363,3 +425,28 @@ void madd
 ```
 
 * question
+
+### x. 
+
+```
+func madd
+```
+
+```
+void madd
+```
+
+* question
+
+### x. 
+
+```
+func madd
+```
+
+```
+void madd
+```
+
+* question
+
