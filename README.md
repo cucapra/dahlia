@@ -1,6 +1,6 @@
 # Seashell
 
-Under development! Seashell provides a type system that makes programming FPGAs easier.
+Under development! Seashell provides a type system that makes programming FPGAs easier. To learn about the syntax and behavior, check out the [docs](https://github.com/cucapra/seashell/wiki/Docs).
 
 ## Setup/Use
 
