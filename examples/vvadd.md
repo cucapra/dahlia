@@ -592,16 +592,3 @@ void madd(float a[1024], float b[1024], float c[1024]) {
 ```
 
 * Multiplier in loop doesn't matter? Only two unrolls seem to hurt seashell.
-
-### 18.  
-
-```
-
-```
-
-```
-
-```
-
-* 
-
