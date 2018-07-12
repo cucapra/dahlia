@@ -255,6 +255,103 @@ func madd(a: float[1024], b: float[1024], c: float[1024] bank(2)) {
 Illegal bank access: 0
 ```
 
+### 11. Simple array[bank][index] access  
+
+```
+func madd(a: float[1024], b: float[1024], c: float[1024] bank(2)) {
+
+  for (let i = 0..511) {
+    c[0][i] := a[i] + b[i];
+    c[1][i] := a[i] + b[i];
+  }
+
+}
+```
+
+```
+Invalid array accessor
+```
+
+### 11a. Simple array[bank][index] access   
+
+```
+func madd(a: float[1024], b: float[1024], c: float[1024] bank(2)) {
+
+  for (let i = 0..511) {
+    c[0][i] := a[0][i] + b[0][i];
+    c[1][i] := a[0][i] + b[0][i];
+  }
+
+}
+```
+
+```
+Illegal bank access: 0
+```
+
+### 11b. Simple array[bank][index] access   
+
+```
+func madd(a: float[1024] bank(2), b: float[1024] bank(2), c: float[1024] bank(2)) {
+
+  for (let i = 0..511) {
+    c[0][i] := a[0][i] + b[0][i];
+    c[1][i] := a[0][i] + b[0][i];
+  }
+
+}
+```
+
+```
+Illegal bank access: 0
+```
+
+* Is this an illegal access?
+
+### 11c. Simple array[bank][index] access  
+
+```
+func madd(a: float[1024] bank(2), b: float[1024] bank(2), c: float[1024] bank(2)) {
+
+  for (let i = 0..511) {
+    c[0][i] := a[0][i] + b[0][i];
+    c[1][i] := a[1][i] + b[1][i];
+  }
+
+}
+```
+
+```
+void madd(float a[1024], float b[1024], float c[1024]) {
+        #pragma HLS ARRAY_PARTITION variable=a factor=2
+        #pragma HLS ARRAY_PARTITION variable=b factor=2
+        #pragma HLS ARRAY_PARTITION variable=c factor=2
+        for (int i = 0; i <= 511; i += 1) {
+                c[0 + 2*(i)] = a[0 + 2*(i)]+b[0 + 2*(i)];
+                c[1 + 2*(i)] = a[1 + 2*(i)]+b[1 + 2*(i)];
+        }
+}
+```
+
+### 11.d. Simple array[bank][index] access  
+
+```
+func madd(a: float[1024], b: float[1024], c: float[1024] bank(2)) {
+
+  for (let i = 0..511) {
+    c[0][i] := a[0][i] + b[0][i];
+    c[1][i] := a[1][i] + b[1][i];
+  }
+
+}
+```
+
+```
+Illegal bank access: 1
+```
+
+* This error makes sense, but shouldn't either 11 or 11a be valid?
+
 ### x. 
 
 ```
@@ -266,4 +363,3 @@ void madd
 ```
 
 * question
-
