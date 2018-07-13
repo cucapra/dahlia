@@ -19,6 +19,8 @@ func madd(a: float[1024], b: float[1024], c: float[1024]) {
 Invalid array accessor
 ```
 
+* The rule seems all non unrolled loop array acceses should be explicit.
+
 ### 2. 
 
 ```
