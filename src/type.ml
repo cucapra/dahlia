@@ -189,12 +189,14 @@ and check_aa_expl id idx1 idx2 (c, d) =
   | TInt (Some i), TInt _, TArray (a_t, _, _) ->
     (if Hashtbl.mem c2 (id, Some i) then
       a_t, ((Hashtbl.remove c2 (id, Some i); c2), d2)
-    else raise (TypeError ("Illegal bank access: " ^ (string_of_int i))))
+    else raise (TypeError ("Illegal bank access " ^ (string_of_int i) ^ " on array " ^ id)))
   | TInt (Some i), TArray _, TArray (a_t, _, _) -> 
     (if Hashtbl.mem c2 (id, Some i) then
       a_t, ((Hashtbl.remove c2 (id, Some i); c2), d2)
-    else raise (TypeError ("Illegal bank access: " ^ (string_of_int i))))
-  | _ -> raise (TypeError "Bank accessor must be static") 
+    else raise (TypeError ("Illegal bank access: " ^ (string_of_int i) ^ " on array " ^ id)))
+  | t, _, _ -> 
+    raise (TypeError ("Tried illegal bank access on array " ^ 
+                      id ^ " with type " ^ (string_of_type t)))
 
 and check_idx id idx a_t (c, d) =
   List.iter
@@ -213,11 +215,11 @@ and check_aa_impl id i (c, d) =
     check_idx id idxs a_t (c, d)
   | (TIndex _, _), t ->
     raise
-      (TypeError ("Can't index into non-array type: " ^
+      (TypeError ("Can't index into non-array type " ^ id ^" with accessor type " ^
                   (string_of_type t)))
   | (t, _), _ -> 
     raise 
-      (TypeError ("Can't implicitly access array by indexing with type: " ^ 
+      (TypeError ("Can't implicitly access array by indexing into " ^ id ^ " with type " ^
                   (string_of_type t)))
 
 let rec check_cmd cmd (context, delta) =
