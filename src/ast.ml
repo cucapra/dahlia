@@ -44,6 +44,7 @@ type command =
   | CAssign of id * expression
   | CFor of id * expression * expression * command
   | CForImpl of id * expression * expression * int * command
+  | CForDouble of id * id * expression * expression * int * command
   | CReassign of expression * expression
   | CIf of expression * command
   | CSeq of command * command

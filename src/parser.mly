@@ -62,6 +62,9 @@ cmd:
   | FOR LPAREN LET x = ID EQUAL x1 = expr RANGE_DOTS x2 = expr RPAREN 
     LBRACK c = cmd RBRACK
     { make_for x x1 x2 c } ;
+  | FOR LPAREN LET i = ID COMMA j = ID EQUAL x1 = expr RANGE_DOTS x2 = expr RPAREN u = INT
+    LBRACK c = cmd RBRACK
+    { make_for_double i j x1 x2 u c }
   | c1 = cmd c2 = cmd
     { make_seq c1 c2 }
 

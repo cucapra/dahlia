@@ -55,3 +55,6 @@ let make_app f a =
 let make_typedef tname tval =
   CTypeDef (tname, tval)
 
+let make_for_double i j x1 x2 u body =
+  CForDouble (i, j, x1, x2, u, body)
+
