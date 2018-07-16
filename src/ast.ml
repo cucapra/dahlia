@@ -4,7 +4,7 @@ type type_node =
   | TInt of int option (* Some i => static int with value i *)
   | TBool
   | TArray of type_node * int * int (* (type, banking factor, size) *)
-  | TIndex of int list
+  | TIndex of int list * (int list) option (* (static comp, dynamic comp) *)
   | TFunc of type_node list (* list of arg types *)
   | TAlias of id
   | TFloat
