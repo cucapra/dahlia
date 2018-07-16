@@ -16,9 +16,15 @@ let rec string_of_type = function
   | TBool -> "bool"
   | TInt _ -> "int"
   | TArray (t, _, _) -> (string_of_type t) ^ " array"
-  | TIndex _ -> "index"
+  | TIndex (s, d) ->
+    begin
+      match d with
+      | None -> "index with completely static information"
+      | Some _ -> "index with static and dynamic information"
+    end
   | TAlias id -> id
   | TFloat -> "float"
+  | TFunc _ -> "func"
 
 let string_of_binop = function
   | BopEq    -> "="
@@ -174,10 +180,14 @@ and check_aa_expl id idx1 idx2 (c, d) =
     (if Hashtbl.mem c2 (id, Some i) then
       a_t, ((Hashtbl.remove c2 (id, Some i); c2), d2)
     else raise (TypeError ("Illegal bank access " ^ (string_of_int i) ^ " on array " ^ id)))
-  | TInt (Some i), TArray _, TArray (a_t, _, _) -> 
+  | TInt (Some i), TIndex _, TArray (a_t, _, _) -> 
     (if Hashtbl.mem c2 (id, Some i) then
       a_t, ((Hashtbl.remove c2 (id, Some i); c2), d2)
     else raise (TypeError ("Illegal bank access: " ^ (string_of_int i) ^ " on array " ^ id)))
+  | TIndex (s, None), TInt _, TArray (a_t, _, _) ->
+    check_idx id s a_t (c, d)
+  | TIndex (s, None), TIndex _, TArray (a_t, _, _) ->
+    check_idx id s a_t (c, d)
   | t, _, _ -> 
     raise (TypeError ("Tried illegal bank access on array " ^ 
                       id ^ " with type " ^ (string_of_type t)))
@@ -239,10 +249,14 @@ and check_for_impl id r1 r2 body u (context, delta) =
   check_expr r1 (context, delta) |> fun (r1_type, (c1, d1)) ->
   check_expr r2 (context, delta) |> fun (r2_type, (c2, d2)) ->
   match r1_type, r2_type with
-  | TInt _, TInt _ ->
-    Hashtbl.add c2 (id, None) (TIndex ((0--(u-1)), None));
+  | TInt (Some i1), TInt (Some i2) ->
+    let range_size = i2 - i1 + 1 in
+    if (range_size=u) then
+      Hashtbl.add c2 (id, None) (TIndex ((0--(u-1)), None))
+    else
+      Hashtbl.add c2 (id, None) (TIndex ((0--(u-1)), Some (range_size/u)));
     check_cmd body (c2, d2)
-  | _ -> raise (TypeError "Range start/end must be integers")
+  | _ -> raise (TypeError "Range start/end must be static integers")
 
 and add_array_banks s bf id bank_num (context, delta) t i =
   if i=bank_num then (context, delta)
