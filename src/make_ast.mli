@@ -33,5 +33,3 @@ val make_function : id -> (id * type_node) list -> command -> command
 val make_app : id -> expression list -> command
 
 val make_typedef : id -> type_node -> command
-
-val make_for_double : id -> id -> expression -> expression -> int -> command -> command

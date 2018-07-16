@@ -4,7 +4,7 @@ type type_node =
   | TInt of int option (* Some i => static int with value i *)
   | TBool
   | TArray of type_node * int * int (* (type, banking factor, size) *)
-  | TIndex of int list * (int list) option (* (static comp, dynamic comp) *)
+  | TIndex of int list * int option (* (static comp, dynamic comp) *)
   | TFunc of type_node list (* list of arg types *)
   | TAlias of id
   | TFloat
@@ -44,7 +44,6 @@ type command =
   | CAssign of id * expression
   | CFor of id * expression * expression * command
   | CForImpl of id * expression * expression * int * command
-  | CForDouble of id * id * expression * expression * int * command
   | CReassign of expression * expression
   | CIf of expression * command
   | CSeq of command * command
