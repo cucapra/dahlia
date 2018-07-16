@@ -70,9 +70,6 @@ let bop_type a b op =
   | TInt _, (TIndex i), BopMinus       -> TIndex i
   | (TIndex i), TInt _, BopTimes       -> TIndex i
   | TInt _, (TIndex i), BopTimes       -> TIndex i
-  | (TIndex i1), (TIndex i2), BopPlus  -> TIndex (combine_idxs i1 i2) (*FIXME*)
-  | (TIndex i1), (TIndex i2), BopMinus -> TIndex (combine_idxs i1 i2) (*FIXME*)
-  | (TIndex i1), (TIndex i2), BopTimes -> TIndex (combine_idxs i1 i2) (*FIXME*)
 
 (* FIXME: refactor this! *)
 let rec is_int delta = function
@@ -109,47 +106,38 @@ let legal_op t1 t2 delta = function
                 || (is_float delta t1 && is_float delta t2)
                 || (is_index delta t1 && is_int delta t2)
                 || (is_int delta t1 && is_index delta t2)
-                || (is_index delta t1 && is_index delta t2)
   | BopNeq   -> is_int delta t1 && is_int delta t2
                 || (is_float delta t1 && is_float delta t2)
                 || (is_index delta t1 && is_int delta t2)
                 || (is_int delta t1 && is_index delta t2)
-                || (is_index delta t1 && is_index delta t2)
   | BopGeq   -> is_int delta t1 && is_int delta t2
                 || (is_float delta t1 && is_float delta t2)
                 || (is_index delta t1 && is_int delta t2)
                 || (is_int delta t1 && is_index delta t2)
-                || (is_index delta t1 && is_index delta t2)
   | BopLeq   -> is_int delta t1 && is_int delta t2
                 || (is_float delta t1 && is_float delta t2)
                 || (is_index delta t1 && is_int delta t2)
                 || (is_int delta t1 && is_index delta t2)
-                || (is_index delta t1 && is_index delta t2)
   | BopLt    -> is_int delta t1 && is_int delta t2
                 || (is_float delta t1 && is_float delta t2)
                 || (is_index delta t1 && is_int delta t2)
                 || (is_int delta t1 && is_index delta t2)
-                || (is_index delta t1 && is_index delta t2)
   | BopGt    -> is_int delta t1 && is_int delta t2
                 || (is_float delta t1 && is_float delta t2)
                 || (is_index delta t1 && is_int delta t2)
                 || (is_int delta t1 && is_index delta t2)
-                || (is_index delta t1 && is_index delta t2)
   | BopPlus  -> is_int delta t1 && is_int delta t2
                 || (is_float delta t1 && is_float delta t2)
                 || (is_index delta t1 && is_int delta t2)
                 || (is_int delta t1 && is_index delta t2)
-                || (is_index delta t1 && is_index delta t2)
   | BopMinus -> is_int delta t1 && is_int delta t2
                 || (is_float delta t1 && is_float delta t2)
                 || (is_index delta t1 && is_int delta t2)
                 || (is_int delta t1 && is_index delta t2)
-                || (is_index delta t1 && is_index delta t2)
   | BopTimes -> is_int delta t1 && is_int delta t2
                 || (is_float delta t1 && is_float delta t2)
                 || (is_index delta t1 && is_int delta t2)
                 || (is_int delta t1 && is_index delta t2)
-                || (is_index delta t1 && is_index delta t2)
   | BopAnd   -> is_bool delta t1 && is_bool delta t2
   | BopOr    -> is_bool delta t1 && is_bool delta t2
 
@@ -224,15 +212,16 @@ and check_aa_impl id i (c, d) =
 
 let rec check_cmd cmd (context, delta) =
   match cmd with
-  | CSeq (c1, c2)                 -> check_seq c1 c2 (context, delta)
-  | CIf (cond, cmd)               -> check_if cond cmd (context, delta)
-  | CFor (x, r1, r2, body)        -> check_for x r1 r2 body (context, delta)
-  | CForImpl (x, r1, r2, u, body) -> check_for_impl x r1 r2 body u (context, delta)
-  | CAssign (x, e1)               -> check_assignment x e1 (context, delta)
-  | CReassign (target, exp)       -> check_reassign target exp (context, delta)
-  | CFuncDef (id, args, body)     -> check_funcdef id args body (context, delta)
-  | CApp (id, args)               -> check_app id args (context, delta)
-  | CTypeDef (id, t)              -> check_typedef id t (context, delta)
+  | CSeq (c1, c2)                      -> check_seq c1 c2 (context, delta)
+  | CIf (cond, cmd)                    -> check_if cond cmd (context, delta)
+  | CFor (x, r1, r2, body)             -> check_for x r1 r2 body (context, delta)
+  | CForImpl (x, r1, r2, u, body)      -> check_for_impl x r1 r2 body u (context, delta)
+  | CForDouble (i, j, r1, r2, u, body) -> check_for_double i j r1 r2 u body (context, delta)
+  | CAssign (x, e1)                    -> check_assignment x e1 (context, delta)
+  | CReassign (target, exp)            -> check_reassign target exp (context, delta)
+  | CFuncDef (id, args, body)          -> check_funcdef id args body (context, delta)
+  | CApp (id, args)                    -> check_app id args (context, delta)
+  | CTypeDef (id, t)                   -> check_typedef id t (context, delta)
 
 and check_seq c1 c2 (context, delta) =
   check_cmd c1 (context, delta)
@@ -259,6 +248,9 @@ and check_for_impl id r1 r2 body u (context, delta) =
     Hashtbl.add c2 (id, None) (TIndex (0--(u-1)));
     check_cmd body (c2, d2)
   | _ -> raise (TypeError "Range start/end must be integers")
+
+and check_for_double i j r1 r2 u body (context, delta) =
+  failwith "Implement double for loop"
 
 and add_array_banks s bf id bank_num (context, delta) t i =
   if i=bank_num then (context, delta)
