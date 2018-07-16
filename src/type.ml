@@ -38,38 +38,34 @@ and (--) i j =
     if n < i then acc else aux (n-1) (n :: acc)
   in aux j []
 
-let combine_idxs i1 i2 =
-  let new_length = (List.length i1) * (List.length i2) in
-  0 -- (new_length - 1)
-
 let bop_type a b op =
   match a, b, op with
-  | _, _, BopEq                        -> TBool
-  | _, _, BopNeq                       -> TBool
-  | _, _, BopGeq                       -> TBool
-  | _, _, BopLeq                       -> TBool
-  | _, _, BopLt                        -> TBool
-  | _, _, BopGt                        -> TBool
-  | (TInt _), (TInt _), BopPlus        -> TInt None
-  | (TInt _), TFloat, BopPlus          -> TFloat
-  | TFloat, (TInt _), BopPlus          -> TFloat
-  | TFloat, TFloat, BopPlus            -> TFloat
-  | TFloat, (TInt _), BopMinus         -> TFloat
-  | (TInt _), (TInt _), BopMinus       -> TInt None
-  | (TInt _), TFloat, BopMinus         -> TFloat
-  | TFloat, TFloat, BopMinus           -> TFloat
-  | TFloat, (TInt _), BopTimes         -> TFloat
-  | (TInt _), (TInt _), BopTimes       -> TInt None
-  | (TInt _), TFloat, BopTimes         -> TFloat
-  | TFloat, TFloat, BopTimes           -> TFloat
-  | _, _, BopAnd                       -> TBool
-  | _, _, BopOr                        -> TBool
-  | (TIndex i), TInt _, BopPlus        -> TIndex i
-  | TInt _, (TIndex i), BopPlus        -> TIndex i
-  | (TIndex i), TInt _, BopMinus       -> TIndex i
-  | TInt _, (TIndex i), BopMinus       -> TIndex i
-  | (TIndex i), TInt _, BopTimes       -> TIndex i
-  | TInt _, (TIndex i), BopTimes       -> TIndex i
+  | _, _, BopEq                            -> TBool
+  | _, _, BopNeq                           -> TBool
+  | _, _, BopGeq                           -> TBool
+  | _, _, BopLeq                           -> TBool
+  | _, _, BopLt                            -> TBool
+  | _, _, BopGt                            -> TBool
+  | (TInt _), (TInt _), BopPlus            -> TInt None
+  | (TInt _), TFloat, BopPlus              -> TFloat
+  | TFloat, (TInt _), BopPlus              -> TFloat
+  | TFloat, TFloat, BopPlus                -> TFloat
+  | TFloat, (TInt _), BopMinus             -> TFloat
+  | (TInt _), (TInt _), BopMinus           -> TInt None
+  | (TInt _), TFloat, BopMinus             -> TFloat
+  | TFloat, TFloat, BopMinus               -> TFloat
+  | TFloat, (TInt _), BopTimes             -> TFloat
+  | (TInt _), (TInt _), BopTimes           -> TInt None
+  | (TInt _), TFloat, BopTimes             -> TFloat
+  | TFloat, TFloat, BopTimes               -> TFloat
+  | _, _, BopAnd                           -> TBool
+  | _, _, BopOr                            -> TBool
+  | TIndex (s, d), TInt _, BopPlus         -> TIndex (s, d)
+  | TInt _, TIndex (s, d), BopPlus         -> TIndex (s, d)
+  | TIndex (s, d), TInt _, BopMinus        -> TIndex (s, d)
+  | TInt _, TIndex (s, d), BopMinus        -> TIndex (s, d)
+  | TIndex (s, d), TInt (Some i), BopTimes -> TIndex (List.map (( * ) i) s, d)
+  | TInt (Some i), TIndex (s, d), BopTimes -> TIndex (List.map (( * ) i) s, d)
 
 (* FIXME: refactor this! *)
 let rec is_int delta = function
@@ -199,7 +195,7 @@ and check_idx id idx a_t (c, d) =
   
 and check_aa_impl id i (c, d) =
   match check_expr i (c, d), Hashtbl.find c (id, None) with
-  | (TIndex idxs, _), TArray (a_t, _, _) -> 
+  | (TIndex (idxs, _), _), TArray (a_t, _, _) -> 
     check_idx id idxs a_t (c, d)
   | (TIndex _, _), t ->
     raise
@@ -216,7 +212,6 @@ let rec check_cmd cmd (context, delta) =
   | CIf (cond, cmd)                    -> check_if cond cmd (context, delta)
   | CFor (x, r1, r2, body)             -> check_for x r1 r2 body (context, delta)
   | CForImpl (x, r1, r2, u, body)      -> check_for_impl x r1 r2 body u (context, delta)
-  | CForDouble (i, j, r1, r2, u, body) -> check_for_double i j r1 r2 u body (context, delta)
   | CAssign (x, e1)                    -> check_assignment x e1 (context, delta)
   | CReassign (target, exp)            -> check_reassign target exp (context, delta)
   | CFuncDef (id, args, body)          -> check_funcdef id args body (context, delta)
@@ -245,12 +240,9 @@ and check_for_impl id r1 r2 body u (context, delta) =
   check_expr r2 (context, delta) |> fun (r2_type, (c2, d2)) ->
   match r1_type, r2_type with
   | TInt _, TInt _ ->
-    Hashtbl.add c2 (id, None) (TIndex (0--(u-1)));
+    Hashtbl.add c2 (id, None) (TIndex ((0--(u-1)), None));
     check_cmd body (c2, d2)
   | _ -> raise (TypeError "Range start/end must be integers")
-
-and check_for_double i j r1 r2 u body (context, delta) =
-  failwith "Implement double for loop"
 
 and add_array_banks s bf id bank_num (context, delta) t i =
   if i=bank_num then (context, delta)
