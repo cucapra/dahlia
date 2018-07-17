@@ -15,7 +15,7 @@
 | 11. | nested_for | TB |  |  
 | 12. | [multaccess](https://github.com/cucapra/seashell/blob/master/examples/docs/multaccess.md) | SA | Check multi-write access to same element | To be implemented | 
 | 13. | [vvadd_fullnrl](https://github.com/cucapra/seashell/blob/master/examples/docs/vvadd.md) | SA | Check explicit access with variable if loop full unrolled | Pass |  
-| 14. | matmul | SA | Compute-reduce, transposed loop access | To be decided |  
+| 14. | [matmul](https://github.com/cucapra/seashell/blob/master/examples/docs/matmul.md) | SA | Compute-reduce, transposed loop access | To be decided |  
 | 15. | convolution | SA | Multiple loops and designs with different loop unrolls | To be decided |  
 | 16. | mini_convolution | TB |  |  
 | 17. |  |  |  |  
