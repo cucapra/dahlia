@@ -640,4 +640,105 @@ void madd(float a[1024], float b[1024], float c[1024]) {
 }
 ```
 
-* Multiplier in loop doesn't matter? Only two unrolls seem to hurt seashell.
+* Multiplier in loop doesn't matter? Only two unrolls seem to hurt seashell.  
+
+## 2018 July 17
+
+### 1. Roundabout way with unroll 1 is invalid because of invalid index equations  
+
+```
+func madd(a: float[1024] bank(32), b: float[1024] bank(32), c: float[32]) {
+
+  for (let i = 0..31) unroll 1 {
+    for (let j = 0..31) unroll 32 {
+      c[32*i] := a[32*i+j] + b[32*i+j];
+    }
+  }
+
+}
+```  
+
+`Illegal operation: can't apply operator '+' to index with static and dynamic information and index with static and dynamic information`
+
+### 2. explicit notation for first loop works. 
+
+```
+func madd(a: float[1024] bank(32), b: float[1024] bank(32), c: float[32]) {
+
+  for (let i = 0..31) {
+    for (let j = 0..31) unroll 8 {
+      c[0][32*i] := a[32*i+j] + b[32*i+j];
+    }
+  }
+
+}
+```
+
+```
+void madd(float a[1024], float b[1024], float c[32]) {
+        #pragma HLS ARRAY_PARTITION variable=a factor=32
+        #pragma HLS ARRAY_PARTITION variable=b factor=32
+        for (int i = 0; i <= 31; i += 1) {
+                for (int j = 0; j <= 31; j += 1) {
+                        #pragma HLS UNROLL factor=8
+                        c[0 + 1*(32*i)] = a[32*i+j]+b[32*i+j];
+                }
+        }
+}
+```
+
+### 3. unroll in one loop and use it in all arrays works
+
+```
+func madd(a: float[1024] bank(32), b: float[1024] bank(32), c: float[1024] bank(32)) {
+
+  for (let i = 0..31) {
+    for (let j = 0..31) unroll 32 {
+      c[32*i+j] := a[32*i+j] + b[32*i+j];
+    }
+  }
+
+}
+```
+
+```
+void madd(float a[1024], float b[1024], float c[1024]) {
+        #pragma HLS ARRAY_PARTITION variable=a factor=32
+        #pragma HLS ARRAY_PARTITION variable=b factor=32
+        #pragma HLS ARRAY_PARTITION variable=c factor=32
+        for (int i = 0; i <= 31; i += 1) {
+                for (int j = 0; j <= 31; j += 1) {
+                        #pragma HLS UNROLL factor=32
+                        c[32*i+j] = a[32*i+j]+b[32*i+j];
+                }
+        }
+}
+```
+
+### 4. full unroll in one loop, can make it explicit access
+
+```
+func madd(a: float[1024] bank(32), b: float[1024] bank(32), c: float[1024] bank(32)) {
+
+  for (let i = 0..31) {
+    for (let j = 0..31) unroll 32 {
+      c[j][i] := a[j][i] + b[j][i];
+    }
+  }
+
+}
+```
+
+```
+void madd(float a[1024], float b[1024], float c[1024]) {
+        #pragma HLS ARRAY_PARTITION variable=a factor=32
+        #pragma HLS ARRAY_PARTITION variable=b factor=32
+        #pragma HLS ARRAY_PARTITION variable=c factor=32
+        for (int i = 0; i <= 31; i += 1) {
+                for (int j = 0; j <= 31; j += 1) {
+                        #pragma HLS UNROLL factor=32
+                        c[j + 32*(i)] = a[j + 32*(i)]+b[j + 32*(i)];
+                }
+        }
+}
+```
