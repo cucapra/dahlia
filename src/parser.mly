@@ -65,17 +65,21 @@ cmd:
   | c1 = cmd c2 = cmd
     { make_seq c1 c2 }
 
+access:
+  | LSQUARE; idx = expr; RSQUARE
+    { [idx] }
+  | LSQUARE; idx = expr; RSQUARE; a = access
+    { idx :: a }
+
 expr:
-  | x = ID; LSQUARE; idx = expr; RSQUARE
-    { make_array_access_impl x idx }
+  | x = ID; a = access;
+    { make_logl_access x a }
   | x = ID; LBRACK; idx1 = expr; RBRACK; LSQUARE; idx2 = expr; RSQUARE
-    { make_array_access_expl x idx1 idx2 }
+    { make_phys_access x idx1 idx2 }
   | LPAREN e = expr RPAREN
     { e }
   | e1 = expr; bop = binop; e2 = expr
     { make_binop bop e1 e2 } ;
-  | x = ID LSQUARE index = expr RSQUARE
-    { make_array_access x index }
   | x = INT
     { make_int x }
   | f = FLOAT
