@@ -39,6 +39,17 @@ type binop =
   | BopTimes
   | BopOr
 
+(* An [expression] is one of the following:
+     - [EInt (i, s)]: an integer expression with value [i];
+       if [s] is [true], it's a static integer; otherwise, it's
+       not.
+     - [EFloat f]: a float with value [f]
+     - [EIndex]: TODO
+     - [EVar i]: a variable with id [i]
+     - [EBool b]: a boolean with truth value [b]
+     - [EBinop (b, e1, e2)]: a binop [b] between two expressions 
+       [e1] and [e2]
+     - [EArray, EPhysAccess, ELoglAcces]: TODO *)
 type expression =
   | EInt of int * bool
   | EFloat of float
