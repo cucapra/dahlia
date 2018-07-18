@@ -68,7 +68,7 @@ cmd:
 expr:
   | x = ID; LSQUARE; idx = expr; RSQUARE
     { make_array_access_impl x idx }
-  | x = ID; LSQUARE; idx1 = expr; RSQUARE; LSQUARE; idx2 = expr; RSQUARE
+  | x = ID; LBRACK; idx1 = expr; RBRACK; LSQUARE; idx2 = expr; RSQUARE
     { make_array_access_expl x idx1 idx2 }
   | LPAREN e = expr RPAREN
     { e }
