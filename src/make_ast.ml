@@ -39,12 +39,11 @@ let make_if b body =
 let make_seq c1 c2 =
   CSeq (c1, c2)
 
-let make_array_access_expl id e1 e2 =
-  EArrayExplAccess (id, e1, e2)
+let make_phys_access id e1 e2 =
+  EPhysAccess (id, e1, e2)
 
-let make_array_access_impl id e1 =
-  EArrayImplAccess (id, e1)
-
+let make_logl_access id e1 =
+  ELoglAccess (id, e1)
 
 let make_function id args body =
   CFuncDef (id, args, body)
@@ -55,3 +54,5 @@ let make_app f a =
 let make_typedef tname tval =
   CTypeDef (tname, tval)
 
+let make_muxdef s mid aid =
+  CMuxDef (mid, aid, s)
