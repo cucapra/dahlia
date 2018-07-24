@@ -82,8 +82,14 @@ and banking_factor = function
   | _ -> failwith "Tried to access bf of non-array"
 
 and emit_aa_phys (id, b, i) =
-  let bf = banking_factor (!type_map id) in
-  concat [ id; "["; (emit_expr b); " + "; (string_of_int bf); "*("; (emit_expr i); ")]" ]
+  match !type_map id with
+  | TArray _ ->
+    let bf = banking_factor (!type_map id) in
+    concat [ id; "["; (emit_expr b); " + "; (string_of_int bf); "*("; (emit_expr i); ")]" ]
+  | TMux (a_id, _) ->
+    let bf = banking_factor (!type_map a_id) in
+    concat [ id; "["; (emit_expr b); " + "; (string_of_int bf); "*("; (emit_expr i); ")]" ]
+  | _ -> failwith "Tried to index into non-array"
 
 and emit_aa_logl (id, i) =
   failwith "Implement logical access"
@@ -119,6 +125,7 @@ let rec emit_cmd i cmd =
   | CFuncDef (id, args, body)      -> emit_fun (id, args, body) i
   | CApp (id, args)                -> emit_app (id, args) i
   | CTypeDef (id, t)               -> emit_typedef (id, t) i
+  | CMuxDef (m_id, a_id, s)        -> emit_muxdef (m_id, a_id, s)
 
 and emit_assign_int (id, e) =
   concat [ "int "; id; " = "; (emit_expr e); ";" ]
@@ -189,6 +196,8 @@ and emit_fun (id, args, body) i =
 and emit_typedef (id, t) i =
   concat [ "typedef "; (type_str t); " "; id; ";" ]
   |> indent i
+
+and emit_muxdef (m_id, a_id, s) = "" (* No need to emit anything *)
 
 and generate_c cmd =
   emit_cmd 0 cmd
