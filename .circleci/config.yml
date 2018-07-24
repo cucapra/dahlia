@@ -9,16 +9,8 @@ jobs:
       - checkout
 
       - run:
-          name: Install OCaml/OPAM/m4
-          command: sudo apt-get install m4 ocaml opam
-
-      - run:
-          name: Configure OPAM
-          command: opam init -a -y; opam switch -y 4.05.0; eval `opam config env`
-
-      - run:
           name: Install OCaml packages
-          command: opam install -y ounit menhir dune; opam user-setup install
+          command: opam install -y ounit menhir dune
 
       - run:
           name: Build Seashell
