@@ -16,7 +16,9 @@ type id = string
        arguments)
      - [TAlias i]: an alias type where [i] is an id; under a typing context 
        [c] this may or may not map to another [type_node]
-     - [TFloat]: a float type *)       
+     - [TFloat]: a float type
+     - [TMux (id, s) a mux type that encapsulates a memory with id [id] and
+       this mux (not memory) is of size [s] *)
 type type_node =
   | TInt of int option 
   | TBool
@@ -25,6 +27,7 @@ type type_node =
   | TFunc of type_node list 
   | TAlias of id
   | TFloat
+  | TMux of id * int
 
 type binop =
   | BopEq

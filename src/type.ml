@@ -153,7 +153,7 @@ let rec check_expr exp (context, delta) =
   | EArray _                     -> raise (TypeError "Can't refer to array literal")
   | EPhysAccess (id, idx1, idx2) -> check_aa_expl id idx1 idx2 (context, delta)
   | EIndex idx                   -> failwith "Unreachable"
-  | ELoglAccess (id, i)          -> failwith "Implement logical access" (* check_aa_impl id i (context, delta) *)
+  | ELoglAccess (id, i)          -> check_aa_logl id i (context, delta)
 
 and check_int i is_stat (ctx, dta) = (if is_stat then TInt (Some i) else TInt (None)), (ctx, dta)
 
@@ -171,11 +171,11 @@ and check_binop binop e1 e2 (c, d) =
      " and " ^ 
      (string_of_type t2)))
 
+(* TODO: refactor this mess *)
 and check_aa_expl id idx1 idx2 (c, d) =
   check_expr idx1 (c, d)   |> fun (idx1_t, (c1, d1)) ->
   check_expr idx2 (c1, d1) |> fun (idx2_t, (c2, d2)) ->
   match idx1_t, idx2_t, Hashtbl.find c (id, None) with
-  | TInt (None), _, _-> raise (TypeError "Bank accessor must be static")
   | TInt (Some i), TInt _, TArray (a_t, _, _) ->
     (if Hashtbl.mem c2 (id, Some i) then
       a_t, ((Hashtbl.remove c2 (id, Some i); c2), d2)
@@ -188,9 +188,36 @@ and check_aa_expl id idx1 idx2 (c, d) =
     check_idx id s a_t (c, d)
   | TIndex (s, None), TIndex _, TArray (a_t, _, _) ->
     check_idx id s a_t (c, d)
+  | TInt _, TInt _, TMux (m_id, s) 
+  | TIndex _, TInt _, TMux (m_id, s) 
+  | TInt _, TIndex _, TMux (m_id, s) 
+  | TIndex _, TIndex _, TMux (m_id, s) ->
+    begin
+      match Hashtbl.find c (m_id, None) with
+      | TArray (a_t, bf, _) -> 
+        if s <= bf then a_t, (c, d)
+        else raise (TypeError "Illegal access operation: mux is smaller than array banking factor")
+      | _ -> raise (TypeError ("Cannot use mux to access non-array"))
+    end
+  | TMux (_, m_s), TIndex _, TArray (a_t, bf, _) ->
+    if m_s <= bf then a_t, (c, d)
+    else raise (TypeError "Illegal access operation: mux is smaller than array banking factor")
+  | TInt (None), _, _-> raise (TypeError "Bank accessor must be static")
   | t, _, _ -> 
     raise (TypeError ("Tried illegal bank access on array " ^ 
                       id ^ " with type " ^ (string_of_type t)))
+
+and check_aa_logl id i (c, d) =
+  match Hashtbl.find c (id, None) with
+  | TMux (a_id, s) ->
+    begin
+      match Hashtbl.find c (a_id, None) with
+      | TArray (a_t, bf, _) -> 
+        if s <= bf then a_t, (c, d)
+        else raise (TypeError "Illegal access operation: mux is smaller than array banking factor")
+      | _ -> raise (TypeError "Tried to use mux to access non-memory")
+    end
+  | _ -> failwith "Finish logical access"
 
 and check_idx id idx a_t (c, d) =
   List.iter
@@ -218,15 +245,16 @@ and check_aa_impl id i (c, d) =
 
 let rec check_cmd cmd (context, delta) =
   match cmd with
-  | CSeq (c1, c2)                      -> check_seq c1 c2 (context, delta)
-  | CIf (cond, cmd)                    -> check_if cond cmd (context, delta)
-  | CFor (x, r1, r2, body)             -> check_for x r1 r2 body (context, delta)
-  | CForImpl (x, r1, r2, u, body)      -> check_for_impl x r1 r2 body u (context, delta)
-  | CAssign (x, e1)                    -> check_assignment x e1 (context, delta)
-  | CReassign (target, exp)            -> check_reassign target exp (context, delta)
-  | CFuncDef (id, args, body)          -> check_funcdef id args body (context, delta)
-  | CApp (id, args)                    -> check_app id args (context, delta)
-  | CTypeDef (id, t)                   -> check_typedef id t (context, delta)
+  | CSeq (c1, c2)                  -> check_seq c1 c2 (context, delta)
+  | CIf (cond, cmd)                -> check_if cond cmd (context, delta)
+  | CFor (x, r1, r2, body)         -> check_for x r1 r2 body (context, delta)
+  | CForImpl (x, r1, r2, u, body)  -> check_for_impl x r1 r2 body u (context, delta)
+  | CAssign (x, e1)                -> check_assignment x e1 (context, delta)
+  | CReassign (target, exp)        -> check_reassign target exp (context, delta)
+  | CFuncDef (id, args, body)      -> check_funcdef id args body (context, delta)
+  | CApp (id, args)                -> check_app id args (context, delta)
+  | CTypeDef (id, t)               -> check_typedef id t (context, delta)
+  | CMuxDef (mux_id, mem_id, size) -> check_muxdef mux_id mem_id size (context, delta)
 
 and check_seq c1 c2 (context, delta) =
   check_cmd c1 (context, delta)
@@ -283,7 +311,8 @@ and check_reassign target exp (context, delta) =
     else raise (TypeError "Tried to populate array with incorrect type")
   | EVar id, expr -> (context, delta)
   | ELoglAccess (id, idx), expr -> 
-    failwith "Implement logical access"
+    check_aa_logl id idx (context, delta) |> fun (_, (c', d')) ->
+    (c', d')
       (*
     check_aa_impl id idx (context, delta) |> fun (t_arr, (c, d)) ->
     check_expr expr (context, delta)      |> fun (t_exp, (c', d')) ->
@@ -320,4 +349,10 @@ and check_app id args (context, delta) =
 
 and check_typedef id t (context, delta) =
   Hashtbl.add delta id t; (context, delta)
+
+and check_muxdef mux_id a_id size (context, delta) =
+  Hashtbl.add context (mux_id, None) (TMux (a_id, size)); (context, delta)
+
+
+
 
