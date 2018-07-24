@@ -2,20 +2,12 @@ version: 2
 jobs:
   build:
 
-    # Specify the Xcode version to use
-    macos:
-      xcode: "8.3.3"
-
     steps:
       - checkout
 
       - run:
-          name: Install Brew
-          command: /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-
-      - run:
           name: Install OCaml/OPAM/m4
-          command: brew install m4 ocaml opam
+          command: sudo apt-get install m4 ocaml opam
 
       - run:
           name: Configure OPAM
