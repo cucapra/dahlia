@@ -6,7 +6,7 @@ Seashell provides a type system that makes programming FPGAs easier. To learn ab
 
 ## Setup/Use
 
-Requires Dune and Menhir (in addition to OCaml and OPAM):
+Requires [Dune](https://github.com/ocaml/dune) and [Menhir](http://gallium.inria.fr/~fpottier/menhir/) (in addition to OCaml and OPAM):
 
 	$ opam install dune
 	$ opam install menhir
