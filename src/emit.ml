@@ -92,8 +92,11 @@ and emit_aa_phys (id, b, i) =
   | _ -> failwith "Tried to index into non-array"
 
 and emit_aa_logl (id, i) =
-  failwith "Implement logical access"
-  (* concat [ id; "["; (emit_expr i); "]" ] *)
+  let idx = 
+    (match i with
+    | h::[] -> emit_expr h
+    | i -> List.fold_left (fun acc e -> (emit_expr e) ^ " + " ^ acc) "" i) in
+  concat [ id; "["; idx; "]" ]
 
 and argvals =
   List.map ((fun (id, t) -> 
