@@ -3,14 +3,14 @@ jobs:
   build:
 
     docker:
-      - image: ocaml/opam
+      - image: ocaml/opam2
 
     steps:
       - checkout
 
       - run:
           name: Install OCaml packages
-          command: export term=xterm; echo $TERM; opam update; opam install -y ounit menhir dune
+          command: opam install -y ounit menhir dune
 
       - run:
           name: Build Seashell
