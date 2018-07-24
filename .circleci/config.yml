@@ -1,0 +1,30 @@
+version: 2
+jobs:
+  build:
+
+    # Specify the Xcode version to use
+    macos:
+      xcode: "8.3.3"
+
+    steps:
+      - checkout
+
+      - run:
+          name: Install Brew
+          command: /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+
+      - run:
+          name: Install OCaml/OPAM/m4
+          command: brew install m4 ocaml opam
+
+      - run:
+          name: Configure OPAM
+          command: opam init -a -y; opam switch -y 4.05.0; eval `opam config env`
+
+      - run:
+          name: Install OCaml packages
+          command: opam install -y ounit menhir dune; opam user-setup install
+
+      - run:
+          name: Build Seashell
+          command: dune build bin/ex.bc

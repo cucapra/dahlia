@@ -12,7 +12,7 @@ open Make_ast
 (* Keywords *)
 %token LET IF FOR TRUE FALSE INT_ANNOTATION 
        BOOL_ANNOTATION IDX_ANNOTATION FLOAT_ANNOTATION
-       UNROLL MEMORY BANK FUNC TYPE
+       MUX UNROLL MEMORY BANK FUNC TYPE 
 
 (* Parentheses, brackets, etc *)
 %token LPAREN RPAREN LBRACK RBRACK LSQUARE RSQUARE FORWARD_SLASH
@@ -40,6 +40,8 @@ prog:
     { c } ;
 
 cmd:
+  | MUX s = INT; mid = ID; LPAREN; aid = ID; RPAREN; SEMICOLON
+    { make_muxdef s mid aid }
   | f = ID LPAREN a = args RPAREN SEMICOLON
     { make_app f a }
   | TYPE tname = ID EQUAL tval = type_annotation (* FIXME *)

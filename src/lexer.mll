@@ -37,6 +37,7 @@ rule token =
   | "||"         { OR }
 
   | "memory"     { MEMORY }
+  | "mux"        { MUX }
   | "bank"       { BANK }
   | "unroll"     { UNROLL }
   | "func"       { FUNC }

@@ -68,6 +68,22 @@ type value =
   | VArray of value array
   | VIndex of int
   
+(* A [command] is one of the following:
+     - [CAssign (i, e)]: a representation of assignment of
+       expression [e] to id [i]
+     - [CFor (i, x1, x2, b)]: a representation of a for loop
+       with counter variable [i], range [x1..x2], and body [b]
+     - [CForImpl (i, x1, x2, u, b)]: a representation of an
+       unrolled loop with counter variable [i], range [x1..x2],
+       unroll factor [u] and body [b]
+     - [CReassign (t, e)]: a representation of a reassignment
+       of target [t] to expression [e]
+     - [CIf (e, b)]: a representation of an if statement with
+       conditional [e] and body [b]
+     - [CSeq (c1, c2)]: a representation of the command [c1]
+       followed by [c2]
+     - [CFuncDef, CTypeDef, CMuxDef, CApp]: TODO
+   *)
 type command =
   | CAssign of id * expression
   | CFor of id * expression * expression * command
@@ -77,4 +93,5 @@ type command =
   | CSeq of command * command
   | CFuncDef of id * (id * type_node) list * command
   | CTypeDef of id * type_node
+  | CMuxDef of id * id * int
   | CApp of id * (expression list)

@@ -53,15 +53,15 @@ let bop_str = function
   | BopOr -> "||"
 
 let rec emit_expr = function
-  | EInt (i, _)                 -> emit_int i
-  | EFloat f                    -> emit_float f
-  | EBool b                     -> emit_bool b
-  | EVar v                      -> emit_var v
-  | EArray (_, _, a)            -> emit_array a
-  | EBinop (b, e1, e2)          -> emit_binop (b, e1, e2)
-  | EArrayExplAccess (id, b, i) -> emit_aa_expl (id, b, i)
-  | EArrayImplAccess (id, i)    -> emit_aa (id, i)
-  | EIndex _ -> failwith "Implement index stuff"
+  | EInt (i, _)            -> emit_int i
+  | EFloat f               -> emit_float f
+  | EBool b                -> emit_bool b
+  | EVar v                 -> emit_var v
+  | EArray (_, _, a)       -> emit_array a
+  | EBinop (b, e1, e2)     -> emit_binop (b, e1, e2)
+  | EPhysAccess (id, b, i) -> emit_aa_phys (id, b, i)
+  | ELoglAccess (id, i)    -> emit_aa_logl (id, i)
+  | EIndex _               -> failwith "Implement index stuff"
 
 and emit_int i = string_of_int i
 
@@ -81,12 +81,13 @@ and banking_factor = function
   | TArray (_, bf, _) -> bf
   | _ -> failwith "Tried to access bf of non-array"
 
-and emit_aa_expl (id, b, i) =
+and emit_aa_phys (id, b, i) =
   let bf = banking_factor (!type_map id) in
   concat [ id; "["; (emit_expr b); " + "; (string_of_int bf); "*("; (emit_expr i); ")]" ]
 
-and emit_aa (id, i) =
-  concat [ id; "["; (emit_expr i); "]" ]
+and emit_aa_logl (id, i) =
+  failwith "Implement logical access"
+  (* concat [ id; "["; (emit_expr i); "]" ] *)
 
 and argvals =
   List.map ((fun (id, t) -> 

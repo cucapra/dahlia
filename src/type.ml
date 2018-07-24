@@ -145,15 +145,15 @@ let legal_op t1 t2 delta = function
 
 let rec check_expr exp (context, delta) =
   match exp with
-  | EInt (i, s)                       -> check_int i s (context, delta)
-  | EFloat f                          -> check_float f (context, delta)
-  | EBool _                           -> TBool, (context, delta)
-  | EVar x                            -> Hashtbl.find context (x, None), (context, delta)
-  | EBinop (binop, e1, e2)            -> check_binop binop e1 e2 (context, delta)
-  | EArray _                          -> raise (TypeError "Can't refer to array literal")
-  | EArrayExplAccess (id, idx1, idx2) -> check_aa_expl id idx1 idx2 (context, delta)
-  | EIndex idx                        -> failwith "Unreachable"
-  | EArrayImplAccess (id, i)          -> check_aa_impl id i (context, delta)
+  | EInt (i, s)                  -> check_int i s (context, delta)
+  | EFloat f                     -> check_float f (context, delta)
+  | EBool _                      -> TBool, (context, delta)
+  | EVar x                       -> Hashtbl.find context (x, None), (context, delta)
+  | EBinop (binop, e1, e2)       -> check_binop binop e1 e2 (context, delta)
+  | EArray _                     -> raise (TypeError "Can't refer to array literal")
+  | EPhysAccess (id, idx1, idx2) -> check_aa_expl id idx1 idx2 (context, delta)
+  | EIndex idx                   -> failwith "Unreachable"
+  | ELoglAccess (id, i)          -> failwith "Implement logical access" (* check_aa_impl id i (context, delta) *)
 
 and check_int i is_stat (ctx, dta) = (if is_stat then TInt (Some i) else TInt (None)), (ctx, dta)
 
@@ -276,17 +276,19 @@ and check_assignment id exp (context, delta) =
 
 and check_reassign target exp (context, delta) =
   match target, exp with
-  | EArrayExplAccess (id, idx1, idx2), expr ->
+  | EPhysAccess (id, idx1, idx2), expr ->
     check_aa_expl id idx1 idx2 (context, delta) |> fun (t_arr, (c, d)) ->
     check_expr exp (c, d)                       |> fun (t_exp, (c', d')) ->
     if types_equal delta t_arr t_exp then (c', d')
     else raise (TypeError "Tried to populate array with incorrect type")
   | EVar id, expr -> (context, delta)
-  | EArrayImplAccess (id, idx), expr -> 
+  | ELoglAccess (id, idx), expr -> 
+    failwith "Implement logical access"
+      (*
     check_aa_impl id idx (context, delta) |> fun (t_arr, (c, d)) ->
     check_expr expr (context, delta)      |> fun (t_exp, (c', d')) ->
     if types_equal delta t_arr t_exp then (c', d')
-    else raise (TypeError "Tried to populate array with incorrect type")
+    else raise (TypeError "Tried to populate array with incorrect type") *)
   | _ -> raise (TypeError "Used reassign operator on illegal types")
 
 and bind_type id t (context, delta) =
