@@ -1,8 +1,8 @@
 open Ast
 
-(* [AlreadyConsumed] represents that an array access was performed
-   using an index that has already been consumed. *)
-exception AlreadyConsumed
+(* [(AlreadyConsumed i)] represents that an array access was performed
+   using an index [i] that has already been consumed. *)
+exception AlreadyConsumed of int
 exception NoBinding
 
 (* [gamma] is a type for a typing context that binds IDs to types. *)

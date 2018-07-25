@@ -1,16 +1,7 @@
 open Ast
+open Context
 
 exception TypeError of string
-
-type context = ((id * int option), type_node) Hashtbl.t
-type delta   = (id, type_node) Hashtbl.t
-
-let empty_context = Hashtbl.create 100
-let empty_delta   = Hashtbl.create 100
-
-let type_of_id id context = Hashtbl.find context (id, None)
-
-let type_of_alias_id id delta = Hashtbl.find delta id
 
 let rec string_of_type = function
   | TBool -> "bool"
@@ -38,11 +29,6 @@ let string_of_binop = function
   | BopTimes -> "*"
   | BopOr    -> "||"
   | BopAnd   -> "&&"
-
-and (--) i j =
-  let rec aux n acc =
-    if n < i then acc else aux (n-1) (n :: acc)
-  in aux j []
 
 let bop_type a b op =
   match a, b, op with
@@ -148,7 +134,7 @@ let rec check_expr exp (context, delta) =
   | EInt (i, s)                  -> check_int i s (context, delta)
   | EFloat f                     -> check_float f (context, delta)
   | EBool _                      -> TBool, (context, delta)
-  | EVar x                       -> Hashtbl.find context (x, None), (context, delta)
+  | EVar x                       -> Context.get_binding x context, (context, delta) 
   | EBinop (binop, e1, e2)       -> check_binop binop e1 e2 (context, delta)
   | EArray _                     -> raise (TypeError "Can't refer to array literal")
   | EPhysAccess (id, idx1, idx2) -> check_aa_expl id idx1 idx2 (context, delta)
@@ -223,10 +209,10 @@ and check_idx id idx a_t (c, d) =
   List.iter
     (fun bank ->
       try 
-         ignore (Hashtbl.find c (id, Some bank))
-      with Not_found -> 
+        ignore (Context.consume_aa id bank c)
+      with AlreadyConsumed i -> 
         raise 
-          (TypeError ("Illegal bank access: " ^ (string_of_int bank))))
+          (TypeError ("Illegal bank access: " ^ (string_of_int i))))
     idx;
   List.iter (fun i -> Hashtbl.remove c (id, Some i)) idx; a_t, (c, d)
   

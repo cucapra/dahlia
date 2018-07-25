@@ -1,6 +1,6 @@
 open Ast
 
-exception AlreadyConsumed
+exception AlreadyConsumed of int
 exception NoBinding
 
 module StringMap = 
@@ -58,4 +58,4 @@ let consume_aa id i g =
         (IntSet.remove i (StringMap.find id g.indices_available)) 
         g.indices_available 
   }
-  else raise AlreadyConsumed
+  else raise (AlreadyConsumed i)
