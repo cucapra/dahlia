@@ -44,8 +44,15 @@ let add_binding id t g =
     }
   | t -> { g with type_map = type_map' }
 
+let add_alias_binding id t d =
+  StringMap.add id t d
+
 let get_binding id g =
   try StringMap.find id g.type_map
+  with Not_found -> raise NoBinding
+
+let get_alias_binding id d =
+  try StringMap.find id d
   with Not_found -> raise NoBinding
 
 let rem_binding id g =

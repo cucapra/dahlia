@@ -22,7 +22,7 @@ let _ =
   try
     if not !no_typecheck then
       let (ctx, dta) = 
-        Type.check_cmd commands (Type.empty_context, Type.empty_delta) 
+        Type.check_cmd commands (Context.empty_gamma, Context.empty_delta) 
       in 
       Emit.set_type_map (fun id -> Type.type_of_id id ctx);
       Emit.set_delta_map (fun id -> Type.type_of_alias_id id dta)

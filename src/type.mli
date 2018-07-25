@@ -1,18 +1,12 @@
 open Ast
-
-type context
-type delta
+open Context
 
 exception TypeError of string
 
-val check_expr : expression -> (context * delta) -> type_node * (context * delta)
+val check_expr : expression -> (gamma * delta) -> type_node * (gamma * delta)
 
-val check_cmd : command -> (context * delta) -> (context * delta)
+val check_cmd : command -> (gamma * delta) -> (gamma * delta)
 
-val empty_context : context
-
-val empty_delta : delta
-
-val type_of_id : id -> context -> type_node
+val type_of_id : id -> gamma -> type_node
 
 val type_of_alias_id : id -> delta -> type_node
