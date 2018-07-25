@@ -10,19 +10,6 @@ let type_of_id id g =
 let type_of_alias_id id d =
   Context.get_alias_binding id d
 
-let string_of_binop = function
-  | BopEq    -> "="
-  | BopNeq   -> "!="
-  | BopGeq   -> ">="
-  | BopLeq   -> "<="
-  | BopLt    -> "<"
-  | BopGt    -> ">"
-  | BopPlus  -> "+"
-  | BopMinus -> "-"
-  | BopTimes -> "*"
-  | BopOr    -> "||"
-  | BopAnd   -> "&&"
-
 let bop_type a b op =
   match a, b, op with
   | _, _, BopEq                            -> TBool
@@ -142,13 +129,7 @@ and check_binop binop e1 e2 (c, d) =
   check_expr e1 (c, d)   |> fun (t1, (c1, d1)) ->
   check_expr e2 (c1, d1) |> fun (t2, (c2, d2)) ->
   if legal_op t1 t2 d2 binop then bop_type t1 t2 binop, (c2, d2)
-  else raise (TypeError 
-    ("Illegal operation: can't apply operator '" ^
-     (string_of_binop binop) ^ 
-     "' to " ^ 
-     (string_of_type t1) ^ 
-     " and " ^ 
-     (string_of_type t2)))
+  else raise (TypeError (illegal_op binop t1 t2))
 
 (* TODO: refactor this mess *)
 and check_aa_expl id idx1 idx2 (c, d) =
@@ -159,7 +140,7 @@ and check_aa_expl id idx1 idx2 (c, d) =
   | TInt (Some i), TIndex _, TArray (a_t, _, _) -> 
     begin
       try a_t, (Context.consume_aa id i c2, d2) 
-      with AlreadyConsumed i -> raise (TypeError ("Illegal bank access: " ^ (string_of_int i)))
+      with AlreadyConsumed i -> raise (TypeError (illegal_bank i id))
     end
   | TIndex (s, None), TInt _, TArray (a_t, _, _) 
   | TIndex (s, None), TIndex _, TArray (a_t, _, _) ->
@@ -172,16 +153,15 @@ and check_aa_expl id idx1 idx2 (c, d) =
       match Context.get_binding id c2 with
       | TArray (a_t, bf, _) -> 
         if s <= bf then a_t, (c, d)
-        else raise (TypeError "Illegal access operation: mux is smaller than array banking factor")
-      | _ -> raise (TypeError ("Cannot use mux to access non-array"))
+        else raise (TypeError small_mux)
+      | _ -> raise (TypeError illegal_mux)
     end
   | TMux (_, m_s), TIndex _, TArray (a_t, bf, _) ->
     if m_s <= bf then a_t, (c, d)
-    else raise (TypeError "Illegal access operation: mux is smaller than array banking factor")
-  | TInt (None), _, _-> raise (TypeError "Bank accessor must be static")
+    else raise (TypeError small_mux)
+  | TInt (None), _, _-> raise (TypeError static_bank_error)
   | t, _, _ -> 
-    raise (TypeError ("Tried illegal bank access on array " ^ 
-                      id ^ " with type " ^ (string_of_type t)))
+    raise (TypeError (illegal_accessor_type t id))
 
 and check_aa_logl id i (c, d) =
   match Context.get_binding id c with
@@ -190,8 +170,8 @@ and check_aa_logl id i (c, d) =
       match Context.get_binding a_id c with
       | TArray (a_t, bf, _) -> 
         if s <= bf then a_t, (c, d)
-        else raise (TypeError "Illegal access operation: mux is smaller than array banking factor")
-      | _ -> raise (TypeError "Tried to use mux to access non-memory")
+        else raise (TypeError small_mux)
+      | _ -> raise (TypeError illegal_mux)
     end
   | _ -> failwith "Finish logical access"
 
@@ -206,13 +186,9 @@ and check_aa_impl id i (c, d) =
   | (TIndex (idxs, _), _), TArray (a_t, _, _) -> 
     check_idx id idxs a_t (c, d)
   | (TIndex _, _), t ->
-    raise
-      (TypeError ("Can't index into non-array type " ^ id ^" with accessor type " ^
-                  (string_of_type t)))
+    raise (TypeError (illegal_access id))
   | (t, _), _ -> 
-    raise 
-      (TypeError ("Can't implicitly access array by indexing into " ^ id ^ " with type " ^
-                  (string_of_type t)))
+    raise (TypeError (illegal_accessor_type t id))
 
 let rec check_cmd cmd (context, (delta: Context.delta)) =
   match cmd with
@@ -234,7 +210,7 @@ and check_seq c1 c2 (context, delta) =
 and check_if cond cmd (context, delta) =
   match check_expr cond (context, delta) with
   | TBool, (ctx', dta') -> check_cmd cmd (ctx', dta')
-  | _ -> raise (TypeError "Non-boolean conditional")
+  | t, _ -> raise (TypeError (unexpected_type "conditional" t TBool))
   
 and check_for id r1 r2 body (c, d) =
   check_expr r1 (c, d)   |> fun (r1_type, (c1, d1)) ->
@@ -259,7 +235,7 @@ and check_for_impl id r1 r2 body u (context, delta) =
       check_cmd body (Context.add_binding id (TIndex (0--(u-1), None)) c2, d2)
     else
       check_cmd body (Context.add_binding id (TIndex (0--(u-1), Some (range_size/u))) c2, d2)
-  | _ -> raise (TypeError "Range start/end must be static integers")
+  | _ -> raise (TypeError range_error)
 
 and check_assignment id exp (context, delta) =
   check_expr exp (context, delta) |> fun (t, (c, d)) ->
@@ -271,7 +247,7 @@ and check_reassign target exp (context, delta) =
     check_aa_expl id idx1 idx2 (context, delta) |> fun (t_arr, (c, d)) ->
     check_expr exp (c, d)                       |> fun (t_exp, (c', d')) ->
     if types_equal delta t_arr t_exp then (c', d')
-    else raise (TypeError "Tried to populate array with incorrect type")
+    else raise (TypeError (unexpected_type id t_exp t_arr))
   | EVar id, expr -> (context, delta)
   | ELoglAccess (id, idx), expr -> 
     check_aa_logl id idx (context, delta) |> fun (_, (c', d')) ->
@@ -295,11 +271,14 @@ and check_app id args (context, delta) =
   let argtypes = List.map (fun a -> check_expr a (context, delta) |> fst) args in
   match Context.get_binding id context with
   | TFunc param_types -> 
-    if List.exists2 
-      (fun arg param -> not (types_equal delta arg param)) argtypes param_types
-    then raise (TypeError ("Illegal arg type supplied to " ^ id))
-    else (context, delta)
-  | _ -> raise (TypeError (id ^ " is not a function and cannot be applied"))
+    List.iter2
+      (fun arg param -> 
+         if not (types_equal delta arg param)
+         then raise (TypeError (unexpected_type 
+          ("in function app of " ^ id ^ ", arg was") arg param))
+         else ()) argtypes param_types;
+    (context, delta)
+  | _ -> raise (TypeError (illegal_app id))
 
 and check_typedef id t (context, delta) =
   context, (Context.add_alias_binding id t delta)
