@@ -353,6 +353,3 @@ and check_typedef id t (context, delta) =
 and check_muxdef mux_id a_id size (context, delta) =
   Hashtbl.add context (mux_id, None) (TMux (a_id, size)); (context, delta)
 
-
-
-

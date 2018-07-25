@@ -1,10 +1,18 @@
 open Ast
 
+(* [AlreadyConsumed] represents that an array access was performed
+   using an index that has already been consumed. *)
+exception AlreadyConsumed
+exception NoBinding
+
 (* [gamma] is a type for a typing context that binds IDs to types. *)
 type gamma
 
 (* [delta] is a type for a mapping between alias IDs and types. *)
 type delta
+
+val empty_gamma : gamma
+val empty_delta : delta
 
 (* [bind_type id t g] is a new gamma [g'] with type_node [t] bound to [id]. *)
 val add_binding : id -> type_node -> gamma -> gamma
