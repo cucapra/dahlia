@@ -39,6 +39,9 @@ let bop_type a b op =
   | TIndex (s, d), TInt (Some i), BopTimes -> TIndex (List.map (( * ) i) s, d)
   | TInt (Some i), TIndex (s, d), BopTimes -> TIndex (List.map (( * ) i) s, d)
 
+let compute_bf d =
+  List.fold_left (fun acc (_, bf) -> acc * bf) 0 d
+
 (* FIXME: refactor this! *)
 let rec is_int delta = function
   | TInt _ -> true
@@ -63,7 +66,7 @@ let rec is_index delta = function
 let rec types_equal delta t1 t2 =
   match t1, t2 with
   | TInt _, TInt _ -> true
-  | TArray (a1, bf1, s1), TArray (a2, bf2, s2) -> bf1=bf2 && s1=s2 && types_equal delta a1 a2
+  | TArray (a1, d1), TArray (a2, d2) -> d1=d2 && types_equal delta a1 a2
   | TIndex _, TIndex _ -> true
   | TAlias t1, t2 -> types_equal delta (Context.get_alias_binding t1 delta) t2
   | t1, TAlias t2 -> types_equal delta t1 (Context.get_alias_binding t2 delta)
@@ -136,14 +139,14 @@ and check_aa_expl id idx1 idx2 (c, d) =
   check_expr idx1 (c, d)   |> fun (idx1_t, (c1, d1)) ->
   check_expr idx2 (c1, d1) |> fun (idx2_t, (c2, d2)) ->
   match idx1_t, idx2_t, Context.get_binding id c2 with
-  | TInt (Some i), TInt _, TArray (a_t, _, _)
-  | TInt (Some i), TIndex _, TArray (a_t, _, _) -> 
+  | TInt (Some i), TInt _, TArray (a_t, _)
+  | TInt (Some i), TIndex _, TArray (a_t, _) -> 
     begin
       try a_t, (Context.consume_aa id i c2, d2) 
       with AlreadyConsumed i -> raise (TypeError (illegal_bank i id))
     end
-  | TIndex (s, None), TInt _, TArray (a_t, _, _) 
-  | TIndex (s, None), TIndex _, TArray (a_t, _, _) ->
+  | TIndex (s, None), TInt _, TArray (a_t, _) 
+  | TIndex (s, None), TIndex _, TArray (a_t, _) ->
     check_idx id s a_t (c, d)
   | TInt _, TInt _, TMux (m_id, s) 
   | TIndex _, TInt _, TMux (m_id, s) 
@@ -151,12 +154,14 @@ and check_aa_expl id idx1 idx2 (c, d) =
   | TIndex _, TIndex _, TMux (m_id, s) ->
     begin
       match Context.get_binding id c2 with
-      | TArray (a_t, bf, _) -> 
+      | TArray (a_t, banking) -> 
+        let bf = compute_bf banking in 
         if s <= bf then a_t, (c, d)
         else raise (TypeError small_mux)
       | _ -> raise (TypeError illegal_mux)
     end
-  | TMux (_, m_s), TIndex _, TArray (a_t, bf, _) ->
+  | TMux (_, m_s), TIndex _, TArray (a_t, banking) ->
+    let bf = compute_bf banking in
     if m_s <= bf then a_t, (c, d)
     else raise (TypeError small_mux)
   | TInt (None), _, _-> raise (TypeError static_bank_error)
@@ -168,7 +173,8 @@ and check_aa_logl id i (c, d) =
   | TMux (a_id, s) ->
     begin
       match Context.get_binding a_id c with
-      | TArray (a_t, bf, _) -> 
+      | TArray (a_t, banking) -> 
+        let bf = compute_bf banking in
         if s <= bf then a_t, (c, d)
         else raise (TypeError small_mux)
       | _ -> raise (TypeError illegal_mux)
@@ -183,7 +189,7 @@ and check_idx id idx a_t (c, d) =
 
 and check_aa_impl id i (c, d) =
   match check_expr i (c, d), Context.get_binding id c with
-  | (TIndex (idxs, _), _), TArray (a_t, _, _) -> 
+  | (TIndex (idxs, _), _), TArray (a_t, _) -> 
     check_idx id idxs a_t (c, d)
   | (TIndex _, _), t ->
     raise (TypeError (illegal_access id))

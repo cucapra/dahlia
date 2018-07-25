@@ -3,7 +3,7 @@ open Ast
 let rec string_of_type = function
   | TBool -> "bool"
   | TInt _ -> "int"
-  | TArray (t, _, _) -> (string_of_type t) ^ " array"
+  | TArray (t, _) -> (string_of_type t) ^ " array"
   | TIndex (s, d) ->
     begin
       match d with

@@ -3,6 +3,9 @@ open Ast
 let type_map = ref (fun _ -> failwith "TypeMap has not been set")
 let delta_map = ref (fun _ -> failwith "DeltaMap has not been set")
 
+let compute_bf d =
+  List.fold_left (fun acc (_, d) -> d * acc) 0 d
+
 let set_type_map t =
   type_map := t
 
@@ -36,7 +39,7 @@ let rec type_str = function
   | TInt _        -> "int"
   | TFloat        -> "float"
   | TIndex _      -> failwith "Implement indices"
-  | TArray (t, _, _) -> failwith "Implement array type stringified version"
+  | TArray (t, _) -> failwith "Implement array type stringified version"
   | TAlias id -> type_str (!delta_map id)
 
 let bop_str = function
@@ -77,17 +80,19 @@ and emit_array _ =
 and emit_binop (b, e1, e2) = 
   concat [ (emit_expr e1); (bop_str b); (emit_expr e2) ]
 
-and banking_factor = function
-  | TArray (_, bf, _) -> bf
-  | _ -> failwith "Tried to access bf of non-array"
+and determine_bf id =
+  match !type_map id with
+  | TArray (_, d) -> compute_bf d
+  | _ -> 
+    failwith "Typechecker failed to determine that mux is illegally wrapped around array"
 
 and emit_aa_phys (id, b, i) =
   match !type_map id with
-  | TArray _ ->
-    let bf = banking_factor (!type_map id) in
+  | TArray (_, d) ->
+    let bf = compute_bf d in 
     concat [ id; "["; (emit_expr b); " + "; (string_of_int bf); "*("; (emit_expr i); ")]" ]
   | TMux (a_id, _) ->
-    let bf = banking_factor (!type_map a_id) in
+    let bf = determine_bf a_id in
     concat [ id; "["; (emit_expr b); " + "; (string_of_int bf); "*("; (emit_expr i); ")]" ]
   | _ -> failwith "Tried to index into non-array"
 
@@ -101,10 +106,11 @@ and emit_aa_logl (id, i) =
 and argvals =
   List.map ((fun (id, t) -> 
     match t with
-      | TArray (t, _, s) -> 
+      | TArray (t, d) -> 
+        let s = List.fold_left (fun acc (s, _) -> s * acc) 0 d in
         concat [ (type_str t); " "; id; "["; (string_of_int s); "]" ]
-      | t                -> concat [ (type_str t); " "; id  ] 
-  ))
+      | t -> concat [ (type_str t); " "; id  ] 
+  )) 
 
 and emit_args args =
   (fun acc e -> concat [ acc; ", "; e ]) |> fun f ->
@@ -133,7 +139,8 @@ let rec emit_cmd i cmd =
 and emit_assign_int (id, e) =
   concat [ "int "; id; " = "; (emit_expr e); ";" ]
 
-and emit_assign_arr (id, e, a, bf) i =
+and emit_assign_arr (id, e, a, d) i =
+  let bf = compute_bf d in
   let arr_size = string_of_int (Array.length a) in
   let part_pragma =
     if bf=1 then ""
@@ -149,9 +156,9 @@ and emit_assign_float (id, e) =
 and emit_assign (id, e) i =
   match !type_map id, e with
   | TInt _, _
-  | TBool, _                            -> emit_assign_int (id, e)          |> indent i
-  | TArray (t, bf, _), EArray (_, _, a) -> emit_assign_arr (id, e, a, bf) i |> indent i
-  | TFloat, _                           -> emit_assign_float (id, e)        |> indent i
+  | TBool, _                        -> emit_assign_int (id, e)         |> indent i
+  | TArray (t, d), EArray (_, _, a) -> emit_assign_arr (id, e, a, d) i |> indent i
+  | TFloat, _                       -> emit_assign_float (id, e)       |> indent i
 
 and emit_reassign (target, e) i =
   concat [ (emit_expr target); " = "; (emit_expr e); ";" ] |> indent i
@@ -183,7 +190,8 @@ and emit_seq (c1, c2) i =
 and emit_pragmas lst i =
   (fun acc elem ->
      match elem with
-     | id, TArray (_, bf, s) -> 
+     | id, TArray (_, d) ->
+       let bf = compute_bf d in
        concat [ acc; (s_pragma_bank id bf (i+1)); newline; ]
      | _ -> acc)
   |> fun f -> List.fold_left f "" lst

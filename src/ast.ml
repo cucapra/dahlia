@@ -4,8 +4,8 @@ type id = string
      - [TInt i]: an integer type, where if [i] is [Some i'], it's a 
        static integer with value i', and if [i] is [None], it's non-static
      - [TBool]: a boolean type
-     - [TArray (t, bf, s)]: an array type with array element type [t], 
-       banking factor [bf], and size [s]
+     - [TArray (t, [(s1, bf1)..(sn, bfn)] is an array type with elements of
+       type [t]. It has [n] dimensions, each of size [sn] and banking factor [bfn]
      - [TIndex (s, d)]: an index type where [s] is its static component, 
        a list of integers representing the indices it itself simultaneously
        represents; and where [d] is its dynamic component, which is [None] 
@@ -22,7 +22,7 @@ type id = string
 type type_node =
   | TInt of int option 
   | TBool
-  | TArray of type_node * int * int 
+  | TArray of type_node * (int * int) list
   | TIndex of int list * int option 
   | TFunc of type_node list 
   | TAlias of id

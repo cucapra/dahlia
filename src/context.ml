@@ -32,12 +32,15 @@ let rec create_set s =
     else create_set' (i-1) (IntSet.add i acc)
   in create_set' (s-1) IntSet.empty
 
+let compute_bf b =
+  List.fold_left (fun acc (_, b) -> b * acc) 0 b
+
 let add_binding id t g =
   let type_map' = StringMap.add id t g.type_map in
   match t with
-  | TArray (_, _, s) -> 
+  | TArray (_, banking) -> 
     let indices_available' = 
-      StringMap.add id (create_set s) g.indices_available in
+      StringMap.add id (create_set (compute_bf banking)) g.indices_available in
     {
       type_map = type_map' ;
       indices_available = indices_available'

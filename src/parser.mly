@@ -103,12 +103,22 @@ annotated_args:
 args:
   | a = separated_list(COMMA, expr) { a }
 
+array_def:
+  | LSQUARE; s = INT; BANK; LPAREN; bf = INT; RPAREN; RSQUARE
+    { [(s, bf)] }
+  | LSQUARE; s = INT; RSQUARE
+    { [(s, 1)] }
+  | LSQUARE; s = INT; BANK; LPAREN; bf = INT; RPAREN; RSQUARE; t = array_def
+    { (s, bf) :: t }
+  | LSQUARE; s = INT; RSQUARE; t = array_def
+    { (s, 1) :: t }
+
 type_annotation:
   | BOOL_ANNOTATION { TBool }
   | INT_ANNOTATION { TInt None }
   | FLOAT_ANNOTATION { TFloat } 
-  | t = type_annotation LSQUARE s = INT RSQUARE BANK LPAREN bf = INT RPAREN 
-    { TArray (t, bf, s) }
+  | t = type_annotation a = array_def
+    { TArray (t, a) }
   | t = type_annotation LSQUARE s = INT RSQUARE 
     { TArray (t, 1, s) }
   | x = ID { TAlias x }
