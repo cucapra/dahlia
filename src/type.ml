@@ -1,21 +1,14 @@
 open Ast
 open Context
+open Error_msg
 
 exception TypeError of string
 
-let rec string_of_type = function
-  | TBool -> "bool"
-  | TInt _ -> "int"
-  | TArray (t, _, _) -> (string_of_type t) ^ " array"
-  | TIndex (s, d) ->
-    begin
-      match d with
-      | None -> "index with completely static information"
-      | Some _ -> "index with static and dynamic information"
-    end
-  | TAlias id -> id
-  | TFloat -> "float"
-  | TFunc _ -> "func"
+let type_of_id id g =
+  Context.get_binding id g
+
+let type_of_alias_id id d =
+  Context.get_alias_binding id d
 
 let string_of_binop = function
   | BopEq    -> "="
@@ -62,22 +55,22 @@ let bop_type a b op =
 (* FIXME: refactor this! *)
 let rec is_int delta = function
   | TInt _ -> true
-  | TAlias t -> is_int delta (Hashtbl.find delta t)
+  | TAlias t -> is_int delta (Context.get_alias_binding t delta)
   | _ -> false
 
 let rec is_bool delta = function
   | TBool -> true
-  | TAlias t -> is_bool delta (Hashtbl.find delta t)
+  | TAlias t -> is_bool delta (Context.get_alias_binding t delta)
   | _ -> false
 
 let rec is_float delta = function
   | TFloat -> true
-  | TAlias t -> is_float delta (Hashtbl.find delta t)
+  | TAlias t -> is_float delta (Context.get_alias_binding t delta)
   | _ -> false
 
 let rec is_index delta = function
   | TIndex _ -> true
-  | TAlias t -> is_index delta (Hashtbl.find delta t)
+  | TAlias t -> is_index delta (Context.get_alias_binding t delta)
   | _ -> false
 
 let rec types_equal delta t1 t2 =
@@ -85,8 +78,8 @@ let rec types_equal delta t1 t2 =
   | TInt _, TInt _ -> true
   | TArray (a1, bf1, s1), TArray (a2, bf2, s2) -> bf1=bf2 && s1=s2 && types_equal delta a1 a2
   | TIndex _, TIndex _ -> true
-  | TAlias t1, t2 -> types_equal delta (Hashtbl.find delta t1) t2
-  | t1, TAlias t2 -> types_equal delta t1 (Hashtbl.find delta t2)
+  | TAlias t1, t2 -> types_equal delta (Context.get_alias_binding t1 delta) t2
+  | t1, TAlias t2 -> types_equal delta t1 (Context.get_alias_binding t2 delta)
   | t1, t2 -> t1=t2
 
 let legal_op t1 t2 delta = function
@@ -129,7 +122,7 @@ let legal_op t1 t2 delta = function
   | BopAnd   -> is_bool delta t1 && is_bool delta t2
   | BopOr    -> is_bool delta t1 && is_bool delta t2
 
-let rec check_expr exp (context, delta) =
+let rec check_expr exp (context, (delta: Context.delta)) =
   match exp with
   | EInt (i, s)                  -> check_int i s (context, delta)
   | EFloat f                     -> check_float f (context, delta)
@@ -161,17 +154,14 @@ and check_binop binop e1 e2 (c, d) =
 and check_aa_expl id idx1 idx2 (c, d) =
   check_expr idx1 (c, d)   |> fun (idx1_t, (c1, d1)) ->
   check_expr idx2 (c1, d1) |> fun (idx2_t, (c2, d2)) ->
-  match idx1_t, idx2_t, Hashtbl.find c (id, None) with
-  | TInt (Some i), TInt _, TArray (a_t, _, _) ->
-    (if Hashtbl.mem c2 (id, Some i) then
-      a_t, ((Hashtbl.remove c2 (id, Some i); c2), d2)
-    else raise (TypeError ("Illegal bank access " ^ (string_of_int i) ^ " on array " ^ id)))
+  match idx1_t, idx2_t, Context.get_binding id c2 with
+  | TInt (Some i), TInt _, TArray (a_t, _, _)
   | TInt (Some i), TIndex _, TArray (a_t, _, _) -> 
-    (if Hashtbl.mem c2 (id, Some i) then
-      a_t, ((Hashtbl.remove c2 (id, Some i); c2), d2)
-    else raise (TypeError ("Illegal bank access: " ^ (string_of_int i) ^ " on array " ^ id)))
-  | TIndex (s, None), TInt _, TArray (a_t, _, _) ->
-    check_idx id s a_t (c, d)
+    begin
+      try a_t, (Context.consume_aa id i c2, d2) 
+      with AlreadyConsumed i -> raise (TypeError ("Illegal bank access: " ^ (string_of_int i)))
+    end
+  | TIndex (s, None), TInt _, TArray (a_t, _, _) 
   | TIndex (s, None), TIndex _, TArray (a_t, _, _) ->
     check_idx id s a_t (c, d)
   | TInt _, TInt _, TMux (m_id, s) 
@@ -179,7 +169,7 @@ and check_aa_expl id idx1 idx2 (c, d) =
   | TInt _, TIndex _, TMux (m_id, s) 
   | TIndex _, TIndex _, TMux (m_id, s) ->
     begin
-      match Hashtbl.find c (m_id, None) with
+      match Context.get_binding id c2 with
       | TArray (a_t, bf, _) -> 
         if s <= bf then a_t, (c, d)
         else raise (TypeError "Illegal access operation: mux is smaller than array banking factor")
@@ -194,10 +184,10 @@ and check_aa_expl id idx1 idx2 (c, d) =
                       id ^ " with type " ^ (string_of_type t)))
 
 and check_aa_logl id i (c, d) =
-  match Hashtbl.find c (id, None) with
+  match Context.get_binding id c with
   | TMux (a_id, s) ->
     begin
-      match Hashtbl.find c (a_id, None) with
+      match Context.get_binding a_id c with
       | TArray (a_t, bf, _) -> 
         if s <= bf then a_t, (c, d)
         else raise (TypeError "Illegal access operation: mux is smaller than array banking factor")
@@ -206,18 +196,13 @@ and check_aa_logl id i (c, d) =
   | _ -> failwith "Finish logical access"
 
 and check_idx id idx a_t (c, d) =
-  List.iter
-    (fun bank ->
-      try 
-        ignore (Context.consume_aa id bank c)
-      with AlreadyConsumed i -> 
-        raise 
-          (TypeError ("Illegal bank access: " ^ (string_of_int i))))
-    idx;
-  List.iter (fun i -> Hashtbl.remove c (id, Some i)) idx; a_t, (c, d)
-  
+  let consume_indices = fun context bank ->
+    try Context.consume_aa id bank context
+    with AlreadyConsumed i -> raise (TypeError (illegal_bank bank id))
+  in a_t, (List.fold_left consume_indices c idx, d)
+
 and check_aa_impl id i (c, d) =
-  match check_expr i (c, d), Hashtbl.find c (id, None) with
+  match check_expr i (c, d), Context.get_binding id c with
   | (TIndex (idxs, _), _), TArray (a_t, _, _) -> 
     check_idx id idxs a_t (c, d)
   | (TIndex _, _), t ->
@@ -229,7 +214,7 @@ and check_aa_impl id i (c, d) =
       (TypeError ("Can't implicitly access array by indexing into " ^ id ^ " with type " ^
                   (string_of_type t)))
 
-let rec check_cmd cmd (context, delta) =
+let rec check_cmd cmd (context, (delta: Context.delta)) =
   match cmd with
   | CSeq (c1, c2)                  -> check_seq c1 c2 (context, delta)
   | CIf (cond, cmd)                -> check_if cond cmd (context, delta)
@@ -256,8 +241,13 @@ and check_for id r1 r2 body (c, d) =
   check_expr r2 (c1, d1) |> fun (r2_type, (c2, d2)) ->
   match r1_type, r2_type with
   | TInt _, TInt _ -> 
-    Hashtbl.add c2 (id, None) (TInt None); check_cmd body (c2, d2)
-  | _ -> raise (TypeError "Range start/end must be integers")
+    check_cmd body (Context.add_binding id (TInt None) c2, d2)
+  | _ -> raise (TypeError range_error)
+
+and (--) i j =
+  let rec aux n acc =
+    if n < i then acc else aux (n-1) (n :: acc)
+  in aux j []
 
 and check_for_impl id r1 r2 body u (context, delta) =
   check_expr r1 (context, delta) |> fun (r1_type, (c1, d1)) ->
@@ -266,27 +256,14 @@ and check_for_impl id r1 r2 body u (context, delta) =
   | TInt (Some i1), TInt (Some i2) ->
     let range_size = i2 - i1 + 1 in
     if (range_size=u) then
-      Hashtbl.add c2 (id, None) (TIndex ((0--(u-1)), None))
+      check_cmd body (Context.add_binding id (TIndex (0--(u-1), None)) c2, d2)
     else
-      Hashtbl.add c2 (id, None) (TIndex ((0--(u-1)), Some (range_size/u)));
-    check_cmd body (c2, d2)
+      check_cmd body (Context.add_binding id (TIndex (0--(u-1), Some (range_size/u))) c2, d2)
   | _ -> raise (TypeError "Range start/end must be static integers")
 
-and add_array_banks s bf id bank_num (context, delta) t i =
-  if i=bank_num then (context, delta)
-  else 
-    (Hashtbl.add context (id, Some i) (TArray (t, bf, s)); 
-     (add_array_banks s bf id bank_num (context, delta) t (i+1)))
-
 and check_assignment id exp (context, delta) =
-  match exp with
-  | EArray (t, b, a) -> 
-    let s = Array.length a in
-    Hashtbl.add context (id, None) (TArray (t, b, s)); 
-    add_array_banks s b id b (context, delta) t 0
-  | other_exp -> 
-    check_expr other_exp (context, delta) |> fun (t, (c, d)) ->
-    Hashtbl.add c (id, None) t; (c, d)
+  check_expr exp (context, delta) |> fun (t, (c, d)) ->
+  Context.add_binding id t c, delta
 
 and check_reassign target exp (context, delta) =
   match target, exp with
@@ -306,26 +283,17 @@ and check_reassign target exp (context, delta) =
     else raise (TypeError "Tried to populate array with incorrect type") *)
   | _ -> raise (TypeError "Used reassign operator on illegal types")
 
-and bind_type id t (context, delta) =
-  match t with
-  | TArray (t, bf, s) ->
-    Hashtbl.add context (id, None) (TArray (t, bf, s)); 
-    add_array_banks s bf id bf (context, delta) t 0
-  | other_exp -> 
-    Hashtbl.add context (id, None) other_exp;
-    (context, delta)
-
 and check_funcdef id args body (context, delta) =
-  (* FIXME: this is a little wonky *)
-  List.iter (fun (e, t) -> ignore (bind_type e t (context, delta))) args;
-  let (context', delta') = check_cmd body (context, delta) in
+  let context' = 
+    List.fold_left 
+      (fun ctx (arg_id, t) -> Context.add_binding arg_id t ctx) context args in
+  let context'', delta'' = check_cmd body (context', delta) in
+  Context.add_binding id (TFunc (List.map (fun (_, t) -> t) args)) context'', delta''
   (* List.iter (fun (e, t) -> Hashtbl.remove context' (e, None)) args; *)
-  Hashtbl.add context' (id, None) (TFunc (List.map (fun (_, t) -> t) args));
-  (context', delta')
 
 and check_app id args (context, delta) =
   let argtypes = List.map (fun a -> check_expr a (context, delta) |> fst) args in
-  match Hashtbl.find context (id, None) with
+  match Context.get_binding id context with
   | TFunc param_types -> 
     if List.exists2 
       (fun arg param -> not (types_equal delta arg param)) argtypes param_types
@@ -334,8 +302,8 @@ and check_app id args (context, delta) =
   | _ -> raise (TypeError (id ^ " is not a function and cannot be applied"))
 
 and check_typedef id t (context, delta) =
-  Hashtbl.add delta id t; (context, delta)
+  context, (Context.add_alias_binding id t delta)
 
 and check_muxdef mux_id a_id size (context, delta) =
-  Hashtbl.add context (mux_id, None) (TMux (a_id, size)); (context, delta)
+  Context.add_binding mux_id (TMux (a_id, size)) context, delta
 
