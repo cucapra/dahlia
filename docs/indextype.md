@@ -7,7 +7,7 @@ Syntax & Semantics
 ------------------
 
 We will need notation for half-closed integer intervals, which might be written something like $[l, h)$ but we will write as $l..h$ for simplicity (and for to suggest syntax in real programming languages).
-To be perfectly explicit, $l..h$ denotes the set of natural numbers $\\{ n \in \mathbb{N} ~|~ l \le n < h \\}$.
+To be perfectly explicit, $l..h$ denotes the set of natural numbers $\{ n \in \mathbb{N} ~|~ l \le n < h \}$.
 We will sometimes write $|l..h|$ to mean $h-l$, i.e., the size of the set.
 
 An *index type* consists of two such intervals: a static interval and a dynamic interval.
@@ -20,7 +20,7 @@ a given dynamic value $d \in l_d..h_d$ for the type
 $\text{idx}\langle l_s .. h_s, l_d .. h_d \rangle$
 represents this set of numbers:
 
-$$\\{ s + |l_s..h_s| \times d ~|~ s \in l_s..h_s\\}$$
+$$\{ s + |l_s..h_s| \times d ~|~ s \in l_s..h_s\}$$
 
 **Example.**
 Consider the type
@@ -28,9 +28,9 @@ $\text{idx}\langle 0 .. 5, 0 .. 2 \rangle$.
 There are two values of this type: $d=0$ and $d=1$.
 Each value represents a set of five indices, because $|0..5| = 5$.
 The first set, for $d=0$, is
-$\\{ s + |0..5| \times 0 ~|~ s \in 0..5\\} = \\{s + 5 \times 0 ~|~ s \in 0..5\\} = 0..5$.
+$\{ s + |0..5| \times 0 ~|~ s \in 0..5\} = \{s + 5 \times 0 ~|~ s \in 0..5\} = 0..5$.
 The second set, for $d=1$, is
-$\\{s + 5 \times 1 ~|~ s \in 0..5\\} = 6..10$.
+$\{s + 5 \times 1 ~|~ s \in 0..5\} = 6..10$.
 
 **Special cases.**
 Index types generalize `int` and `static int`, i.e., the types for ordinary dynamic integers and for static integers.
@@ -51,10 +51,10 @@ $$
 \begin{aligned}
 &\phantom{=}
 \bigcup_{d ~\in~ l_d..h_d}
-\\{ s + |l_s..h_s| \times d ~|~ s \in l_s..h_s\\}
-\\\\
+\{ s + |l_s..h_s| \times d ~|~ s \in l_s..h_s\}
+\\
 &=
-\\{ s + |l_s..h_s| \times d ~|~ s \in l_s..h_s, d \in l_d..h_d\\}
+\{ s + |l_s..h_s| \times d ~|~ s \in l_s..h_s, d \in l_d..h_d\}
 \end{aligned}
 $$
 
@@ -94,10 +94,10 @@ Consider the value space of $i$, which is:
 $$
 \begin{aligned}
 &\phantom{=}
-\\{ s + |l_s..h_s| \times d ~|~ s \in l_s..h_s, d \in l_d..h_d\\}
-\\\\
+\{ s + |l_s..h_s| \times d ~|~ s \in l_s..h_s, d \in l_d..h_d\}
+\\
 &=
-\left\\{ s + k \times d ~|~ s \in 0..k, d \in \frac{l}{k}..\frac{h}{k}\right\\}
+\left\{ s + k \times d ~|~ s \in 0..k, d \in \frac{l}{k}..\frac{h}{k}\right\}
 \end{aligned}
 $$
 
