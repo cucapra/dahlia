@@ -1,5 +1,4 @@
-#
-Docs
+# Docs
 
 This directory contains some notes and documentation concerning Seashell. 
 
