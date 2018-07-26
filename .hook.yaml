@@ -1,0 +1,1 @@
+deploy: make -C docs deploy
