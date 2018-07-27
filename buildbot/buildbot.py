@@ -52,7 +52,7 @@ def add_job():
         'status': 'uploaded',
     })
 
-    return 'job accepted'
+    return job_name
 
 
 @app.route('/jobs.csv')
