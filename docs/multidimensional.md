@@ -94,6 +94,6 @@ $$
 \{ s + k*(\frac{n}{k}-1)  ~|~ s \in 0 .. k\} \rightarrow \{ s + n - k ~|~ s \in 0..k\} \rightarrow (n-k)..n
 $$
 
-and indeed for any $d=m$, we'd have a $k$-sized chunk $(0+mk)..(k+mk)$; the union of all of these sets would be $0..n$. (TODO: actual proof instead of this). So, from this we can conclude that when the banking factor matches the unroll factor of an index type, we access every index of a loop: therefore, we cannot make more than one such access. Our linear typing context would completely consume such an index, and it would not be available for another use inside the body of such a loop.
+and indeed for any $d=m$, we'd have a $k$-sized chunk $(0+mk)..(k+mk)$; there would be $\frac{m}{k}$ of these chunks, which are (hopefully) disjoint - so the union of all of these sets would be $0..n$. (TODO: actual proof instead of this). So, from this we can conclude that when the banking factor matches the unroll factor of an index type, we access every index of a loop: therefore, we cannot make more than one such access. Our linear typing context would completely consume such an index, and it would not be available for another use inside the body of such a loop.
 
 **Assumption 2, weakened.** We might want to relax this assumption to allow situations where the unroll factor divides into the banking factor.
