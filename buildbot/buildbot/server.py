@@ -1,12 +1,10 @@
 import flask
 from flask import request
-import tinydb
-import secrets
 import os
-import time
 from io import StringIO
 import csv
 from . import worker
+from .db import JobDB
 
 # Our Flask application. Our "instance path," where we search for
 # configuration fails and such, is the parent directory of our Python
@@ -19,11 +17,10 @@ app.config.from_pyfile('buildbot.base.cfg')
 app.config.from_pyfile('buildbot.site.cfg', silent=True)
 
 # Connect to our database.
-db = tinydb.TinyDB(os.path.join(app.instance_path, app.config['DATABASE']))
-jobs = db.table('jobs')
+db = JobDB(os.path.join(app.instance_path, app.config['DATABASE']))
 
 # Create our worker thread (but don't start it yet).
-work_thread = worker.WorkThread(jobs)
+work_thread = worker.WorkThread(db)
 
 
 def job_dir(job_name):
@@ -43,8 +40,8 @@ def add_job():
     if ext[1:] not in app.config['UPLOAD_EXTENSIONS']:
         return 'invalid extension {}'.format(ext), 400
 
-    # Generate a random name for the job.
-    job_name = secrets.token_urlsafe(8)
+    # Create a job record.
+    job_name = db.add('uploading')
 
     # Create the job's directory and save the code there.
     path = job_dir(job_name)
@@ -52,14 +49,8 @@ def add_job():
     archive_path = os.path.join(path, app.config['ARCHIVE_NAME'] + ext)
     file.save(archive_path)
 
-    # Create a job record.
-    with worker.jobs_cv:
-        jobs.insert({
-            'name': job_name,
-            'started': time.time(),
-            'state': 'uploaded',
-        })
-        worker.jobs_cv.notify()
+    # Mark it as uploaded.
+    db.set_state(job_name, 'uploaded')
 
     # Lazily start the worker thread, if we haven't already.
     if not work_thread.is_alive():
@@ -77,7 +68,7 @@ def jobs_csv():
     )
     writer.writeheader()
 
-    for job in jobs:
+    for job in db.jobs:
         writer.writerow(job)
 
     csv_data = output.getvalue()
