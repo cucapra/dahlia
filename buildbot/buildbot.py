@@ -4,6 +4,8 @@ import tinydb
 import secrets
 import os
 import time
+from io import StringIO
+import csv
 
 # Our Flask application.
 app = flask.Flask(__name__)
@@ -21,14 +23,6 @@ def job_dir(job_name):
     """Get the path to a job's work directory.
     """
     return os.path.join(app.config['JOBS_DIR'], job_name)
-
-
-@app.route('/')
-def list_jobs():
-    out = []
-    for job in jobs:
-        out.append(job['name'])
-    return '\n'.join(out), 200, {'Content-Type': 'text/plain'}
 
 
 @app.route('/jobs', methods=['POST'])
@@ -59,3 +53,19 @@ def add_job():
     })
 
     return 'job accepted'
+
+
+@app.route('/jobs.csv')
+def jobs_csv():
+    output = StringIO()
+    writer = csv.DictWriter(
+        output,
+        ['name', 'started', 'status'],
+    )
+    writer.writeheader()
+
+    for job in jobs:
+        writer.writerow(job)
+
+    csv_data = output.getvalue()
+    return csv_data, 200, {'Content-Type': 'text/csv'}
