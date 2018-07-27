@@ -9,8 +9,5 @@ class WorkThread(threading.Thread):
 
     def run(self):
         while True:
-            with self.db.cv:
-                while not self.db._count('uploaded'):
-                    self.db.cv.wait()
-                job = self.db._acquire('uploaded', 'unpacking')
-                print(job)
+            job = self.db._acquire('uploaded', 'unpacking')
+            print('unpacking', job['name'])

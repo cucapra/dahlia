@@ -75,3 +75,13 @@ class JobDB:
             job['state'] = state
             self.jobs.write_back([job])
             self.cv.notify()
+
+    def acquire(self, old_state, new_state):
+        """Block until a job is available in `old_state`, update its
+        state to `new_state`, and return it.
+        """
+        with self.cv:
+            while not self._count(old_state):
+                self.cv.wait()
+            job = self._acquire(old_state, new_state)
+            return job
