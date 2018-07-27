@@ -1,28 +1,32 @@
 ---
 title: Logical Accesses to Multidimensional Arrays in Banked Memories
 ---
-A recap of index types
+Index Type Recap
 ----------------------
 
-An array with an index type where $s$ refers to the static part and $d$ to the dynamic part, represents a possible set of indices,
+[Index types](https://capra.cs.cornell.edu/seashell/docs/indextype.html) allow us to combine static and dynamic information about the indices we're accessing in unrolled loops. For instance, consider the following example: 
 
-$$\{ s + |l_s..h_s| \times d ~|~ s \in l_s..h_s, d \in l_d..h_d\}$$
+    for i in l..h unroll k
+        access a[i]
 
-**Example**  
-consider $a'$ an array with the size 30 and we attempt to access it 5 times in parallel (unrolled 5 times). 
+The variable $\text{i}$ accessing array $\text{a}$ has type $\text{idx}\langle 0 .. k, \frac{l}{k} .. \frac{h}{k} \rangle$. This type is comprised of a *static component*, $0 .. k$, and a *dynamic component*, $\frac{l}{k} .. \frac{h}{k}$. This means that for every dynamic value $d$ that $\text{i}$ takes on, $\text{i}$ represents the following set of indices:
 
-The set of possible indices are,
+$$
+\{ s + |l_s..h_s| \times d ~|~ s \in 0..k, d \in \frac{l}{k}..\frac{h}{k}\}
+$$
 
-$$\{ s + 5 \times d ~|~ s \in 0..5, d \in 0..6 \}$$
+**Example.**
+Index types will allow us to make more expressive accesses on higher-dimensional arrays (decoupling matrix logic and banking structure); however, before we dive into a more involved example, it might be a good sanity check to try out a simpler example on a one-dimensional array.  Consider an array $\text{a}$ of size 30. We'd like to access $\text{a}$ 5 times in parallel:
 
-i.e from $(0,0)$ to $(4,5)$
+    int a[30 bank(5)]
+    for i in 0..30 unroll 5
+        access a[i]
 
-Since accessing the same static part would result in a safety violation, for a given $d$, valid accesses would be,
+Here, $\text{i}$ takes on type $\text{idx}\langle 0 .. 5, 0 .. 6 \rangle$. Using our set interpretation of the index type, for each $d \in 0 .. 6$, $\text{i}$ represents:
 
-$$\{ s + |l_s..h_s| \times d ~|~ s \in l_s..h_s\}$$
+$$\{ s + |0 .. 5| \times d ~|~ s \in 0..5 \} \rightarrow \{ s + 5 \times d ~|~ s \in 0..5 \}$$
 
-**Example**
-For above instance, that set would be $0..5$
+So, for $d=0$, we'd be simultaneously accessing the indices $\{0, \dots, 4 \}$; for $d=1$ we'd have $\{5, \dots, 9 \}$; and so on and so forth until for $d=5$ we'd be finally be accessing $\{25, \dots, 29 \}$.
 
 Multi dimensional arrays
 ------------------------
