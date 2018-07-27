@@ -1,3 +1,6 @@
+---
+title: Logical Accesses to Multidimensional Arrays in Banked Memories
+---
 A recap of index types
 ----------------------
 
