@@ -28,42 +28,35 @@ $$\{ s + |0 .. 5| \times d ~|~ s \in 0..5 \} \rightarrow \{ s + 5 \times d ~|~ s
 
 So, for $d=0$, we'd be simultaneously accessing the indices $\{0, \dots, 4 \}$; for $d=1$ we'd have $\{5, \dots, 9 \}$; and so on and so forth until for $d=5$ we'd be finally be accessing $\{25, \dots, 29 \}$.
 
-Multi dimensional arrays
+**Typechecking.** For Seashell, it is of interest to find the banks that accesses make, to restrict illegal operations that access the same bank multiple times. So in this previous example, we can compute the banks that each index $i'$ of the set represented by $i$ access, with $i' \bmod b$ - assuming an interleaved banking style. With a chunked banking style we can simply use $i / b$.
+
+Multi Dimensional Arrays
 ------------------------
 
-Let's consider a multi dimensional array,
-$a:t[\sigma_0][\sigma_1]..[\sigma_n] bank b$
-where $i$ would refer to index variable for a dimension
-$\sigma$ refers to the size of a dimension(starting from $0$ this would be the range of $i$)
-We would use the notation $a[i_0][i_1]..[i_n]$ to access an element in this array.
+As far as we're concerned, HLS only supports the use of one-dimensional arrays. With Seashell, we'd like to offer some abstractions to make expressing logical computations on multi-dimensional matrices easier. We'll define Seashell $n$-dimensonal arrays like this:
 
-We can unpack such a multidimensional array into a single dimensional array,
-$a:t[\sigma_0][\sigma_1]..[\sigma_n] \equiv a':t[\sigma_N]$
+$$
+\text{a}:t[\sigma_0][\sigma_1]..[\sigma_n] \text{ bank}(b)
+$$
 
-given the above we can derive the expression
-$$ i' = \sum_{k=0}^{n} (i_k \prod_{k'=k+1}^{n} \sigma_k')$$
+Here, $\text{a}$ is the name of our array; the contents following the colon tell us that $t$ is some arbitrary type ($\text{int}$, etc); and $\sigma_i$ represents the size of a dimension $i$. $\text{bank}(b)$ tells us that this array is banked by a factor of $b$: in the future we'd like to impose flexible banking structures on each dimension, but for now, we're going to simply bank the entire array - that is, the entire flattened array, which we'll talk about in just a moment.
 
-**Example** 
+Under the hood (that is, when we translate our Seashell program to HLS C), this multi-dimensional array is translated to a one-dimensional array. This flattened array (which we'll call $\text{a}_f)$ has size equal to the product of our Seashell array dimensions:
 
-$$a:t[2][5][3]$$
-$$a':t[30] \text{ bank} (5)$$
+$$
+\text{a}:t[\sigma_0][\sigma_1]..[\sigma_n] \equiv \text{a}_f:t[\sigma_{(\prod_{i=0}^{n} i)} ]
+$$
 
-$$a[1][4][2] = a'[29]$$
+Logical accesses to a Seashell multi-dimensonal array look like this: $\text{a}[i_0][i_1]..[i_n]$. We'd like to access these higher-dimensional arrays with our Seashell index types, but to first examine how working with these arrays might work, it would be useful to first consider $i_0..i_n$ as plain old integers. So now, for the purposes of typechecking our array accesses, we'd like to know exactly which indices we're using to access this flattened array when we make our logical accesses. So to compute what our flattened index $i_f$ would be based on our logical indices $i_0..i_n$, we could use the following method: 
 
-in order to check which bank and offset this element occupies, we can use the same approach as in a single dimension,
+$$ i_f = \sum_{k=0}^{n} (i_k \prod_{k'=k+1}^{n} \sigma_k)$$
 
-$$ \text{bank} \rightarrow i' \bmod b $$
-$$ \text{offset} \rightarrow i' / b $$
+The general intuition behind the above formula is that when accessing the $i$th element of dimension $k$, we need to skip over i sections of $\text{a}_f$ that have size equal to the product of the remainder of the $n-k$ logical dimensions. (TODO: more intuition?)
 
-As an aside, this assumes interleaved memory banking (cyclic partitioning). Block partitioning (chunking) would simply require us to swap these,
-i.e.
+**Example.** Consider a three-dimensional array $\text{a}$ defined like this:
 
-$$ \text{bank} \rightarrow i'/b $$
-$$ \text{offset} \rightarrow i' \bmod b$$
+$$a:t[2][5][3] \text{ bank} (5)$$
 
-**Example**
+The flattened version, $\text{a}_f$ would have size $N=30$. Say we make an access $\text{a}[1][4][2]$. Using our formula we defined, we'd access $\text{a}_f$ with $i_f=29$.
 
-$$ \text{bank} \rightarrow 29 \bmod 5 = 4 $$
-$$ \text{offset} \rightarrow 29 / 5 = 5$$
-
-
+**Typechecking.** Because we're using this flattened array, computing which bank is being accessed from $i_f$ can simply be accomplished with $i \bmod b$ or $i / b$, depending on banking structure - just like in the earlier one-dimensional example.
