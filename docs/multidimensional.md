@@ -16,7 +16,7 @@ $$
 $$
 
 **Example.**
-Index types will allow us to make more expressive accesses on higher-dimensional arrays (decoupling matrix logic and banking structure); however, before we dive into a more involved example, it might be a good sanity check to try out a simpler example on a one-dimensional array.  Consider an array $\text{a}$ of size 30. We'd like to access $\text{a}$ 5 times in parallel:
+Index types will allow us to make more expressive accesses on higher-dimensional arrays (decoupling matrix logic and banking structure); however, before we dive into a more involved example, it might be a good sanity check to review a simpler example with a one-dimensional array.  Consider an array $\text{a}$ of size 30. We'd like to access $\text{a}$ 5 times in parallel:
 
     int a[30 bank(5)]
     for i in 0..30 unroll 5
