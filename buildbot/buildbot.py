@@ -3,6 +3,7 @@ from flask import request
 import tinydb
 import secrets
 import os
+import time
 
 # Our Flask application.
 app = flask.Flask(__name__)
@@ -49,5 +50,12 @@ def add_job():
     os.makedirs(path)
     archive_path = os.path.join(path, app.config['ARCHIVE_NAME'] + ext)
     file.save(archive_path)
+
+    # Create a job record.
+    jobs.insert({
+        'name': job_name,
+        'started': time.time(),
+        'status': 'uploaded',
+    })
 
     return 'job accepted'
