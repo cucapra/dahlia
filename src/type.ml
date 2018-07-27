@@ -10,58 +10,8 @@ let type_of_id id g =
 let type_of_alias_id id d =
   Context.get_alias_binding id d
 
-let bop_type a b op =
-  match a, b, op with
-  | _, _, BopEq                            -> TBool
-  | _, _, BopNeq                           -> TBool
-  | _, _, BopGeq                           -> TBool
-  | _, _, BopLeq                           -> TBool
-  | _, _, BopLt                            -> TBool
-  | _, _, BopGt                            -> TBool
-  | (TInt _), (TInt _), BopPlus            -> TInt None
-  | (TInt _), TFloat, BopPlus              -> TFloat
-  | TFloat, (TInt _), BopPlus              -> TFloat
-  | TFloat, TFloat, BopPlus                -> TFloat
-  | TFloat, (TInt _), BopMinus             -> TFloat
-  | (TInt _), (TInt _), BopMinus           -> TInt None
-  | (TInt _), TFloat, BopMinus             -> TFloat
-  | TFloat, TFloat, BopMinus               -> TFloat
-  | TFloat, (TInt _), BopTimes             -> TFloat
-  | (TInt _), (TInt _), BopTimes           -> TInt None
-  | (TInt _), TFloat, BopTimes             -> TFloat
-  | TFloat, TFloat, BopTimes               -> TFloat
-  | _, _, BopAnd                           -> TBool
-  | _, _, BopOr                            -> TBool
-  | TIndex (s, d), TInt _, BopPlus         -> TIndex (s, d)
-  | TInt _, TIndex (s, d), BopPlus         -> TIndex (s, d)
-  | TIndex (s, d), TInt _, BopMinus        -> TIndex (s, d)
-  | TInt _, TIndex (s, d), BopMinus        -> TIndex (s, d)
-  | TIndex (s, d), TInt (Some i), BopTimes -> TIndex (List.map (( * ) i) s, d)
-  | TInt (Some i), TIndex (s, d), BopTimes -> TIndex (List.map (( * ) i) s, d)
-
-let compute_bf d =
-  List.fold_left (fun acc (_, bf) -> acc * bf) 0 d
-
-(* FIXME: refactor this! *)
-let rec is_int delta = function
-  | TInt _ -> true
-  | TAlias t -> is_int delta (Context.get_alias_binding t delta)
-  | _ -> false
-
-let rec is_bool delta = function
-  | TBool -> true
-  | TAlias t -> is_bool delta (Context.get_alias_binding t delta)
-  | _ -> false
-
-let rec is_float delta = function
-  | TFloat -> true
-  | TAlias t -> is_float delta (Context.get_alias_binding t delta)
-  | _ -> false
-
-let rec is_index delta = function
-  | TIndex _ -> true
-  | TAlias t -> is_index delta (Context.get_alias_binding t delta)
-  | _ -> false
+let compute_bf =
+  List.fold_left (fun acc (_, b) -> acc * b) 0
 
 let rec types_equal delta t1 t2 =
   match t1, t2 with
@@ -71,46 +21,6 @@ let rec types_equal delta t1 t2 =
   | TAlias t1, t2 -> types_equal delta (Context.get_alias_binding t1 delta) t2
   | t1, TAlias t2 -> types_equal delta t1 (Context.get_alias_binding t2 delta)
   | t1, t2 -> t1=t2
-
-let legal_op t1 t2 delta = function
-  | BopEq    -> (is_int delta t1 && is_int delta t2)
-                || (is_float delta t1 && is_float delta t2)
-                || (is_index delta t1 && is_int delta t2)
-                || (is_int delta t1 && is_index delta t2)
-  | BopNeq   -> is_int delta t1 && is_int delta t2
-                || (is_float delta t1 && is_float delta t2)
-                || (is_index delta t1 && is_int delta t2)
-                || (is_int delta t1 && is_index delta t2)
-  | BopGeq   -> is_int delta t1 && is_int delta t2
-                || (is_float delta t1 && is_float delta t2)
-                || (is_index delta t1 && is_int delta t2)
-                || (is_int delta t1 && is_index delta t2)
-  | BopLeq   -> is_int delta t1 && is_int delta t2
-                || (is_float delta t1 && is_float delta t2)
-                || (is_index delta t1 && is_int delta t2)
-                || (is_int delta t1 && is_index delta t2)
-  | BopLt    -> is_int delta t1 && is_int delta t2
-                || (is_float delta t1 && is_float delta t2)
-                || (is_index delta t1 && is_int delta t2)
-                || (is_int delta t1 && is_index delta t2)
-  | BopGt    -> is_int delta t1 && is_int delta t2
-                || (is_float delta t1 && is_float delta t2)
-                || (is_index delta t1 && is_int delta t2)
-                || (is_int delta t1 && is_index delta t2)
-  | BopPlus  -> is_int delta t1 && is_int delta t2
-                || (is_float delta t1 && is_float delta t2)
-                || (is_index delta t1 && is_int delta t2)
-                || (is_int delta t1 && is_index delta t2)
-  | BopMinus -> is_int delta t1 && is_int delta t2
-                || (is_float delta t1 && is_float delta t2)
-                || (is_index delta t1 && is_int delta t2)
-                || (is_int delta t1 && is_index delta t2)
-  | BopTimes -> is_int delta t1 && is_int delta t2
-                || (is_float delta t1 && is_float delta t2)
-                || (is_index delta t1 && is_int delta t2)
-                || (is_int delta t1 && is_index delta t2)
-  | BopAnd   -> is_bool delta t1 && is_bool delta t2
-  | BopOr    -> is_bool delta t1 && is_bool delta t2
 
 let rec check_expr exp (context, (delta: Context.delta)) =
   match exp with
@@ -131,8 +41,9 @@ and check_float f (ctx, dta) = TFloat, (ctx, dta)
 and check_binop binop e1 e2 (c, d) =
   check_expr e1 (c, d)   |> fun (t1, (c1, d1)) ->
   check_expr e2 (c1, d1) |> fun (t2, (c2, d2)) ->
-  if legal_op t1 t2 d2 binop then bop_type t1 t2 binop, (c2, d2)
-  else raise (TypeError (illegal_op binop t1 t2))
+  try (Op_util.type_of_op t1 t2 d binop), (c2, d2)
+  with Op_util.IllegalOperation -> 
+    raise (TypeError (illegal_op binop t1 t2))
 
 (* TODO: refactor this mess *)
 and check_aa_expl id idx1 idx2 (c, d) =
