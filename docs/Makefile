@@ -14,7 +14,7 @@ clean:
 	rm *.html style.css
 
 %.html: %.md style.css
-	pandoc $< -f markdown -t html -s --katex $(KATEX_URL) -c style.css -o $@
+	pandoc $< -f markdown -t html -s --katex=$(KATEX_URL) -c style.css -o $@
 
 style.css:
 	curl -o $@ $(CSS_URL)
