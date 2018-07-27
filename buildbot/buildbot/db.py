@@ -85,3 +85,9 @@ class JobDB:
                 self.cv.wait()
             job = self._acquire(old_state, new_state)
             return job
+
+    def get(self, name):
+        """Get the job with the given name.
+        """
+        with self.cv:
+            return self._get(name)
