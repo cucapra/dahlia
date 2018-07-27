@@ -4,21 +4,22 @@ title: Logical Accesses to Multidimensional Arrays in Banked Memories
 A recap of index types
 ----------------------
 
-An array with an index type where $s$ refers to the static part and $d$ to the dynamic part, represents a possible set of indeces,
+An array with an index type where $s$ refers to the static part and $d$ to the dynamic part, represents a possible set of indices,
 
-$$\\{ s + |l_s..h_s| \times d ~|~ s \in l_s..h_s, d \in l_d..h_d\\}$$
+$$\{ s + |l_s..h_s| \times d ~|~ s \in l_s..h_s, d \in l_d..h_d\}$$
 
 **Example**  
 consider $a'$ an array with the size 30 and we attempt to access it 5 times in parallel (unrolled 5 times). 
 
-The set of possible indeces are,
-$$\\{ s + 5 \times d ~|~ s \in 0..5, d \in 0..6 }\\$$ $$
+The set of possible indices are,
+
+$$\{ s + 5 \times d ~|~ s \in 0..5, d \in 0..6 \}$$
 
 i.e from $(0,0)$ to $(4,5)$
 
 Since accessing the same static part would result in a safety violation, for a given $d$, valid accesses would be,
 
-$$\\{ s + |l_s..h_s| \times d ~|~ s \in l_s..h_s\\}$$
+$$\{ s + |l_s..h_s| \times d ~|~ s \in l_s..h_s\}$$
 
 **Example**
 For above instance, that set would be $0..5$
@@ -39,23 +40,26 @@ given the above we can derive the expression
 $$ i' = \sum_{k=0}^{n} (i_k \prod_{k'=k+1}^{n} \sigma_k')$$
 
 **Example** 
-$a:t[2][5][3]$
-$a':t[30] bank 5$
 
-$ a[1][4][2] = a'[29]$
+$$a:t[2][5][3]$$
+$$a':t[30] \text{ bank} (5)$$
+
+$$a[1][4][2] = a'[29]$$
 
 in order to check which bank and offset this element occupies, we can use the same approach as in a single dimension,
-$bank \rightarrow i'%b$
-$offset \rightarrow i'/b$
+
+$$ \text{bank} \rightarrow i' \bmod b $$
+$$ \text{offset} \rightarrow i' / b $$
 
 As an aside, this assumes interleaved memory banking (cyclic partitioning). Block partitioning (chunking) would simply require us to swap these,
 i.e.
-$bank \rightarrow i'/b$
-$offset \rightarrow i'%b$
+
+$$ \text{bank} \rightarrow i'/b $$
+$$ \text{offset} \rightarrow i' \bmod b$$
 
 **Example**
 
-$ bank is 29 % 5 = 4 $
-$ offset is 29 / 5 = 5$
+$$ \text{bank} \rightarrow 29 \bmod 5 = 4 $$
+$$ \text{offset} \rightarrow 29 / 5 = 5$$
 
 
