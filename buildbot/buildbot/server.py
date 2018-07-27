@@ -7,22 +7,25 @@ import time
 from io import StringIO
 import csv
 
-# Our Flask application.
-app = flask.Flask(__name__)
+# Our Flask application. Our "instance path," where we search for
+# configuration fails and such, is the parent directory of our Python
+# package (so this server can be run "in place.")
+app = flask.Flask(__name__, instance_relative_config=True,
+                  instance_path=os.path.dirname(os.path.dirname(__file__)))
 
 # Configuration. We include some defaults and allow overrides.
 app.config.from_pyfile('buildbot.base.cfg')
 app.config.from_pyfile('buildbot.site.cfg', silent=True)
 
 # Connect to our database.
-db = tinydb.TinyDB(app.config['DATABASE'])
+db = tinydb.TinyDB(os.path.join(app.instance_path, app.config['DATABASE']))
 jobs = db.table('jobs')
 
 
 def job_dir(job_name):
     """Get the path to a job's work directory.
     """
-    return os.path.join(app.config['JOBS_DIR'], job_name)
+    return os.path.join(app.instance_path, app.config['JOBS_DIR'], job_name)
 
 
 @app.route('/jobs', methods=['POST'])
