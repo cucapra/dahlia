@@ -6,6 +6,7 @@ import os
 import time
 from io import StringIO
 import csv
+from . import worker
 
 # Our Flask application. Our "instance path," where we search for
 # configuration fails and such, is the parent directory of our Python
@@ -20,6 +21,9 @@ app.config.from_pyfile('buildbot.site.cfg', silent=True)
 # Connect to our database.
 db = tinydb.TinyDB(os.path.join(app.instance_path, app.config['DATABASE']))
 jobs = db.table('jobs')
+
+# Create our worker thread (but don't start it yet).
+work_thread = worker.WorkThread(jobs)
 
 
 def job_dir(job_name):
@@ -49,11 +53,17 @@ def add_job():
     file.save(archive_path)
 
     # Create a job record.
-    jobs.insert({
-        'name': job_name,
-        'started': time.time(),
-        'status': 'uploaded',
-    })
+    with worker.jobs_cv:
+        jobs.insert({
+            'name': job_name,
+            'started': time.time(),
+            'state': 'uploaded',
+        })
+        worker.jobs_cv.notify()
+
+    # Lazily start the worker thread, if we haven't already.
+    if not work_thread.is_alive():
+        work_thread.start()
 
     return job_name
 
@@ -63,7 +73,7 @@ def jobs_csv():
     output = StringIO()
     writer = csv.DictWriter(
         output,
-        ['name', 'started', 'status'],
+        ['name', 'started', 'state'],
     )
     writer.writeheader()
 
