@@ -2,7 +2,9 @@
 
 [![build status](https://circleci.com/gh/cucapra/seashell.svg?style=shield)](https://circleci.com/gh/cucapra/seashell)
 
-Seashell provides a type system that makes programming FPGAs easier. To learn about the syntax and behavior, check out the [docs](https://github.com/cucapra/seashell/wiki/Seashell-Syntax).
+Seashell provides a type system that makes programming FPGAs easier. To learn about the syntax and behavior, check out these links:
+  - [Seashell Syntax](https://github.com/cucapra/seashell/wiki/Seashell-Syntax).
+  - [Notes about Seashell](https://capra.cs.cornell.edu/seashell/docs/index.html).
 
 ## Setup/Use
 

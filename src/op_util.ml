@@ -33,7 +33,6 @@ let op_map a b op =
   | TInt (Some i), TIndex (s, d), BopTimes -> TIndex (List.map (( * ) i) s, d)
   | _ -> raise IllegalOperation
 
-
 let rec determine_type t d =
   match t with
   | TAlias id -> determine_type (Context.get_alias_binding id d) d
