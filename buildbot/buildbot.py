@@ -69,3 +69,14 @@ def jobs_csv():
 
     csv_data = output.getvalue()
     return csv_data, 200, {'Content-Type': 'text/csv'}
+
+
+@app.route('/jobs/<name>')
+def get_job(name):
+    matches = jobs.search(tinydb.Query().name == name)
+    if not matches:
+        return 'job not found', 404
+    assert len(matches) == 1
+    job = matches[0]
+
+    return flask.jsonify(job)

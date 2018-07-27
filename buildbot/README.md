@@ -16,4 +16,8 @@ To see a list of the current jobs, get `/jobs.csv`:
 
     $ curl $BUILDBOT/jobs.csv
 
+To get details about a specific job, request `/jobs/<name>`:
+
+    $ curl $BUILDBOT/jobs/d988ruiuAk4
+
 [pipenv]: http://pipenv.org
