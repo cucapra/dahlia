@@ -1,6 +1,6 @@
-Index Types in Seashell
-=======================
-
+---
+title: Index Types in Seashell
+---
 This note expands on the meaning and capabilities of *index types* in Seashell, which are our way of handling loop unrolling and banked memories by combining static and dynamic information about index sets.
 
 Syntax & Semantics
