@@ -1,6 +1,6 @@
 # Docs
 
-This directory contains some notes and documentation concerning Seashell. 
+This directory contains some notes and documentation concerning Seashell. You can build these yourself or view all of them rendered [here](https://capra.cs.cornell.edu/seashell/docs/).
 
 ## Usage
 
