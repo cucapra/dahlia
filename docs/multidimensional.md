@@ -44,7 +44,7 @@ Here, $\text{a}$ is the name of our array; the contents following the colon tell
 Under the hood (that is, when we translate our Seashell program to HLS C), this multi-dimensional array is translated to a one-dimensional array. This flattened array (which we'll call $\text{a}_f)$ has size equal to the product of our Seashell array dimensions:
 
 $$
-\text{a}:t[\sigma_0][\sigma_1]..[\sigma_n] \equiv \text{a}_f:t[\sigma_{(\prod_{i=0}^{n} i)} ]
+\text{a}:t[\sigma_0][\sigma_1]..[\sigma_n] \equiv \text{a}_f:t[\sigma_{(\prod_{i=0}^{n} \sigma_i)} ]
 $$
 
 Logical accesses to a Seashell multi-dimensonal array look like this: $\text{a}[i_0][i_1]..[i_n]$. We'd like to access these higher-dimensional arrays with our Seashell index types, but to first examine how working with these arrays might work, it would be useful to first consider $i_0..i_n$ as plain old integers. So now, for the purposes of typechecking our array accesses, we'd like to know exactly which indices we're using to access this flattened array when we make our logical accesses. So to compute what our flattened index $i_f$ would be based on our logical indices $i_0..i_n$, we could use the following method: 
