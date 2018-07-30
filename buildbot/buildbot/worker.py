@@ -43,8 +43,8 @@ class SeashellThread(WorkThread):
         compiler = self.config["SEASHELL_COMPILER"]
         with self.db.work('unpacked', 'seashelling', 'seashelled') as job:
             # Look for the Seashell source code.
-            job_dir = self.db.job_dir(job['name'])
-            for name in os.listdir(job_dir):
+            code_dir = self.db.job_dir(job['name'])
+            for name in os.listdir(code_dir):
                 _, ext = os.path.splitext(name)
                 if ext == SEASHELL_EXT:
                     source_name = name
@@ -54,7 +54,7 @@ class SeashellThread(WorkThread):
                 return
 
             # Read the source code.
-            with open(os.path.join(job_dir, source_name), 'rb') as f:
+            with open(os.path.join(code_dir, source_name), 'rb') as f:
                 code = f.read()
 
             # Run the Seashell compiler.
@@ -69,7 +69,7 @@ class SeashellThread(WorkThread):
 
             # Write the C code.
             base, _ = os.path.splitext(source_name)
-            with open(os.path.join(job_dir, base + C_EXT), 'wb') as f:
+            with open(os.path.join(code_dir, base + C_EXT), 'wb') as f:
                 f.write(hls_code)
 
 
