@@ -1,13 +1,17 @@
 {% extends "base.html" %}
 {% block content %}
 <h2>Job {{ job.name }}</h2>
-<dl>
-    <dt>started</dt>
-    <dd>{{ job.started | dt }}</dd>
+<ul>
+    <li>
+        <b>started:</b>
+        {{ job.started | dt }}
+    </li>
 
-    <dt>state</dt>
-    <dd>{{ job.state }}</dd>
-</dl>
+    <li>
+        <b>state:</b>
+        {{ job.state }}
+    </li>
+</ul>
 
 <h3>Log</h3>
 <ul>
