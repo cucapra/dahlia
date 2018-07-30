@@ -48,6 +48,7 @@ $$
 $$
 
 Testing comments
+Line from local setup
 $$
 \text{a}:t[\sigma_0][\sigma_1]..[\sigma_n] \text{ bank}(b)
 $$
