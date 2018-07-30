@@ -43,7 +43,7 @@ class SeashellThread(WorkThread):
         compiler = self.config["SEASHELL_COMPILER"]
         with self.db.work('unpacked', 'seashelling', 'seashelled') as job:
             # Look for the Seashell source code.
-            code_dir = self.db.job_dir(job['name'])
+            code_dir = os.path.join(self.db.job_dir(job['name']), CODE_DIR)
             for name in os.listdir(code_dir):
                 _, ext = os.path.splitext(name)
                 if ext == SEASHELL_EXT:
@@ -60,7 +60,7 @@ class SeashellThread(WorkThread):
             # Run the Seashell compiler.
             proc = subprocess.run(
                 [compiler],
-                stdin=code,
+                input=code,
                 check=True,
                 capture_output=True,
             )
