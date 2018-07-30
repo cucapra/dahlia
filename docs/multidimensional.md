@@ -4,6 +4,8 @@ title: Logical Accesses to Multidimensional Arrays in Banked Memories
 Index Type Recap
 ----------------------
 
+Test!
+
 [Index types](https://capra.cs.cornell.edu/seashell/docs/indextype.html) allow us to combine static and dynamic information about the indices we're accessing in unrolled loops. For instance, consider the following example: 
 
     for i in l..h unroll k
