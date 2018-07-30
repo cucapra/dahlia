@@ -14,5 +14,5 @@ RUN git clone https://github.com/cucapra/seashell.git
 WORKDIR seashell
 
 # Build Seashell.
-RUN dune build
-RUN dune install
+RUN opam config exec dune build
+RUN opam config exec dune install
