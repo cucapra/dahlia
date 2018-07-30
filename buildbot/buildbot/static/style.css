@@ -23,3 +23,10 @@ ul {
 ul li {
     margin-bottom: 0.4rem;
 }
+
+form {
+    margin-bottom: 1rem;
+}
+input {
+    display: block;
+}

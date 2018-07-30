@@ -1,5 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
+<h2>Start Job</h2>
+<form method="POST" action="/jobs" enctype="multipart/form-data">
+    <input type="file" name="file" accept="application/zip">
+    <input type="hidden" name="browser" value="true">
+    <input type="submit" value="Upload">
+</form>
+
 <h2>Jobs</h2>
 <table>
     <thead>

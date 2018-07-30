@@ -76,7 +76,12 @@ def add_job():
     # Mark it as uploaded.
     db.set_state(job, 'uploaded')
 
-    return job['name']
+    # In the browser, redirect to the detail page. Otherwise, just
+    # return the job name.
+    if request.values.get('browser'):
+        return flask.redirect(flask.url_for('show_job', name=job['name']))
+    else:
+        return job['name']
 
 
 @app.route('/jobs.csv')
