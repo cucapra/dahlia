@@ -12,7 +12,11 @@
     <tbody>
         {% for job in jobs | sort(attribute="started", reverse=True) %}
         <tr>
-            <td>{{ job.name }}</td>
+            <td>
+                <a href="{{ url_for('show_job', name=job.name) }}">
+                    {{ job.name }}
+                </a>
+            </td>
             <td>{{ job.started }}</td>
             <td>{{ job.state }}</td>
         </tr>

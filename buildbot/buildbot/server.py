@@ -78,7 +78,7 @@ def jobs_list():
 
 
 @app.route('/jobs/<name>.html')
-def job_show(name):
+def show_job(name):
     job = db.get(name)
     return flask.render_template('job.html', job=job)
 
