@@ -44,15 +44,8 @@ Here, $\text{a}$ is the name of our array; the contents following the colon tell
 Under the hood (that is, when we translate our Seashell program to HLS C), this multi-dimensional array is translated to a one-dimensional array. This flattened array (which we'll call $\text{a}_f)$ has size equal to the product of our Seashell array dimensions:
 
 $$
-\text{a}:t[\sigma_0][\sigma_1]..[\sigma_n] \equiv \text{a}_f:t[\sigma_{(\prod_{i=0}^{n} \sigma_i)} ]
+\text{a}:t[\sigma_0][\sigma_1]..[\sigma_n] \equiv \text{a}_f:t[{(\prod_{i=0}^{n} \sigma_i)} ]
 $$
-
-Testing comments
-Line from local setup
-$$
-\text{a}:t[\sigma_0][\sigma_1]..[\sigma_n] \text{ bank}(b)
-$$
-\todo{Here's a comment in the margin!}
 
 Logical accesses to a Seashell multi-dimensonal array look like this: $\text{a}[i_0][i_1]..[i_n]$. We'd like to access these higher-dimensional arrays with our Seashell index types, but to first examine how working with these arrays might work, it would be useful to first consider $i_0..i_n$ as plain old integers. So now, for the purposes of typechecking our array accesses, we'd like to know exactly which indices we're using to access this flattened array when we make our logical accesses. So to compute what our flattened index $i_f$ would be based on our logical indices $i_0..i_n$, we could use the following method: 
 
@@ -75,7 +68,6 @@ Typechecking Array Accesses
 
 In these document, we've been describing methods of determining the banks that array accesses make. Now, we'd like to expand on how this might be of use in the Seashell type system. In general, the problem we're trying to solve is the following: restrict programs such that banks of memories can only be accessed once, to reflect the fact that in actual hardware, these memories have limited access ports. One way we might be able to do this is by tracking a set of indices that are available for use in accessing an array. When an access with a particular index occurs, we mark it unreachable after that point. So, for any array $\text{a}$ in our typing context, associate it with some set $\text{I}$ of unconsumed indices, and when we access some index $i \in \text{I}$, the set of indices associated with $\text{a}$ becomes $\text{a} \setminus i$.
 
-
 Now, we need a way to determine which accesses are being used and consumed when we use an index type. One way we could accomplish this is by generating every single index that our index types can represent, and then determine every single bank they access, using the methods we've described. However, we can simplify this process with the help of a few simplifying assumptions.
 
 **Assumption 1.** Our index types, as we've defined them, allow for static components to be any integer range $l_s .. h_s$. We can restrict this so that $l_s=0$, which is all we really need for practical purposes: if a loop has an unroll factor $k$, then the static component of an index variable for this loop would certainly just be $0 .. k$. This just makes reasoning about which indices are being accessed a little bit easier.
@@ -84,28 +76,48 @@ Now, we need a way to determine which accesses are being used and consumed when 
 
     int a[s bank(k)]
     for i in 0..n unroll k
-        access a[i
+        access a[i]
 
 Here, $\text{i}$ has type $\text{idx}\langle 0 .. k, 0 .. \frac{n}{k}\rangle$. For any $d \in 0 .. \frac{n}{k}$, $\text{i}$ represents:
 
 $$
-\{ s + k * d ~|~ s \in 0 .. k\}
+\{ s + k * d ~|~ s \in 0 .. k \}
 $$
 
-So, for $d=0$, the indices in use are:
+We could then compute the banks being accessed like this (assuming the interleaved banking structure):
 
 $$
-\{ s ~|~ s \in 0 .. k \} \rightarrow 0..k
+\{ s \bmod b + (k * d) \bmod b ~|~ s \in 0 .. k \}
 $$
 
-and for $d=\frac{n}{k}$, the indices would be:
+And because of our assumption (that is, that $b=k$), we have:
 
 $$
-\{ s + k*(\frac{n}{k}-1)  ~|~ s \in 0 .. k\} \rightarrow \{ s + n - k ~|~ s \in 0..k\} \rightarrow (n-k)..n
+\{ s \bmod k + (k * d) \bmod k ~|~ s \in 0 .. k \} \rightarrow 0 .. k
 $$
 
-and indeed for any $d=m$, we'd have a $k$-sized chunk $(0+mk)..(k+mk)$; there would be $\frac{m}{k}$ of these chunks, which are (hopefully) disjoint - so the union of all of these sets would probably be $0..n$. (TODO: actual proof instead of this). 
+So, from this we can conclude that when the banking factor matches the unroll factor of an index type, we access every bank when we use an index type for accessing an array. In other words, if an index type has a static component $l_s..h_s$, and it's indexing into some array $\text{a}$ with banking factor $b$, then if $|l_s..h_s|=b$, the type system consumes every bank of $\text{a}$, disallowing any further accesses.
 
-So, from this we can conclude that when the banking factor matches the unroll factor of an index type, we access every index of a loop. In other words, if an index type has a static component $l_s..h_s$, and it's indexing into some array $\text{a}$ with banking factor $b$, then if $|l_s..h_s|=b$, the type system consumes every index of $\text{a}$, disallowing any further accesses
+**Assumption 2, weakened.** We might want to relax this assumption to allow situations where the unroll factor divides into the banking factor. Consider the following example: 
 
-**Assumption 2, weakened.** We might want to relax this assumption to allow situations where the unroll factor divides into the banking factor.
+    int a[s bank(m*k)]
+    for i in 0..n unroll k
+        access a[i]
+
+Similar to our previous example, $\text{i}$ has type $\text{idx}\langle 0 .. k, 0 .. \frac{n}{mk} \rangle$. The set interpretation would be: 
+
+$$
+\bigcup_{ d=0 }^{ \frac{n}{mk} }{ \{ s + k * d ~|~ s  \in 0 .. k \} }
+$$
+
+The first set of this union would be:
+
+$$
+\{ s ~|~ s \in 0 .. k \} = 0..k
+$$
+
+The last set would be:
+
+$$
+\{ s + k * (\frac{n}{mk} - 1) ~|~ s \in 0 .. k \}  
+$$
