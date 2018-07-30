@@ -4,8 +4,6 @@ title: Logical Accesses to Multidimensional Arrays in Banked Memories
 Index Type Recap
 ----------------------
 
-Test!
-
 [Index types](https://capra.cs.cornell.edu/seashell/docs/indextype.html) allow us to combine static and dynamic information about the indices we're accessing in unrolled loops. For instance, consider the following example: 
 
     for i in l..h unroll k
@@ -74,7 +72,10 @@ The flattened version, $\text{a}_f$, would have size $N=30$. Say we make an acce
 Typechecking Array Accesses
 ------------------------
 
-In these document, we've been describing methods of determining the banks that array accesses make. Now, we'd like to expand on how this might be of use in the Seashell type system. In general, the problem we're trying to solve is the following: restrict programs such that banks of memories can only be accessed once, to reflect the fact that in actual hardware, these memories have limited access ports. One way we could accomplish this is by generating every single index that our index types can represent, and then determine every single bank they access, using the methods we've described. However, we can simplify this process with the help of a few simplifying assumptions.
+In these document, we've been describing methods of determining the banks that array accesses make. Now, we'd like to expand on how this might be of use in the Seashell type system. In general, the problem we're trying to solve is the following: restrict programs such that banks of memories can only be accessed once, to reflect the fact that in actual hardware, these memories have limited access ports. One way we might be able to do this is by tracking a set of indices that are available for use in accessing an array. When an access with a particular index occurs, we mark it unreachable after that point. So, for any array $\text{a}$ in our typing context, associate it with some set $\text{I}$ of unconsumed indices, and when we access some index $i \in \text{I}$, the set of indices associated with $\text{a}$ becomes $\text{a} \setminus i$.
+
+
+Now, we need a way to determine which accesses are being used and consumed when we use an index type. One way we could accomplish this is by generating every single index that our index types can represent, and then determine every single bank they access, using the methods we've described. However, we can simplify this process with the help of a few simplifying assumptions.
 
 **Assumption 1.** Our index types, as we've defined them, allow for static components to be any integer range $l_s .. h_s$. We can restrict this so that $l_s=0$, which is all we really need for practical purposes: if a loop has an unroll factor $k$, then the static component of an index variable for this loop would certainly just be $0 .. k$. This just makes reasoning about which indices are being accessed a little bit easier.
 
@@ -82,7 +83,7 @@ In these document, we've been describing methods of determining the banks that a
 
     int a[s bank(k)]
     for i in 0..n unroll k
-        access a[i]
+        access a[i
 
 Here, $\text{i}$ has type $\text{idx}\langle 0 .. k, 0 .. \frac{n}{k}\rangle$. For any $d \in 0 .. \frac{n}{k}$, $\text{i}$ represents:
 
@@ -102,6 +103,8 @@ $$
 \{ s + k*(\frac{n}{k}-1)  ~|~ s \in 0 .. k\} \rightarrow \{ s + n - k ~|~ s \in 0..k\} \rightarrow (n-k)..n
 $$
 
-and indeed for any $d=m$, we'd have a $k$-sized chunk $(0+mk)..(k+mk)$; there would be $\frac{m}{k}$ of these chunks, which are (hopefully) disjoint - so the union of all of these sets would probably be $0..n$. (TODO: actual proof instead of this). So, from this we can conclude that when the banking factor matches the unroll factor of an index type, we access every index of a loop: therefore, we cannot make more than one such access. Our linear typing context would completely consume such an index, and it would not be available for another use inside the body of such a loop.
+and indeed for any $d=m$, we'd have a $k$-sized chunk $(0+mk)..(k+mk)$; there would be $\frac{m}{k}$ of these chunks, which are (hopefully) disjoint - so the union of all of these sets would probably be $0..n$. (TODO: actual proof instead of this). 
+
+So, from this we can conclude that when the banking factor matches the unroll factor of an index type, we access every index of a loop. In other words, if an index type has a static component $l_s..h_s$, and it's indexing into some array $\text{a}$ with banking factor $b$, then if $|l_s..h_s|=b$, the type system consumes every index of $\text{a}$, disallowing any further accesses
 
 **Assumption 2, weakened.** We might want to relax this assumption to allow situations where the unroll factor divides into the banking factor.
