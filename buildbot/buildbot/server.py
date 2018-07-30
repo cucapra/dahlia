@@ -72,6 +72,11 @@ def jobs_csv():
     return csv_data, 200, {'Content-Type': 'text/csv'}
 
 
+@app.route('/')
+def jobs_list():
+    return flask.render_template('joblist.html', jobs=db.jobs)
+
+
 @app.route('/jobs/<name>')
 def get_job(name):
     job = db.get(name)

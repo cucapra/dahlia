@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+        <title>Seashell Buildbot</title>
+    </head>
+    <body>
+        <h1>Seashell Buildbot</title>
+
+        <h2>Jobs</h2>
+        <table>
+            <thead>
+                <tr>
+                    <td>job</td>
+                    <td>started</td>
+                    <td>state</td>
+                </tr>
+            </thead>
+            <tbody>
+                {% for job in jobs | sort(attribute="started", reverse=True) %}
+                <tr>
+                    <td>{{ job.name }}</td>
+                    <td>{{ job.started }}</td>
+                    <td>{{ job.state }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </body>
+</html>
