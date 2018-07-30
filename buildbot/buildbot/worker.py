@@ -2,9 +2,25 @@ import threading
 import subprocess
 import os
 from .db import ARCHIVE_NAME, CODE_DIR
+from contextlib import contextmanager
 
 SEASHELL_EXT = '.ss'
 C_EXT = '.c'
+
+
+@contextmanager
+def work(db, old_state, temp_state, done_state):
+    """A context manager for acquiring a job temporarily in an
+    exclusive way to work on it.
+    """
+    job = db.acquire(old_state, temp_state)
+    try:
+        yield job
+    except Exception as exc:
+        db._log(job, traceback.format_exc())
+        db.set_state(job, 'failed')
+    else:
+        db.set_state(job, done_state)
 
 
 class WorkThread(threading.Thread):
@@ -26,7 +42,7 @@ class UnpackThread(WorkThread):
     """Unpack source code.
     """
     def work(self):
-        with self.db.work('uploaded', 'unpacking', 'unpacked') as job:
+        with work(self.db, 'uploaded', 'unpacking', 'unpacked') as job:
             proc = subprocess.run(
                 ["unzip", "-d", CODE_DIR, "{}.zip".format(ARCHIVE_NAME)],
                 cwd=self.db.job_dir(job['name']),
@@ -41,7 +57,7 @@ class SeashellThread(WorkThread):
     """
     def work(self):
         compiler = self.config["SEASHELL_COMPILER"]
-        with self.db.work('unpacked', 'seashelling', 'seashelled') as job:
+        with work(self.db, 'unpacked', 'seashelling', 'seashelled') as job:
             # Look for the Seashell source code.
             code_dir = os.path.join(self.db.job_dir(job['name']), CODE_DIR)
             for name in os.listdir(code_dir):
