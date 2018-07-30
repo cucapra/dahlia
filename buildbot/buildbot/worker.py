@@ -92,7 +92,6 @@ class SeashellThread(WorkThread):
                     capture_output=True,
                 )
             except subprocess.CalledProcessError as exc:
-                self.db.set_state(job, 'failed')
                 raise WorkError('seac failed ({}):\n{}'.format(
                     exc.returncode,
                     '\n---\n'.join(filter(lambda x: x, (
