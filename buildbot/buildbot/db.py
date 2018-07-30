@@ -3,6 +3,7 @@ import threading
 import secrets
 import time
 import os
+from contextlib import contextmanager
 
 DB_FILENAME = 'db.json'
 JOBS_DIR = 'jobs'
@@ -109,3 +110,14 @@ class JobDB:
         """Get the path to a job's work directory.
         """
         return os.path.join(self.base_path, JOBS_DIR, job_name)
+
+    @contextmanager
+    def work(self, old_state, temp_state, done_state):
+        """A context manager for acquiring a job temporarily in an
+        exclusive way to work on it.
+        """
+        job = self.acquire(old_state, temp_state)
+        try:
+            yield job
+        finally:
+            self.set_state(job, done_state)
