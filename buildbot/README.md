@@ -6,7 +6,7 @@ This is a server for building and running Seashell programs on our infrastructur
 Get [pipenv][], then type `pipenv install`.
 Then, to run a local server:
 
-    $ FLASK_APP=buildbot.py pipenv run flask run
+    $ FLASK_APP=buildbot pipenv run flask run
 
 To submit a job, upload a file to the `/jobs` endpoint:
 
