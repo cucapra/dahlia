@@ -47,7 +47,7 @@ def _datetime_filter(value, withtime=True):
 def start_work_threads():
     """Create and start our worker threads.
     """
-    work_threads = worker.work_threads(db)
+    work_threads = worker.work_threads(db, app.config)
     for thread in work_threads:
         if not thread.is_alive():
             thread.start()
