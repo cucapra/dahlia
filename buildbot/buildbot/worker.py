@@ -50,6 +50,7 @@ class SeashellThread(WorkThread):
                     source_name = name
                     break
             else:
+                self.db.set_state(job, 'failed')
                 self.db._log(job, 'no source file found')
                 return
 
@@ -58,12 +59,24 @@ class SeashellThread(WorkThread):
                 code = f.read()
 
             # Run the Seashell compiler.
-            proc = subprocess.run(
-                [compiler],
-                input=code,
-                check=True,
-                capture_output=True,
-            )
+            try:
+                proc = subprocess.run(
+                    [compiler],
+                    input=code,
+                    check=True,
+                    capture_output=True,
+                )
+            except subprocess.CalledProcessError as exc:
+                self.db.set_state(job, 'failed')
+                msg = 'seac failed ({}):\n{}'.format(
+                    exc.returncode,
+                    '\n---\n'.join(filter(lambda x: x, (
+                        exc.stdout.decode('utf8', 'ignore'),
+                        exc.stderr.decode('utf8', 'ignore'),
+                    )))
+                )
+                self.db._log(job, msg)
+                return
             self.db._log(job, proc.stderr.decode('utf8', 'ignore'))
             hls_code = proc.stdout
 
