@@ -5,6 +5,8 @@ from io import StringIO
 import csv
 from . import worker
 from .db import JobDB, ARCHIVE_NAME
+from datetime import datetime
+import re
 
 # Our Flask application. Our "instance path," where we search for
 # configuration fails and such, is the parent directory of our Python
@@ -18,6 +20,27 @@ app.config.from_pyfile('buildbot.site.cfg', silent=True)
 
 # Connect to our database.
 db = JobDB(app.instance_path)
+
+
+def _unpad(s):
+    """Remove padding zeroes from a formatted date string."""
+    return re.sub(r'(^|\s)0+', r'\1', s)
+
+
+@app.template_filter('dt')
+def _datetime_filter(value, withtime=True):
+    """Format a timestamp (given as a float) as a human-readable string.
+    `withtime` indicates whether this should be just a day or a day with
+    a time.
+    """
+    if not value:
+        return ''
+    dt = datetime.fromtimestamp(value)
+
+    fmt = '%B %d, %Y'
+    if withtime:
+        fmt += ', %I:%M %p'
+    return _unpad(dt.strftime(fmt))
 
 
 @app.before_first_request

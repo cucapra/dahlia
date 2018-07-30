@@ -17,7 +17,7 @@
                     {{ job.name }}
                 </a>
             </td>
-            <td>{{ job.started }}</td>
+            <td>{{ job.started | dt }}</td>
             <td>{{ job.state }}</td>
         </tr>
         {% endfor %}

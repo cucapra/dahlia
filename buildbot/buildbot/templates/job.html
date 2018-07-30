@@ -3,7 +3,7 @@
 <h2>Job {{ job.name }}</h2>
 <dl>
     <dt>started</dt>
-    <dd>{{ job.started }}</dd>
+    <dd>{{ job.started | dt }}</dd>
 
     <dt>state</dt>
     <dd>{{ job.state }}</dd>
@@ -13,7 +13,7 @@
 <ul>
 {% for time, text in job.log %}
     <li>
-        <b>{{ time }}:</b>
+        <b>{{ time | dt }}:</b>
         {{ text }}
     </li>
 {% endfor %}
