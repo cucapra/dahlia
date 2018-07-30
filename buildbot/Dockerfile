@@ -7,7 +7,7 @@ RUN pip3 install --user pipenv
 
 # OCaml dependencies.
 RUN opam repo remove default && opam repo add default https://opam.ocaml.org
-RUN opam install dune menhir
+RUN opam depext -i dune menhir
 
 # Get Seashell source.
 RUN git clone https://github.com/cucapra/seashell.git
