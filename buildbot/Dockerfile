@@ -6,7 +6,7 @@ RUN sudo apk add --no-cache python3
 RUN pip3 install --user pipenv
 
 # OCaml dependencies.
-RUN opam update
+RUN opam repo remove default && opam repo add default https://opam.ocaml.org
 RUN opam install dune menhir
 
 # Get Seashell source.
