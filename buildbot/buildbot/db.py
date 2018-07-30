@@ -4,6 +4,7 @@ import secrets
 import time
 import os
 from contextlib import contextmanager
+import traceback
 
 DB_FILENAME = 'db.json'
 JOBS_DIR = 'jobs'
@@ -119,5 +120,8 @@ class JobDB:
         job = self.acquire(old_state, temp_state)
         try:
             yield job
-        finally:
+        except Exception as exc:
+            self._log(job, traceback.format_exc())
+            self.set_state(job, 'failed')
+        else:
             self.set_state(job, done_state)
