@@ -24,7 +24,6 @@ class JobDB:
 
         self.cv = threading.Condition()
 
-
     def _count(self, state):
         """Get the number of jobs in the database in a given state.
         """
@@ -53,6 +52,7 @@ class JobDB:
         job = matches[0]
 
         job['state'] = new_state
+        self._log(job, 'acquired in state {}'.format(new_state))
         self.jobs.write_back([job])
 
         return job
@@ -63,8 +63,14 @@ class JobDB:
             'name': name,
             'started': time.time(),
             'state': state,
+            'log': [],
         })
         return name
+
+    def _log(self, job, message):
+        """Add a message to the job's log.
+        """
+        job['log'].append((time.time(), message))
 
     def add(self, state):
         """Add a new job and return its name.
@@ -80,6 +86,7 @@ class JobDB:
         with self.cv:
             job = self._get(name)
             job['state'] = state
+            self._log(job, 'state changed to {}'.format(state))
             self.jobs.write_back([job])
             self.cv.notify()
 
