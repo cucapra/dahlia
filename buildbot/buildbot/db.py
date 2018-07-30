@@ -79,7 +79,7 @@ class JobDB:
         """
         with self.cv:
             job = self._add(state)
-            self.cv.notify()
+            self.cv.notify_all()
         return job
 
     def set_state(self, job, state):
@@ -89,7 +89,7 @@ class JobDB:
             job['state'] = state
             self._log(job, 'state changed to {}'.format(state))
             self.jobs.write_back([job])
-            self.cv.notify()
+            self.cv.notify_all()
 
     def acquire(self, old_state, new_state):
         """Block until a job is available in `old_state`, update its
