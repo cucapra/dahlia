@@ -35,22 +35,22 @@ def add_job():
         return 'invalid extension {}'.format(ext), 400
 
     # Create a job record.
-    job_name = db.add('uploading')
+    job = db.add('uploading')
 
     # Create the job's directory and save the code there.
-    path = db.job_dir(job_name)
+    path = db.job_dir(job['name'])
     os.makedirs(path)
     archive_path = os.path.join(path, ARCHIVE_NAME + ext)
     file.save(archive_path)
 
     # Mark it as uploaded.
-    db.set_state(job_name, 'uploaded')
+    db.set_state(job, 'uploaded')
 
     # Lazily start the worker thread, if we haven't already.
     if not work_thread.is_alive():
         work_thread.start()
 
-    return job_name
+    return job['name']
 
 
 @app.route('/jobs.csv')

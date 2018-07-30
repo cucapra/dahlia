@@ -59,13 +59,13 @@ class JobDB:
 
     def _add(self, state):
         name = secrets.token_urlsafe(8)
-        self.jobs.insert({
+        doc_id = self.jobs.insert({
             'name': name,
             'started': time.time(),
             'state': state,
             'log': [],
         })
-        return name
+        return self.jobs.get(doc_id=doc_id)
 
     def _log(self, job, message):
         """Add a message to the job's log.
@@ -73,18 +73,17 @@ class JobDB:
         job['log'].append((time.time(), message))
 
     def add(self, state):
-        """Add a new job and return its name.
+        """Add a new job and return it.
         """
         with self.cv:
-            name = self._add(state)
+            job = self._add(state)
             self.cv.notify()
-        return name
+        return job
 
-    def set_state(self, name, state):
+    def set_state(self, job, state):
         """Update a job's state.
         """
         with self.cv:
-            job = self._get(name)
             job['state'] = state
             self._log(job, 'state changed to {}'.format(state))
             self.jobs.write_back([job])

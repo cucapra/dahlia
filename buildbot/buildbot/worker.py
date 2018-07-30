@@ -11,8 +11,11 @@ class WorkThread(threading.Thread):
     def run(self):
         while True:
             job = self.db.acquire('uploaded', 'unpacking')
-            subprocess.run(
+            proc = subprocess.run(
                 ["unzip", "-d", CODE_DIR, "{}.zip".format(ARCHIVE_NAME)],
                 cwd=self.db.job_dir(job['name']),
+                check=True,
+                capture_output=True,
             )
-            self.db.set_state(job['name'], 'unpacked')
+            self.db._log(job, proc.stdout.decode('utf8', 'ignore'))
+            self.db.set_state(job, 'unpacked')
