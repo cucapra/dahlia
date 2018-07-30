@@ -94,7 +94,11 @@ def jobs_csv():
     writer.writeheader()
 
     for job in db.jobs:
-        writer.writerow(job)
+        writer.writerow({
+            'name': job['name'],
+            'started': job['started'],
+            'state': job['state'],
+        })
 
     csv_data = output.getvalue()
     return csv_data, 200, {'Content-Type': 'text/csv'}
