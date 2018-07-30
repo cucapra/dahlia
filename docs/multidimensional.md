@@ -15,21 +15,6 @@ $$
 \{ s + |l_s..h_s| \times d ~|~ s \in 0..k, d \in \frac{l}{k}..\frac{h}{k}\}
 $$
 
-**Example.**
-Index types will allow us to make more expressive accesses on higher-dimensional arrays (decoupling matrix logic and banking structure); however, before we dive into a more involved example, it might be a good sanity check to review a simpler example with a one-dimensional array.  Consider an array $\text{a}$ of size 30. We'd like to access $\text{a}$ 5 times in parallel:
-
-    int a[30 bank(5)]
-    for i in 0..30 unroll 5
-        access a[i]
-
-Here, $\text{i}$ takes on type $\text{idx}\langle 0 .. 5, 0 .. 6 \rangle$. Using our set interpretation of the index type, for each $d \in 0 .. 6$, $\text{i}$ represents:
-
-$$\{ s + |0 .. 5| \times d ~|~ s \in 0..5 \} \rightarrow \{ s + 5 \times d ~|~ s \in 0..5 \}$$
-
-So, for $d=0$, we'd be simultaneously accessing the indices $\{0, \dots, 4 \}$; for $d=1$ we'd have $\{5, \dots, 9 \}$; and so on and so forth until for $d=5$ we'd be finally be accessing $\{25, \dots, 29 \}$.
-
-**Typechecking.** For Seashell, it is of interest to find the banks that accesses use, to restrict illegal operations that access the same bank multiple times. So in this previous example, we can compute the banks that each index $i'$ of the set represented by $i$ access, with $i' \bmod b$ - assuming an interleaved banking style. With a chunked banking style we can simply use $i / b$.
-
 Multi Dimensional Arrays
 ------------------------
 
@@ -39,7 +24,7 @@ $$
 \text{a}:t[\sigma_0][\sigma_1]..[\sigma_n] \text{ bank}(b)
 $$
 
-Here, $\text{a}$ is the name of our array; the contents following the colon tell us that $t$ is some arbitrary type ($\text{int}$, etc); and $\sigma_i$ represents the size of a dimension $i$. $\text{bank}(b)$ tells us that this array is banked by a factor of $b$: in the future we'd like to impose flexible banking structures on each dimension, but for now, we're going to simply bank the entire array - that is, the entire flattened array, which we'll talk about in just a moment.
+Here, $\text{a}$ is the name of our array; the contents following the colon tell us that $t$ is some arbitrary type ($\text{int}$, etc) for the array elements; and $\sigma_i$ represents the size of a dimension $i$. $\text{bank}(b)$ tells us that this array is banked by a factor of $b$: in the future we'd like to impose flexible banking structures on each dimension, but for now, we're going to simply bank the entire array - that is, the entire flattened array, which we'll talk about in just a moment.
 
 Under the hood (that is, when we translate our Seashell program to HLS C), this multi-dimensional array is translated to a one-dimensional array. This flattened array (which we'll call $\text{a}_f)$ has size equal to the product of our Seashell array dimensions:
 
@@ -68,7 +53,7 @@ Typechecking Array Accesses
 
 In these document, we've been describing methods of determining the banks that array accesses make. Now, we'd like to expand on how this might be of use in the Seashell type system. In general, the problem we're trying to solve is the following: restrict programs such that banks of memories can only be accessed once, to reflect the fact that in actual hardware, these memories have limited access ports. One way we might be able to do this is by tracking a set of indices that are available for use in accessing an array. When an access with a particular index occurs, we mark it unreachable after that point. So, for any array $\text{a}$ in our typing context, associate it with some set $\text{I}$ of unconsumed indices, and when we access some index $i \in \text{I}$, the set of indices associated with $\text{a}$ becomes $\text{a} \setminus i$.
 
-Now, we need a way to determine which accesses are being used and consumed when we use an index type. One way we could accomplish this is by generating every single index that our index types can represent, and then determine every single bank they access, using the methods we've described. However, we can simplify this process with the help of a few simplifying assumptions.
+Now, we need a way to determine which accesses are being used and consumed when we use an index type. One way we could accomplish this is by generating every single index that our index types can represent, and then determine every single bank they access, using the methods we've described. However, we can make this process easier with the help of a few simplifying assumptions.
 
 **Assumption 1.** Our index types, as we've defined them, allow for static components to be any integer range $l_s .. h_s$. We can restrict this so that $l_s=0$, which is all we really need for practical purposes: if a loop has an unroll factor $k$, then the static component of an index variable for this loop would certainly just be $0 .. k$. This just makes reasoning about which indices are being accessed a little bit easier.
 
@@ -104,20 +89,8 @@ So, from this we can conclude that when the banking factor matches the unroll fa
     for i in 0..n unroll k
         access a[i]
 
-Similar to our previous example, $\text{i}$ has type $\text{idx}\langle 0 .. k, 0 .. \frac{n}{mk} \rangle$. The set interpretation would be: 
+Similar to our previous example, $\text{i}$ has type $\text{idx}\langle 0 .. k, 0 .. \frac{n}{mk} \rangle$. The set interpretation for a particular $d \in 0..\frac{n}{mk}$ would be: 
 
 $$
-\bigcup_{ d=0 }^{ \frac{n}{mk} }{ \{ s + k * d ~|~ s  \in 0 .. k \} }
-$$
-
-The first set of this union would be:
-
-$$
-\{ s ~|~ s \in 0 .. k \} = 0..k
-$$
-
-The last set would be:
-
-$$
-\{ s + k * (\frac{n}{mk} - 1) ~|~ s \in 0 .. k \}  
+\{ s + mk * d ~|~ s  \in 0 .. k \} 
 $$
