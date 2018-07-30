@@ -19,8 +19,15 @@ app.config.from_pyfile('buildbot.site.cfg', silent=True)
 # Connect to our database.
 db = JobDB(app.instance_path)
 
-# Create our worker thread (but don't start it yet).
-work_thread = worker.WorkThread(db)
+
+@app.before_first_request
+def start_work_threads():
+    """Create and start our worker threads.
+    """
+    work_threads = worker.work_threads(db)
+    for thread in work_threads:
+        if not thread.is_alive():
+            thread.start()
 
 
 @app.route('/jobs', methods=['POST'])
@@ -45,10 +52,6 @@ def add_job():
 
     # Mark it as uploaded.
     db.set_state(job, 'uploaded')
-
-    # Lazily start the worker thread, if we haven't already.
-    if not work_thread.is_alive():
-        work_thread.start()
 
     return job['name']
 
