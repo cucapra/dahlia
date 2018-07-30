@@ -99,7 +99,8 @@ class SeashellThread(WorkThread):
                         exc.stderr.decode('utf8', 'ignore'),
                     )))
                 ))
-            self.db._log(job, proc.stderr.decode('utf8', 'ignore'))
+            if proc.stderr:
+                self.db._log(job, proc.stderr.decode('utf8', 'ignore'))
             hls_code = proc.stdout
 
             # Write the C code.
