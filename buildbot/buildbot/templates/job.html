@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Job {{ job.name }}</h2>
+<dl>
+    <dt>started</dt>
+    <dd>{{ job.started }}</dd>
+
+    <dt>state</dt>
+    <dd>{{ job.state }}</dd>
+</dl>
+
+<h3>Log</h3>
+<ul>
+{% for time, text in job.log %}
+    <li>
+        <b>{{ time }}:</b>
+        {{ text }}
+    </li>
+{% endfor %}
+</ul>
+{% endblock %}
