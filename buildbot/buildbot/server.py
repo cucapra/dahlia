@@ -4,7 +4,7 @@ import os
 from io import StringIO
 import csv
 from . import worker
-from .db import JobDB
+from .db import JobDB, ARCHIVE_NAME
 
 # Our Flask application. Our "instance path," where we search for
 # configuration fails and such, is the parent directory of our Python
@@ -17,16 +17,10 @@ app.config.from_pyfile('buildbot.base.cfg')
 app.config.from_pyfile('buildbot.site.cfg', silent=True)
 
 # Connect to our database.
-db = JobDB(os.path.join(app.instance_path, app.config['DATABASE']))
+db = JobDB(app.instance_path)
 
 # Create our worker thread (but don't start it yet).
 work_thread = worker.WorkThread(db)
-
-
-def job_dir(job_name):
-    """Get the path to a job's work directory.
-    """
-    return os.path.join(app.instance_path, app.config['JOBS_DIR'], job_name)
 
 
 @app.route('/jobs', methods=['POST'])
@@ -44,9 +38,9 @@ def add_job():
     job_name = db.add('uploading')
 
     # Create the job's directory and save the code there.
-    path = job_dir(job_name)
+    path = db.job_dir(job_name)
     os.makedirs(path)
-    archive_path = os.path.join(path, app.config['ARCHIVE_NAME'] + ext)
+    archive_path = os.path.join(path, ARCHIVE_NAME + ext)
     file.save(archive_path)
 
     # Mark it as uploaded.

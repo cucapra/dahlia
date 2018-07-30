@@ -2,6 +2,12 @@ import tinydb
 import threading
 import secrets
 import time
+import os
+
+DB_FILENAME = 'db.json'
+JOBS_DIR = 'jobs'
+ARCHIVE_NAME = 'code'
+CODE_DIR = 'code'
 
 Job = tinydb.Query()
 
@@ -11,8 +17,9 @@ class NotFoundError(Exception):
 
 
 class JobDB:
-    def __init__(self, path):
-        self.db = tinydb.TinyDB(path)
+    def __init__(self, base_path):
+        self.base_path = base_path
+        self.db = tinydb.TinyDB(os.path.join(base_path, DB_FILENAME))
         self.jobs = self.db.table('jobs')
 
         self.cv = threading.Condition()
@@ -91,3 +98,8 @@ class JobDB:
         """
         with self.cv:
             return self._get(name)
+
+    def job_dir(self, job_name):
+        """Get the path to a job's work directory.
+        """
+        return os.path.join(self.base_path, JOBS_DIR, job_name)

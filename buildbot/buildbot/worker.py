@@ -1,5 +1,6 @@
 import threading
-import tinydb
+import subprocess
+from .db import ARCHIVE_NAME, CODE_DIR
 
 
 class WorkThread(threading.Thread):
@@ -10,4 +11,8 @@ class WorkThread(threading.Thread):
     def run(self):
         while True:
             job = self.db.acquire('uploaded', 'unpacking')
-            print('unpacking', job['name'])
+            subprocess.run(
+                ["unzip", "-d", CODE_DIR, "{}.zip".format(ARCHIVE_NAME)],
+                cwd=self.db.job_dir(job['name']),
+            )
+            self.db.set_state(job['name'], 'unpacked')
