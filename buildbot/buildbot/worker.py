@@ -8,6 +8,14 @@ SEASHELL_EXT = '.ss'
 C_EXT = '.c'
 
 
+class WorkError(Exception):
+    """An error that occurs in a worker that needs to be displayed in
+    the log.
+    """
+    def __init__(self, message):
+        self.message = message
+
+
 @contextmanager
 def work(db, old_state, temp_state, done_state):
     """A context manager for acquiring a job temporarily in an
@@ -16,6 +24,9 @@ def work(db, old_state, temp_state, done_state):
     job = db.acquire(old_state, temp_state)
     try:
         yield job
+    except WorkError as exc:
+        db._log(job, exc.message)
+        db.set_state(job, 'failed')
     except Exception as exc:
         db._log(job, traceback.format_exc())
         db.set_state(job, 'failed')
@@ -66,9 +77,7 @@ class SeashellThread(WorkThread):
                     source_name = name
                     break
             else:
-                self.db.set_state(job, 'failed')
-                self.db._log(job, 'no source file found')
-                return
+                raise WorkError('no source file found')
 
             # Read the source code.
             with open(os.path.join(code_dir, source_name), 'rb') as f:
@@ -84,15 +93,13 @@ class SeashellThread(WorkThread):
                 )
             except subprocess.CalledProcessError as exc:
                 self.db.set_state(job, 'failed')
-                msg = 'seac failed ({}):\n{}'.format(
+                raise WorkError('seac failed ({}):\n{}'.format(
                     exc.returncode,
                     '\n---\n'.join(filter(lambda x: x, (
                         exc.stdout.decode('utf8', 'ignore'),
                         exc.stderr.decode('utf8', 'ignore'),
                     )))
-                )
-                self.db._log(job, msg)
-                return
+                ))
             self.db._log(job, proc.stderr.decode('utf8', 'ignore'))
             hls_code = proc.stdout
 
