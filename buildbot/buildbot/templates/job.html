@@ -17,8 +17,8 @@
 <ul>
 {% for time, text in job.log %}
     <li>
-        <b>{{ time | dt }}:</b>
-        {{ text }}
+        <time>{{ time | dt }}</time><br>
+        <pre>{{ text }}</pre>
     </li>
 {% endfor %}
 </ul>
