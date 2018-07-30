@@ -112,10 +112,29 @@ def jobs_list():
 @app.route('/jobs/<name>.html')
 def show_job(name):
     job = db.get(name)
-    return flask.render_template('job.html', job=job)
+
+    # Find all the job's files.
+    job_dir = db.job_dir(name)
+    paths = []
+    for dirpath, dirnames, filenames in os.walk(job_dir):
+        dp = os.path.relpath(dirpath, job_dir)
+        for fn in filenames:
+            if not fn.startswith('.'):
+                paths.append(os.path.join(dp, fn))
+
+    return flask.render_template('job.html', job=job, files=paths)
 
 
 @app.route('/jobs/<name>')
 def get_job(name):
     job = db.get(name)
     return flask.jsonify(job)
+
+
+@app.route('/jobs/<name>/files/<path:filename>')
+def job_file(name, filename):
+    # Make sure this job actually exists.
+    db.get(name)
+
+    # Send the file.
+    return flask.send_from_directory(db.job_dir(name), filename)
