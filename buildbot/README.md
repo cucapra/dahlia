@@ -20,4 +20,6 @@ To get details about a specific job, request `/jobs/<name>`:
 
     $ curl $BUILDBOT/jobs/d988ruiuAk4
 
+There is also a browser interface that lets you view jobs and start new ones.
+
 [pipenv]: http://pipenv.org
