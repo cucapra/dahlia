@@ -13,6 +13,12 @@ Requires [Dune](https://github.com/ocaml/dune) and [Menhir](http://gallium.inria
 	$ opam install dune
 	$ opam install menhir
 
-Generate an HLS program from your Seashell program:
+Then, build and install `seac` compiler:
 
-	$ cat my_program | dune exec bin/ex.bc
+    $ dune build
+    $ dune install
+
+Now you can generate HLS programs from your Seashell programs.
+For example:
+
+    $ seac < examples/float.ss > float.c
