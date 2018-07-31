@@ -75,7 +75,7 @@ $$
 Logical accesses to a Seashell multi-dimensonal array look like this: $\text{a}[i_0][i_1]..[i_n]$. We'd like to access these higher-dimensional arrays with our Seashell index types, but to first examine how working with these arrays might work, it would be useful to first consider $i_0..i_n$ as plain old integers. So now, for the purposes of typechecking our array accesses, we'd like to know exactly which indices we're using to access this flattened array when we make our logical accesses. So to compute what our flattened index $i_f$ would be based on our logical indices $i_0..i_n$, we could use the following method: 
 
 $$
-i_f = \sum_{k=0}^{n} (i_k \prod_{k'=k+1}^{n} \sigma_k)
+i_f = \sum_{k=0}^{n} (i_k \prod_{k'=k+1}^{n} \sigma_k')
 $$
 
 The general intuition behind the above formula is that when accessing the $i$th element of dimension $k$, we need to skip over i sections of $\text{a}_f$ that have size equal to the product of the remainder of the $n-k$ logical dimensions. (TODO: more intuition?)
@@ -155,3 +155,36 @@ Similar to our previous example, $\text{i}$ has type $\text{idx}\langle 0 .. k, 
 $$
 \{ s + mk * d ~|~ s  \in 0 .. k \} 
 $$
+
+
+Using index types for multi dimensional array accesses
+------------------------------------------------------
+
+So far we have recapped index types in a single dimensional sense and we have explored how logical accessing in multi-dimensional arrays are translated to a single dimension in hardware, thereby making it easy to type check for banking.  
+
+However, it'll be nice to use the same type (index type) for both single and multi dimensions. Moreover, using index types in multi-dimensions may allow us to finely bank such an array in different dimensions (we can only do block and cyclic in single dimension. However, nested loops with unroll factors need more flexible banking strutures.)  
+
+So, let's try to extend index types to a multi-dimensional array indices.  
+
+from the recap,  
+ 
+$$
+i = \{ s + |0..k| \times d \}
+$$
+
+from multi-dimensional access,
+
+$$
+i_f = \sum_{j=0}^{n} (i_j \prod_{j'=j+1}^{n} \sigma_j')
+$$
+
+therefore,  
+$$
+i_f = \sum_{j=0}^{n} (\{ s_j + |0..k_j| \times d_j \} \prod_{j'=j+1}^{n} \sigma_j')
+$$
+
+where $sigma_j is |0..k| \times |\frac{l}{k}..\frac{h}{k}|$  
+
+(maybe this is multiplication of index type variables? But the order may matter, as it is not associative)  
+
+**Example.** Let's consider an access to the array we considered earlier. $$
