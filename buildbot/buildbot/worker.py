@@ -3,6 +3,7 @@ import subprocess
 import os
 from .db import ARCHIVE_NAME, CODE_DIR
 from contextlib import contextmanager
+import traceback
 
 SEASHELL_EXT = '.ss'
 C_EXT = '.c'
@@ -27,7 +28,7 @@ def work(db, old_state, temp_state, done_state):
     except WorkError as exc:
         db._log(job, exc.message)
         db.set_state(job, 'failed')
-    except Exception as exc:
+    except Exception:
         db._log(job, traceback.format_exc())
         db.set_state(job, 'failed')
     else:
