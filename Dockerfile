@@ -9,9 +9,9 @@ RUN pip3 install --user pipenv
 RUN opam repo remove default && opam repo add default https://opam.ocaml.org
 RUN opam depext -i dune menhir
 
-# Get Seashell source.
-RUN git clone https://github.com/cucapra/seashell.git
-WORKDIR seashell
+# Add Seashell source.
+ADD . /seashell
+WORKDIR /seashell
 
 # Build Seashell.
 RUN opam config exec dune build
