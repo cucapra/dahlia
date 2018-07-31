@@ -10,8 +10,8 @@ RUN opam repo remove default && opam repo add default https://opam.ocaml.org
 RUN opam depext -i dune menhir
 
 # Add Seashell source.
-ADD . /seashell
-WORKDIR /seashell
+ADD --chown=opam:nogroup . ~/seashell
+WORKDIR ~/seashell
 
 # Build Seashell.
 RUN opam config exec dune build
