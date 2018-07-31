@@ -32,6 +32,10 @@ $$
 \{ s + |0..k| \times d ~|~ s \in 0..k\}
 $$
 
+This set is very important in our subsequent discussion (in any index type discussion). When we access an $i$th element $a[i]$, we would be accessing this set rather than a single element. Our type checking would work on this observation to check for interesting qualities such as safety. 
+
+[//]: # (not entirely happy with this bit)
+
 **Example.** We can create a non-unrolled loop with explicit array accessing using index types. This means we can use the dynamic component dynamcally (of course!), but static component should be explicit. If we consider the same loop as before, for a given dynamic index, we can access the following set of array indices,
 
 $$
@@ -75,7 +79,7 @@ $$
 Logical accesses to a Seashell multi-dimensonal array look like this: $\text{a}[i_0][i_1]..[i_n]$. We'd like to access these higher-dimensional arrays with our Seashell index types, but to first examine how working with these arrays might work, it would be useful to first consider $i_0..i_n$ as plain old integers. So now, for the purposes of typechecking our array accesses, we'd like to know exactly which indices we're using to access this flattened array when we make our logical accesses. So to compute what our flattened index $i_f$ would be based on our logical indices $i_0..i_n$, we could use the following method: 
 
 $$
-i_f = \sum_{k=0}^{n} (i_k \prod_{k'=k+1}^{n} \sigma_k')
+i_f = \sum_{k=0}^{n} (i_k \prod_{k'=k+1}^{n} \sigma_(k'))
 $$
 
 The general intuition behind the above formula is that when accessing the $i$th element of dimension $k$, we need to skip over i sections of $\text{a}_f$ that have size equal to the product of the remainder of the $n-k$ logical dimensions. (TODO: more intuition?)
@@ -87,7 +91,6 @@ $$a:t[2][5][3] \text{ bank} (5)$$
 The flattened version, $\text{a}_f$, would have size $N=30$. Say we make an access $\text{a}[1][4][2]$. Using our formula we defined, we'd access $\text{a}_f$ with $i_f=29$.
 
 **Typechecking.** Because we're using this flattened array, computing which bank is being accessed from $i_f$ can simply be accomplished with $i \bmod b$ or $i / b$, depending on banking structure. 
-(- just like in the earlier one-dimensional example (Ask which is it).)
 
 In one-dimensional arrays we can arrange banks in two ways,
 	- 1. cyclic partitioning/ interleaving (adjacent elements in different banks)
@@ -175,16 +178,29 @@ $$
 from multi-dimensional access,
 
 $$
-i_f = \sum_{j=0}^{n} (i_j \prod_{j'=j+1}^{n} \sigma_j')
+i_f = \sum_{j=0}^{n} (i_j \prod_{j'=j+1}^{n} \sigma_(j'))
 $$
 
 therefore,  
 $$
-i_f = \sum_{j=0}^{n} (\{ s_j + |0..k_j| \times d_j \} \prod_{j'=j+1}^{n} \sigma_j')
+i_f = \sum_{j=0}^{n} (\{ s_j + |0..k_j| \times d_j \} \prod_{j'=j+1}^{n} \sigma_(j'))
 $$
 
 where $sigma_j is |0..k| \times |\frac{l}{k}..\frac{h}{k}|$  
 
 (maybe this is multiplication of index type variables? But the order may matter, as it is not associative)  
 
-**Example.** Let's consider an access to the array we considered earlier. $$
+**Example.** Let's consider an access to the array we considered earlier. 
+$$a:t[2][5][3] \text{ bank} (5)$$
+
+Since the size of dimension 2 fits nicely with the banking factor, let's say we bank in terms of dimension 2. i.e., we put each set of elements in dim 2 in a different bank.  
+
+Let's try accessing the same element as we tried before, $a[1][4][2]$. In index type indexing, knowing banks represent dim 2, we can translate this to $a[\langle 0,1 \rangle][\langle 4,0 \rangle][\langle 0,2 \rangle]$.  
+
+Using the equation we derived,  
+
+$$
+(0 + 1 \times 1) \times 15 + (4 + 5 \times 0) \times 3 + (0 + 1 \times 2) \times 1 = 29
+$$
+
+
