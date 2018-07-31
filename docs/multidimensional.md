@@ -156,6 +156,13 @@ $$
 \{ s + mk * d ~|~ s  \in 0 .. k \} 
 $$
 
+We could then determine the set of banks accessed for any $d \in 0 .. \frac{n}{mk}$ with:
+
+$$
+\{ (s + (mk * d) \bmod mk ~|~ s  \in 0 .. k) \bmod mk \} 
+$$
+
+This set gives us a general intuition of what's going on; indeed, in each iteration, $\text{i}$ accesses $k$ distinct banks, and which $k$ banks is determined by the dynamic value $d$. It's impossible to tell what the value of $d$ would be statically, so to be conservative, in this situation we can also consume every bank for this array and prevent further accesses.
 
 Using index types for multi dimensional array accesses
 ------------------------------------------------------
