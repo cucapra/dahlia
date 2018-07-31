@@ -6,5 +6,6 @@ name = "pypi"
 [packages]
 flask = "*"
 tinydb = "*"
+gunicorn = "*"
 
 [dev-packages]
