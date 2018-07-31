@@ -10,7 +10,7 @@ RUN opam init -y
 
 # Our OCaml dependencies. We already have ocamlbuild, so we have a workaround:
 # https://github.com/ocaml/ocamlbuild/issues/109
-RUN opam install --fake ocamlbuild
+ENV CHECK_IF_PREINSTALLED=false
 RUN opam install dune menhir
 
 # Volume, port, and command for buildbot.
