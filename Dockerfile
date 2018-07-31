@@ -11,8 +11,10 @@ ENV LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
 RUN opam repo remove default && opam repo add default https://opam.ocaml.org
 RUN opam depext -i dune menhir
 
-# Volume for buildbot.
+# Volume, port, and command for buildbot.
 VOLUME seashell/buildbot/instance
+EXPOSE 8000
+CMD ["make", "-C", "buildbot", "serve"]
 
 # Add Seashell source.
 ADD --chown=opam:nogroup . seashell
