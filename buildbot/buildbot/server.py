@@ -4,7 +4,7 @@ import os
 from io import StringIO
 import csv
 from . import worker
-from .db import JobDB, ARCHIVE_NAME
+from .db import JobDB, ARCHIVE_NAME, NotFoundError
 from datetime import datetime
 import re
 
@@ -20,6 +20,14 @@ app.config.from_pyfile('buildbot.cfg', silent=True)
 
 # Connect to our database.
 db = JobDB(app.instance_path)
+
+
+def _get(job_name):
+    """Get a job by name, or raise a 404 error."""
+    try:
+        return db.get(job_name)
+    except NotFoundError:
+        flask.abort(404, 'Job {} not found.'.format(job_name))
 
 
 def _unpad(s):
@@ -111,7 +119,7 @@ def jobs_list():
 
 @app.route('/jobs/<name>.html')
 def show_job(name):
-    job = db.get(name)
+    job = _get(name)
 
     # Find all the job's files.
     job_dir = db.job_dir(name)
@@ -127,14 +135,14 @@ def show_job(name):
 
 @app.route('/jobs/<name>')
 def get_job(name):
-    job = db.get(name)
+    job = _get(name)
     return flask.jsonify(job)
 
 
 @app.route('/jobs/<name>/files/<path:filename>')
 def job_file(name, filename):
     # Make sure this job actually exists.
-    db.get(name)
+    _get(name)
 
     # Send the file.
     return flask.send_from_directory(db.job_dir(name), filename)
