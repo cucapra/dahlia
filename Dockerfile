@@ -20,4 +20,4 @@ RUN opam config exec dune build
 RUN opam config exec dune install
 
 # Set up buildbot.
-RUN cd buildbot ; pipenv --python /usr/bin/python3 install
+RUN cd buildbot ; pipenv install
