@@ -159,13 +159,6 @@ $$
 \{ s + mk * d ~|~ s  \in 0 .. k \} 
 $$
 
-We could then determine the set of banks accessed for any $d \in 0 .. \frac{n}{mk}$ with:
-
-$$
-\{ (s + (mk * d) \bmod mk ~|~ s  \in 0 .. k) \bmod mk \} 
-$$
-
-This set gives us a general intuition of what's going on; indeed, in each iteration, $\text{i}$ accesses $k$ distinct banks, and which $k$ banks is determined by the dynamic value $d$. It's impossible to tell what the value of $d$ would be statically, so to be conservative, in this situation we can also consume every bank for this array and prevent further accesses.
 
 Using index types for multi dimensional array accesses
 ------------------------------------------------------
@@ -230,3 +223,87 @@ From the equation,
 $$
 \{ (s_0 + 1 \times 1) \times 15 + (s_1 + 5 \times 0) \times 3 + (s_2 + 1 \times 2) \times 1 ~|~ s_0 \in 0..1, s_1 \in 0..5. s_2 \in 0..1 \} = \{17,20,23,26,29\}
 $$
+
+Case studies as a sanity check
+------------------------------
+
+**for a single dimension with no unrolling**
+
+$for n=1 and k=1
+$$
+i_f = \{ \sum_{j=0}^{n} ( [ s_j + |0..k_j| \times d_j ] \prod_{j'=j+1}^{n} \sigma_(j')) ~|~ s_0 \in 0..k_0, s_1 \in 0..k_1, .. , s_n \in 0..k_n \}
+$$
+
+$$
+i_f = \{[s_0 + |0..1| \times d_0] \times 1 ~|~ s_0 \in 0..1\}
+i_f = d_0
+$$
+
+$bank = d_0 \bmod b$
+
+We use  
+proof for taking modulus inside an expression $(a+b) \bmod c = (a \bmod c + b \bmod c) \bmod c$
+proof for $ab \mod ac = a(b \bmod c)$  
+for the following.  
+ 
+**for banking factor = unroll factor**
+
+Intuitively we know that if banking factor equals the unroll factor, in each access we'd be accessing different and all banks.  
+
+$for n=1 and b=k
+$$
+i_f = \{ \sum_{j=0}^{n} ( [ s_j + |0..k_j| \times d_j ] \prod_{j'=j+1}^{n} \sigma_(j')) ~|~ s_0 \in 0..k_0, s_1 \in 0..k_1, .. , s_n \in 0..k_n \}
+$$
+
+$$
+i_f = \{[s_0 + |0..k| \times d_0] \times 1 ~|~ s_0 \in 0..k\}
+$$
+
+$$
+bank = i_f \bmod b
+= \{[s_0 + |0..k| \times d_0] \times 1 ~|~ s_0 \in 0..k\} \bmod k
+= \{[(s_0 \bmod k) + (k \times d_0) \bmod k] \bmod k ~|~ s_0 \in 0..k\} 
+= \{[(s_0 \bmod k) + k \times (d_0 \bmod 1)] \bmod k ~|~ s_0 \in 0..k\}
+= \{[(s_0 \bmod k) + k \times 0] \bmod k ~|~ s_0 \in 0..k\} 
+= \{[s_0 \bmod k] ~|~ s_0 \in 0..k\}
+since s_0 is bounded by k s_0 \bmod k is always smaller than k
+bank = \{s_0 \in 0..k\} 
+$$
+
+This shows we'd access all the banks and each bank would be accessed only once.  
+
+We use $if a \in 0..b and m is a is an integer, then a \bmod mk = a \bmod k$
+
+**for banking factor = constant * unroll factor**
+
+Intuitively we know that if we have more banks than unroll factor, it should be possible to access different banks at a given time. For this case, where number of banks is a constant of multiple of unroll factor, we know that depending on the dynamic index we'd access a specific set of banks and that set would also have a unique set of banks.  
+
+Given a dynamic component $d$, unroll factor $k$ and banking factor $m \times k$ where $m$ is the constant multiple: 
+
+since we'd be accessing different banks depending on the dynamic component, and we can simplify to a scenario where we'd be accessing different sets of banks of size of the unroll factor, we can say this set is $d \bmod m$. And we'd be accessing all \{0..k\} banks in that set, we can write the banks we are accessing as,  
+
+$$\{k \times (d \bmod m).. k \times (d \bmod m) + k\}$$
+
+We can determine the banks we access from our derived equation
+$for n=1 and b=mk
+$$
+i_f = \{ \sum_{j=0}^{n} ( [ s_j + |0..k_j| \times d_j ] \prod_{j'=j+1}^{n} \sigma_(j')) ~|~ s_0 \in 0..k_0, s_1 \in 0..k_1, .. , s_n \in 0..k_n \}
+$$
+
+$$
+i_f = \{[s_0 + |0..k| \times d_0] \times 1 ~|~ s_0 \in 0..k\}
+$$
+
+$$
+bank = i_f \bmod b
+= \{[s_0 + |0..k| \times d_0] \times 1 ~|~ s_0 \in 0..k\} \bmod mk
+= \{[(s_0 \bmod mk) + (k \times d_0) \bmod mk] \bmod mk ~|~ s_0 \in 0..k\} 
+= \{[(s_0 \bmod k) + k \times (d_0 \bmod m)] \bmod mk ~|~ s_0 \in 0..k\}
+we can expand this to a range,
+bank = 0 + k \times (d_0 \bmod m) .. k + k \times (d_0 \bmod m)
+= k \times (d \bmod m) .. k \times (d \bmod m ) + k
+$$
+
+so our equation allows us to come to the same conclusion as the intuition.  
+
+[//]: # (not sure if this is generalizable and if my write up is sufficient)
