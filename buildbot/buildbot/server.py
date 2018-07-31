@@ -8,15 +8,15 @@ from .db import JobDB, ARCHIVE_NAME
 from datetime import datetime
 import re
 
-# Our Flask application. Our "instance path," where we search for
-# configuration fails and such, is the parent directory of our Python
-# package (so this server can be run "in place.")
-app = flask.Flask(__name__, instance_relative_config=True,
-                  instance_path=os.path.dirname(os.path.dirname(__file__)))
+# Our Flask application.
+app = flask.Flask(__name__, instance_relative_config=True)
 
 # Configuration. We include some defaults and allow overrides.
-app.config.from_pyfile('buildbot.base.cfg')
-app.config.from_pyfile('buildbot.site.cfg', silent=True)
+app.config.update(
+    UPLOAD_EXTENSIONS=['zip'],
+    SEASHELL_COMPILER='seac',
+)
+app.config.from_pyfile('buildbot.cfg', silent=True)
 
 # Connect to our database.
 db = JobDB(app.instance_path)
@@ -69,7 +69,7 @@ def add_job():
 
     # Create the job's directory and save the code there.
     path = db.job_dir(job['name'])
-    os.makedirs(path)
+    os.mkdir(path)
     archive_path = os.path.join(path, ARCHIVE_NAME + ext)
     file.save(archive_path)
 

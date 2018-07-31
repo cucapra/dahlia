@@ -3,8 +3,6 @@ import threading
 import secrets
 import time
 import os
-from contextlib import contextmanager
-import traceback
 
 DB_FILENAME = 'db.json'
 JOBS_DIR = 'jobs'
@@ -21,6 +19,9 @@ class NotFoundError(Exception):
 class JobDB:
     def __init__(self, base_path):
         self.base_path = base_path
+        os.makedirs(self.base_path, exist_ok=True)
+        os.makedirs(os.path.join(self.base_path, JOBS_DIR), exist_ok=True)
+
         self.db = tinydb.TinyDB(os.path.join(base_path, DB_FILENAME))
         self.jobs = self.db.table('jobs')
 

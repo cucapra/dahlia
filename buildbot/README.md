@@ -22,4 +22,6 @@ To get details about a specific job, request `/jobs/<name>`:
 
 There is also a browser interface that lets you view jobs and start new ones.
 
+The server keeps the data, including the database and the file trees for each job, in an `instance` directory here.
+
 [pipenv]: http://pipenv.org
