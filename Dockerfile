@@ -23,8 +23,8 @@ ADD . seashell
 WORKDIR seashell
 
 # Build Seashell.
-RUN opam config exec -- dune build
-RUN opam config exec -- dune install
+RUN eval `opam config env` ; dune build
+RUN eval `opam config env` ; dune install
 
 # Set up buildbot.
 RUN cd buildbot ; pipenv install
