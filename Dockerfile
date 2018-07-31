@@ -1,15 +1,17 @@
-FROM ocaml/opam:alpine
+FROM python:3.7-alpine
 MAINTAINER Adrian Sampson <asampson@cs.cornell.edu>
 
-# pipenv for running the buildbot.
-RUN sudo apk add --no-cache python3
-RUN pip3 install --user pipenv
-ENV PATH /home/opam/.local/bin:${PATH}
-ENV LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
+# Add pipenv for buildbot.
+RUN pip install pipenv
 
-# OCaml dependencies.
-RUN opam repo remove default && opam repo add default https://opam.ocaml.org
-RUN opam depext -i dune menhir
+# Add OCaml and enough dependencies to build OCaml packages.
+RUN apk add --no-cache opam ocaml-compiler-libs bash m4 build-base
+RUN opam init -y
+
+# Our OCaml dependencies. We already have ocamlbuild, so we have a workaround:
+# https://github.com/ocaml/ocamlbuild/issues/109
+RUN opam install --fake ocamlbuild
+RUN opam install dune menhir
 
 # Volume, port, and command for buildbot.
 VOLUME seashell/buildbot/instance
@@ -17,12 +19,12 @@ EXPOSE 8000
 CMD ["make", "-C", "buildbot", "serve"]
 
 # Add Seashell source.
-ADD --chown=opam:nogroup . seashell
+ADD . seashell
 WORKDIR seashell
 
 # Build Seashell.
-RUN opam config exec dune build
-RUN opam config exec dune install
+RUN opam config exec -- dune build
+RUN opam config exec -- dune install
 
 # Set up buildbot.
 RUN cd buildbot ; pipenv install
