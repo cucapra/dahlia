@@ -13,6 +13,9 @@ RUN opam init -y
 ENV CHECK_IF_PREINSTALLED=false
 RUN opam install dune menhir
 
+# Add opam bin directory to our $PATH so we can run seac.
+ENV PATH /root/.opam/system/bin:${PATH}
+
 # Volume, port, and command for buildbot.
 VOLUME seashell/buildbot/instance
 EXPOSE 8000
