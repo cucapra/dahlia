@@ -221,7 +221,7 @@ Note that rather than using s_j \in 0..k_j with a union operation, I have writte
 From the equation,  
 
 $$
-\{ (s_0 + 1 \times 1) \times 15 + (s_1 + 5 \times 0) \times 3 + (s_2 + 1 \times 2) \times 1 ~|~ s_0 \in 0..1, s_1 \in 0..5. s_2 \in 0..1 \} = \{17,20,23,26,29\}
+\{ (s_0 + 1 \times 1) \times 15 + (s_1 + 5 \times 0) \times 3 + (s_2 + 1 \times 2) \times 1 ~|~ s_0 \in 0..1, s_1 \in 0..5, s_2 \in 0..1 \} = \{17,20,23,26,29\}
 $$
 
 Case studies as a sanity check
@@ -259,20 +259,36 @@ $$
 i_f = \{[s_0 + |0..k| \times d_0] \times 1 ~|~ s_0 \in 0..k\}
 $$
 
+$bank = i_f \bmod b$
+
 $$
-bank = i_f \bmod b
 = \{[s_0 + |0..k| \times d_0] \times 1 ~|~ s_0 \in 0..k\} \bmod k
-= \{[(s_0 \bmod k) + (k \times d_0) \bmod k] \bmod k ~|~ s_0 \in 0..k\} 
+$$
+
+$$
+= \{[(s_0 \bmod k) + (k \times d_0) \bmod k] \bmod k ~|~ s_0 \in 0..k\}
+$$
+
+$$ 
 = \{[(s_0 \bmod k) + k \times (d_0 \bmod 1)] \bmod k ~|~ s_0 \in 0..k\}
+$$
+
+$$
 = \{[(s_0 \bmod k) + k \times 0] \bmod k ~|~ s_0 \in 0..k\} 
+$$
+
+$$
 = \{[s_0 \bmod k] ~|~ s_0 \in 0..k\}
-since s_0 is bounded by k s_0 \bmod k is always smaller than k
+$$
+
+since $s_0$ is bounded by k $s_0 \bmod k$ is always smaller than k
+$$
 bank = \{s_0 \in 0..k\} 
 $$
 
 This shows we'd access all the banks and each bank would be accessed only once.  
 
-We use $if a \in 0..b and m is a is an integer, then a \bmod mk = a \bmod k$
+We use $if a \in 0..b$  and $m$ is an integer, then $a \bmod mk = a \bmod k$
 
 **for banking factor = constant * unroll factor**
 
@@ -286,6 +302,7 @@ $$\{k \times (d \bmod m).. k \times (d \bmod m) + k\}$$
 
 We can determine the banks we access from our derived equation
 $for n=1 and b=mk
+
 $$
 i_f = \{ \sum_{j=0}^{n} ( [ s_j + |0..k_j| \times d_j ] \prod_{j'=j+1}^{n} \sigma_(j')) ~|~ s_0 \in 0..k_0, s_1 \in 0..k_1, .. , s_n \in 0..k_n \}
 $$
@@ -294,12 +311,21 @@ $$
 i_f = \{[s_0 + |0..k| \times d_0] \times 1 ~|~ s_0 \in 0..k\}
 $$
 
+$bank = i_f \bmod b$
 $$
-bank = i_f \bmod b
 = \{[s_0 + |0..k| \times d_0] \times 1 ~|~ s_0 \in 0..k\} \bmod mk
+$$
+
+$$
 = \{[(s_0 \bmod mk) + (k \times d_0) \bmod mk] \bmod mk ~|~ s_0 \in 0..k\} 
+$$
+
+$$
 = \{[(s_0 \bmod k) + k \times (d_0 \bmod m)] \bmod mk ~|~ s_0 \in 0..k\}
+$$
+
 we can expand this to a range,
+$$
 bank = 0 + k \times (d_0 \bmod m) .. k + k \times (d_0 \bmod m)
 = k \times (d \bmod m) .. k \times (d \bmod m ) + k
 $$
@@ -307,3 +333,5 @@ $$
 so our equation allows us to come to the same conclusion as the intuition.  
 
 [//]: # (not sure if this is generalizable and if my write up is sufficient)
+
+
