@@ -9,10 +9,50 @@ Index Type Recap
     for i in l..h unroll k
         access a[i]
 
-The variable $\text{i}$ accessing array $\text{a}$ has type $\text{idx}\langle 0 .. k, \frac{l}{k} .. \frac{h}{k} \rangle$. This type is comprised of a *static component*, $0 .. k$, and a *dynamic component*, $\frac{l}{k} .. \frac{h}{k}$. This means that for every dynamic value $d$ that $\text{i}$ takes on, $\text{i}$ represents the following set of indices:
+The variable $\text{i}$ accessing array $\text{a}$ has type $\text{idx}\langle 0 .. k, \frac{l}{k} .. \frac{h}{k} \rangle$. This type is comprised of a *static component*, $0 .. k$, and a *dynamic component*, $\frac{l}{k} .. \frac{h}{k}$. Following set represents this set of indices,
 
 $$
-\{ s + |l_s..h_s| \times d ~|~ s \in 0..k, d \in \frac{l}{k}..\frac{h}{k}\}
+\{ s + |0..k| \times d ~|~ s \in 0..k, d \in \frac{l}{k}..\frac{h}{k}\}
+$$
+
+**Example.** Consider a loop with $l=0$ and $h=30$ with an unroll factor $5$. The set of indeces can be expressed in index types as,
+
+
+$$
+\{ s + |0..5| \times d ~|~ s \in 0..5, d \in \frac{0}{5}..\frac{30}{5}\}
+$$
+
+$$
+\{ s + 5 \times d ~|~ s \in 0..5, d \in 0..6\}
+$$
+
+Since the static component should be unique at runtime, for every dynamic value $d$ that $\text{i}$ takes on, $\text{i}$ represents the following set of indices:
+
+$$
+\{ s + |0..k| \times d ~|~ s \in 0..k\}
+$$
+
+**Example.** We can create a non-unrolled loop with explicit array accessing using index types. This means we can use the dynamic component dynamcally (of course!), but static component should be explicit. If we consider the same loop as before, for a given dynamic index, we can access the following set of array indices,
+
+$$
+\{ s + 5 \times d ~|~ s \in 0..5\}
+$$
+
+$if d=5$
+$$
+\{ 25,26,27,28,29 \}
+$$
+
+Just as when accessing with array indices, we can explicitly specify a single element using index types by providing both static and dynamic components $\langle s,d \rangle$,
+
+$$
+\{ s + |0..k| \times d \}
+$$
+
+**Example.** Using the same array as before, if we access element $\langle 4,5 \rangle$,
+
+$$
+\{ 4 + 5 \times 5\} = \{29\}
 $$
 
 Multi Dimensional Arrays
@@ -35,7 +75,7 @@ $$
 Logical accesses to a Seashell multi-dimensonal array look like this: $\text{a}[i_0][i_1]..[i_n]$. We'd like to access these higher-dimensional arrays with our Seashell index types, but to first examine how working with these arrays might work, it would be useful to first consider $i_0..i_n$ as plain old integers. So now, for the purposes of typechecking our array accesses, we'd like to know exactly which indices we're using to access this flattened array when we make our logical accesses. So to compute what our flattened index $i_f$ would be based on our logical indices $i_0..i_n$, we could use the following method: 
 
 $$
-i_f = \sum_{k=0}^{n} (i_k \prod_{k'=k+1}^{n} \sigma_k)
+i_f = \sum_{k=0}^{n} (i_k \prod_{k'=k+1}^{n} \sigma_k')
 $$
 
 The general intuition behind the above formula is that when accessing the $i$th element of dimension $k$, we need to skip over i sections of $\text{a}_f$ that have size equal to the product of the remainder of the $n-k$ logical dimensions. (TODO: more intuition?)
@@ -46,7 +86,28 @@ $$a:t[2][5][3] \text{ bank} (5)$$
 
 The flattened version, $\text{a}_f$, would have size $N=30$. Say we make an access $\text{a}[1][4][2]$. Using our formula we defined, we'd access $\text{a}_f$ with $i_f=29$.
 
-**Typechecking.** Because we're using this flattened array, computing which bank is being accessed from $i_f$ can simply be accomplished with $i \bmod b$ or $i / b$, depending on banking structure - just like in the earlier one-dimensional example.
+**Typechecking.** Because we're using this flattened array, computing which bank is being accessed from $i_f$ can simply be accomplished with $i \bmod b$ or $i / b$, depending on banking structure. 
+(- just like in the earlier one-dimensional example (Ask which is it).)
+
+In one-dimensional arrays we can arrange banks in two ways,
+	- 1. cyclic partitioning/ interleaving (adjacent elements in different banks)
+
+| 0 5 10 15 20 25 | 1 6 11 16 21 26 | 2 7 12 17 22 27 | 3 8 13 18 23 28 | 4 9 14 19 24 29 | 
+| --- | --- | --- | --- | --- |
+
+We can use $i \bmod b$ to find the relevant bank for this variant. $i / b$ gives the index within the bank. 
+	- 2. block partitioning/ chunking (adjacent elements in the same bank) 
+
+| 0 1 2 3 4 5 | 6 7 8 9 10 11 | 12 13 14 15 16 17 | 18 19 20 21 22 23 | 24 25 26 27 28 29 |  
+| --- | --- | --- | --- | --- |  
+
+We can use $i / b$ to find the relevant bank for this variant. $i \bmod b$ gives the index within the bank. 
+
+A detailed note how these are used and why they are needed can be found at [status log](https://github.com/cucapra/seashell/wiki/Test-status-log#array-partitioning-seems-to-need-different-types-of-partitioning)
+
+**Example.** For the same array we considered with $i_f=29$, 
+bank is $29 \bmod 5 = 4$ and bank index is $29 / 5 = 5$. 
+i.e., we would access the 5th element in the 4th bank.  
 
 Typechecking Array Accesses
 ------------------------
@@ -94,3 +155,36 @@ Similar to our previous example, $\text{i}$ has type $\text{idx}\langle 0 .. k, 
 $$
 \{ s + mk * d ~|~ s  \in 0 .. k \} 
 $$
+
+
+Using index types for multi dimensional array accesses
+------------------------------------------------------
+
+So far we have recapped index types in a single dimensional sense and we have explored how logical accessing in multi-dimensional arrays are translated to a single dimension in hardware, thereby making it easy to type check for banking.  
+
+However, it'll be nice to use the same type (index type) for both single and multi dimensions. Moreover, using index types in multi-dimensions may allow us to finely bank such an array in different dimensions (we can only do block and cyclic in single dimension. However, nested loops with unroll factors need more flexible banking strutures.)  
+
+So, let's try to extend index types to a multi-dimensional array indices.  
+
+from the recap,  
+ 
+$$
+i = \{ s + |0..k| \times d \}
+$$
+
+from multi-dimensional access,
+
+$$
+i_f = \sum_{j=0}^{n} (i_j \prod_{j'=j+1}^{n} \sigma_j')
+$$
+
+therefore,  
+$$
+i_f = \sum_{j=0}^{n} (\{ s_j + |0..k_j| \times d_j \} \prod_{j'=j+1}^{n} \sigma_j')
+$$
+
+where $sigma_j is |0..k| \times |\frac{l}{k}..\frac{h}{k}|$  
+
+(maybe this is multiplication of index type variables? But the order may matter, as it is not associative)  
+
+**Example.** Let's consider an access to the array we considered earlier. $$
