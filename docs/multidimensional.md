@@ -203,4 +203,23 @@ $$
 (0 + 1 \times 1) \times 15 + (4 + 5 \times 0) \times 3 + (0 + 1 \times 2) \times 1 = 29
 $$
 
+As we noted before, we are more interested in the set of indices we can access with $a[i]$ than accessing a single element with index types. Therefore, we can extend the equation we derived earlier similarly,
 
+
+$$
+\{ s + |0..k| \times d ~|~ s \in 0..k\}
+$$
+
+$$
+i_f = \{ \sum_{j=0}^{n} ( [ s_j + |0..k_j| \times d_j ] \prod_{j'=j+1}^{n} \sigma_(j')) ~|~ s_0 \in 0..k_0, s_1 \in 0..k_1, .. , s_n \in 0..k_n \}
+$$
+
+Note that rather than using s_j \in 0..k_j with a union operation, I have written all the static component sets. This way just felt more intuitive, but expressing with a union might be better. 
+
+**Example.** Let's try to access the same array as before with the dynamic index set $d=\{1,0,2\}$  
+
+From the equation,  
+
+$$
+\{ (s_0 + 1 \times 1) \times 15 + (s_1 + 5 \times 0) \times 3 + (s_2 + 1 \times 2) \times 1 ~|~ s_0 \in 0..1, s_1 \in 0..5. s_2 \in 0..1 \} = \{17,20,23,26,29\}
+$$
