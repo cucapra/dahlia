@@ -12,11 +12,7 @@ import re
 app = flask.Flask(__name__, instance_relative_config=True)
 
 # Configuration. We include some defaults and allow overrides.
-app.config.update(
-    UPLOAD_EXTENSIONS=['zip'],
-    HLS_COMMAND_PREFIX=[],
-    SEASHELL_COMPILER='seac',
-)
+app.config.from_object('buildbot.config_default')
 app.config.from_pyfile('buildbot.cfg', silent=True)
 
 # Connect to our database.
