@@ -35,6 +35,28 @@ def work(db, old_state, temp_state, done_state):
         db.set_state(job, done_state)
 
 
+def run(cmd, **kwargs):
+    """Run a command, like `subprocess.run`, while capturing output. Log an
+    appropriate error if the command fails.
+    """
+    try:
+        return subprocess.run(
+            cmd,
+            check=True,
+            capture_output=True,
+            **kwargs
+        )
+    except subprocess.CalledProcessError as exc:
+        raise WorkError('command failed: {} (code {}):\n{}'.format(
+            ' '.join(shlex(p) for p in cmd),
+            exc.returncode,
+            '\n---\n'.join(filter(lambda x: x, (
+                exc.stdout.decode('utf8', 'ignore'),
+                exc.stderr.decode('utf8', 'ignore'),
+            )))
+        ))
+
+
 class WorkThread(threading.Thread):
     """A base class for all our worker threads, which run indefinitely
     to process tasks in an appropriate state.
@@ -86,31 +108,17 @@ class SeashellThread(WorkThread):
                 code = f.read()
 
             # Run the Seashell compiler.
-            try:
-                proc = subprocess.run(
-                    [compiler],
-                    input=code,
-                    check=True,
-                    capture_output=True,
-                )
-            except subprocess.CalledProcessError as exc:
-                raise WorkError('seac failed ({}):\n{}'.format(
-                    exc.returncode,
-                    '\n---\n'.join(filter(lambda x: x, (
-                        exc.stdout.decode('utf8', 'ignore'),
-                        exc.stderr.decode('utf8', 'ignore'),
-                    )))
-                ))
+            proc = run(compiler, input=code)
             if proc.stderr:
                 self.db._log(job, proc.stderr.decode('utf8', 'ignore'))
             hls_code = proc.stdout
 
             # A filename for the translated C code.
+            base, _ = os.path.splitext(source_name)
             c_name = base + C_EXT
             job['c_main'] = c_name
 
             # Write the C code.
-            base, _ = os.path.splitext(source_name)
             with open(os.path.join(code_dir, c_name), 'wb') as f:
                 f.write(hls_code)
 
