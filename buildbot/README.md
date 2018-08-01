@@ -12,6 +12,10 @@ To submit a job, upload a file to the `/jobs` endpoint:
 
     $ curl -F file=@foo.zip $BUILDBOT/jobs
 
+For example, you can zip up a directory and submit it like this:
+
+    $ zip -r - . | curl -F file='@-;filename=code.zip' $BUILDBOT/jobs
+
 To see a list of the current jobs, get `/jobs.csv`:
 
     $ curl $BUILDBOT/jobs.csv
