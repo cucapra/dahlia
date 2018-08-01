@@ -79,6 +79,7 @@ class SeashellThread(WorkThread):
                     break
             else:
                 raise WorkError('no source file found')
+            job['seashell_main'] = name
 
             # Read the source code.
             with open(os.path.join(code_dir, source_name), 'rb') as f:
@@ -104,9 +105,13 @@ class SeashellThread(WorkThread):
                 self.db._log(job, proc.stderr.decode('utf8', 'ignore'))
             hls_code = proc.stdout
 
+            # A filename for the translated C code.
+            c_name = base + C_EXT
+            job['c_main'] = c_name
+
             # Write the C code.
             base, _ = os.path.splitext(source_name)
-            with open(os.path.join(code_dir, base + C_EXT), 'wb') as f:
+            with open(os.path.join(code_dir, c_name), 'wb') as f:
                 f.write(hls_code)
 
 

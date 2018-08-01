@@ -6,11 +6,18 @@
         <b>started:</b>
         {{ job.started | dt }}
     </li>
-
     <li>
         <b>state:</b>
         {{ job.state }}
     </li>
+    {% for key, value in job.items() %}
+    {% if key not in ('started', 'state', 'name', 'log') %}
+    <li>
+        <b>{{ key }}:</b>
+        {{ value }}
+    </li>
+    {% endif %}
+    {% endfor %}
 </ul>
 
 <h3>Files</h3>
