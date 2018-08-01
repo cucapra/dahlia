@@ -70,15 +70,15 @@ def run(cmd, **kwargs):
             **kwargs
         )
     except subprocess.CalledProcessError as exc:
-        raise WorkError('command failed ({}): {}{}'.format(
-            exc.returncode,
+        raise WorkError('$ {}\ncommand failed ({}){}'.format(
             _cmd_str(cmd),
+            exc.returncode,
             _stream_text(exc.stdout, exc.stderr),
         ))
     except FileNotFoundError as exc:
-        raise WorkError('command {} not found: {}'.format(
-            exc.filename,
+        raise WorkError('$ {}\ncommand {} not found'.format(
             _cmd_str(cmd),
+            exc.filename,
         ))
 
 
