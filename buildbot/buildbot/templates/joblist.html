@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Start Job</h2>
+<form method="POST" action="/jobs" enctype="multipart/form-data">
+    <input type="file" name="file" accept="application/zip">
+    <input type="hidden" name="browser" value="true">
+    <input type="submit" value="Upload">
+</form>
+
+<h2>Jobs</h2>
+<table>
+    <thead>
+        <tr>
+            <th>job</th>
+            <th>started</th>
+            <th>state</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for job in jobs | sort(attribute="started", reverse=True) %}
+        <tr>
+            <td>
+                <a href="{{ url_for('show_job', name=job.name) }}">
+                    {{ job.name }}
+                </a>
+            </td>
+            <td>{{ job.started | dt }}</td>
+            <td>{{ job.state }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

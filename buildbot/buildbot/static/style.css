@@ -1,0 +1,50 @@
+body {
+    font-family: "Source Sans Pro", Verdana, Tahoma, Geneva, sans-serif;
+    max-width: 50rem;
+    margin: 1rem auto;
+}
+
+h1 {
+    margin: 0;
+}
+h2 {
+    margin: 0 0 0.5rem;
+}
+
+th, td {
+    padding: 0.1rem 1rem;
+}
+
+ul {
+    list-style: none;
+    padding-left: 0;
+}
+ul li {
+    margin-bottom: 0.4rem;
+}
+
+pre {
+    margin: 0;
+    overflow-x: auto;
+
+}
+
+ul.log li {
+    display: flex;
+    margin-bottom: 0.1rem;
+}
+ul.log time {
+    color: #999;
+    font-size: 80%;
+    margin-right: 1rem;
+    white-space: nowrap;
+}
+ul.log pre {
+}
+
+form {
+    margin-bottom: 1rem;
+}
+input {
+    display: block;
+}

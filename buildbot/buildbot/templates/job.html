@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Job {{ job.name }}</h2>
+<ul>
+    <li>
+        <b>started:</b>
+        {{ job.started | dt }}
+    </li>
+    <li>
+        <b>state:</b>
+        {{ job.state }}
+    </li>
+    {% for key, value in job.items() %}
+    {% if key not in ('started', 'state', 'name', 'log') %}
+    <li>
+        <b>{{ key }}:</b>
+        {{ value }}
+    </li>
+    {% endif %}
+    {% endfor %}
+</ul>
+
+<h3>Files</h3>
+<ul>
+{% for path in files %}
+    <li>
+        <a href="{{ url_for('job_file', name=job.name, filename=path) }}">
+            {{ path }}
+        </a>
+    </li>
+{% endfor %}
+</ul>
+
+<h3>Log</h3>
+<ul class="log">
+{% for time, text in job.log %}
+    <li>
+        <time>{{ time | dt }}</time><br>
+        <pre>{{ text }}</pre>
+    </li>
+{% endfor %}
+</ul>
+{% endblock %}
