@@ -1,7 +1,7 @@
 import threading
 import subprocess
 import os
-from .db import ARCHIVE_NAME, CODE_DIR
+from .db import ARCHIVE_NAME, CODE_DIR, log
 from contextlib import contextmanager
 import traceback
 import shlex
@@ -27,10 +27,10 @@ def work(db, old_state, temp_state, done_state):
     try:
         yield job
     except WorkError as exc:
-        db._log(job, exc.message)
+        log(job, exc.message)
         db.set_state(job, 'failed')
     except Exception:
-        db._log(job, traceback.format_exc())
+        log(job, traceback.format_exc())
         db.set_state(job, 'failed')
     else:
         db.set_state(job, done_state)
@@ -89,7 +89,7 @@ class UnpackThread(WorkThread):
                 check=True,
                 capture_output=True,
             )
-            self.db._log(job, proc.stdout.decode('utf8', 'ignore'))
+            log(job, proc.stdout.decode('utf8', 'ignore'))
 
 
 class SeashellThread(WorkThread):
@@ -116,7 +116,7 @@ class SeashellThread(WorkThread):
             # Run the Seashell compiler.
             proc = run(compiler, input=code)
             if proc.stderr:
-                self.db._log(job, proc.stderr.decode('utf8', 'ignore'))
+                log(job, proc.stderr.decode('utf8', 'ignore'))
             hls_code = proc.stdout
 
             # A filename for the translated C code.

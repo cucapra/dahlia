@@ -16,6 +16,12 @@ class NotFoundError(Exception):
     pass
 
 
+def log(job, message):
+    """Add a message to the job's log.
+    """
+    job['log'].append((time.time(), message))
+
+
 class JobDB:
     def __init__(self, base_path):
         self.base_path = base_path
@@ -55,7 +61,7 @@ class JobDB:
         job = matches[0]
 
         job['state'] = new_state
-        self._log(job, 'acquired in state {}'.format(new_state))
+        log(job, 'acquired in state {}'.format(new_state))
         self.jobs.write_back([job])
 
         return job
@@ -70,11 +76,6 @@ class JobDB:
         })
         return self.jobs.get(doc_id=doc_id)
 
-    def _log(self, job, message):
-        """Add a message to the job's log.
-        """
-        job['log'].append((time.time(), message))
-
     def add(self, state):
         """Add a new job and return it.
         """
@@ -88,7 +89,7 @@ class JobDB:
         """
         with self.cv:
             job['state'] = state
-            self._log(job, 'state changed to {}'.format(state))
+            log(job, 'state changed to {}'.format(state))
             self.jobs.write_back([job])
             self.cv.notify_all()
 
