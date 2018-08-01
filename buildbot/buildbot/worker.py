@@ -75,6 +75,11 @@ def run(cmd, **kwargs):
             _cmd_str(cmd),
             _stream_text(exc.stdout, exc.stderr),
         ))
+    except FileNotFoundError as exc:
+        raise WorkError('command {} not found: {}'.format(
+            exc.filename,
+            _cmd_str(cmd),
+        ))
 
 
 def _log_cmd(job, cmd, proc, stdout=True, stderr=True):
