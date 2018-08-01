@@ -38,10 +38,15 @@ def work(db, old_state, temp_state, done_state):
 
 def _stream_text(*args):
     """Given some bytes objects, return a string listing all the
-    non-empty ones, delimited by a separator.
+    non-empty ones, delimited by a separator and starting with a
+    newline (if any part is nonempty).
     """
-    return '\n---\n'.join(b.decode('utf8', 'ignore')
-                          for b in args if b)
+    out = '\n---\n'.join(b.decode('utf8', 'ignore')
+                         for b in args if b)
+    if out:
+        return '\n' + out
+    else:
+        return ''
 
 
 def run(cmd, **kwargs):
@@ -61,7 +66,7 @@ def run(cmd, **kwargs):
             **kwargs
         )
     except subprocess.CalledProcessError as exc:
-        raise WorkError('command failed ({}): {}\n{}'.format(
+        raise WorkError('command failed ({}): {}{}'.format(
             exc.returncode,
             cmd_str,
             _stream_text(exc.stdout, exc.stderr),
