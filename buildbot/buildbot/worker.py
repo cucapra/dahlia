@@ -4,6 +4,7 @@ import os
 from .db import ARCHIVE_NAME, CODE_DIR
 from contextlib import contextmanager
 import traceback
+import shlex
 
 SEASHELL_EXT = '.ss'
 C_EXT = '.c'
@@ -38,7 +39,12 @@ def work(db, old_state, temp_state, done_state):
 def run(cmd, **kwargs):
     """Run a command, like `subprocess.run`, while capturing output. Log an
     appropriate error if the command fails.
+
+    `cmd` must be a list of arguments.
     """
+    # A string representation of the command for logging.
+    cmd_str = ' '.join(shlex.quote(p) for p in cmd)
+
     try:
         return subprocess.run(
             cmd,
@@ -48,7 +54,7 @@ def run(cmd, **kwargs):
         )
     except subprocess.CalledProcessError as exc:
         raise WorkError('command failed: {} (code {}):\n{}'.format(
-            ' '.join(shlex(p) for p in cmd),
+            cmd_str,
             exc.returncode,
             '\n---\n'.join(filter(lambda x: x, (
                 exc.stdout.decode('utf8', 'ignore'),
