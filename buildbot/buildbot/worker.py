@@ -97,72 +97,75 @@ def _log_cmd(job, cmd, proc, stdout=False, stderr=True):
 class WorkThread(threading.Thread):
     """A base class for all our worker threads, which run indefinitely
     to process tasks in an appropriate state.
+
+    The thread takes the database and configuration dictionaries as well
+    as a function to which these will be passed. When the thread runs,
+    the function is invoked repeatedly, indefinitely.
     """
 
-    def __init__(self, db, config):
+    def __init__(self, db, config, func):
         self.db = db
         self.config = config
+        self.func = func
         super(WorkThread, self).__init__(daemon=True)
 
     def run(self):
         while True:
-            self.work()
+            self.func(self.db, self.config)
 
 
-class UnpackThread(WorkThread):
-    """Unpack source code.
+def stage_unpack(db, config):
+    """Work stage: unpack source code.
     """
-    def work(self):
-        with work(self.db, 'uploaded', 'unpacking', 'unpacked') as job:
-            proc = subprocess.run(
-                ["unzip", "-d", CODE_DIR, "{}.zip".format(ARCHIVE_NAME)],
-                cwd=self.db.job_dir(job['name']),
-                check=True,
-                capture_output=True,
-            )
-            log(job, proc.stdout.decode('utf8', 'ignore'))
+    with work(db, 'uploaded', 'unpacking', 'unpacked') as job:
+        proc = subprocess.run(
+            ["unzip", "-d", CODE_DIR, "{}.zip".format(ARCHIVE_NAME)],
+            cwd=db.job_dir(job['name']),
+            check=True,
+            capture_output=True,
+        )
+        log(job, proc.stdout.decode('utf8', 'ignore'))
 
 
-class SeashellThread(WorkThread):
-    """Compile Seashell code to HLS.
+def stage_seashell(db, config):
+    """Work stage: compile Seashell code to HLS.
     """
-    def work(self):
-        compiler = self.config["SEASHELL_COMPILER"]
-        with work(self.db, 'unpacked', 'seashelling', 'seashelled') as job:
-            # Look for the Seashell source code.
-            code_dir = os.path.join(self.db.job_dir(job['name']), CODE_DIR)
-            for name in os.listdir(code_dir):
-                _, ext = os.path.splitext(name)
-                if ext == SEASHELL_EXT:
-                    source_name = name
-                    break
-            else:
-                raise WorkError('no source file found')
-            job['seashell_main'] = name
+    compiler = config["SEASHELL_COMPILER"]
+    with work(db, 'unpacked', 'seashelling', 'seashelled') as job:
+        # Look for the Seashell source code.
+        code_dir = os.path.join(db.job_dir(job['name']), CODE_DIR)
+        for name in os.listdir(code_dir):
+            _, ext = os.path.splitext(name)
+            if ext == SEASHELL_EXT:
+                source_name = name
+                break
+        else:
+            raise WorkError('no source file found')
+        job['seashell_main'] = name
 
-            # Read the source code.
-            with open(os.path.join(code_dir, source_name), 'rb') as f:
-                code = f.read()
+        # Read the source code.
+        with open(os.path.join(code_dir, source_name), 'rb') as f:
+            code = f.read()
 
-            # Run the Seashell compiler.
-            proc = run([compiler], input=code)
-            _log_cmd(job, [compiler], proc)
-            hls_code = proc.stdout
+        # Run the Seashell compiler.
+        proc = run([compiler], input=code)
+        _log_cmd(job, [compiler], proc)
+        hls_code = proc.stdout
 
-            # A filename for the translated C code.
-            base, _ = os.path.splitext(source_name)
-            c_name = base + C_EXT
-            job['c_main'] = c_name
+        # A filename for the translated C code.
+        base, _ = os.path.splitext(source_name)
+        c_name = base + C_EXT
+        job['c_main'] = c_name
 
-            # Write the C code.
-            with open(os.path.join(code_dir, c_name), 'wb') as f:
-                f.write(hls_code)
+        # Write the C code.
+        with open(os.path.join(code_dir, c_name), 'wb') as f:
+            f.write(hls_code)
 
 
 def work_threads(db, config):
     """Get a list of (unstarted) Thread objects for processing tasks.
     """
-    return [
-        UnpackThread(db, config),
-        SeashellThread(db, config),
-    ]
+    out = []
+    for stage in (stage_unpack, stage_seashell):
+        out.append(WorkThread(db, config, stage))
+    return out
