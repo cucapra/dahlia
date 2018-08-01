@@ -77,7 +77,7 @@ def run(cmd, **kwargs):
         ))
 
 
-def _log_cmd(job, cmd, proc, stdout=False, stderr=True):
+def _log_cmd(job, cmd, proc, stdout=True, stderr=True):
     """Log the output of a command run on behalf of a job.
 
     Provide the job, the command (a list of arguments), and the process
@@ -128,7 +128,7 @@ def stage_unpack(db, config):
 
 
 def stage_seashell(db, config):
-    """Work stage: compile Seashell code to HLS.
+    """Work stage: compile Seashell code to HLS C.
     """
     compiler = config["SEASHELL_COMPILER"]
     with work(db, 'unpacked', 'seashelling', 'seashelled') as job:
@@ -149,7 +149,7 @@ def stage_seashell(db, config):
 
         # Run the Seashell compiler.
         proc = run([compiler], input=code)
-        _log_cmd(job, [compiler], proc)
+        _log_cmd(job, [compiler], proc, stdout=False)
         hls_code = proc.stdout
 
         # A filename for the translated C code.
@@ -162,10 +162,23 @@ def stage_seashell(db, config):
             f.write(hls_code)
 
 
+def stage_hls(db, config):
+    """Work stage: compile C code with HLS toolchain.
+    """
+    with work(db, 'seashelled', 'hlsing', 'hlsed') as job:
+        code_dir = os.path.join(db.job_dir(job['name']), CODE_DIR)
+        c_main = job['c_main']
+
+        # Run the Xilinx SDSoC compiler.
+        cmd = ['sds++', '-c', c_main]
+        proc = run(cmd, cwd=code_dir)
+        _log_cmd(job, cmd, proc)
+
+
 def work_threads(db, config):
     """Get a list of (unstarted) Thread objects for processing tasks.
     """
     out = []
-    for stage in (stage_unpack, stage_seashell):
+    for stage in (stage_unpack, stage_seashell, stage_hls):
         out.append(WorkThread(db, config, stage))
     return out

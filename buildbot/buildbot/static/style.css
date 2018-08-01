@@ -37,6 +37,7 @@ ul.log time {
     color: #999;
     font-size: 80%;
     margin-right: 1rem;
+    white-space: nowrap;
 }
 ul.log pre {
 }
