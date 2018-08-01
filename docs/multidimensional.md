@@ -84,6 +84,8 @@ $$
 
 The general intuition behind the above formula is that when accessing the $i$th element of dimension $k$, we need to skip over i sections of $\text{a}_f$ that have size equal to the product of the remainder of the $n-k$ logical dimensions. (TODO: more intuition?)
 
+[//]: # (What is missing here?)
+
 **Example.** Consider a three-dimensional array $\text{a}$ defined like this:
 
 $$a:t[2][5][3] \text{ bank} (5)$$
@@ -92,13 +94,13 @@ The flattened version, $\text{a}_f$, would have size $N=30$. Say we make an acce
 
 **Typechecking.** Because we're using this flattened array, computing which bank is being accessed from $i_f$ can simply be accomplished with $i \bmod b$ or $i / b$, depending on banking structure. 
 
-In one-dimensional arrays we can arrange banks in two ways,
+In one-dimensional arrays we can arrange banks in two ways,  
 	- 1. cyclic partitioning/ interleaving (adjacent elements in different banks)
 
 | 0 5 10 15 20 25 | 1 6 11 16 21 26 | 2 7 12 17 22 27 | 3 8 13 18 23 28 | 4 9 14 19 24 29 | 
 | --- | --- | --- | --- | --- |
 
-We can use $i \bmod b$ to find the relevant bank for this variant. $i / b$ gives the index within the bank. 
+We can use $i \bmod b$ to find the relevant bank for this variant. $i / b$ gives the index within the bank.  
 	- 2. block partitioning/ chunking (adjacent elements in the same bank) 
 
 | 0 1 2 3 4 5 | 6 7 8 9 10 11 | 12 13 14 15 16 17 | 18 19 20 21 22 23 | 24 25 26 27 28 29 |  
@@ -115,7 +117,9 @@ i.e., we would access the 5th element in the 4th bank.
 Typechecking Array Accesses
 ------------------------
 
-In these document, we've been describing methods of determining the banks that array accesses make. Now, we'd like to expand on how this might be of use in the Seashell type system. In general, the problem we're trying to solve is the following: restrict programs such that banks of memories can only be accessed once, to reflect the fact that in actual hardware, these memories have limited access ports. One way we might be able to do this is by tracking a set of indices that are available for use in accessing an array. When an access with a particular index occurs, we mark it unreachable after that point. So, for any array $\text{a}$ in our typing context, associate it with some set $\text{I}$ of unconsumed indices, and when we access some index $i \in \text{I}$, the set of indices associated with $\text{a}$ becomes $\text{a} \setminus i$.
+In these document, we've been describing methods of determining the banks that array accesses make. Now, we'd like to expand on how this might be of use in the Seashell type system. In general, the problem we're trying to solve is the following: restrict programs such that banks of memories can only be accessed once, to reflect the fact that in actual hardware, these memories have limited access ports. One way we might be able to do this is by tracking a set of indices that are available for use in accessing an array. When an access with a particular index occurs, we mark it unreachable after that point. So, for any array $\text{a}$ in our typing context, associate it with some set $\text{I}$ of unconsumed indices, and when we access some index $i \in \text{I}$, the set of indices associated with $\text{a}$ becomes $\text{a} \setminus i$.  
+
+[//]: # (What does this mean?)  
 
 Now, we need a way to determine which accesses are being used and consumed when we use an index type. One way we could accomplish this is by generating every single index that our index types can represent, and then determine every single bank they access, using the methods we've described. However, we can make this process easier with the help of a few simplifying assumptions.
 
@@ -186,7 +190,7 @@ $$
 i_f = \sum_{j=0}^{n} (\{ s_j + |0..k_j| \times d_j \} \prod_{j'=j+1}^{n} \sigma_(j'))
 $$
 
-where $sigma_j is |0..k| \times |\frac{l}{k}..\frac{h}{k}|$  
+where $sigma_j$ is $|0..k| \times |\frac{l}{k}..\frac{h}{k}|$  
 
 (maybe this is multiplication of index type variables? But the order may matter, as it is not associative)  
 
@@ -203,7 +207,7 @@ $$
 (0 + 1 \times 1) \times 15 + (4 + 5 \times 0) \times 3 + (0 + 1 \times 2) \times 1 = 29
 $$
 
-As we noted before, we are more interested in the set of indices we can access with $a[i]$ than accessing a single element with index types. Therefore, we can extend the equation we derived earlier similarly,
+As we noted before, we are more interested in the set of indices we can access with $a[i]$ than accessing a single element with index types. Therefore, we can similarly extend the equation we derived earlier,
 
 
 $$
@@ -214,9 +218,11 @@ $$
 i_f = \{ \sum_{j=0}^{n} ( [ s_j + |0..k_j| \times d_j ] \prod_{j'=j+1}^{n} \sigma_(j')) ~|~ s_0 \in 0..k_0, s_1 \in 0..k_1, .. , s_n \in 0..k_n \}
 $$
 
-Note that rather than using s_j \in 0..k_j with a union operation, I have written all the static component sets. This way just felt more intuitive, but expressing with a union might be better. 
+Note that rather than using $s_j \in 0..k_j$ with a union operation, I have written all the static component sets. This way just felt more intuitive, but expressing with a union might be better. 
 
 **Example.** Let's try to access the same array as before with the dynamic index set $d=\{1,0,2\}$  
+
+[//]: # (Is this an accurate representation?)
 
 From the equation,  
 
@@ -229,7 +235,7 @@ Case studies as a sanity check
 
 **for a single dimension with no unrolling**
 
-$for n=1 and k=1
+for $n=1$ and $k=1$
 $$
 i_f = \{ \sum_{j=0}^{n} ( [ s_j + |0..k_j| \times d_j ] \prod_{j'=j+1}^{n} \sigma_(j')) ~|~ s_0 \in 0..k_0, s_1 \in 0..k_1, .. , s_n \in 0..k_n \}
 $$
@@ -241,16 +247,18 @@ $$
 
 $bank = d_0 \bmod b$
 
+__*This shows we'll be filling in the banks cyclically, as $i \bmod b$ was intended to do.*__
+
+**for banking factor = unroll factor**
+
 We use  
-proof for taking modulus inside an expression $(a+b) \bmod c = (a \bmod c + b \bmod c) \bmod c$
+proof for taking modulus inside an expression $(a+b) \bmod c = (a \bmod c + b \bmod c) \bmod c$ and  
 proof for $ab \mod ac = a(b \bmod c)$  
 for the following.  
  
-**for banking factor = unroll factor**
+Intuitively we know that if banking factor equals the unroll factor, in each access we'd be accessing different banks and also all the banks.  
 
-Intuitively we know that if banking factor equals the unroll factor, in each access we'd be accessing different and all banks.  
-
-$for n=1 and b=k
+for $n=1$ and $b=k$
 $$
 i_f = \{ \sum_{j=0}^{n} ( [ s_j + |0..k_j| \times d_j ] \prod_{j'=j+1}^{n} \sigma_(j')) ~|~ s_0 \in 0..k_0, s_1 \in 0..k_1, .. , s_n \in 0..k_n \}
 $$
@@ -281,22 +289,22 @@ $$
 = \{[s_0 \bmod k] ~|~ s_0 \in 0..k\}
 $$
 
-since $s_0$ is bounded by k $s_0 \bmod k$ is always smaller than k
+since $s_0$ is bounded by $k$, $s_0 \bmod k$ is always smaller than k
 $$
 bank = \{s_0 \in 0..k\} 
 $$
 
-This shows we'd access all the banks and each bank would be accessed only once.  
-
-We use $if a \in 0..b$  and $m$ is an integer, then $a \bmod mk = a \bmod k$
+__*This shows we'd access all the banks and each bank would be accessed only once*.__  
 
 **for banking factor = constant * unroll factor**
 
-Intuitively we know that if we have more banks than unroll factor, it should be possible to access different banks at a given time. For this case, where number of banks is a constant of multiple of unroll factor, we know that depending on the dynamic index we'd access a specific set of banks and that set would also have a unique set of banks.  
+We use if $a \in 0..b$ and $m$ is an integer, then $a \bmod mk = a \bmod k$ for the following.  
 
-Given a dynamic component $d$, unroll factor $k$ and banking factor $m \times k$ where $m$ is the constant multiple: 
+Intuitively we know that if we have more banks than the unroll factor, it should be possible to access different banks at a given time. For this case, where number of banks is a constant of multiple of unroll factor, we know that depending on the dynamic index we'd access a specific set of banks and that set would also have a unique set of banks.  
 
-since we'd be accessing different banks depending on the dynamic component, and we can simplify to a scenario where we'd be accessing different sets of banks of size of the unroll factor, we can say this set is $d \bmod m$. And we'd be accessing all \{0..k\} banks in that set, we can write the banks we are accessing as,  
+Given a dynamic component $d$, unroll factor $k$ and banking factor $m \times k$ where $m$ is the constant integer multiple: 
+
+Since we'd be accessing using interleaved strategy, we'd put adjacent elements to different banks. Since we have $m$ banks represented by each static component, we'd access these $m$ banks cyclically depending on the dynamic component. As we'd be accessing different sets of banks of size of the unroll factor depending on the dynamic component, we can say this set is $d \bmod m$. And we'd be accessing all \{0..k\} banks in that set, we can write the banks we are accessing as,  
 
 $$\{k \times (d \bmod m).. k \times (d \bmod m) + k\}$$
 
@@ -332,6 +340,6 @@ $$
 
 so our equation allows us to come to the same conclusion as the intuition.  
 
-[//]: # (not sure if this is generalizable and if my write up is sufficient)
+[//]: # (I think it does not need to be generalizable as we are referring to the interleaved case only and hopefully my write up is sufficient)
 
-
+This shows us that index type expressions we derived show the set of banks we access when the bank factor is $m$ times the unroll factor.  
