@@ -14,4 +14,4 @@ jobs:
 
       - run:
           name: Build Seashell
-          command: eval $(opam env) && dune build bin/ex.bc
+          command: eval $(opam env) && dune build && dune install
