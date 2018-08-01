@@ -49,15 +49,19 @@ def _stream_text(*args):
         return ''
 
 
+def _cmd_str(cmd):
+    """Given a list of command-line arguments, return a human-readable
+    string for logging.
+    """
+    return ' '.join(shlex.quote(p) for p in cmd)
+
+
 def run(cmd, **kwargs):
     """Run a command, like `subprocess.run`, while capturing output. Log an
     appropriate error if the command fails.
 
     `cmd` must be a list of arguments.
     """
-    # A string representation of the command for logging.
-    cmd_str = ' '.join(shlex.quote(p) for p in cmd)
-
     try:
         return subprocess.run(
             cmd,
@@ -68,9 +72,26 @@ def run(cmd, **kwargs):
     except subprocess.CalledProcessError as exc:
         raise WorkError('command failed ({}): {}{}'.format(
             exc.returncode,
-            cmd_str,
+            _cmd_str(cmd),
             _stream_text(exc.stdout, exc.stderr),
         ))
+
+
+def _log_cmd(job, cmd, proc, stdout=False, stderr=True):
+    """Log the output of a command run on behalf of a job.
+
+    Provide the job, the command (a list of arguments), and the process
+    (e.g., returned from `run`. Specify whether to include the stdout
+    and stderr streams.
+    """
+    out = '$ ' + _cmd_str(cmd)
+    streams = []
+    if stdout:
+        streams.append(proc.stdout)
+    if stderr:
+        streams.append(proc.stderr)
+    out += _stream_text(*streams)
+    log(job, out)
 
 
 class WorkThread(threading.Thread):
@@ -125,8 +146,7 @@ class SeashellThread(WorkThread):
 
             # Run the Seashell compiler.
             proc = run([compiler], input=code)
-            if proc.stderr:
-                log(job, proc.stderr.decode('utf8', 'ignore'))
+            _log_cmd(job, [compiler], proc)
             hls_code = proc.stdout
 
             # A filename for the translated C code.
