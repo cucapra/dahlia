@@ -82,7 +82,7 @@ def run(cmd, **kwargs):
         ))
 
 
-def _log_cmd(job, cmd, proc, stdout=True, stderr=True):
+def proc_log(job, cmd, proc, stdout=True, stderr=True):
     """Log the output of a command run on behalf of a job.
 
     Provide the job, the command (a list of arguments), and the process
@@ -97,6 +97,20 @@ def _log_cmd(job, cmd, proc, stdout=True, stderr=True):
         streams.append(proc.stderr)
     out += _stream_text(*streams)
     log(job, out)
+
+
+def runl(job, cmd, log_stdout=True, **kwargs):
+    """Run a command and log its output.
+
+    Return an exited process object, with output captured (in `stdout`
+    and `stderr`). The `log_stdout` flag determines whether the stdout
+    stream is included in the log; set this to False if the point of
+    running the command is to collect data from stdout. Additional
+    arguments are forwarded to `subprocess.run`.
+    """
+    proc = run(cmd, **kwargs)
+    proc_log(job, cmd, proc, stdout=log_stdout)
+    return proc
 
 
 class WorkThread(threading.Thread):
@@ -153,9 +167,7 @@ def stage_seashell(db, config):
             code = f.read()
 
         # Run the Seashell compiler.
-        proc = run([compiler], input=code)
-        _log_cmd(job, [compiler], proc, stdout=False)
-        hls_code = proc.stdout
+        hls_code = runl(job, [compiler], log_stdout=False, input=code).stdout
 
         # A filename for the translated C code.
         base, _ = os.path.splitext(source_name)
@@ -175,9 +187,7 @@ def stage_hls(db, config):
         c_main = job['c_main']
 
         # Run the Xilinx SDSoC compiler.
-        cmd = ['sds++', '-c', c_main]
-        proc = run(cmd, cwd=code_dir)
-        _log_cmd(job, cmd, proc)
+        runl(job, ['sds++', '-c', c_main], cwd=code_dir)
 
 
 def work_threads(db, config):
