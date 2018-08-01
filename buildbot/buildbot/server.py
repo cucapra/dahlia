@@ -14,7 +14,6 @@ TEXT_EXTENSIONS = [
     'c',
     'cpp',
     's',
-    'xml',
     'log',
     'jou',
 ]
