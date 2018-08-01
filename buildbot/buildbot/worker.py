@@ -36,6 +36,14 @@ def work(db, old_state, temp_state, done_state):
         db.set_state(job, done_state)
 
 
+def _stream_text(*args):
+    """Given some bytes objects, return a string listing all the
+    non-empty ones, delimited by a separator.
+    """
+    return '\n---\n'.join(b.decode('utf8', 'ignore')
+                          for b in args if b)
+
+
 def run(cmd, **kwargs):
     """Run a command, like `subprocess.run`, while capturing output. Log an
     appropriate error if the command fails.
@@ -53,13 +61,10 @@ def run(cmd, **kwargs):
             **kwargs
         )
     except subprocess.CalledProcessError as exc:
-        raise WorkError('command failed: {} (code {}):\n{}'.format(
-            cmd_str,
+        raise WorkError('command failed ({}): {}\n{}'.format(
             exc.returncode,
-            '\n---\n'.join(filter(lambda x: x, (
-                exc.stdout.decode('utf8', 'ignore'),
-                exc.stderr.decode('utf8', 'ignore'),
-            )))
+            cmd_str,
+            _stream_text(exc.stdout, exc.stderr),
         ))
 
 
@@ -114,7 +119,7 @@ class SeashellThread(WorkThread):
                 code = f.read()
 
             # Run the Seashell compiler.
-            proc = run(compiler, input=code)
+            proc = run([compiler], input=code)
             if proc.stderr:
                 log(job, proc.stderr.decode('utf8', 'ignore'))
             hls_code = proc.stdout
