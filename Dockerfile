@@ -5,7 +5,7 @@ MAINTAINER Adrian Sampson <asampson@cs.cornell.edu>
 RUN pip install pipenv
 
 # Add OCaml and enough dependencies to build OCaml packages.
-RUN apk add --no-cache opam ocaml-compiler-libs bash m4 build-base
+RUN apk add --no-cache opam ocaml-compiler-libs bash m4 build-base git
 RUN opam init -y
 
 # Our OCaml dependencies. We already have ocamlbuild, so we have a workaround:
