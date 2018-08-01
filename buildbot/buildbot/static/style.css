@@ -36,7 +36,7 @@ ul.log li {
 ul.log time {
     color: #999;
     font-size: 80%;
-    width: 11em;
+    margin-right: 1rem;
 }
 ul.log pre {
 }
