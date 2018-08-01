@@ -182,12 +182,13 @@ def stage_seashell(db, config):
 def stage_hls(db, config):
     """Work stage: compile C code with HLS toolchain.
     """
+    prefix = config["HLS_COMMAND_PREFIX"]
     with work(db, 'seashelled', 'hlsing', 'hlsed') as job:
         code_dir = os.path.join(db.job_dir(job['name']), CODE_DIR)
         c_main = job['c_main']
 
         # Run the Xilinx SDSoC compiler.
-        runl(job, ['sds++', '-c', c_main], cwd=code_dir)
+        runl(job, prefix + ['sds++', '-c', c_main], cwd=code_dir)
 
 
 def work_threads(db, config):
