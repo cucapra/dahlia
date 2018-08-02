@@ -45,11 +45,51 @@ $$
 i_f = \sum_{k=0}^{n} (i_k * (\prod_{k'=k+1}^{n} \sigma_{k'}))
 $$
 
-**Example 1.** Consider a three-dimensional array $\text{a}$ defined like this:
+**Example.** Consider a three-dimensional array $\text{a}$ defined like this:
 
 $$a:t[2][5][3] \text{ bank} (5)$$
 
 The flattened version, $\text{a}_f$, would have size $N=30$. Say we make an access $\text{a}[1][4][2]$. Using our formula we defined, we'd access $\text{a}_f$ with $i_f=29$.
+
+Logical Access with Index Types
+------------------------
+
+Now, we'd like to talk about which indices are represented when we make a logical array access using our index types. Consider an access to array $a$ (that we defined earlier in this document):
+
+$$ \text{a}[i_0]..[i_n]$$
+
+Here, $i_0$..$i_n$ are index types, where index $i_x$ is $\text{idx}\langle 0 .. k_x, l_x .. h_x  \rangle$. We'd like to determine the set of flattened indices $I_f$. Define $\tau(i)$ to be the static component of index type $i$, and $\delta(i)$ to be the dynamic component of $i$. Then we can write this set as:
+
+$$ I_f = \left\{ \sum_{x=0}^{n} \left[ (s_x + |0 .. k_x| \times d_x) * \left( \prod_{x'=x+1}^{n}{\sigma_{x'}} \right) \right] ~|~ s_x \in \tau(i_x), d_x \in \delta(i_x) \right\} $$
+
+It's a bit of a headache to look at, but basically it's capturing the idea of taking every set of literal index integers $a_0..a_n$ that are represented by our index types, and then applying our index-flattening formula and then taking the union of each of these results to produce one set of flattened indices.
+
+**Example.** Consider this program:
+
+    int a[2][2] bank(4)
+
+    for x in 0..2 unroll 2
+        for y in 0..2 unroll 2
+            access a[x][y]
+
+Here are the types of $x$ and $y$:
+
+ - $x : \text{idx}\langle 0 .. 2, 0 .. 1 \rangle$
+ - $y : \text{idx}\langle 0 .. 2, 0 .. 1 \rangle$
+
+So the set of flattened indices here would be:
+
+$$      \left\{ s + 5d ~|~ s \in 0 .. 5, d \in 0 .. 2 \right\} 
+   \cup \left\{ s + 4d ~|~ s \in 0 .. 4, d \in 0 .. 2 \right\} 
+   \cup \left\{ s + 3d ~|~ s \in 0 .. 3, d \in 0 .. 2 \right\} 
+$$
+
+Which would simplify to:
+
+$$
+(0 .. 9) \cup (0 .. 8) \cup (0 .. 6)
+$$
+
 
 Array Banking Strategies
 ------------------------
@@ -61,23 +101,21 @@ We are interested in the indices being used to access $\text{a}_f$, so we can re
 | 0 5 10 15 20 25 | 1 6 11 16 21 26 | 2 7 12 17 22 27 | 3 8 13 18 23 28 | 4 9 14 19 24 29 | 
 | --- | --- | --- | --- | --- |
 
-Then, given an index $i_f$ into $\text{a}_f$, we could determine the bank being accessed with $i \bmod b$. The index offset into the bank would be $i / b$.
+Then, given an index $i_f$ into $\text{a}_f$, we could determine the bank being accessed with $i_f \bmod b$. The index offset into the bank would be $i_f / b$.
 
 **Bank Chunking.** We could simply divide $a_f$ into banks, like this:
 
 | 0 1 2 3 4 5 | 6 7 8 9 10 11 | 12 13 14 15 16 17 | 18 19 20 21 22 23 | 24 25 26 27 28 29 |  
 | --- | --- | --- | --- | --- |  
 
-Then, we could use $i / b$ to find the relevant bank, and $i \bmod b$ to find the index within the bank. 
+Then, we could use $i_f / b$ to find the relevant bank, and $i_f \bmod b$ to find the index within the bank. 
 
-Both have use cases, but we won't go into those here.
-
-**Example 2.** Consider the array $a$ defined in example 1. Assume interleaving. If we index into $a_f$ with $i_f=29$, the bank accessed would be $29 \bmod 5 = 4$, and the index into this bank would be $29 / 5 = 5$. In other words, we would access the 5th element in the 4th bank.  
+Both have use cases, but we won't go into those here. For the remainder of this document we'll assume we're using bank interleaving, but we could have similar results with chunking.
 
 Typechecking Array Accesses
 ------------------------
 
-In these document, we've been describing methods of determining the banks that array accesses make. Now, we'd like to expand on how this might be of use in the Seashell type system. In general, the problem we're trying to solve is the following: restrict programs such that banks of memories can only be accessed once, to reflect the fact that in actual hardware, these memories have limited access ports. One way we might be able to do this is by tracking a set of indices that are available for use in accessing an array. When an access with a particular index occurs, we mark it unreachable after that point. So, for any array $\text{a}$ in our typing context, associate it with some set $\text{I}$ of unconsumed indices, and when we access some index $i \in \text{I}$, the set of indices associated with $\text{a}$ becomes $\text{a} \setminus i$.  
+In these document, we've been describing methods of determining the banks that array accesses make. Now, we'd like to expand on how this might be of use in the Seashell type system. In general, the problem we're trying to solve is the following: restrict programs such that banks of memories can only be accessed once, to reflect the fact that in actual hardware, these memories have limited access ports. One way we might be able to do this is by tracking a set of banks that are available for use in accessing an array. When an access with a particular bank occurs, we mark the bank unreachable after that point. So, for any array $\text{a}$ in our typing context, associate it with some set $B$ of unconsumed banks, and when we access some bank $b \in B$, the set of banks associated with $B$ becomes $B \setminus b$.  
 
 [//]: # (What does this mean?)  
 
