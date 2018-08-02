@@ -1,63 +1,26 @@
 ---
-title: Logical Accesses to Multidimensional Arrays in Banked Memories
+title: Logical Memory Accesses
 ---
+
+In this document, we'll describe how Seashell typechecks logical array accesses using [index types](https://capra.cs.cornell.edu/seashell/docs/indextype.html), and we'll argue that our methods are valid.
+
 Index Type Recap
 ----------------------
 
-[Index types](https://capra.cs.cornell.edu/seashell/docs/indextype.html) allow us to combine static and dynamic information about the indices we're accessing in unrolled loops. For instance, consider the following example: 
+Index types allow us to combine static and dynamic information about the indices we're accessing in unrolled loops. For instance, consider the following example: 
 
     for i in l..h unroll k
         access a[i]
 
-The variable $\text{i}$ accessing array $\text{a}$ has type $\text{idx}\langle 0 .. k, \frac{l}{k} .. \frac{h}{k} \rangle$. This type is comprised of a *static component*, $0 .. k$, and a *dynamic component*, $\frac{l}{k} .. \frac{h}{k}$. Following set represents this set of indices,
+The variable $\text{i}$ accessing array $\text{a}$ has type $\text{idx}\langle 0 .. k, \frac{l}{k} .. \frac{h}{k} \rangle$. This type is comprised of a *static component*, $0 .. k$, and a *dynamic component*, $\frac{l}{k} .. \frac{h}{k}$. The set representation of this index type is:
 
 $$
 \{ s + |0..k| \times d ~|~ s \in 0..k, d \in \frac{l}{k}..\frac{h}{k}\}
 $$
 
-**Example.** Consider a loop with $l=0$ and $h=30$ with an unroll factor $5$. The set of indeces can be expressed in index types as,
+For Seashell, it's important to know exactly which indices are being used given a particular array access, which may be inside an unrolled loop. Seashell's typechecker uses index types to determine these indices. Seashell allows for two styles of array accesses: *implicit* and *explicit*. For the latter, which do not appear inside unrolled loops, the programmer specifies a statically known bank number and a potentially dynamic index offset into that bank. An index type representation of such an access would have trivial single-value static and dynamic components (rather than ranges), as such an access represents only a single value.
 
-
-$$
-\{ s + |0..5| \times d ~|~ s \in 0..5, d \in \frac{0}{5}..\frac{30}{5}\}
-$$
-
-$$
-\{ s + 5 \times d ~|~ s \in 0..5, d \in 0..6\}
-$$
-
-Since the static component should be unique at runtime, for every dynamic value $d$ that $\text{i}$ takes on, $\text{i}$ represents the following set of indices:
-
-$$
-\{ s + |0..k| \times d ~|~ s \in 0..k\}
-$$
-
-This set is very important in our subsequent discussion (in any index type discussion). When we access an $i$th element $a[i]$, we would be accessing this set rather than a single element. Our type checking would work on this observation to check for interesting qualities such as safety. 
-
-[//]: # (not entirely happy with this bit)
-
-**Example.** We can create a non-unrolled loop with explicit array accessing using index types. This means we can use the dynamic component dynamcally (of course!), but static component should be explicit. If we consider the same loop as before, for a given dynamic index, we can access the following set of array indices,
-
-$$
-\{ s + 5 \times d ~|~ s \in 0..5\}
-$$
-
-$if d=5$
-$$
-\{ 25,26,27,28,29 \}
-$$
-
-Just as when accessing with array indices, we can explicitly specify a single element using index types by providing both static and dynamic components $\langle s,d \rangle$,
-
-$$
-\{ s + |0..k| \times d \}
-$$
-
-**Example.** Using the same array as before, if we access element $\langle 4,5 \rangle$,
-
-$$
-\{ 4 + 5 \times 5\} = \{29\}
-$$
+For the purposes of this document, we're concerned with the index types used to represent the indices involved in *implicit* accesses.
 
 Multi Dimensional Arrays
 ------------------------
