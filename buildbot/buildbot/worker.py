@@ -19,13 +19,28 @@ class WorkError(Exception):
 
 
 @contextmanager
+def chdir(path):
+    """Temporarily change the working directory (then change back).
+    """
+    old_dir = os.getcwd()
+    os.chdir(path)
+    yield
+    os.chdir(old_dir)
+
+
+@contextmanager
 def work(db, old_state, temp_state, done_state):
     """A context manager for acquiring a job temporarily in an
     exclusive way to work on it.
+
+    While inside the context, the working directory is changed to the
+    job's private work directory.
     """
     job = db.acquire(old_state, temp_state)
+    job_dir = db.job_dir(job['name'])
     try:
-        yield job
+        with chdir(job_dir):
+            yield job
     except WorkError as exc:
         log(job, exc.message)
         db.set_state(job, 'failed')
@@ -137,13 +152,20 @@ def stage_unpack(db, config):
     """Work stage: unpack source code.
     """
     with work(db, 'uploaded', 'unpacking', 'unpacked') as job:
-        proc = subprocess.run(
-            ["unzip", "-d", CODE_DIR, "{}.zip".format(ARCHIVE_NAME)],
-            cwd=db.job_dir(job['name']),
-            check=True,
-            capture_output=True,
-        )
-        log(job, proc.stdout.decode('utf8', 'ignore'))
+        # Unzip the archive into the code directory.
+        runl(job, ["unzip", "-d", CODE_DIR, "{}.zip".format(ARCHIVE_NAME)])
+
+        # Check for single-directory zip files: if the code directory
+        # only contains one subdirectory now, "collapse" it.
+        code_contents = os.listdir(CODE_DIR)
+        if len(code_contents) == 1:
+            path = os.path.join(CODE_DIR, code_contents[0])
+            if os.path.isdir(path):
+                print(path, os.listdir(path))
+                for fn in os.listdir(path):
+                    os.rename(os.path.join(path, fn),
+                              os.path.join(CODE_DIR, fn))
+                log(job, 'collapsed directory {}'.format(code_contents[0]))
 
 
 def stage_seashell(db, config):
@@ -184,11 +206,9 @@ def stage_hls(db, config):
     """
     prefix = config["HLS_COMMAND_PREFIX"]
     with work(db, 'seashelled', 'hlsing', 'hlsed') as job:
-        code_dir = os.path.join(db.job_dir(job['name']), CODE_DIR)
-        c_main = job['c_main']
-
         # Run the Xilinx SDSoC compiler.
-        runl(job, prefix + ['sds++', '-c', c_main], cwd=code_dir)
+        c_main = job['c_main']
+        runl(job, prefix + ['sds++', '-c', c_main], cwd=CODE_DIR)
 
 
 def work_threads(db, config):
