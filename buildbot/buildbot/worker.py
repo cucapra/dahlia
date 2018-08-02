@@ -137,13 +137,11 @@ def stage_unpack(db, config):
     """Work stage: unpack source code.
     """
     with work(db, 'uploaded', 'unpacking', 'unpacked') as job:
-        proc = subprocess.run(
+        runl(
+            job,
             ["unzip", "-d", CODE_DIR, "{}.zip".format(ARCHIVE_NAME)],
             cwd=db.job_dir(job['name']),
-            check=True,
-            capture_output=True,
         )
-        log(job, proc.stdout.decode('utf8', 'ignore'))
 
 
 def stage_seashell(db, config):
