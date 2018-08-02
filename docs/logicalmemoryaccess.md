@@ -18,11 +18,11 @@ $$
 \{ s + |0..k| \times d ~|~ s \in 0..k, d \in \frac{l}{k}..\frac{h}{k}\}
 $$
 
-For Seashell, it's important to know exactly which indices are being used given a particular array access, which may be inside an unrolled loop. Seashell's typechecker uses index types to determine these indices. Seashell allows for two styles of array accesses: *implicit* and *explicit*. For the latter, which do not appear inside unrolled loops, the programmer specifies a statically known bank number and a potentially dynamic index offset into that bank. An index type representation of such an access would have trivial single-value static and dynamic components (rather than ranges), as such an access represents only a single value.
+**Usage.** For Seashell, it's important to know exactly which indices are being used given a particular array access, which may be inside an unrolled loop. Seashell's typechecker uses index types to determine these indices. Seashell allows for two styles of array accesses: *implicit* and *explicit*. For the latter, which do not appear inside unrolled loops, the programmer specifies a statically known bank number and a potentially dynamic index offset into that bank. An index type representation of such an access would have trivial single-value static and dynamic components (rather than ranges), as such an access represents only a single value.
 
 For the purposes of this document, we're concerned with the index types used to represent the indices involved in *implicit* accesses.
 
-Multi Dimensional Arrays
+Logical Multi-Dimensional Arrays
 ------------------------
 
 As far as we're concerned, HLS only supports the use of one-dimensional arrays. With Seashell, we'd like to offer some abstractions to make expressing logical computations on multi-dimensional matrices easier. We'll define Seashell $n$-dimensonal arrays like this:
@@ -36,46 +36,43 @@ Here, $\text{a}$ is the name of our array; the contents following the colon tell
 Under the hood (that is, when we translate our Seashell program to HLS C), this multi-dimensional array is translated to a one-dimensional array. This flattened array (which we'll call $\text{a}_f)$ has size equal to the product of our Seashell array dimensions:
 
 $$
-\text{a}:t[\sigma_0][\sigma_1]..[\sigma_n] \equiv \text{a}_f:t[{(\prod_{i=0}^{n} \sigma_i)} ]
+\text{a}:t[\sigma_0][\sigma_1]..[\sigma_n] \text{ bank}(b) \equiv \text{a}_f:t[{(\prod_{i=0}^{n} \sigma_i)} ] \text{ bank}(b)
 $$
 
-Logical accesses to a Seashell multi-dimensonal array look like this: $\text{a}[i_0][i_1]..[i_n]$. We'd like to access these higher-dimensional arrays with our Seashell index types, but to first examine how working with these arrays might work, it would be useful to first consider $i_0..i_n$ as plain old integers. So now, for the purposes of typechecking our array accesses, we'd like to know exactly which indices we're using to access this flattened array when we make our logical accesses. So to compute what our flattened index $i_f$ would be based on our logical indices $i_0..i_n$, we could use the following method: 
+Logical accesses to a Seashell multi-dimensonal array look like this: $\text{a}[i_0][i_1]..[i_n]$. We'd like to access these higher-dimensional arrays with our Seashell index types, but to first examine how working with these arrays might work, it would be useful to first consider $i_0..i_n$ as plain old integers. To compute what our flattened index $i_f$ would be based on our logical indices $i_0..i_n$, we could use the following method: 
 
 $$
-i_f = \sum_{k=0}^{n} (i_k \prod_{k'=k+1}^{n} \sigma_(k'))
+i_f = \sum_{k=0}^{n} (i_k * (\prod_{k'=k+1}^{n} \sigma_{k'}))
 $$
 
-The general intuition behind the above formula is that when accessing the $i$th element of dimension $k$, we need to skip over i sections of $\text{a}_f$ that have size equal to the product of the remainder of the $n-k$ logical dimensions. (TODO: more intuition?)
-
-[//]: # (What is missing here?)
-
-**Example.** Consider a three-dimensional array $\text{a}$ defined like this:
+**Example 1.** Consider a three-dimensional array $\text{a}$ defined like this:
 
 $$a:t[2][5][3] \text{ bank} (5)$$
 
 The flattened version, $\text{a}_f$, would have size $N=30$. Say we make an access $\text{a}[1][4][2]$. Using our formula we defined, we'd access $\text{a}_f$ with $i_f=29$.
 
-**Typechecking.** Because we're using this flattened array, computing which bank is being accessed from $i_f$ can simply be accomplished with $i \bmod b$ or $i / b$, depending on banking structure. 
+Array Banking Strategies
+------------------------
 
-In one-dimensional arrays we can arrange banks in two ways,  
-	- 1. cyclic partitioning/ interleaving (adjacent elements in different banks)
+We are interested in the indices being used to access $\text{a}_f$, so we can restrict the banks that a Seashell programmer can access. However, which banks the programmer accesses is influenced by the array banking strategy. Here are a few ways we could bank $\text{a}_f$. 
+
+**Bank Interleaving.** We could interleave the elements of $\text{a}_f$ among its banks, like this (each rectangle represents a bank):
 
 | 0 5 10 15 20 25 | 1 6 11 16 21 26 | 2 7 12 17 22 27 | 3 8 13 18 23 28 | 4 9 14 19 24 29 | 
 | --- | --- | --- | --- | --- |
 
-We can use $i \bmod b$ to find the relevant bank for this variant. $i / b$ gives the index within the bank.  
-	- 2. block partitioning/ chunking (adjacent elements in the same bank) 
+Then, given an index $i_f$ into $\text{a}_f$, we could determine the bank being accessed with $i \bmod b$. The index offset into the bank would be $i / b$.
+
+**Bank Chunking.** We could simply divide $a_f$ into banks, like this:
 
 | 0 1 2 3 4 5 | 6 7 8 9 10 11 | 12 13 14 15 16 17 | 18 19 20 21 22 23 | 24 25 26 27 28 29 |  
 | --- | --- | --- | --- | --- |  
 
-We can use $i / b$ to find the relevant bank for this variant. $i \bmod b$ gives the index within the bank. 
+Then, we could use $i / b$ to find the relevant bank, and $i \bmod b$ to find the index within the bank. 
 
-A detailed note how these are used and why they are needed can be found at [status log](https://github.com/cucapra/seashell/wiki/Test-status-log#array-partitioning-seems-to-need-different-types-of-partitioning)
+Both have use cases, but we won't go into those here.
 
-**Example.** For the same array we considered with $i_f=29$, 
-bank is $29 \bmod 5 = 4$ and bank index is $29 / 5 = 5$. 
-i.e., we would access the 5th element in the 4th bank.  
+**Example 2.** Consider the array $a$ defined in example 1. Assume interleaving. If we index into $a_f$ with $i_f=29$, the bank accessed would be $29 \bmod 5 = 4$, and the index into this bank would be $29 / 5 = 5$. In other words, we would access the 5th element in the 4th bank.  
 
 Typechecking Array Accesses
 ------------------------
