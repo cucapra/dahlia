@@ -152,10 +152,20 @@ def stage_unpack(db, config):
     """Work stage: unpack source code.
     """
     with work(db, 'uploaded', 'unpacking', 'unpacked') as job:
-        runl(
-            job,
-            ["unzip", "-d", CODE_DIR, "{}.zip".format(ARCHIVE_NAME)],
-        )
+        # Unzip the archive into the code directory.
+        runl(job, ["unzip", "-d", CODE_DIR, "{}.zip".format(ARCHIVE_NAME)])
+
+        # Check for single-directory zip files: if the code directory
+        # only contains one subdirectory now, "collapse" it.
+        code_contents = os.listdir(CODE_DIR)
+        if len(code_contents) == 1:
+            path = os.path.join(CODE_DIR, code_contents[0])
+            if os.path.isdir(path):
+                print(path, os.listdir(path))
+                for fn in os.listdir(path):
+                    os.rename(os.path.join(path, fn),
+                              os.path.join(CODE_DIR, fn))
+                log(job, 'collapsed directory {}'.format(code_contents[0]))
 
 
 def stage_seashell(db, config):
