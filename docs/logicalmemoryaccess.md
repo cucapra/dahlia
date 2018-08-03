@@ -42,7 +42,7 @@ $$
 Logical accesses to a Seashell multi-dimensonal array look like this: $\text{a}[i_0][i_1]..[i_n]$. We'd like to access these higher-dimensional arrays with our Seashell index types, but to first examine how working with these arrays might work, it would be useful to first consider $i_0..i_n$ as plain old integers. To compute what our flattened index $i_f$ would be based on our logical indices $i_0..i_n$, we could use the following method: 
 
 $$
-i_f = \sum_{k=0}^{n} (i_k * (\prod_{k'=k+1}^{n} \sigma_{k'}))
+i_f = \sum_{k=0}^{n} \left[i_k * \left(\prod_{k'=k+1}^{n} \sigma_{k'} \right) \right]
 $$
 
 **Example.** Consider a three-dimensional array $\text{a}$ defined like this:
@@ -77,10 +77,16 @@ Here are the types of $x$ and $y$:
  - $x : \text{idx}\langle 0 .. 2, 0 .. 1 \rangle$
  - $y : \text{idx}\langle 0 .. 2, 0 .. 1 \rangle$
 
-TODO: finish this example.
+So we can compute $I_f$ like this:
+
+$$
+\{ (0*2 + 0*1), (0*2 + 1*1), (1*2 + 0*1), (1*2 + 1*1) \} = \{ 0, 1, 2, 3 \}
+$$
 
 Array Banking Strategies
 ------------------------
+
+TODO: make more involved example in previous section, then use same array in these banking examples.
 
 We are interested in the indices being used to access $\text{a}_f$, so we can restrict the banks that a Seashell programmer can access. However, which banks the programmer accesses is influenced by the array banking strategy. Here are a few ways we could bank $\text{a}_f$. 
 
@@ -126,7 +132,7 @@ $$
 \{ s + k * d ~|~ s \in 0 .. k \}
 $$
 
-TODO: show that this set is actually a special case of the set we mentioned in the Logical Array Access section
+Note that we're operating on a 1-D array, so this set already represents our "flattened indices". This is a special case of the $I_f$ definition we provided earlier.
 
 We mentioned earlier that assuming an interleaved banking style, we can determine the bank an index accesses with $i \bmod b$, where $i$ is some integer and $b$ is the number of banks. So the banks that the set above accesses would be:
 
