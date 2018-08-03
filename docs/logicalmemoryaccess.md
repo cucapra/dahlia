@@ -77,19 +77,7 @@ Here are the types of $x$ and $y$:
  - $x : \text{idx}\langle 0 .. 2, 0 .. 1 \rangle$
  - $y : \text{idx}\langle 0 .. 2, 0 .. 1 \rangle$
 
-So the set of flattened indices here would be:
-
-$$      \left\{ s + 5d ~|~ s \in 0 .. 5, d \in 0 .. 2 \right\} 
-   \cup \left\{ s + 4d ~|~ s \in 0 .. 4, d \in 0 .. 2 \right\} 
-   \cup \left\{ s + 3d ~|~ s \in 0 .. 3, d \in 0 .. 2 \right\} 
-$$
-
-Which would simplify to:
-
-$$
-(0 .. 9) \cup (0 .. 8) \cup (0 .. 6)
-$$
-
+TODO: finish this example.
 
 Array Banking Strategies
 ------------------------
@@ -117,9 +105,9 @@ Typechecking Array Accesses
 
 In these document, we've been describing methods of determining the banks that array accesses make. Now, we'd like to expand on how this might be of use in the Seashell type system. In general, the problem we're trying to solve is the following: restrict programs such that banks of memories can only be accessed once, to reflect the fact that in actual hardware, these memories have limited access ports. One way we might be able to do this is by tracking a set of banks that are available for use in accessing an array. When an access with a particular bank occurs, we mark the bank unreachable after that point. So, for any array $\text{a}$ in our typing context, associate it with some set $B$ of unconsumed banks, and when we access some bank $b \in B$, the set of banks associated with $B$ becomes $B \setminus b$.  
 
-[//]: # (What does this mean?)  
+Now, we need a way to determine which accesses are being used and consumed when we use an index type. One way we could accomplish this is by generating every single index that our index types can represent, and then determine every single bank they access, using the methods we've described. However, we'd like to simplify this process.
 
-Now, we need a way to determine which accesses are being used and consumed when we use an index type. One way we could accomplish this is by generating every single index that our index types can represent, and then determine every single bank they access, using the methods we've described. However, we can make this process easier with the help of a few simplifying assumptions.
+First, we'll describe how we might typecheck index type array accesses when the array is one-dimensional.
 
 **Assumption 1.** Our index types, as we've defined them, allow for static components to be any integer range $l_s .. h_s$. We can restrict this so that $l_s=0$, which is all we really need for practical purposes: if a loop has an unroll factor $k$, then the static component of an index variable for this loop would certainly just be $0 .. k$. This just makes reasoning about which indices are being accessed a little bit easier.
 
