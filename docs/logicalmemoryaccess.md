@@ -105,15 +105,18 @@ Typechecking Array Accesses
 
 In these document, we've been describing methods of determining the banks that array accesses make. Now, we'd like to expand on how this might be of use in the Seashell type system. In general, the problem we're trying to solve is the following: restrict programs such that banks of memories can only be accessed once, to reflect the fact that in actual hardware, these memories have limited access ports. One way we might be able to do this is by tracking a set of banks that are available for use in accessing an array. When an access with a particular bank occurs, we mark the bank unreachable after that point. So, for any array $\text{a}$ in our typing context, associate it with some set $B$ of unconsumed banks, and when we access some bank $b \in B$, the set of banks associated with $B$ becomes $B \setminus b$.  
 
-Now, we need a way to determine which accesses are being used and consumed when we use an index type. One way we could accomplish this is by generating every single index that our index types can represent, and then determine every single bank they access, using the methods we've described. However, we'd like to simplify this process.
+Now, we need a way to determine which accesses are being used and consumed when we use an index type. One way we could accomplish this is by generating every single index that our index types can represent, and then determine every single bank they access, using the methods we've described. However, we'd like to simplify this process. We'd like to come up with some simpler type rules that enforce memory access safety.
 
-First, we'll describe how we might typecheck index type array accesses when the array is one-dimensional.
+### Type Rules for One-Dimensional Access
+First, we'll make the assumption that any static component of an index type will start at 0, that is, any static component will be some range $0 .. k$. This will make reasoning about the indices we're accessing a little bit easier. 
 
-**Assumption 1.** Our index types, as we've defined them, allow for static components to be any integer range $l_s .. h_s$. We can restrict this so that $l_s=0$, which is all we really need for practical purposes: if a loop has an unroll factor $k$, then the static component of an index variable for this loop would certainly just be $0 .. k$. This just makes reasoning about which indices are being accessed a little bit easier.
+**Type Rule 1.** For any one-dimensional array access into array $\text{a}$ with index type $i$, we will only consider it valid if the size of the static component of $i$ divides into the banking factor of $\text{a}$.
 
-**Assumption 2.** If we restrict our programs so that we only allow for array accesses where the index type static component length matches the unroll factor, then typechecking becomes much easier. Consider the following example, where $\text{a}$ is an array with length $s$ and banking factor $k$:
+**Type Rule 2.** Allow only one legal usage of index type $i$ to access $\text{a}$, if rule (1) holds.
 
-    int a[s bank(k)]
+We'd now like to discuss some arguments that show our rules only allow valid array accesses. Consider the following example:
+
+    int a[s bank(m*k)]
     for i in 0..n unroll k
         access a[i]
 
@@ -123,30 +126,29 @@ $$
 \{ s + k * d ~|~ s \in 0 .. k \}
 $$
 
-We could then compute the banks being accessed like this (assuming the interleaved banking structure):
+TODO: show that this set is actually a special case of the set we mentioned in the Logical Array Access section
+
+We mentioned earlier that assuming an interleaved banking style, we can determine the bank an index accesses with $i \bmod b$, where $i$ is some integer and $b$ is the number of banks. So the banks that the set above accesses would be:
 
 $$
-\{ s \bmod b + (k * d) \bmod b ~|~ s \in 0 .. k \}
+\{ ((s \bmod mk) + (kd \bmod mk)) \bmod mk ~|~ s \in 0 .. k \}
 $$
 
-And because of our assumption (that is, that $b=k$), we have:
+We know a couple things that help us rewrite this set:
+
+  - $s < mk$
+  - $kd \bmod mk = k (d \bmod m)$ 
+
+So then, we have:
 
 $$
-\{ s \bmod k + (k * d) \bmod k ~|~ s \in 0 .. k \} \rightarrow 0 .. k
+\{ s + k (d \bmod m) ~|~ s \in 0 .. k \}
 $$
 
-So, from this we can conclude that when the banking factor matches the unroll factor of an index type, we access every bank when we use an index type for accessing an array. In other words, if an index type has a static component $l_s..h_s$, and it's indexing into some array $\text{a}$ with banking factor $b$, then if $|l_s..h_s|=b$, the type system consumes every bank of $\text{a}$, disallowing any further accesses.
-
-**Assumption 2, weakened.** We might want to relax this assumption to allow situations where the unroll factor divides into the banking factor. Consider the following example: 
-
-    int a[s bank(m*k)]
-    for i in 0..n unroll k
-        access a[i]
-
-Similar to our previous example, $\text{i}$ has type $\text{idx}\langle 0 .. k, 0 .. \frac{n}{mk} \rangle$. The set interpretation for a particular $d \in 0..\frac{n}{mk}$ would be: 
+We can then express this as a range:
 
 $$
-\{ s + mk * d ~|~ s  \in 0 .. k \} 
+k (d \bmod m) .. \left( k (d \bmod m) + k \right)
 $$
 
 
