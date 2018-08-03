@@ -62,7 +62,7 @@ Here, $i_0$..$i_n$ are index types, where index $i_x$ is $\text{idx}\langle 0 ..
 
 $$ I_f = \left\{ \sum_{x=0}^{n} \left[ (s_x + |0 .. k_x| \times d_x) * \left( \prod_{x'=x+1}^{n}{\sigma_{x'}} \right) \right] ~|~ s_x \in \tau(i_x), d_x \in \delta(i_x) \right\} $$
 
-It's a bit of a headache to look at, but basically it's capturing the idea of taking every set of literal index integers $a_0..a_n$ that are represented by our index types, and then applying our index-flattening formula and then taking the union of each of these results to produce one set of flattened indices.
+It's a bit of a headache to look at, but basically it's capturing the idea of taking every set of literal index integers $a_0..a_n$ that are represented by our index types, and then applying our index-flattening formula, and then taking the union of each of these results to produce one set of flattened indices.
 
 **Example.** Consider this program:
 
@@ -108,7 +108,7 @@ In these document, we've been describing methods of determining the banks that a
 Now, we need a way to determine which accesses are being used and consumed when we use an index type. One way we could accomplish this is by generating every single index that our index types can represent, and then determine every single bank they access, using the methods we've described. However, we'd like to simplify this process. We'd like to come up with some simpler type rules that enforce memory access safety.
 
 ### Type Rules for One-Dimensional Access
-First, we'll make the assumption that any static component of an index type will start at 0, that is, any static component will be some range $0 .. k$. This will make reasoning about the indices we're accessing a little bit easier. 
+First, we'll make the assumption that any static component of an index type will start at $0$, that is, any static component will be some range $0 .. k$. This will make reasoning about the indices we're accessing a little bit easier. 
 
 **Type Rule 1.** For any one-dimensional array access into array $\text{a}$ with index type $i$, we will only consider it valid if the size of the static component of $i$ divides into the banking factor of $\text{a}$.
 
@@ -137,7 +137,7 @@ $$
 We know a couple things that help us rewrite this set:
 
   - $s < mk$
-  - $kd \bmod mk = k (d \bmod m)$ 
+  - $kd \bmod mk = k (d \bmod m)$ [[proof](https://imgur.com/a/9cEQHGr)]
 
 So then, we have:
 
@@ -151,184 +151,9 @@ $$
 k (d \bmod m) .. \left( k (d \bmod m) + k \right)
 $$
 
+This range shows us that our index type would be accessing $k$ distinct banks at any time, and we'd never access some non-existent bank. For $d=0$ we'd access $0..k$, and for $d=(m-1)$ we'd access $(mk-k)..mk$. Allowing accesses that follow rule (1) would guarantee this. Then, because we can't know what $d$ is statically, we can follow rule (2) and conservatively disallow any further accesses, preventing banks from being accessed multiple times.
 
-Using index types for multi dimensional array accesses
-------------------------------------------------------
+### Type Rules for Multi-Dimensional Access
 
-So far we have recapped index types in a single dimensional sense and we have explored how logical accessing in multi-dimensional arrays are translated to a single dimension in hardware, thereby making it easy to type check for banking.  
-
-However, it'll be nice to use the same type (index type) for both single and multi dimensions. Moreover, using index types in multi-dimensions may allow us to finely bank such an array in different dimensions (we can only do block and cyclic in single dimension. However, nested loops with unroll factors need more flexible banking strutures.)  
-
-So, let's try to extend index types to a multi-dimensional array indices.  
-
-from the recap,  
- 
-$$
-i = \{ s + |0..k| \times d \}
-$$
-
-from multi-dimensional access,
-
-$$
-i_f = \sum_{j=0}^{n} (i_j \prod_{j'=j+1}^{n} \sigma_(j'))
-$$
-
-therefore,  
-$$
-i_f = \sum_{j=0}^{n} (\{ s_j + |0..k_j| \times d_j \} \prod_{j'=j+1}^{n} \sigma_(j'))
-$$
-
-where $sigma_j$ is $|0..k| \times |\frac{l}{k}..\frac{h}{k}|$  
-
-(maybe this is multiplication of index type variables? But the order may matter, as it is not associative)  
-
-**Example.** Let's consider an access to the array we considered earlier. 
-$$a:t[2][5][3] \text{ bank} (5)$$
-
-Since the size of dimension 2 fits nicely with the banking factor, let's say we bank in terms of dimension 2. i.e., we put each set of elements in dim 2 in a different bank.  
-
-Let's try accessing the same element as we tried before, $a[1][4][2]$. In index type indexing, knowing banks represent dim 2, we can translate this to $a[\langle 0,1 \rangle][\langle 4,0 \rangle][\langle 0,2 \rangle]$.  
-
-Using the equation we derived,  
-
-$$
-(0 + 1 \times 1) \times 15 + (4 + 5 \times 0) \times 3 + (0 + 1 \times 2) \times 1 = 29
-$$
-
-As we noted before, we are more interested in the set of indices we can access with $a[i]$ than accessing a single element with index types. Therefore, we can similarly extend the equation we derived earlier,
-
-
-$$
-\{ s + |0..k| \times d ~|~ s \in 0..k\}
-$$
-
-$$
-i_f = \{ \sum_{j=0}^{n} ( [ s_j + |0..k_j| \times d_j ] \prod_{j'=j+1}^{n} \sigma_(j')) ~|~ s_0 \in 0..k_0, s_1 \in 0..k_1, .. , s_n \in 0..k_n \}
-$$
-
-Note that rather than using $s_j \in 0..k_j$ with a union operation, I have written all the static component sets. This way just felt more intuitive, but expressing with a union might be better. 
-
-**Example.** Let's try to access the same array as before with the dynamic index set $d=\{1,0,2\}$  
-
-[//]: # (Is this an accurate representation?)
-
-From the equation,  
-
-$$
-\{ (s_0 + 1 \times 1) \times 15 + (s_1 + 5 \times 0) \times 3 + (s_2 + 1 \times 2) \times 1 ~|~ s_0 \in 0..1, s_1 \in 0..5, s_2 \in 0..1 \} = \{17,20,23,26,29\}
-$$
-
-Case studies as a sanity check
-------------------------------
-
-**for a single dimension with no unrolling**
-
-for $n=1$ and $k=1$
-$$
-i_f = \{ \sum_{j=0}^{n} ( [ s_j + |0..k_j| \times d_j ] \prod_{j'=j+1}^{n} \sigma_(j')) ~|~ s_0 \in 0..k_0, s_1 \in 0..k_1, .. , s_n \in 0..k_n \}
-$$
-
-$$
-i_f = \{[s_0 + |0..1| \times d_0] \times 1 ~|~ s_0 \in 0..1\}
-i_f = d_0
-$$
-
-$bank = d_0 \bmod b$
-
-__*This shows we'll be filling in the banks cyclically, as $i \bmod b$ was intended to do.*__
-
-**for banking factor = unroll factor**
-
-We use  
-proof for taking modulus inside an expression $(a+b) \bmod c = (a \bmod c + b \bmod c) \bmod c$ and  
-proof for $ab \mod ac = a(b \bmod c)$  
-for the following.  
- 
-Intuitively we know that if banking factor equals the unroll factor, in each access we'd be accessing different banks and also all the banks.  
-
-for $n=1$ and $b=k$
-$$
-i_f = \{ \sum_{j=0}^{n} ( [ s_j + |0..k_j| \times d_j ] \prod_{j'=j+1}^{n} \sigma_(j')) ~|~ s_0 \in 0..k_0, s_1 \in 0..k_1, .. , s_n \in 0..k_n \}
-$$
-
-$$
-i_f = \{[s_0 + |0..k| \times d_0] \times 1 ~|~ s_0 \in 0..k\}
-$$
-
-$bank = i_f \bmod b$
-
-$$
-= \{[s_0 + |0..k| \times d_0] \times 1 ~|~ s_0 \in 0..k\} \bmod k
-$$
-
-$$
-= \{[(s_0 \bmod k) + (k \times d_0) \bmod k] \bmod k ~|~ s_0 \in 0..k\}
-$$
-
-$$ 
-= \{[(s_0 \bmod k) + k \times (d_0 \bmod 1)] \bmod k ~|~ s_0 \in 0..k\}
-$$
-
-$$
-= \{[(s_0 \bmod k) + k \times 0] \bmod k ~|~ s_0 \in 0..k\} 
-$$
-
-$$
-= \{[s_0 \bmod k] ~|~ s_0 \in 0..k\}
-$$
-
-since $s_0$ is bounded by $k$, $s_0 \bmod k$ is always smaller than k
-$$
-bank = \{s_0 \in 0..k\} 
-$$
-
-__*This shows we'd access all the banks and each bank would be accessed only once*.__  
-
-**for banking factor = constant * unroll factor**
-
-We use if $a \in 0..b$ and $m$ is an integer, then $a \bmod mk = a \bmod k$ for the following.  
-
-Intuitively we know that if we have more banks than the unroll factor, it should be possible to access different banks at a given time. For this case, where number of banks is a constant of multiple of unroll factor, we know that depending on the dynamic index we'd access a specific set of banks and that set would also have a unique set of banks.  
-
-Given a dynamic component $d$, unroll factor $k$ and banking factor $m \times k$ where $m$ is the constant integer multiple: 
-
-Since we'd be accessing using interleaved strategy, we'd put adjacent elements to different banks. Since we have $m$ banks represented by each static component, we'd access these $m$ banks cyclically depending on the dynamic component. As we'd be accessing different sets of banks of size of the unroll factor depending on the dynamic component, we can say this set is $d \bmod m$. And we'd be accessing all \{0..k\} banks in that set, we can write the banks we are accessing as,  
-
-$$\{k \times (d \bmod m).. k \times (d \bmod m) + k\}$$
-
-We can determine the banks we access from our derived equation
-$for n=1 and b=mk
-
-$$
-i_f = \{ \sum_{j=0}^{n} ( [ s_j + |0..k_j| \times d_j ] \prod_{j'=j+1}^{n} \sigma_(j')) ~|~ s_0 \in 0..k_0, s_1 \in 0..k_1, .. , s_n \in 0..k_n \}
-$$
-
-$$
-i_f = \{[s_0 + |0..k| \times d_0] \times 1 ~|~ s_0 \in 0..k\}
-$$
-
-$bank = i_f \bmod b$
-$$
-= \{[s_0 + |0..k| \times d_0] \times 1 ~|~ s_0 \in 0..k\} \bmod mk
-$$
-
-$$
-= \{[(s_0 \bmod mk) + (k \times d_0) \bmod mk] \bmod mk ~|~ s_0 \in 0..k\} 
-$$
-
-$$
-= \{[(s_0 \bmod k) + k \times (d_0 \bmod m)] \bmod mk ~|~ s_0 \in 0..k\}
-$$
-
-we can expand this to a range,
-$$
-bank = 0 + k \times (d_0 \bmod m) .. k + k \times (d_0 \bmod m)
-= k \times (d \bmod m) .. k \times (d \bmod m ) + k
-$$
-
-so our equation allows us to come to the same conclusion as the intuition.  
-
-[//]: # (I think it does not need to be generalizable as we are referring to the interleaved case only and hopefully my write up is sufficient)
-
-__*This shows us that index type expressions we derived show the set of banks we access when the bank factor is $m$ times the unroll factor.*__   
+The next step is to determine rules for when we access an array $\text{a}$ with multiple index types.
 
