@@ -10,8 +10,9 @@ let type_of_id id g =
 let type_of_alias_id id d =
   Context.get_alias_binding id d
 
-let compute_bf =
-  List.fold_left (fun acc (_, b) -> acc * b) 0
+let compute_bf lst =
+  if List.length lst > 1 then failwith "TODO: md access"
+  else List.fold_left (fun acc (_, b) -> acc * b) 0 lst
 
 let rec types_equal delta t1 t2 =
   match t1, t2 with
@@ -80,8 +81,8 @@ and check_aa_expl id idx1 idx2 (c, d) =
     raise (TypeError (illegal_accessor_type t id))
 
 and check_aa_logl id i (c, d) =
-  match Context.get_binding id c with
-  | TMux (a_id, s) ->
+  match Context.get_binding id c, check_expr i (c, d) with
+  | TMux (a_id, s), (TInt _, _) ->
     begin
       match Context.get_binding a_id c with
       | TArray (a_t, banking) -> 
@@ -90,13 +91,16 @@ and check_aa_logl id i (c, d) =
         else raise (TypeError small_mux)
       | _ -> raise (TypeError illegal_mux)
     end
-  | _ -> failwith "Finish logical access"
+  | TArray (_, dims), (TIndex (s, d), _) ->
+    let bf = compute_bf dims in
+    if (bf mod (List.length s))=0 then failwith "implement me"
+    else raise (TypeError (Error_msg.improper_unroll))
 
 and check_idx id idx a_t (c, d) =
   let consume_indices = fun context bank ->
     try Context.consume_aa id bank context
     with AlreadyConsumed i -> raise (TypeError (illegal_bank bank id))
-  in a_t, (List.fold_left consume_indices c idx, d)
+  in a_t, (Context.consume_aa_lst id idx c, d)
 
 and check_aa_impl id i (c, d) =
   match check_expr i (c, d), Context.get_binding id c with

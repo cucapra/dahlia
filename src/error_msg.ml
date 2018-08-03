@@ -64,3 +64,6 @@ let illegal_mux =
 let static_bank_error =
   "Bank accessor must be static"
 
+let improper_unroll =
+  "Type Error: unroll factor must be a multiple of banking factor"
+

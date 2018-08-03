@@ -69,3 +69,9 @@ let consume_aa id i g =
         g.indices_available 
   }
   else raise (AlreadyConsumed i)
+
+let rec consume_aa_lst id lst g =
+  let consume_indices = fun context bank ->
+    try consume_aa id bank context
+    with AlreadyConsumed i -> raise (AlreadyConsumed i)
+  in List.fold_left consume_indices g lst

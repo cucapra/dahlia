@@ -23,7 +23,7 @@ type type_node =
   | TInt of int option 
   | TBool
   | TArray of type_node * (int * int) list
-  | TIndex of int list * int option 
+  | TIndex of int list * int list
   | TFunc of type_node list 
   | TAlias of id
   | TFloat
@@ -62,7 +62,7 @@ type expression =
   | EBinop of binop * expression * expression
   | EArray of type_node * int * expression array
   | EPhysAccess of id * expression * expression
-  | ELoglAccess of id * expression list
+  | ELoglAccess of id * expression 
 
 type value =
   | VInt of int
