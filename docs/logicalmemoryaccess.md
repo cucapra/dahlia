@@ -64,53 +64,63 @@ Here, $i_0$..$i_n$ are index types, where index $i_x$ is $\text{idx}\langle 0 ..
 
 (I think it's useful to highlight we substitute $i$ in the above equation. Have numbers on the prior equations and show this?)  
 
-$$ I_f = \left\{ \sum_{x=0}^{n} \left[ (s_x + |0 .. k_x| \times d_x) * \left( \prod_{x'=x+1}^{n}{\sigma_{x'}} \right) \right] ~|~ s_x \in \tau(i_x), d_x \in \delta(i_x) \right\} $$
+$$ I_f = \left\{ \sum_{x=0}^{n} \left[ (s_x + |\tau(i_x)| \times d_x) * \left( \prod_{x'=x+1}^{n}{\sigma_{x'}} \right) \right] ~|~ s_x \in \tau(i_x), d_x \in \delta(i_x) \right\} $$
 
 It's a bit of a headache to look at, but basically it's capturing the idea of taking every set of literal index integers $a_0..a_n$ that are represented by our index types, and then applying our index-flattening formula, and then taking the union of each of these results to produce one set of flattened indices.
 
 **Example.** Consider this program:
 
-    int a[2][2] bank(4)
+    int a[4][2] bank(4)
 
-    for x in 0..2 unroll 2
+    for x in 0..4 unroll 2
         for y in 0..2 unroll 2
-            access a[x][y]
+            access[x][y]
 
-Here are the types of $x$ and $y$:
+The types of $x$ and $y$ would then be:
 
- - $x : \text{idx}\langle 0 .. 2, 0 .. 1 \rangle$
+ - $x : \text{idx}\langle 0 .. 2, 0 .. 2 \rangle$
  - $y : \text{idx}\langle 0 .. 2, 0 .. 1 \rangle$
 
-So we can compute $I_f$ like this:
+
+Finally we compute the elements of $I_f$. We do this by computing the following, for all $s_0 \in 0 .. 2$, $s_1 \in 0 .. 2$, $d_0 \in 0 .. 2$, $d_1 \in 0 .. 1$:
 
 $$
-\{ (0*2 + 0*1), (0*2 + 1*1), (1*2 + 0*1), (1*2 + 1*1) \} = \{ 0, 1, 2, 3 \}
+(s_0 + |0..k_0|*d_0)*\sigma_1*\sigma_2 + (s_1 + |0..k_1|*d_1)*\sigma_2
 $$
+
+Here are the computed elements:
+
+  - $(0+2*0)*2*1 + (0+2*0)*1=0$
+  - $(0+2*0)*2*1 + (1+2*0)*1=1$
+  - $(1+2*0)*2*1 + (0+2*0)*1=2$
+  - $(1+2*0)*2*1 + (1+2*0)*1=3$
+  - $(0+2*1)*2*1 + (0+2*0)*1=4$
+  - $(0+2*1)*2*1 + (1+2*0)*1=5$
+  - $(1+2*1)*2*1 + (0+2*0)*1=6$
+  - $(1+2*1)*2*1 + (1+2*0)*1=7$
 
 (I prefer the uneven sized dimension example because it's clear, and also feel the implicit access expression is important to highlight)
 
 Array Banking Strategies
 ------------------------
 
-TODO: make more involved example in previous section, then use same array in these banking examples.
+We are interested in the computing the indices being used to access flattened arrays,, so we can restrict the banks that a Seashell programmer can access. However, which banks the programmer accesses is influenced by the array banking strategy. This section will outine a couple of banking strategies. We'll show what it looks like to bank $\text{a}_f$, based on array $\text{a}$ from the example in the previous section.
 
-We are interested in the indices being used to access $\text{a}_f$, so we can restrict the banks that a Seashell programmer can access. However, which banks the programmer accesses is influenced by the array banking strategy. Here are a few ways we could bank $\text{a}_f$. 
-
-**Bank Interleaving.** We could interleave the elements of $\text{a}_f$ among its banks, like this (each rectangle represents a bank):
+**Bank Interleaving/Cyclic Banking.** We could interleave the elements of $\text{a}_f$ among its banks, like this (each rectangle represents a bank):
 
 (I want to introduce the term cyclic too, which might be widely used)  
 
-| 0 5 10 15 20 25 | 1 6 11 16 21 26 | 2 7 12 17 22 27 | 3 8 13 18 23 28 | 4 9 14 19 24 29 | 
-| --- | --- | --- | --- | --- |
+| 0 4 | 1 5 | 2 6 | 3 7 |
+| --- | --- | --- | --- |
 
 Then, given an index $i_f$ into $\text{a}_f$, we could determine the bank being accessed with $i_f \bmod b$. The index offset into the bank would be $i_f / b$.
 
-**Bank Chunking.** We could simply divide $a_f$ into banks, like this:  
+**Bank Chunking/Block Banking.** We could simply divide $a_f$ into banks, like this:  
+
+| 0 1 | 2 3 | 4 5 | 6 7 |
+| --- | --- | --- | --- |
 
 (I want to introuce the term block too, which is probably the widely used term)  
-
-| 0 1 2 3 4 5 | 6 7 8 9 10 11 | 12 13 14 15 16 17 | 18 19 20 21 22 23 | 24 25 26 27 28 29 |  
-| --- | --- | --- | --- | --- |  
 
 Then, we could use $i_f / b$ to find the relevant bank, and $i_f \bmod b$ to find the index within the bank. 
 
@@ -128,7 +138,7 @@ First, we'll make the assumption that any static component of an index type will
 
 **Type Rule 1.** For any one-dimensional array access into array $\text{a}$ with index type $i$, we will only consider it valid if the size of the static component of $i$ divides into the banking factor of $\text{a}$.
 
-**Type Rule 2.** Allow only one legal usage of index type $i$ to access $\text{a}$, if rule (1) holds.  
+**Type Rule 2.** Allow only one legal usage of index type $i$ to access $\text{a}$, if rule (1) holds. That is, if we have some access $\text{a}[i]$ in a program, then after that point in the program we cannot access $\text{a}$ again.
 
 (I don't quite follow rule 2)
 
