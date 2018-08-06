@@ -14,6 +14,11 @@ let compute_bf lst =
   if List.length lst > 1 then failwith "TODO: md access"
   else List.fold_left (fun acc (_, b) -> acc * b) 0 lst
 
+let (--) i j =
+  let rec aux n acc =
+    if n < i then acc else aux (n-1) (n :: acc)
+  in aux j []
+
 let rec types_equal delta t1 t2 =
   match t1, t2 with
   | TInt _, TInt _ -> true
@@ -56,8 +61,8 @@ and check_aa_expl id idx1 idx2 (c, d) =
       try a_t, (Context.consume_aa id i c2, d2) 
       with AlreadyConsumed i -> raise (TypeError (illegal_bank i id))
     end
-  | TIndex (s, d), TInt _, TArray (a_t, _) 
-  | TIndex (s, d), TIndex _, TArray (a_t, _) ->
+  | TIndex (s, _), TInt _, TArray (a_t, _) 
+  | TIndex (s, _), TIndex _, TArray (a_t, _) ->
     check_idx id s a_t (c, d)
   | TInt _, TInt _, TMux (m_id, s) 
   | TIndex _, TInt _, TMux (m_id, s) 
@@ -79,36 +84,24 @@ and check_aa_expl id idx1 idx2 (c, d) =
   | t, _, _ -> 
     raise (TypeError (illegal_accessor_type t id))
 
-and check_aa_logl id i (c, d) =
-  match Context.get_binding id c, check_expr i (c, d) with
-  | TMux (a_id, s), (TInt _, _) ->
-    begin
-      match Context.get_binding a_id c with
-      | TArray (a_t, banking) -> 
-        let bf = compute_bf banking in
-        if s <= bf then a_t, (c, d)
-        else raise (TypeError small_mux)
-      | _ -> raise (TypeError illegal_mux)
-    end
-  | TArray (_, dims), (TIndex (s, d), _) ->
+and compute_unrollf idx_exprs =
+  failwith "Implement me"
+
+and check_aa_logl id idx_exprs (c, d) =
+  match Context.get_binding id c with
+  | TArray (t, dims) ->
     let bf = compute_bf dims in
-    if (bf mod (List.length s))=0 then failwith "implement me"
-    else raise (TypeError (Error_msg.improper_unroll))
+    let unrollf = compute_unrollf idx_exprs in
+    if (bf mod unrollf)=0 then
+      try 
+        t, (Context.consume_aa_lst id (0--(unrollf-1)) c, d)
+      with AlreadyConsumed bank -> raise (TypeError (illegal_bank bank id)) 
+    else 
+      raise (TypeError "TypeError: unroll factor must be factor of banking factor")
+  | _ -> raise (TypeError "TypeError: tried to index into non-array")
 
 and check_idx id idx a_t (c, d) =
-  let consume_indices = fun context bank ->
-    try Context.consume_aa id bank context
-    with AlreadyConsumed i -> raise (TypeError (illegal_bank bank id))
-  in a_t, (Context.consume_aa_lst id idx c, d)
-
-and check_aa_impl id i (c, d) =
-  match check_expr i (c, d), Context.get_binding id c with
-  | (TIndex (idxs, _), _), TArray (a_t, _) -> 
-    check_idx id idxs a_t (c, d)
-  | (TIndex _, _), t ->
-    raise (TypeError (illegal_access id))
-  | (t, _), _ -> 
-    raise (TypeError (illegal_accessor_type t id))
+  a_t, (Context.consume_aa_lst id idx c, d)
 
 let rec check_cmd cmd (context, (delta: Context.delta)) =
   match cmd with
@@ -139,11 +132,6 @@ and check_for id r1 r2 body (c, d) =
   | TInt _, TInt _ -> 
     check_cmd body (Context.add_binding id (TInt None) c2, d2)
   | _ -> raise (TypeError range_error)
-
-and (--) i j =
-  let rec aux n acc =
-    if n < i then acc else aux (n-1) (n :: acc)
-  in aux j []
 
 and check_for_impl id r1 r2 body u (context, delta) =
   check_expr r1 (context, delta) |> fun (r1_type, (c1, d1)) ->

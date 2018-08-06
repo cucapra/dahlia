@@ -97,7 +97,7 @@ and emit_aa_phys (id, b, i) =
 
 (* FIXME: optimize? *)
 and flatten_access dims idx_exprs =
-  let prod_dims:int = List.fold_left (fun e (_, d) -> d * e) 1 dims in
+  let prod_dims = List.fold_left (fun e (d, _) -> d * e) 1 dims in
   match dims, idx_exprs with
   | _::td, hi::ti -> 
     concat [ (string_of_int prod_dims); "*("; (emit_expr hi); ")+"; (flatten_access td ti) ]

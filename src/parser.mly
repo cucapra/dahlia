@@ -119,8 +119,6 @@ type_annotation:
   | FLOAT_ANNOTATION { TFloat } 
   | t = type_annotation a = array_def
     { TArray (t, a) }
-  | t = type_annotation LSQUARE s = INT RSQUARE 
-    { TArray (t, 1, s) }
   | x = ID { TAlias x }
 
 %inline binop:
