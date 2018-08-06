@@ -32,7 +32,6 @@ let rec check_expr exp (context, (delta: Context.delta)) =
   | EBinop (binop, e1, e2)       -> check_binop binop e1 e2 (context, delta)
   | EArray _                     -> raise (TypeError "Can't refer to array literal")
   | EPhysAccess (id, idx1, idx2) -> check_aa_expl id idx1 idx2 (context, delta)
-  | EIndex idx                   -> failwith "Unreachable"
   | ELoglAccess (id, i)          -> check_aa_logl id i (context, delta)
 
 and check_int i is_stat (ctx, dta) = (if is_stat then TInt (Some i) else TInt (None)), (ctx, dta)
@@ -57,8 +56,8 @@ and check_aa_expl id idx1 idx2 (c, d) =
       try a_t, (Context.consume_aa id i c2, d2) 
       with AlreadyConsumed i -> raise (TypeError (illegal_bank i id))
     end
-  | TIndex (s, None), TInt _, TArray (a_t, _) 
-  | TIndex (s, None), TIndex _, TArray (a_t, _) ->
+  | TIndex (s, d), TInt _, TArray (a_t, _) 
+  | TIndex (s, d), TIndex _, TArray (a_t, _) ->
     check_idx id s a_t (c, d)
   | TInt _, TInt _, TMux (m_id, s) 
   | TIndex _, TInt _, TMux (m_id, s) 
@@ -153,9 +152,9 @@ and check_for_impl id r1 r2 body u (context, delta) =
   | TInt (Some i1), TInt (Some i2) ->
     let range_size = i2 - i1 + 1 in
     if (range_size=u) then
-      check_cmd body (Context.add_binding id (TIndex (0--(u-1), None)) c2, d2)
+      check_cmd body (Context.add_binding id (TIndex (0--(u-1), [0])) c2, d2)
     else
-      check_cmd body (Context.add_binding id (TIndex (0--(u-1), Some (range_size/u))) c2, d2)
+      check_cmd body (Context.add_binding id (TIndex (0--(u-1), (0--(range_size)/u))) c2, d2)
   | _ -> raise (TypeError range_error)
 
 and check_assignment id exp (context, delta) =

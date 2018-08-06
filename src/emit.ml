@@ -64,7 +64,6 @@ let rec emit_expr = function
   | EBinop (b, e1, e2)     -> emit_binop (b, e1, e2)
   | EPhysAccess (id, b, i) -> emit_aa_phys (id, b, i)
   | ELoglAccess (id, i)    -> emit_aa_logl (id, i)
-  | EIndex _               -> failwith "Implement index stuff"
 
 and emit_int i = string_of_int i
 
@@ -96,12 +95,19 @@ and emit_aa_phys (id, b, i) =
     concat [ id; "["; (emit_expr b); " + "; (string_of_int bf); "*("; (emit_expr i); ")]" ]
   | _ -> failwith "Tried to index into non-array"
 
-and emit_aa_logl (id, i) =
-  let idx = 
-    (match i with
-    | h::[] -> emit_expr h
-    | i -> List.fold_left (fun acc e -> (emit_expr e) ^ " + " ^ acc) "" i) in
-  concat [ id; "["; idx; "]" ]
+(* FIXME: optimize? *)
+and flatten_access dims idx_exprs =
+  let prod_dims:int = List.fold_left (fun e (_, d) -> d * e) 1 dims in
+  match dims, idx_exprs with
+  | _::td, hi::ti -> 
+    concat [ (string_of_int prod_dims); "*("; (emit_expr hi); ")+"; (flatten_access td ti) ]
+  | _ -> failwith "Flatten failed"
+
+and emit_aa_logl (id, idx_exprs) =
+  match !type_map id with
+  | TArray (_, dims) ->
+    concat [ id; "["; (flatten_access dims idx_exprs); "]"; ]
+  | _ -> failwith "Tried to index into non-array"
 
 and argvals =
   List.map ((fun (id, t) -> 

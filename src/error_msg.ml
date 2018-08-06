@@ -4,12 +4,7 @@ let rec string_of_type = function
   | TBool -> "bool"
   | TInt _ -> "int"
   | TArray (t, _) -> (string_of_type t) ^ " array"
-  | TIndex (s, d) ->
-    begin
-      match d with
-      | None -> "index with completely static information"
-      | Some _ -> "index with static and dynamic information"
-    end
+  | TIndex (s, d) -> "index"
   | TAlias id -> id
   | TFloat -> "float"
   | TFunc _ -> "func"
