@@ -1,8 +1,15 @@
-func madd(a: int[1024] bank(32), b: int, c: int[1024] bank(32)) {
+/////////////////////////////////////////////
+// vsadd manual unroll
+// - This application uses one banked array as input,
+// one banked array as output, explicit bank access on both arrays and having one scalar value
+////////////////////////////////////////////
+
+
+func madd(a: int[1024 bank(32)], b: int, c: int[1024 bank(32)]) {
 
   for (let i = 0..1023) {
-    c[0][i] := a[0][i] + b;
-    c[1][i] := a[1][i] + b;
+    c{0}[i] := a{0}[i] + b;
+    c{1}[i] := a{1}[i] + b;
   } 
 
 }
