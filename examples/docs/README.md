@@ -12,4 +12,4 @@
 | 8 | [matadd_1dfullnrl/(vvadd_fullnrl)](https://github.com/cucapra/seashell/blob/master/examples/docs/vvadd.md) | SA | Check explicit access with variable if loop full unrolled | **Fails.** Need to implement physical access. |  
 | 9 | [matmul](https://github.com/cucapra/seashell/blob/master/examples/docs/matmul.md) | SA | Compute-reduce, transposed loop access | **Fails.** Need to implement. |  
 | 10 | convolution | SA | Multiple loops and designs with different loop unrolls | **Fails.** |  
-| 11 | mini_convolution | TB | **Fails.** Need to implement physical access. |  
+| 11 | mini_convolution | TB | Interactions between index types and integers. Physical and logical access. | **Fails.** Need to implement physical access. |  
