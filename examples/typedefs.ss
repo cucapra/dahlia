@@ -2,7 +2,12 @@ type number = int
 
 func add(a: number, b: number) {
 
+  // Allow integer addition between number types
   let x = a+b;
+
+  // Allow integer addition between number and int types
+  let y = 5;
+  let z = a + b + x + y;
 
 }
 
