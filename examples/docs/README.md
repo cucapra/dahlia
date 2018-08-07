@@ -13,4 +13,3 @@
 | 9. | [matmul](https://github.com/cucapra/seashell/blob/master/examples/docs/matmul.md) | SA | Compute-reduce, transposed loop access | To be decided |  
 | 10. | convolution | SA | Multiple loops and designs with different loop unrolls | To be decided |  
 | 11. | mini_convolution | TB |  |  
-| 12. |  |  |  |  
