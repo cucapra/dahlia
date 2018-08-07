@@ -1,4 +1,4 @@
-func mconvo(a: int[3] bank(3), b: int[11], out: int[9]) {
+func mconvo(a: int[3 bank(3)], b: int[11], out: int[9]) {
 
   for (let i = 0..8) {
 
