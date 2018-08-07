@@ -4,36 +4,40 @@ title: Logical Memory Accesses
 
 In this document, we'll describe how Seashell typechecks logical array accesses using [index types](https://capra.cs.cornell.edu/seashell/docs/indextype.html), and we'll argue that our methods are valid.
 
-Index Type Recap
-----------------------
+Logical access with index types
+-------------------------------
 
 Index types allow us to combine static and dynamic information about the indices we're accessing in unrolled loops. For instance, consider the following example: 
 
     for i in l..h unroll k
         access a[i]
 
-The variable $\text{i}$ accessing array $\text{a}$ has type $\text{idx}\langle 0 .. k, \frac{l}{k} .. \frac{h}{k} \rangle$. This type is comprised of a *static component*, $0 .. k$, and a *dynamic component*, $\frac{l}{k} .. \frac{h}{k}$. The set representation of this index type is:
+The variable *i* accessing array $\text{a}$ has type, $\text{idx}\langle 0 .. k, \frac{l}{k} .. \frac{h}{k} \rangle$. This type is comprised of a *static component*, $0 .. k$, and a *dynamic component*, $\frac{l}{k} .. \frac{h}{k}$. As described in the [semantics of index types](https://capra.cs.cornell.edu/seashell/docs/indextype.html#syntax-semantics), a value of an index type corresponds to a dynamic number $d \in \frac{l}{k}..\frac{h}{k}$. For any such $d$ type idx represents the set:
+
+__equation 1__
+
+$$
+\{ s + |0..k| \times d ~|~ s \in 0..k\}
+$$
+
+(The set representation of this index type is:
 
 $$
 \{ s + |0..k| \times d ~|~ s \in 0..k, d \in \frac{l}{k}..\frac{h}{k}\}
-$$
+$$)
 
-**Usage.** For Seashell, it's important to know exactly which indices are being used given a particular array access, which may be inside an unrolled loop. Seashell's typechecker uses index types to determine these indices. Seashell allows for two styles of array accesses: *implicit* and *explicit*. For the latter, which do not appear inside unrolled loops, the programmer specifies a statically known bank number and a potentially dynamic index offset into that bank. An index type representation of such an access would have trivial single-value static and dynamic components (rather than ranges), as such an access represents only a single value.
-
-For the purposes of this document, we're concerned with the index types used to represent the indices involved in *implicit* accesses.  
-
-(I feel it might be useful to show this in the mathy sense and how the type checker can ensure safe access)  
+**Usage.** For Seashell, it's important to know exactly which indices are being used given a particular array access, which may be inside an unrolled loop. Seashell's typechecker uses index types to determine these indices. Seashell allows for two styles of array accesses: *implicit* and *explicit*. For the latter, which do not appear inside unrolled loops, the programmer specifies a statically known bank number and a potentially dynamic index offset into that bank. An index type representation of such an access would have trivial single-value static and dynamic components (rather than ranges), as such an access represents only a single value. Therefore, for logical accesses we're concerned with the index types used to represent the indices involved in *implicit* accesses.  
 
 Logical Multi-Dimensional Arrays
-------------------------
+--------------------------------
 
-As far as we're concerned, HLS only supports the use of one-dimensional arrays. (Maybe worthwhile to say FPGAs have (and most memory architectures) one dimensional arrays.) With Seashell, we'd like to offer some abstractions to make expressing logical computations on multi-dimensional matrices easier. We'll define Seashell $n$-dimensonal arrays like this:
+As far as we're concerned, hardware we are dealing with (especially FPGAs) have physically one-dimensional arrays. Thereby, HLS only supports the use of one-dimensional arrays. With Seashell, we'd like to offer some abstractions to make expressing logical computations on multi-dimensional matrices easier. We'll define Seashell $n$-dimensonal arrays like this:
 
 $$
 \text{a}:t[\sigma_0][\sigma_1]..[\sigma_n] \text{ bank}(b)
 $$
 
-Here, $\text{a}$ is the name of our array; the contents following the colon tell us that $t$ is some arbitrary type ($\text{int}$, etc) for the array elements; and $\sigma_i$ represents the size of a dimension $i$. $\text{bank}(b)$ tells us that this array is banked by a factor of $b$: in the future we'd like to impose flexible banking structures on each dimension, but for now, we're going to simply bank the entire array - that is, the entire flattened array, which we'll talk about in just a moment.
+Here, $\text{a}$ is the name of our array; the contents following the colon tell us that $t$ is some arbitrary type ($\text{int}$, etc) for the array elements; and $\sigma_i$ represents the size of a dimension $i$. $\text{bank}(b)$ tells us that this array is banked by a factor of $b$: in the future we'd like to impose flexible banking structures on each dimension, but for now, we're going to simply bank the entire array - that is, the entire flattened array, which we'll talk about next.
 
 Under the hood (that is, when we translate our Seashell program to HLS C), this multi-dimensional array is translated to a one-dimensional array. This flattened array (which we'll call $\text{a}_f)$ has size equal to the product of our Seashell array dimensions:
 
@@ -43,91 +47,81 @@ $$
 
 Logical accesses to a Seashell multi-dimensonal array look like this: $\text{a}[i_0][i_1]..[i_n]$. We'd like to access these higher-dimensional arrays with our Seashell index types, but to first examine how working with these arrays might work, it would be useful to first consider $i_0..i_n$ as plain old integers. To compute what our flattened index $i_f$ would be based on our logical indices $i_0..i_n$, we could use the following method: 
 
+__equation 2__
+
 $$
 i_f = \sum_{k=0}^{n} \left[i_k * \left(\prod_{k'=k+1}^{n} \sigma_{k'} \right) \right]
 $$
 
-**Example.** Consider a three-dimensional array $\text{a}$ defined like this:
+**Example 1** Consider a two-dimensional array $\text{a}$ defined like this:
 
-$$a:t[2][5][3] \text{ bank} (5)$$
+$$a:t[4][2] \text{ bank} (4)$$
 
-The flattened version, $\text{a}_f$, would have size $N=30$. Say we make an access $\text{a}[1][4][2]$. Using our formula we defined, we'd access $\text{a}_f$ with $i_f=29$.
+The flattened version, $\text{a}_f$, would have size $N=8$. Say we make an access $\text{a}[3][1]$. Using our formula we defined, we'd access $\text{a}_f$ with $i_f=7$.
 
-Logical Access with Index Types
-------------------------
+Note that the banking factor is not used in logical access.
 
-Now, we'd like to talk about which indices are represented when we make a logical array access using our index types. Consider an access to array $a$ (that we defined earlier in this document):
+Multi-dimensional logical Access with Index Types
+-------------------------------------------------
 
+Now, we'd like to talk about which indices are represented when we make a logical array access using our index types. Consider an access to array $a$:
+
+    for i in 0..L unroll x
+      for j in 0..M unroll y
+        for k in 0..N unroll z
+          access a[i][j][k]
+
+To generalize, we can represent such an access as:
 $$ \text{a}[i_0]..[i_n]$$
 
-Here, $i_0$..$i_n$ are index types, where index $i_x$ is $\text{idx}\langle 0 .. k_x, l_x .. h_x  \rangle$. We'd like to determine the set of flattened indices $I_f$. Define $\tau(i)$ to be the static component of index type $i$, and $\delta(i)$ to be the dynamic component of $i$. Then we can write this set as:
+Here, $i_0$..$i_n$ are index types, where index $i_x$ is $\text{idx}\langle 0 .. k_x, l_x .. h_x  \rangle$. Following our discussion with one-dimensional accesses, value each for all of these index type variables correspond to a set of dynamic numbers $\{\forall x \in 0 .. n, d_x \in l_x .. h_x\}$. We can derive the set type indices would represent for any such set of $d$s, substituting $i_k$ in equation 2 with equation 1:
 
-(I think it's useful to highlight we substitute $i$ in the above equation. Have numbers on the prior equations and show this?)  
+$$ I_f = \left\{ \sum_{x=0}^{n} \left[ (s_x + |0..k_x| \times d_x) * \left( \prod_{x'=x+1}^{n}{\sigma_{x'}} \right) \right] ~|~ \forall x \in 0..n, s_x \in 0..k_x \right\} $$
 
-$$ I_f = \left\{ \sum_{x=0}^{n} \left[ (s_x + |\tau(i_x)| \times d_x) * \left( \prod_{x'=x+1}^{n}{\sigma_{x'}} \right) \right] ~|~ s_x \in \tau(i_x), d_x \in \delta(i_x) \right\} $$
+(We'd like to determine the set of flattened indices $I_f$. Define $\tau(i)$ to be the static component of index type $i$, and $\delta(i)$ to be the dynamic component of $i$. Then we can write this set as:)
 
-It's a bit of a headache to look at, but basically it's capturing the idea of taking every set of literal index integers $a_0..a_n$ that are represented by our index types, and then applying our index-flattening formula, and then taking the union of each of these results to produce one set of flattened indices.
+($$ I_f = \left\{ \sum_{x=0}^{n} \left[ (s_x + |\tau(i_x)| \times d_x) * \left( \prod_{x'=x+1}^{n}{\sigma_{x'}} \right) \right] ~|~ s_x \in \tau(i_x), d_x \in \delta(i_x) \right\} $$)
 
-**Example.** Consider this program:
+To put this into words, our index type can formalize the set of elements accessed when using multi-dimensional access into an array.  
+
+(it's capturing the idea of taking every set of literal index integers $a_0..a_n$ that are represented by our index types, and then applying our index-flattening formula, and then taking the union of each of these results to produce one set of flattened indices.)
+
+**Example 2.** Consider this program:
 
     int a[4][2] bank(4)
 
-    for x in 0..4 unroll 2
-        for y in 0..2 unroll 2
-            access[x][y]
+    for i in 0..4 unroll 2
+        for j in 0..2 unroll 2
+            access a[i][j]
 
-The types of $x$ and $y$ would then be:
+The types of $i$ and $j$ would then be:
 
- - $x : \text{idx}\langle 0 .. 2, 0 .. 2 \rangle$
- - $y : \text{idx}\langle 0 .. 2, 0 .. 1 \rangle$
+ - $i : \text{idx}\langle 0 .. 2, 0 .. 2 \rangle$
+ - $j : \text{idx}\langle 0 .. 2, 0 .. 1 \rangle$
 
 
-Finally we compute the elements of $I_f$. We do this by computing the following, for all $s_0 \in 0 .. 2$, $s_1 \in 0 .. 2$, $d_0 \in 0 .. 2$, $d_1 \in 0 .. 1$:
+With these index type indices we can compute the elements of $I_f$. We do this by computing the following, $\forall$ $d_0 \in 0 .. 2$, $d_1 \in 0 .. 1$:
 
 $$
-(s_0 + |0..k_0|*d_0)*\sigma_1*\sigma_2 + (s_1 + |0..k_1|*d_1)*\sigma_2
+\{(s_0 + |0..2|*d_0)*\sigma_1 + (s_1 + |0..2|*d_1)*1 ~|~ \forall s_0 \in 0 .. 2, s_1 \in 0 .. 2 \}
 $$
 
-Here are the computed elements:
+where $ \sigma_1 = 2 $
 
-  - $(0+2*0)*2*1 + (0+2*0)*1=0$
-  - $(0+2*0)*2*1 + (1+2*0)*1=1$
-  - $(1+2*0)*2*1 + (0+2*0)*1=2$
-  - $(1+2*0)*2*1 + (1+2*0)*1=3$
-  - $(0+2*1)*2*1 + (0+2*0)*1=4$
-  - $(0+2*1)*2*1 + (1+2*0)*1=5$
-  - $(1+2*1)*2*1 + (0+2*0)*1=6$
-  - $(1+2*1)*2*1 + (1+2*0)*1=7$
+For a pair of $\langle d_0,d_1 \rangle = \langle 1,0 \rangle$:
 
-(I prefer the uneven sized dimension example because it's clear, and also feel the implicit access expression is important to highlight)
+  - $(0+2*1)*2 + (0+2*0)=4$
+  - $(0+2*1)*2 + (1+2*0)=5$
+  - $(1+2*1)*2 + (0+2*0)=6$
+  - $(1+2*1)*2 + (1+2*0)=7$
 
-Array Banking Strategies
-------------------------
+Note that the banks should be arranged with an interleaved strategy. Alternatively, if we unroll the [outer loop by 4]() then the memory arrangement should be block-wise. To read more about banking strategies [here]().
 
-We are interested in the computing the indices being used to access flattened arrays,, so we can restrict the banks that a Seashell programmer can access. However, which banks the programmer accesses is influenced by the array banking strategy. This section will outine a couple of banking strategies. We'll show what it looks like to bank $\text{a}_f$, based on array $\text{a}$ from the example in the previous section.
-
-**Bank Interleaving/Cyclic Banking.** We could interleave the elements of $\text{a}_f$ among its banks, like this (each rectangle represents a bank):
-
-(I want to introduce the term cyclic too, which might be widely used)  
-
-| 0 4 | 1 5 | 2 6 | 3 7 |
-| --- | --- | --- | --- |
-
-Then, given an index $i_f$ into $\text{a}_f$, we could determine the bank being accessed with $i_f \bmod b$. The index offset into the bank would be $i_f / b$.
-
-**Bank Chunking/Block Banking.** We could simply divide $a_f$ into banks, like this:  
-
-| 0 1 | 2 3 | 4 5 | 6 7 |
-| --- | --- | --- | --- |
-
-(I want to introuce the term block too, which is probably the widely used term)  
-
-Then, we could use $i_f / b$ to find the relevant bank, and $i_f \bmod b$ to find the index within the bank. 
-
-Both have use cases, but we won't go into those here. For the remainder of this document we'll assume we're using bank interleaving, but we could have similar results with chunking.
+Bank access with index types
+----------------------------
 
 Typechecking Array Accesses
-------------------------
+---------------------------
 
 In these document, we've been describing methods of determining the banks that array accesses make. Now, we'd like to expand on how this might be of use in the Seashell type system. In general, the problem we're trying to solve is the following: restrict programs such that banks of memories can only be accessed once, to reflect the fact that in actual hardware, these memories have limited access ports. One way we might be able to do this is by tracking a set of banks that are available for use in accessing an array. When an access with a particular bank occurs, we mark the bank unreachable after that point. So, for any array $\text{a}$ in our typing context, associate it with some set $B$ of unconsumed banks, and when we access some bank $b \in B$, the set of banks associated with $B$ becomes $B \setminus b$.  
 
@@ -139,8 +133,6 @@ First, we'll make the assumption that any static component of an index type will
 **Type Rule 1.** For any one-dimensional array access into array $\text{a}$ with index type $i$, we will only consider it valid if the size of the static component of $i$ divides into the banking factor of $\text{a}$.
 
 **Type Rule 2.** Allow only one legal usage of index type $i$ to access $\text{a}$, if rule (1) holds. That is, if we have some access $\text{a}[i]$ in a program, then after that point in the program we cannot access $\text{a}$ again.
-
-(I don't quite follow rule 2)
 
 We'd now like to discuss some arguments that show our rules only allow valid array accesses. Consider the following example:
 
@@ -167,7 +159,7 @@ $$
 We know a couple things that help us rewrite this set:
 
   - $s < mk$
-  - $kd \bmod mk = k (d \bmod m)$ [[proof](https://imgur.com/a/9cEQHGr)]
+  - $kd \bmod mk = k (d \bmod m)$ [proof](https://imgur.com/a/9cEQHGr)
 
 So then, we have:
 
