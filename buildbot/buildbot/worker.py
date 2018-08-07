@@ -1,7 +1,7 @@
 import threading
 import subprocess
 import os
-from .db import ARCHIVE_NAME, CODE_DIR, log
+from .db import ARCHIVE_NAME, CODE_DIR, log, chdir
 from contextlib import contextmanager
 import traceback
 import shlex
@@ -16,16 +16,6 @@ class WorkError(Exception):
     """
     def __init__(self, message):
         self.message = message
-
-
-@contextmanager
-def chdir(path):
-    """Temporarily change the working directory (then change back).
-    """
-    old_dir = os.getcwd()
-    os.chdir(path)
-    yield
-    os.chdir(old_dir)
 
 
 @contextmanager
