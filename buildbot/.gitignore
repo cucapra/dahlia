@@ -1,6 +1,10 @@
 db.json
 jobs/
 Pipfile.lock
+instance/
+
+# JavaScript stuff.
+yarn.lock
 .cache/
 node_modules/
 buildbot/static/live.js
