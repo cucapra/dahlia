@@ -127,8 +127,13 @@ def jobs_csv():
 
 
 @app.route('/')
-def jobs_list():
+def jobs_html():
     return flask.render_template('joblist.html', jobs=db.jobs)
+
+
+@app.route('/live.html')
+def live_html():
+    return flask.render_template('live.html')
 
 
 @app.route('/jobs/<name>.html')

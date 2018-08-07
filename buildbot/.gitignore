@@ -1,3 +1,7 @@
 db.json
 jobs/
 Pipfile.lock
+.cache/
+node_modules/
+buildbot/static/live.js
+buildbot/static/live.map
