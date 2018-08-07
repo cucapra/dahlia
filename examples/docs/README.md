@@ -1,9 +1,13 @@
-# Seashell Example List
+# Seashell Examples
 
 This is a list of Seashell programs that showcase useful FPGA programming behavior.
 
+## Usage
+
     make all # Generate HLS programs (will be placed in new folder out/)
     make clean # Remove HLS programs
+    
+## Example List
 
 | # | Example | Creator | Purpose | Status
 | --- | --- | --- | --- | --- |  
