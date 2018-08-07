@@ -19,6 +19,6 @@ This is a list of Seashell programs that showcase useful FPGA programming behavi
 | 6 | typedefs | TB | Simple usage of type alias | **Passes.** Typechecks and emits expected code. |    
 | 7 | [multaccess](https://github.com/cucapra/seashell/blob/master/examples/docs/multaccess.md) | SA | Check multi-write access to same element | **Fails.** Need to implement. | 
 | 8 | [matadd_1dfullnrl/(vvadd_fullnrl)](https://github.com/cucapra/seashell/blob/master/examples/docs/vvadd.md) | SA | Check explicit access with variable if loop full unrolled | **Passes.** Typechecks and emits expected code. |  
-| 9 | [matmul](https://github.com/cucapra/seashell/blob/master/examples/docs/matmul.md) | SA | Compute-reduce, transposed loop access | **Fails.** Need to implement. |  
-| 10 | convolution | SA | Multiple loops and designs with different loop unrolls | **Fails.** |  
+| 9 | [matmul](https://github.com/cucapra/seashell/blob/master/examples/docs/matmul.md) | SA | Compute-reduce, transposed loop access | **Fails.** Unimplemented. |  
+| 10 | convolution | SA | Multiple loops and designs with different loop unrolls | **Fails.** Unimplemented. |  
 | 11 | mini_convolution | TB | Interactions between index types and integers. Physical and logical access. | **Passes.** Typechecks and emits code, but perhaps need to clarify operations with index types. |  
