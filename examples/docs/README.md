@@ -1,5 +1,10 @@
 # Seashell Example List
 
+This is a list of Seashell programs that showcase useful FPGA programming behavior.
+
+    make all # Generate HLS programs (will be placed in new folder out/)
+    make clean # Remove HLS programs
+
 | # | Example | Creator | Purpose | Status
 | --- | --- | --- | --- | --- |  
 | 1 | [vsadd](https://github.com/cucapra/seashell/blob/master/examples/docs/vsadd.md) | SA | Banking and unrolling | **Passes.** Typechecks and emits expected code. |  
