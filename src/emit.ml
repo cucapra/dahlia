@@ -116,7 +116,7 @@ and argvals =
   List.map ((fun (id, t) -> 
     match t with
       | TArray (t, d) -> 
-        let s = List.fold_left (fun acc (s, _) -> s * acc) 0 d in
+        let s = List.fold_left (fun acc (s, _) -> s * acc) 1 d in
         concat [ (type_str t); " "; id; "["; (string_of_int s); "]" ]
       | t -> concat [ (type_str t); " "; id  ] 
   )) 
