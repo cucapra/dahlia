@@ -4,7 +4,7 @@ let type_map = ref (fun _ -> failwith "TypeMap has not been set")
 let delta_map = ref (fun _ -> failwith "DeltaMap has not been set")
 
 let compute_bf d =
-  List.fold_left (fun acc (_, d) -> d * acc) 0 d
+  List.fold_left (fun acc (_, d) -> d * acc) 1 d
 
 let set_type_map t =
   type_map := t
@@ -97,17 +97,19 @@ and emit_aa_phys (id, b, i) =
 
 (* FIXME: optimize? *)
 and flatten_access dims idx_exprs =
-  let prod_dims = List.fold_left (fun e (d, _) -> d * e) 1 dims in
-  match dims, idx_exprs with
-  | _::td, hi::ti -> 
-    concat [ (string_of_int prod_dims); "*("; (emit_expr hi); ")+"; (flatten_access td ti) ]
-  | [], [] -> ""
-  | _ -> failwith "Flatten failed"
+    match dims, idx_exprs with
+    | _::td, hi::ti -> 
+      let prod_dims = List.fold_left (fun e (d, _) -> d * e) 1 td in
+      concat [ (string_of_int prod_dims); "*("; (emit_expr hi); ")+"; (flatten_access td ti) ]
+    | [], [] -> ""
+    | _ -> failwith "Flatten failed"
 
 and emit_aa_logl (id, idx_exprs) =
   match !type_map id with
   | TArray (_, dims) ->
-    concat [ id; "["; (flatten_access dims idx_exprs); "]"; ]
+    let idx = flatten_access dims idx_exprs in
+    let idx' = String.sub idx 0 (String.length idx - 1) in
+    concat [ id; "["; (idx'); "]"; ]
   | _ -> failwith "Tried to index into non-array"
 
 and argvals =
