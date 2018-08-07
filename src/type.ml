@@ -11,8 +11,7 @@ let type_of_alias_id id d =
   Context.get_alias_binding id d
 
 let compute_bf lst =
-  if List.length lst > 1 then failwith "TODO: md access"
-  else List.fold_left (fun acc (_, b) -> acc * b) 0 lst
+  List.fold_left (fun acc (_, b) -> acc * b) 1 lst
 
 let (--) i j =
   let rec aux n acc =
@@ -84,14 +83,21 @@ and check_aa_expl id idx1 idx2 (c, d) =
   | t, _, _ -> 
     raise (TypeError (illegal_accessor_type t id))
 
-and compute_unrollf idx_exprs =
-  failwith "Implement me"
+and compute_unrollf idx_exprs (c, d) =
+  match idx_exprs with
+  | h::t ->
+    begin
+      match check_expr h (c, d) with
+      | TIndex (s, _), _ -> (List.length s) * compute_unrollf t (c, d)
+      | _ -> raise (TypeError "Logical array access must be with idx types")
+    end
+  | [] -> 1
 
 and check_aa_logl id idx_exprs (c, d) =
   match Context.get_binding id c with
   | TArray (t, dims) ->
     let bf = compute_bf dims in
-    let unrollf = compute_unrollf idx_exprs in
+    let unrollf = compute_unrollf idx_exprs (c, d) in
     if (bf mod unrollf)=0 then
       try 
         t, (Context.consume_aa_lst id (0--(unrollf-1)) c, d)

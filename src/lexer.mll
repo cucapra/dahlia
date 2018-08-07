@@ -31,7 +31,6 @@ rule token =
   | "+"          { PLUS }
   | "-"          { MINUS }
   | "*"          { TIMES }
-  | "/"          { FORWARD_SLASH }
 
   | "&&"         { AND }
   | "||"         { OR }
@@ -45,7 +44,6 @@ rule token =
 
   | "int"        { INT_ANNOTATION }
   | "bool"       { BOOL_ANNOTATION }
-  | "idx"        { IDX_ANNOTATION }
   | "float"      { FLOAT_ANNOTATION }
 
   | "if"         { IF }

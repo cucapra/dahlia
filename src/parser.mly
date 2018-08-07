@@ -11,11 +11,11 @@ open Make_ast
 
 (* Keywords *)
 %token LET IF FOR TRUE FALSE INT_ANNOTATION 
-       BOOL_ANNOTATION IDX_ANNOTATION FLOAT_ANNOTATION
+       BOOL_ANNOTATION FLOAT_ANNOTATION
        MUX UNROLL MEMORY BANK FUNC TYPE 
 
 (* Parentheses, brackets, etc *)
-%token LPAREN RPAREN LBRACK RBRACK LSQUARE RSQUARE FORWARD_SLASH
+%token LPAREN RPAREN LBRACK RBRACK LSQUARE RSQUARE 
 
 (* Operations *)
 %token EQUAL NEQ GEQ LEQ LT GT EQ PLUS MINUS TIMES
@@ -67,12 +67,6 @@ cmd:
   | c1 = cmd c2 = cmd
     { make_seq c1 c2 }
 
-access:
-  | LSQUARE; idx = expr; RSQUARE
-    { [idx] }
-  | LSQUARE; idx = expr; RSQUARE; a = access
-    { idx :: a }
-
 expr:
   | x = ID; a = access;
     { make_logl_access x a }
@@ -104,14 +98,20 @@ args:
   | a = separated_list(COMMA, expr) { a }
 
 array_def:
-  | LSQUARE; s = INT; BANK; LPAREN; bf = INT; RPAREN; RSQUARE
-    { [(s, bf)] }
-  | LSQUARE; s = INT; RSQUARE
-    { [(s, 1)] }
   | LSQUARE; s = INT; BANK; LPAREN; bf = INT; RPAREN; RSQUARE; t = array_def
     { (s, bf) :: t }
   | LSQUARE; s = INT; RSQUARE; t = array_def
     { (s, 1) :: t }
+  | LSQUARE; s = INT; BANK; LPAREN; bf = INT; RPAREN; RSQUARE
+    { [(s, bf)] }
+  | LSQUARE; s = INT; RSQUARE
+    { [(s, 1)] }
+
+access:
+  | LSQUARE; idx = expr; RSQUARE
+    { [idx] }
+  | LSQUARE; idx = expr; RSQUARE; a = access
+    { idx :: a }
 
 type_annotation:
   | BOOL_ANNOTATION { TBool }

@@ -101,6 +101,7 @@ and flatten_access dims idx_exprs =
   match dims, idx_exprs with
   | _::td, hi::ti -> 
     concat [ (string_of_int prod_dims); "*("; (emit_expr hi); ")+"; (flatten_access td ti) ]
+  | [], [] -> ""
   | _ -> failwith "Flatten failed"
 
 and emit_aa_logl (id, idx_exprs) =

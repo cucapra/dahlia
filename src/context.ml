@@ -33,7 +33,7 @@ let rec create_set s =
   in create_set' (s-1) IntSet.empty
 
 let compute_bf b =
-  List.fold_left (fun acc (_, b) -> b * acc) 0 b
+  List.fold_left (fun acc (_, b) -> b * acc) 1 b
 
 let add_binding id t g =
   let type_map' = StringMap.add id t g.type_map in
