@@ -28,6 +28,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (job.state === "failed") {
         result.textContent = 'failed!';
+      } else if (job.c_main) {
+        console.log('compiled');
+        const res = await fetch("/jobs/" + jobName + "/files/code/" + job.c_main);
+        const c_code = await res.text();
+        result.textContent = c_code;
+      } else {
+        setTimeout(poll, 1000);
       }
     };
 
