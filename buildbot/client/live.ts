@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const textarea = document.querySelector("textarea");
   const button = document.querySelector("button");
   const result = document.querySelector("#result");
+  const jobLink = document.querySelector("#jobLink");
 
   async function compile() {
     const code = textarea.value;
@@ -20,6 +21,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const jobName = await startJob(code);
     console.log("started job", jobName);
     result.textContent = 'job started...';
+    jobLink.textContent = jobName;
+    jobLink.setAttribute("href", "/jobs/" + jobName + ".html");
 
     const poll = async () => {
       const res = await fetch("/jobs/" + jobName);

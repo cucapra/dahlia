@@ -57,3 +57,6 @@ textarea {
     white-space: pre;
     font-family: monospace;
 }
+#jobLink {
+    font-size: 80%;
+}
