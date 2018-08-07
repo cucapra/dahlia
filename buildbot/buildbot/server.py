@@ -92,7 +92,8 @@ def add_job():
         db.set_state(job, 'uploaded')
 
     elif 'code' in request.values:
-        code = request.values['code']
+        # Sanitize newlines.
+        code = request.values['code'].replace('\r\n', '\n')
 
         # Create a job and save the code to a file.
         job = db.add('uploading')
