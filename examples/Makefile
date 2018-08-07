@@ -6,8 +6,9 @@ CPP := $(SS:%.ss=%.cpp)
 all: $(CPP)
 
 clean:
-	rm *.cpp
+	rm -r out
 
 %.cpp: %.ss
-	seac < $< > $@
+	mkdir -p out
+	seac < $< > out/$@
 
