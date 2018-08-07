@@ -9,7 +9,7 @@
 | 5 | float | TB | Simple usage of float type | **Passes.** Typechecks and emits expected code. |    
 | 6 | typedefs | TB | Simple usage of type alias | **Passes.** Typechecks and emits expected code. |    
 | 7 | [multaccess](https://github.com/cucapra/seashell/blob/master/examples/docs/multaccess.md) | SA | Check multi-write access to same element | **Fails.** Need to implement. | 
-| 8 | [matadd_1dfullnrl/(vvadd_fullnrl)](https://github.com/cucapra/seashell/blob/master/examples/docs/vvadd.md) | SA | Check explicit access with variable if loop full unrolled | **Fails.** Need to implement physical access. |  
+| 8 | [matadd_1dfullnrl/(vvadd_fullnrl)](https://github.com/cucapra/seashell/blob/master/examples/docs/vvadd.md) | SA | Check explicit access with variable if loop full unrolled | **Passes.** Typechecks and emits expected code. |  
 | 9 | [matmul](https://github.com/cucapra/seashell/blob/master/examples/docs/matmul.md) | SA | Compute-reduce, transposed loop access | **Fails.** Need to implement. |  
 | 10 | convolution | SA | Multiple loops and designs with different loop unrolls | **Fails.** |  
 | 11 | mini_convolution | TB | Interactions between index types and integers. Physical and logical access. | **Fails.** Need to implement physical access. |  
