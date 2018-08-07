@@ -4,7 +4,7 @@ import os
 from io import StringIO
 import csv
 from . import worker
-from .db import JobDB, ARCHIVE_NAME, NotFoundError
+from .db import JobDB, ARCHIVE_NAME, CODE_DIR, NotFoundError
 from datetime import datetime
 import re
 
@@ -70,26 +70,43 @@ def start_work_threads():
 
 @app.route('/jobs', methods=['POST'])
 def add_job():
-    if 'file' not in request.files:
-        return 'missing file', 400
-    file = request.files['file']
+    # Get the code either from an archive or a parameter.
+    if 'file' in request.files:
+        file = request.files['file']
 
-    # Check that the file has an allowed extension.
-    _, ext = os.path.splitext(file.filename)
-    if ext[1:] not in app.config['UPLOAD_EXTENSIONS']:
-        return 'invalid extension {}'.format(ext), 400
+        # Check that the file has an allowed extension.
+        _, ext = os.path.splitext(file.filename)
+        if ext[1:] not in app.config['UPLOAD_EXTENSIONS']:
+            return 'invalid extension {}'.format(ext), 400
 
-    # Create a job record.
-    job = db.add('uploading')
+        # Create a job record.
+        job = db.add('uploading')
 
-    # Create the job's directory and save the code there.
-    path = db.job_dir(job['name'])
-    os.mkdir(path)
-    archive_path = os.path.join(path, ARCHIVE_NAME + ext)
-    file.save(archive_path)
+        # Create the job's directory and save the code there.
+        path = db.job_dir(job['name'])
+        os.mkdir(path)
+        archive_path = os.path.join(path, ARCHIVE_NAME + ext)
+        file.save(archive_path)
 
-    # Mark it as uploaded.
-    db.set_state(job, 'uploaded')
+        # Mark it as uploaded.
+        db.set_state(job, 'uploaded')
+
+    elif 'code' in request.values:
+        code = request.values['code']
+
+        # Create a job and save the code to a file.
+        job = db.add('uploading')
+        path = db.job_dir(job['name'])
+        os.mkdir(path)
+        code_dir_path = os.path.join(path, CODE_DIR)
+        os.mkdir(code_dir_path)
+        code_file_path = os.path.join(code_dir_path, 'main.ss')
+        with open(code_file_path, 'w') as f:
+            f.write(code)
+        db.set_state(job, 'unpacked')
+
+    else:
+        return 'missing code or file', 400
 
     # In the browser, redirect to the detail page. Otherwise, just
     # return the job name.
