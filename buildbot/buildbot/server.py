@@ -4,7 +4,7 @@ import os
 from io import StringIO
 import csv
 from . import worker
-from .db import JobDB, ARCHIVE_NAME, NotFoundError
+from .db import JobDB, ARCHIVE_NAME, CODE_DIR, NotFoundError
 from datetime import datetime
 import re
 
@@ -70,33 +70,40 @@ def start_work_threads():
 
 @app.route('/jobs', methods=['POST'])
 def add_job():
-    if 'file' not in request.files:
-        return 'missing file', 400
-    file = request.files['file']
+    # Get the code either from an archive or a parameter.
+    if 'file' in request.files:
+        file = request.files['file']
 
-    # Check that the file has an allowed extension.
-    _, ext = os.path.splitext(file.filename)
-    if ext[1:] not in app.config['UPLOAD_EXTENSIONS']:
-        return 'invalid extension {}'.format(ext), 400
+        # Check that the file has an allowed extension.
+        _, ext = os.path.splitext(file.filename)
+        if ext[1:] not in app.config['UPLOAD_EXTENSIONS']:
+            return 'invalid extension {}'.format(ext), 400
 
-    # Create a job record.
-    job = db.add('uploading')
+        # Create the job and save the archive file.
+        with db.create('uploading', 'uploaded') as job:
+            file.save(ARCHIVE_NAME + ext)
+            name = job['name']
 
-    # Create the job's directory and save the code there.
-    path = db.job_dir(job['name'])
-    os.mkdir(path)
-    archive_path = os.path.join(path, ARCHIVE_NAME + ext)
-    file.save(archive_path)
+    elif 'code' in request.values:
+        # Sanitize newlines.
+        code = request.values['code'].replace('\r\n', '\n')
 
-    # Mark it as uploaded.
-    db.set_state(job, 'uploaded')
+        # Create a job and save the code to a file.
+        with db.create('uploading', 'unpacked') as job:
+            os.mkdir(CODE_DIR)
+            with open(os.path.join(CODE_DIR, 'main.ss'), 'w') as f:
+                f.write(code)
+            name = job['name']
+
+    else:
+        return 'missing code or file', 400
 
     # In the browser, redirect to the detail page. Otherwise, just
     # return the job name.
     if request.values.get('browser'):
-        return flask.redirect(flask.url_for('show_job', name=job['name']))
+        return flask.redirect(flask.url_for('show_job', name=name))
     else:
-        return job['name']
+        return name
 
 
 @app.route('/jobs.csv')

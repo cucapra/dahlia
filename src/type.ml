@@ -109,7 +109,7 @@ and check_aa_logl id idx_exprs (c, d) =
 and check_idx id idx a_t (c, d) =
   a_t, (Context.consume_aa_lst id idx c, d)
 
-let rec check_cmd cmd (context, (delta: Context.delta)) =
+let rec check_cmd cmd (context, delta) =
   match cmd with
   | CSeq (c1, c2)                  -> check_seq c1 c2 (context, delta)
   | CIf (cond, cmd)                -> check_if cond cmd (context, delta)

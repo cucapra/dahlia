@@ -11,9 +11,12 @@ let id = ['a'-'z' 'A'-'Z' '_'] ['a'-'z' 'A'-'Z' '_' '0'-'9']*
 
 let ws = ['\t' ' ' '\n']
 
+let comment = "//" [^ '\r' '\n']* '\n'
+
 rule token =
   parse
   | ws+          { token lexbuf }
+  | comment      { token lexbuf }
 
   | num as n     { INT (int_of_string n) }
   | fl as f      { FLOAT (float_of_string f) }

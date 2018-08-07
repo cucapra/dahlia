@@ -26,7 +26,6 @@ ul li {
 pre {
     margin: 0;
     overflow-x: auto;
-
 }
 
 ul.log li {
@@ -47,4 +46,9 @@ form {
 }
 input {
     display: block;
+}
+textarea {
+    width: 100%;
+    height: 20ex;
+    font-family: monospace;
 }

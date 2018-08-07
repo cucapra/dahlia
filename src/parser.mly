@@ -22,7 +22,7 @@ open Make_ast
        AND OR REASSIGN 
 
 (* Other *)
-%token SEMICOLON COLON RANGE_DOTS COMMA
+%token SEMICOLON COLON RANGE_DOTS COMMA 
 
 (* Precedences *)
 %right OR
