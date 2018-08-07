@@ -3,7 +3,7 @@
 | # | Example | Creator | Purpose | Status
 | --- | --- | --- | --- | --- |  
 | 1 | [vsadd](https://github.com/cucapra/seashell/blob/master/examples/docs/vsadd.md) | SA | Banking and unrolling | **Passes.** Typechecks and emits expected code. |  
-| 2 | [vsadd_nrl](https://github.com/cucapra/seashell/blob/master/examples/docs/vsadd.md) | SA | Explicit access with banks | **Fails.** Need to implement physical access. | 
+| 2 | [vsadd_nrl](https://github.com/cucapra/seashell/blob/master/examples/docs/vsadd.md) | SA | Explicit access with banks | **Passes.** Typechecks and emits expected code. | 
 | 3 | [vvadd](https://github.com/cucapra/seashell/blob/master/examples/docs/vvadd.md) | SA | Banking and unrolling | **Passes.** Typechecks and emits expected code. |  
 | 4 | [matadd(vvadd_nested)](https://github.com/cucapra/seashell/blob/master/examples/docs/vvadd.md) | SA | Check nested loops and multi loop unroll | **Fails.** Emits some code and typechecks, but we have not decided on type rules for MD access. |   
 | 5 | float | TB | Simple usage of float type | **Passes.** Typechecks and emits expected code. |    
