@@ -3,6 +3,7 @@ import threading
 import secrets
 import time
 import os
+from contextlib import contextmanager
 
 DB_FILENAME = 'db.json'
 JOBS_DIR = 'jobs'
@@ -10,6 +11,16 @@ ARCHIVE_NAME = 'code'
 CODE_DIR = 'code'
 
 Job = tinydb.Query()
+
+
+@contextmanager
+def chdir(path):
+    """Temporarily change the working directory (then change back).
+    """
+    old_dir = os.getcwd()
+    os.chdir(path)
+    yield
+    os.chdir(old_dir)
 
 
 class NotFoundError(Exception):
@@ -83,6 +94,19 @@ class JobDB:
             job = self._add(state)
             self.cv.notify_all()
         return job
+
+    @contextmanager
+    def create(self, start_state, end_state):
+        """A context manager for creating initializing a new job. The
+        job directory is created, and the working directory is
+        temporarily changed there.
+        """
+        job = self.add(start_state)
+        path = self.job_dir(job['name'])
+        os.mkdir(path)
+        with chdir(path):
+            yield job
+        self.set_state(job, end_state)
 
     def set_state(self, job, state):
         """Update a job's state.

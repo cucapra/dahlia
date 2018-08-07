@@ -79,32 +79,21 @@ def add_job():
         if ext[1:] not in app.config['UPLOAD_EXTENSIONS']:
             return 'invalid extension {}'.format(ext), 400
 
-        # Create a job record.
-        job = db.add('uploading')
-
-        # Create the job's directory and save the code there.
-        path = db.job_dir(job['name'])
-        os.mkdir(path)
-        archive_path = os.path.join(path, ARCHIVE_NAME + ext)
-        file.save(archive_path)
-
-        # Mark it as uploaded.
-        db.set_state(job, 'uploaded')
+        # Create the job and save the archive file.
+        with db.create('uploading', 'uploaded') as job:
+            file.save(ARCHIVE_NAME + ext)
+            name = job['name']
 
     elif 'code' in request.values:
         # Sanitize newlines.
         code = request.values['code'].replace('\r\n', '\n')
 
         # Create a job and save the code to a file.
-        job = db.add('uploading')
-        path = db.job_dir(job['name'])
-        os.mkdir(path)
-        code_dir_path = os.path.join(path, CODE_DIR)
-        os.mkdir(code_dir_path)
-        code_file_path = os.path.join(code_dir_path, 'main.ss')
-        with open(code_file_path, 'w') as f:
-            f.write(code)
-        db.set_state(job, 'unpacked')
+        with db.create('uploading', 'unpacked') as job:
+            os.mkdir(CODE_DIR)
+            with open(os.path.join(CODE_DIR, 'main.ss'), 'w') as f:
+                f.write(code)
+            name = job['name']
 
     else:
         return 'missing code or file', 400
@@ -112,9 +101,9 @@ def add_job():
     # In the browser, redirect to the detail page. Otherwise, just
     # return the job name.
     if request.values.get('browser'):
-        return flask.redirect(flask.url_for('show_job', name=job['name']))
+        return flask.redirect(flask.url_for('show_job', name=name))
     else:
-        return job['name']
+        return name
 
 
 @app.route('/jobs.csv')
