@@ -36,3 +36,8 @@ val rem_binding : id -> gamma -> gamma
    index [n] of array with id [id] is consumed. Raises [AlreadyConsumed] if
    the [n] is already consumed. *)
 val consume_aa : id -> int -> gamma -> gamma
+
+(* [consume_aa_lst id [i..k] g] is [g'] where [g'] is a gamma with
+   the indices i..k of array [id] consumed. Raises [AlreadyConsumed] if
+   an element in [i..k] is already consumed. *)
+val consume_aa_lst : id -> int list -> gamma -> gamma

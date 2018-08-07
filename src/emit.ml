@@ -4,7 +4,7 @@ let type_map = ref (fun _ -> failwith "TypeMap has not been set")
 let delta_map = ref (fun _ -> failwith "DeltaMap has not been set")
 
 let compute_bf d =
-  List.fold_left (fun acc (_, d) -> d * acc) 0 d
+  List.fold_left (fun acc (_, d) -> d * acc) 1 d
 
 let set_type_map t =
   type_map := t
@@ -64,7 +64,6 @@ let rec emit_expr = function
   | EBinop (b, e1, e2)     -> emit_binop (b, e1, e2)
   | EPhysAccess (id, b, i) -> emit_aa_phys (id, b, i)
   | ELoglAccess (id, i)    -> emit_aa_logl (id, i)
-  | EIndex _               -> failwith "Implement index stuff"
 
 and emit_int i = string_of_int i
 
@@ -96,12 +95,22 @@ and emit_aa_phys (id, b, i) =
     concat [ id; "["; (emit_expr b); " + "; (string_of_int bf); "*("; (emit_expr i); ")]" ]
   | _ -> failwith "Tried to index into non-array"
 
-and emit_aa_logl (id, i) =
-  let idx = 
-    (match i with
-    | h::[] -> emit_expr h
-    | i -> List.fold_left (fun acc e -> (emit_expr e) ^ " + " ^ acc) "" i) in
-  concat [ id; "["; idx; "]" ]
+(* FIXME: optimize? *)
+and flatten_access dims idx_exprs =
+    match dims, idx_exprs with
+    | _::td, hi::ti -> 
+      let prod_dims = List.fold_left (fun e (d, _) -> d * e) 1 td in
+      concat [ (string_of_int prod_dims); "*("; (emit_expr hi); ")+"; (flatten_access td ti) ]
+    | [], [] -> ""
+    | _ -> failwith "Flatten failed"
+
+and emit_aa_logl (id, idx_exprs) =
+  match !type_map id with
+  | TArray (_, dims) ->
+    let idx = flatten_access dims idx_exprs in
+    let idx' = String.sub idx 0 (String.length idx - 1) in
+    concat [ id; "["; (idx'); "]"; ]
+  | _ -> failwith "Tried to index into non-array"
 
 and argvals =
   List.map ((fun (id, t) -> 

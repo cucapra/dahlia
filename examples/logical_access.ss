@@ -1,4 +1,4 @@
-func logl_access(a: bank[10 bank(5)][4 bank(2)][6 bank(3)]) {
+func logl_access(a: int[10 bank(5)][4 bank(2)][6 bank(3)]) {
 
   for (let i = 0..9) unroll 5 {
 

@@ -33,7 +33,7 @@ let rec create_set s =
   in create_set' (s-1) IntSet.empty
 
 let compute_bf b =
-  List.fold_left (fun acc (_, b) -> b * acc) 0 b
+  List.fold_left (fun acc (_, b) -> b * acc) 1 b
 
 let add_binding id t g =
   let type_map' = StringMap.add id t g.type_map in
@@ -69,3 +69,9 @@ let consume_aa id i g =
         g.indices_available 
   }
   else raise (AlreadyConsumed i)
+
+let rec consume_aa_lst id lst g =
+  let consume_indices = fun context bank ->
+    try consume_aa id bank context
+    with AlreadyConsumed i -> raise (AlreadyConsumed i)
+  in List.fold_left consume_indices g lst

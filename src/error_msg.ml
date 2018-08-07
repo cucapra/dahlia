@@ -4,12 +4,7 @@ let rec string_of_type = function
   | TBool -> "bool"
   | TInt _ -> "int"
   | TArray (t, _) -> (string_of_type t) ^ " array"
-  | TIndex (s, d) ->
-    begin
-      match d with
-      | None -> "index with completely static information"
-      | Some _ -> "index with static and dynamic information"
-    end
+  | TIndex (s, d) -> "index"
   | TAlias id -> id
   | TFloat -> "float"
   | TFunc _ -> "func"
@@ -63,4 +58,7 @@ let illegal_mux =
 
 let static_bank_error =
   "Bank accessor must be static"
+
+let improper_unroll =
+  "Type Error: unroll factor must be a multiple of banking factor"
 

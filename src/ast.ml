@@ -23,7 +23,7 @@ type type_node =
   | TInt of int option 
   | TBool
   | TArray of type_node * (int * int) list
-  | TIndex of int list * int option 
+  | TIndex of int list * int list
   | TFunc of type_node list 
   | TAlias of id
   | TFloat
@@ -56,7 +56,6 @@ type binop =
 type expression =
   | EInt of int * bool
   | EFloat of float
-  | EIndex of int list
   | EVar of id
   | EBool of bool
   | EBinop of binop * expression * expression
@@ -64,13 +63,6 @@ type expression =
   | EPhysAccess of id * expression * expression
   | ELoglAccess of id * expression list
 
-type value =
-  | VInt of int
-  | VBool of bool
-  | VRange of int * int
-  | VArray of value array
-  | VIndex of int
-  
 (* A [command] is one of the following:
      - [CAssign (i, e)]: a representation of assignment of
        expression [e] to id [i]
@@ -97,4 +89,4 @@ type command =
   | CFuncDef of id * (id * type_node) list * command
   | CTypeDef of id * type_node
   | CMuxDef of id * id * int
-  | CApp of id * (expression list)
+  | CApp of id * expression list

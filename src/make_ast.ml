@@ -42,8 +42,8 @@ let make_seq c1 c2 =
 let make_phys_access id e1 e2 =
   EPhysAccess (id, e1, e2)
 
-let make_logl_access id e1 =
-  ELoglAccess (id, e1)
+let make_logl_access id idx_exprs =
+  ELoglAccess (id, idx_exprs)
 
 let make_function id args body =
   CFuncDef (id, args, body)
