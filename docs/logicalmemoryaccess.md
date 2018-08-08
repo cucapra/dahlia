@@ -20,12 +20,6 @@ $$
 \{ s + |0..k| \times d ~|~ s \in 0..k\}
 $$
 
-(The set representation of this index type is:
-
-$$
-\{ s + |0..k| \times d ~|~ s \in 0..k, d \in \frac{l}{k}..\frac{h}{k}\}
-$$)
-
 **Usage.** For Seashell, it's important to know exactly which indices are being used given a particular array access, which may be inside an unrolled loop. Seashell's typechecker uses index types to determine these indices. Seashell allows for two styles of array accesses: *implicit* and *explicit*. For the latter, which do not appear inside unrolled loops, the programmer specifies a statically known bank number and a potentially dynamic index offset into that bank. An index type representation of such an access would have trivial single-value static and dynamic components (rather than ranges), as such an access represents only a single value. Therefore, for logical accesses we're concerned with the index types used to represent the indices involved in *implicit* accesses.  
 
 Logical Multi-Dimensional Arrays
@@ -80,13 +74,7 @@ Here, $i_0$..$i_n$ are index types, where index $i_x$ is $\text{idx}\langle 0 ..
 
 $$ I_f = \left\{ \sum_{x=0}^{n} \left[ (s_x + |0..k_x| \times d_x) * \left( \prod_{x'=x+1}^{n}{\sigma_{x'}} \right) \right] ~|~ \forall x \in 0..n, s_x \in 0..k_x \right\} $$
 
-(We'd like to determine the set of flattened indices $I_f$. Define $\tau(i)$ to be the static component of index type $i$, and $\delta(i)$ to be the dynamic component of $i$. Then we can write this set as:)
-
-($$ I_f = \left\{ \sum_{x=0}^{n} \left[ (s_x + |\tau(i_x)| \times d_x) * \left( \prod_{x'=x+1}^{n}{\sigma_{x'}} \right) \right] ~|~ s_x \in \tau(i_x), d_x \in \delta(i_x) \right\} $$)
-
 To put this into words, our index type can formalize the set of elements accessed when using multi-dimensional access into an array.  
-
-(it's capturing the idea of taking every set of literal index integers $a_0..a_n$ that are represented by our index types, and then applying our index-flattening formula, and then taking the union of each of these results to produce one set of flattened indices.)
 
 **Example 2.** Consider this program:
 
@@ -108,7 +96,7 @@ $$
 \{(s_0 + |0..2|*d_0)*\sigma_1 + (s_1 + |0..2|*d_1)*1 ~|~ \forall s_0 \in 0 .. 2, s_1 \in 0 .. 2 \}
 $$
 
-where $ \sigma_1 = 2 $
+where $$ \sigma_1 = 2 $$
 
 For a pair of $\langle d_0,d_1 \rangle = \langle 1,0 \rangle$:
 
@@ -117,7 +105,7 @@ For a pair of $\langle d_0,d_1 \rangle = \langle 1,0 \rangle$:
   - $(1+2*1)*2 + (0+2*0)=6$
   - $(1+2*1)*2 + (1+2*0)=7$
 
-Note that the banks should be arranged with an interleaved strategy. Alternatively, if we unroll the [outer loop by 4](https://capra.cs.cornell.edu/seashell/docs/appendix.html#example-2.2) then the memory arrangement should be block-wise. We will discuss further about banking in the next section. A 3-D array example is also provid3ed in the [appendix](https://capra.cs.cornell.edu/seashell/docs/appendix.html#d-array-examples-to-visualize-multi-dimensional-access).
+Note that the banks should be arranged with an interleaved strategy. Alternatively, if we unroll the [outer loop by 4](https://capra.cs.cornell.edu/seashell/docs/appendix.html#example-2.2) then the memory arrangement should be block-wise. We will discuss further about banking in the next section. A 3-D array example is also provided in the [appendix](https://capra.cs.cornell.edu/seashell/docs/appendix.html#d-array-examples-to-visualize-multi-dimensional-access).
 
 Bank access with index types
 ----------------------------
@@ -214,7 +202,7 @@ $$
 We know a couple things that help us rewrite this set:
 
   - $s < mk$
-  - $kd \bmod mk = k (d \bmod m)$ [proof](https://capra.cs.cornell.edu/seashell/docs/appendix.html#modulus-proof) [image](https://imgur.com/a/9cEQHGr)
+  - $kd \bmod mk = k (d \bmod m)$ [proof](https://capra.cs.cornell.edu/seashell/docs/appendix.html#modulus-proof), [image](https://imgur.com/a/9cEQHGr)
 
 So then, we have:
 
