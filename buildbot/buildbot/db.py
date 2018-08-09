@@ -70,7 +70,7 @@ class JobDB:
     def _all(self):
         """Read all the jobs. This is currently quite slow.
         """
-        for name in os.listdir(self.base_path):
+        for name in os.listdir(os.path.join(self.base_path, JOBS_DIR)):
             path = self._info_path(name)
             if os.path.isfile(path):
                 with open(path) as f:
