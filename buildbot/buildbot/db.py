@@ -39,6 +39,11 @@ class JobDB:
 
         self.cv = threading.Condition()
 
+    def job_dir(self, job_name):
+        """Get the path to a job's work directory.
+        """
+        return os.path.join(self.base_path, JOBS_DIR, job_name)
+
     def _info_path(self, name):
         """Get the path to a job's info JSON file."""
         return os.path.join(self.job_dir(name), INFO_FILENAME)
@@ -153,8 +158,3 @@ class JobDB:
         """
         with self.cv:
             return self._read(name)
-
-    def job_dir(self, job_name):
-        """Get the path to a job's work directory.
-        """
-        return os.path.join(self.base_path, JOBS_DIR, job_name)
