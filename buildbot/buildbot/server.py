@@ -85,8 +85,7 @@ def add_job():
             name = job['name']
 
     elif 'code' in request.values:
-        # Sanitize newlines.
-        code = request.values['code'].replace('\r\n', '\n')
+        code = request.values['code']
 
         # Create a job and save the code to a file.
         with db.create('uploading', 'unpacked') as job:
