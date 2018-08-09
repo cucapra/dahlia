@@ -85,6 +85,12 @@ def run(cmd, **kwargs):
             _cmd_str(cmd),
             exc.filename,
         ))
+    except subprocess.TimeoutExpired as exc:
+        raise WorkError('$ {}\ntimeout after {} seconds{}'.format(
+            _cmd_str(cmd),
+            exc.timeout,
+            _stream_text(exc.stdout, exc.stderr),
+        ))
 
 
 def proc_log(job, cmd, proc, stdout=True, stderr=True):
@@ -104,7 +110,7 @@ def proc_log(job, cmd, proc, stdout=True, stderr=True):
     log(job, out)
 
 
-def runl(job, cmd, log_stdout=True, **kwargs):
+def runl(job, cmd, log_stdout=True, timeout=5, **kwargs):
     """Run a command and log its output.
 
     Return an exited process object, with output captured (in `stdout`
@@ -113,6 +119,7 @@ def runl(job, cmd, log_stdout=True, **kwargs):
     running the command is to collect data from stdout. Additional
     arguments are forwarded to `subprocess.run`.
     """
+    kwargs['timeout'] = timeout
     proc = run(cmd, **kwargs)
     proc_log(job, cmd, proc, stdout=log_stdout)
     return proc
