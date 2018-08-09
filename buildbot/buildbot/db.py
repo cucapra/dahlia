@@ -39,12 +39,6 @@ class JobDB:
 
         self.cv = threading.Condition()
 
-    def _count(self, state):
-        """Get the number of jobs in the database in a given state.
-        """
-        return len([job for job in self._all()
-                    if job['state'] == state])
-
     def _info_path(self, name):
         """Get the path to a job's info JSON file."""
         return os.path.join(self.job_dir(name), INFO_FILENAME)
@@ -68,7 +62,10 @@ class JobDB:
             json.dump(job, f)
 
     def _all(self):
-        """Read all the jobs. This is currently quite slow.
+        """Read all the jobs.
+
+        This is probably pretty slow, and its O(n) where n is the total
+        number of jobs in the system.
         """
         for name in os.listdir(os.path.join(self.base_path, JOBS_DIR)):
             path = self._info_path(name)
@@ -141,9 +138,14 @@ class JobDB:
         state to `new_state`, and return it.
         """
         with self.cv:
-            while not self._count(old_state):
+            while True:
+                try:
+                    job = self._acquire(old_state, new_state)
+                except NotFoundError:
+                    pass
+                else:
+                    break
                 self.cv.wait()
-            job = self._acquire(old_state, new_state)
             return job
 
     def get(self, name):
