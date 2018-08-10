@@ -71,7 +71,11 @@ and compute_unrollf idx_exprs (c, d) =
   | h::t ->
     begin
       match check_expr h (c, d) with
-      | TIndex ((ls, hs), _), _ -> (hs - ls) * compute_unrollf t (c, d)
+      | TIndex ((ls, hs), _), _ -> 
+        if hs - ls = 1 then
+          raise (TypeError "Index must contain static information")
+        else
+          (hs - ls) * compute_unrollf t (c, d)
       | _ -> raise (TypeError "Logical array access must be with idx types")
     end
   | [] -> 1
