@@ -16,9 +16,7 @@ The variable *i* accessing array $\text{a}$ has type, $\text{idx}\langle 0 .. k,
 
 ##### equation 1
 
-$$
-\{ s + |0..k| \times d ~|~ s \in 0..k\}
-$$
+$$\{ s + |0..k| \times d ~|~ s \in 0..k\}$$
 
 **Usage.** For Seashell, it's important to know exactly which indices are being used given a particular array access, which may be inside an unrolled loop. Seashell's typechecker uses index types to determine these indices. Seashell allows for two styles of array accesses: *implicit* and *explicit*. For the latter, which do not appear inside unrolled loops, the programmer specifies a statically known bank number and a potentially dynamic index offset into that bank. An index type representation of such an access would have trivial single-value static and dynamic components (rather than ranges), as such an access represents only a single value. Therefore, for logical accesses we're concerned with the index types used to represent the indices involved in *implicit* accesses.  
 
@@ -253,5 +251,26 @@ This shows us that our index type would be accessing a single bank at any time, 
 
 ### Type Rules for Multi-Dimensional Access
 
-The next step is to determine rules for when we access an array $\text{a}$ with multiple index types.
+Now we'd like to describe some type rules for when we use multiple index types to access an array.
+
+**Type Rule 1.** The product of the unroll factors influencing the types $i_0..i_n$ must equal the banking factor of the array they're accessing.
+
+
+    int a[x][y] bank(b1*b2)
+
+    for i in range 0..x unroll b1
+        for j in range 0..y unroll b2
+	    access[i][j]
+
+
+Intuitively, we unroll this loop $b=b_1*b_2$ times, so we're simultaneously accessing $b$ values, and there better be $b$ banks we can access. Our index types are the following types:
+
+ - $\text{idx}\langle 0 .. b_1, 0 .. \frac{x}{b1} \rangle$
+ - $\text{idx}\langle 0 .. b_2, 0 .. \frac{y}{b2} \rangle$
+
+Then we can compute $I_f$ for all $d\in 0 .. \frac{x}{b}$, 
+
+$$ I_f = \left\{ \sum_{x=0}^{n} \left[ (s_x + |0..k_x| \times d_x) * \left( \prod_{x'=x+1}^{n}{\sigma_{x'}} \right) \right] ~|~ s_0 \in 0..b_0, s_1 \in 0.. b_1 \right\} $$
+
+The banks accessed would be:
 
