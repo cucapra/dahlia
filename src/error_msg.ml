@@ -2,7 +2,6 @@ open Ast
 
 let rec string_of_type = function
   | TBool -> "bool"
-  | TInt _ -> "int"
   | TArray (t, _) -> (string_of_type t) ^ " array"
   | TIndex (s, d) -> "index"
   | TAlias id -> id
@@ -61,4 +60,7 @@ let static_bank_error =
 
 let improper_unroll =
   "Type Error: unroll factor must be a multiple of banking factor"
+
+let range_static_error =
+  "Type Error: range start/end must be static"
 

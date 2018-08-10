@@ -36,9 +36,8 @@ let s_pragma_bank id bf i =
 
 let rec type_str = function
   | TBool
-  | TInt _        -> "int"
   | TFloat        -> "float"
-  | TIndex _      -> failwith "Implement indices"
+  | TIndex _      -> "int"
   | TArray (t, _) -> failwith "Implement array type stringified version"
   | TAlias id -> type_str (!delta_map id)
 
@@ -97,6 +96,10 @@ and emit_aa_phys (id, b, i) =
 
 (* FIXME: optimize? *)
 and flatten_access dims idx_exprs =
+    print_int (List.length dims);
+    print_newline ();
+    print_int (List.length idx_exprs);
+    print_newline ();
     match dims, idx_exprs with
     | _::td, hi::ti -> 
       let prod_dims = List.fold_left (fun e (d, _) -> d * e) 1 td in
@@ -164,7 +167,6 @@ and emit_assign_float (id, e) =
 
 and emit_assign (id, e) i =
   match !type_map id, e with
-  | TInt _, _
   | TBool, _                        -> emit_assign_int (id, e)         |> indent i
   | TArray (t, d), EArray (_, _, a) -> emit_assign_arr (id, e, a, d) i |> indent i
   | TFloat, _                       -> emit_assign_float (id, e)       |> indent i

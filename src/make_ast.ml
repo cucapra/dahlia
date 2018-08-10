@@ -26,7 +26,7 @@ let make_var id =
 
 let make_array s b t =
   match t with
-  | TInt _ -> EArray (TInt None, b, (Array.make s (EInt (0, true))))
+  | TIndex _ -> EArray ((TIndex ((0, 1), (0, max_int))), b, (Array.make s (EInt (0, true))))
   | TBool -> EArray (TBool, b, (Array.make s (EBool false)))
   | _ -> failwith "Implement rest of array types"
 

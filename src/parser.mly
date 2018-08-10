@@ -115,7 +115,7 @@ access:
 
 type_annotation:
   | BOOL_ANNOTATION { TBool }
-  | INT_ANNOTATION { TInt None }
+  | INT_ANNOTATION { TIndex ((0, 1), (0, max_int)) }
   | FLOAT_ANNOTATION { TFloat } 
   | t = type_annotation a = array_def
     { TArray (t, a) }

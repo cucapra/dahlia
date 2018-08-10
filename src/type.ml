@@ -20,7 +20,6 @@ let (--) i j =
 
 let rec types_equal delta t1 t2 =
   match t1, t2 with
-  | TInt _, TInt _ -> true
   | TArray (a1, d1), TArray (a2, d2) -> d1=d2 && types_equal delta a1 a2
   | TIndex _, TIndex _ -> true
   | TAlias t1, t2 -> types_equal delta (Context.get_alias_binding t1 delta) t2
@@ -38,7 +37,8 @@ let rec check_expr exp (context, (delta: Context.delta)) =
   | EPhysAccess (id, idx1, idx2) -> check_aa_expl id idx1 idx2 (context, delta)
   | ELoglAccess (id, i)          -> check_aa_logl id i (context, delta)
 
-and check_int i is_stat (ctx, dta) = (if is_stat then TInt (Some i) else TInt (None)), (ctx, dta)
+and check_int i is_stat (ctx, dta) = 
+  (if is_stat then (TIndex ((i, i+1), (0, 1))) else (TIndex ((0, 1), (0, max_int)))), (ctx, dta)
 
 and check_float f (ctx, dta) = TFloat, (ctx, dta)
 
@@ -49,46 +49,29 @@ and check_binop binop e1 e2 (c, d) =
   with Op_util.IllegalOperation -> 
     raise (TypeError (illegal_op binop t1 t2))
 
-(* TODO: refactor this mess *)
 and check_aa_expl id idx1 idx2 (c, d) =
   check_expr idx1 (c, d)   |> fun (idx1_t, (c1, d1)) ->
   check_expr idx2 (c1, d1) |> fun (idx2_t, (c2, d2)) ->
   match idx1_t, idx2_t, Context.get_binding id c2 with
-  | TInt (Some i), TInt _, TArray (a_t, _)
-  | TInt (Some i), TIndex _, TArray (a_t, _) -> 
-    begin
-      try a_t, (Context.consume_aa id i c2, d2) 
-      with AlreadyConsumed i -> raise (TypeError (illegal_bank i id))
-    end
-  | TIndex (s, _), TInt _, TArray (a_t, _) 
-  | TIndex (s, _), TIndex _, TArray (a_t, _) ->
-    check_idx id s a_t (c, d)
-  | TInt _, TInt _, TMux (m_id, s) 
-  | TIndex _, TInt _, TMux (m_id, s) 
-  | TInt _, TIndex _, TMux (m_id, s) 
-  | TIndex _, TIndex _, TMux (m_id, s) ->
-    begin
-      match Context.get_binding id c2 with
-      | TArray (a_t, banking) -> 
-        let bf = compute_bf banking in 
-        if s <= bf then a_t, (c, d)
-        else raise (TypeError small_mux)
-      | _ -> raise (TypeError illegal_mux)
-    end
-  | TMux (_, m_s), TIndex _, TArray (a_t, banking) ->
-    let bf = compute_bf banking in
-    if m_s <= bf then a_t, (c, d)
-    else raise (TypeError small_mux)
-  | TInt (None), _, _-> raise (TypeError static_bank_error)
-  | t, _, _ -> 
-    raise (TypeError (illegal_accessor_type t id))
+  | TIndex (s1, d1), TIndex (_, _), TArray (a_t, _) ->
+    let (ls_1, hs_1) = s1 in
+    let (ld_1, hd_1) = d1 in
+    if ls_1 - hs_1 = 1 && hd_1 - ld_1 = max_int then
+      begin
+        try a_t, (Context.consume_aa id ls_1 c2, d2) 
+        with AlreadyConsumed i -> raise (TypeError (illegal_bank i id))
+      end
+    else
+      raise (TypeError static_bank_error)
+  | t1, _, _ ->
+    raise (TypeError (illegal_accessor_type t1 id))
 
 and compute_unrollf idx_exprs (c, d) =
   match idx_exprs with
   | h::t ->
     begin
       match check_expr h (c, d) with
-      | TIndex (s, _), _ -> (List.length s) * compute_unrollf t (c, d)
+      | TIndex ((ls, hs), _), _ -> (hs - ls) * compute_unrollf t (c, d)
       | _ -> raise (TypeError "Logical array access must be with idx types")
     end
   | [] -> 1
@@ -135,20 +118,24 @@ and check_for id r1 r2 body (c, d) =
   check_expr r1 (c, d)   |> fun (r1_type, (c1, d1)) ->
   check_expr r2 (c1, d1) |> fun (r2_type, (c2, d2)) ->
   match r1_type, r2_type with
-  | TInt _, TInt _ -> 
-    check_cmd body (Context.add_binding id (TInt None) c2, d2)
+  | TIndex _, TIndex _ -> 
+    check_cmd body (Context.add_binding id (TIndex ((0, 1), (0, max_int))) c2, d2)
   | _ -> raise (TypeError range_error)
 
 and check_for_impl id r1 r2 body u (context, delta) =
   check_expr r1 (context, delta) |> fun (r1_type, (c1, d1)) ->
   check_expr r2 (context, delta) |> fun (r2_type, (c2, d2)) ->
   match r1_type, r2_type with
-  | TInt (Some i1), TInt (Some i2) ->
-    let range_size = i2 - i1 + 1 in
-    if (range_size=u) then
-      check_cmd body (Context.add_binding id (TIndex (0--(u-1), [0])) c2, d2)
-    else
-      check_cmd body (Context.add_binding id (TIndex (0--(u-1), (0--(range_size)/u))) c2, d2)
+  | TIndex (st1, dyn1), TIndex (st2, dyn2) ->
+    let (ls_1, hs_1) = st1 in
+    let (ls_2, hs_2) = st2 in
+    if (hs_1 - ls_1 = 1) && (hs_2 - ls_2 = 1) then (
+      let range_size = ls_2 - ls_1 + 1 in
+      if (range_size=u) then
+        check_cmd body ((Context.add_binding id (TIndex ((0, u), (0, 1))) c2), d2)
+      else
+        check_cmd body ((Context.add_binding id (TIndex ((0, u), (0, (range_size/u)))) c2), d2))
+    else raise (TypeError range_static_error)
   | _ -> raise (TypeError range_error)
 
 and check_assignment id exp (context, delta) =

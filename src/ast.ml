@@ -20,10 +20,9 @@ type id = string
      - [TMux (id, s) a mux type that encapsulates a memory with id [id] and
        this mux (not memory) is of size [s] *)
 type type_node =
-  | TInt of int option 
   | TBool
   | TArray of type_node * (int * int) list
-  | TIndex of int list * int list
+  | TIndex of (int * int) * (int * int)
   | TFunc of type_node list 
   | TAlias of id
   | TFloat
