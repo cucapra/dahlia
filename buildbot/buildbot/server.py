@@ -17,6 +17,9 @@ TEXT_EXTENSIONS = [
     's',
     'log',
     'jou',
+    'tcl',
+    'd',
+    'dat',
 ]
 
 # Our Flask application.
