@@ -38,36 +38,67 @@ And here, I'm not sure we need a discussion of physical accesses---unless we're 
 :::
 
 
-Logical Multi-Dimensional Arrays
---------------------------------
+Accessing Multi-Dimensional Arrays
+----------------------------------
 
-As far as we're concerned, hardware we are dealing with (especially FPGAs) have physically one-dimensional arrays. Thereby, HLS only supports the use of one-dimensional arrays. With Seashell, we'd like to offer some abstractions to make expressing logical computations on multi-dimensional matrices easier. We'll define Seashell $n$-dimensonal arrays like this:
+Hardware memories are inherently one dimensional---they map a linear range of addresses to values.
+You can loosely think of banked memories as two dimensional, where the first dimension is the bank number.
+HLS compilers typically only support one-dimensional arrays.
+In Seashell, however, we want to support logically multi-dimensional arrays and map them to banked memories.
 
-$$
-\text{a}:t[\sigma_0][\sigma_1]..[\sigma_n] \text{ bank}(b)
-$$
-
-Here, $\text{a}$ is the name of our array; the contents following the colon tell us that $t$ is some arbitrary type ($\text{int}$, etc) for the array elements; and $\sigma_i$ represents the size of a dimension $i$. $\text{bank}(b)$ tells us that this array is banked by a factor of $b$: in the future we'd like to impose flexible banking structures on each dimension, but for now, we're going to simply bank the entire array - that is, the entire flattened array, which we'll talk about next.
-
-Under the hood (that is, when we translate our Seashell program to HLS C), this multi-dimensional array is translated to a one-dimensional array. This flattened array (which we'll call $\text{a}_f)$ has size equal to the product of our Seashell array dimensions:
+We'll write array declarations like this:
 
 $$
-\text{a}:t[\sigma_0][\sigma_1]..[\sigma_n] \text{ bank}(b) \equiv \text{a}_f:t[{(\prod_{i=0}^{n} \sigma_i)} ] \text{ bank}(b)
+\text{a} : t[\sigma_0][\sigma_1] \dots [\sigma_n]
+\text{ bank}(b)
 $$
 
-Logical accesses to a Seashell multi-dimensonal array look like this: $\text{a}[i_0][i_1]..[i_n]$. We'd like to access these higher-dimensional arrays with our Seashell index types, but to first examine how working with these arrays might work, it would be useful to first consider $i_0..i_n$ as plain old integers. To compute what our flattened index $i_f$ would be based on our logical indices $i_0..i_n$, we could use the following method: 
+where $\text{a}$ is the name of the array, $t$ is the element type (`int`, for example), each $\sigma_i$ is the size of a dimension, and $b$ is the banking factor for the underlying memory.
+(For now, there is only one banking factor that applies to the entire memory. We eventually want to allow per-dimension banking too.)
+
+Under the hood (that is, when we translate our Seashell program to HLS C), this multi-dimensional array is translated to a one-dimensional array.
+The flattened array, which we'll call $\text{a}_f$, has a size equal to the product of our Seashell array's dimensions:
+
+$$
+\text{a}_f : t \left[
+    \prod_{i=0}^{n} \sigma_i
+\right]
+\text{ bank}(b)
+$$
+
+::: todo
+I removed the $\equiv$ here---I think it's a little more readable if we just show the definition of $\text{a}_f$. (If the reader wants the type of $\text{a}$, they can just look upward a couple of lines. :)
+--A
+:::
+
+Consider a logical access to an element in our array:
+
+$$\text{a}[i_0][i_1] \dots [i_n]$$
+
+where each $i_k$ is a plain old number (not an index type).
+This logical access corresponds to a physical access in $\text{a}_f$ that we can write as $\text{a}_f[i_f]$ where:
 
 $$\tag{2}
-i_f = \sum_{k=0}^{n} \left[i_k * \left(\prod_{k'=k+1}^{n} \sigma_{k'} \right) \right]
+i_f = \sum_{k=0}^{n} \left[i_k \times \left(\prod_{k'=k+1}^{n} \sigma_{k'} \right) \right]
 $$
 
-**Example 1** Consider a two-dimensional array $\text{a}$ defined like this:
+**Example.**
+Consider a two-dimensional array $\text{a}$ defined like this:
 
-$$a:t[4][2] \text{ bank} (4)$$
+$$
+\text{a} : t[4][2] \text{ bank} (4)
+$$
 
-The flattened version, $\text{a}_f$, would have size $N=8$. Say we make an access $\text{a}[3][1]$. Using our formula we defined, we'd access $\text{a}_f$ with $i_f=7$.
+The flattened version, $\text{a}_f$, has size $8$.
+The logical access to $\text{a}[3][1]$ corresponds to a physical access $\text{a}_f[3 \times 2 + 1]$ or $\text{a}_f[7]$.
 
 Note that the banking factor is not used in logical access.
+
+::: todo
+Because banking factors aren't relevant for Equation 2, which is the main point of this section, perhaps they shouldn't be introduced here?
+--A
+:::
+
 
 Multi-dimensional logical Access with Index Types
 -------------------------------------------------
