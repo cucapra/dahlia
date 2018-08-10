@@ -13,11 +13,6 @@ let type_of_alias_id id d =
 let compute_bf lst =
   List.fold_left (fun acc (_, b) -> acc * b) 1 lst
 
-let (--) i j =
-  let rec aux n acc =
-    if n < i then acc else aux (n-1) (n :: acc)
-  in aux j []
-
 let rec types_equal delta t1 t2 =
   match t1, t2 with
   | TArray (a1, d1), TArray (a2, d2) -> d1=d2 && types_equal delta a1 a2
@@ -86,7 +81,8 @@ and check_aa id idx_exprs (c, d) =
     let unrollf = compute_unrollf idx_exprs (c, d) in
     if (bf mod unrollf)=0 then
       try 
-        t, (Context.consume_aa_lst id (0--(unrollf-1)) c, d)
+        let banks = Core.List.range 0 (unrollf-1) in
+        t, (Context.consume_aa_lst id banks c, d)
       with AlreadyConsumed bank -> raise (TypeError (illegal_bank bank id)) 
     else 
       raise (TypeError "TypeError: unroll factor must be factor of banking factor")

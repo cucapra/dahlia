@@ -4,4 +4,5 @@
 (ocamllex lexer)
 
 (library
-  (name seashell))
+  (name seashell)
+  (libraries core))

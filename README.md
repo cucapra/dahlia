@@ -10,10 +10,11 @@ Seashell provides a type system that makes programming FPGAs easier. To learn ab
 
 ## Setup/Use
 
-Requires [Dune](https://github.com/ocaml/dune) and [Menhir](http://gallium.inria.fr/~fpottier/menhir/) (in addition to OCaml and OPAM):
+Install dependencies (in addition to OCaml and OPAM):
 
 	$ opam install dune
 	$ opam install menhir
+	$ opam install core
 
 Then, build and install `seac` compiler:
 
