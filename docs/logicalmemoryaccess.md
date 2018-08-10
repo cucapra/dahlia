@@ -180,14 +180,30 @@ Since $I_f$ just talks about the flat, bankless physical addresses, it's hard to
 --A
 :::
 
-Bank access with index types
-----------------------------
 
-Now that we have established what a logical array access in index types would represent, we can use it to formally represent unrolling. However, in order to create interesting type checking rules to prevent unsafe memory accesses, we need to identify which bank/ banks each access would attempt to reach. This discussion would use common approaches for memory banking, namely interleaving and block-wise strategies. To read more about banking strategies [here](https://capra.cs.cornell.edu/seashell/docs/appendix.html#array-banking-strategies-with-2-d-example).  
+Banking
+-------
 
-We will mainly proceed with the interleaving strategy, as that would allow consecutive elements to be accessed in parallel. Since our index types could provide us with the logical one dimensional integer index $I_f$, we can use the same strategy as intuitively figuring out the bank.  
-  - with an interleaving strategy, we can use $i_f \bmod b$   
-  - with a chunking strategy, we can use $i_f / b$  
+::: todo
+I changed the title of this section from "Bank access with index types" because it doesn't seem to have to do with index types at all---it just introduces the concept of banking and how to map flattened offsets to bank/offset pairs.
+Also, this might be a good place to move the above discussion of $\text{bank}(b)$ that seemed premature.
+--A
+:::
+
+To define Seashell's typing rules for logical accesses, we need to know which banks each access touches.
+Specifically, we need to know how to map any flattened index $i_f$ to a bank number and an offset within that bank.
+
+There are two common approaches to banking: interleaving and block-wise.
+(See more details [in the appendix][app-banking].)
+We focus on interleaving in this document, where for a given flattened index $i_f$:
+
+- The bank number is $i_f \bmod b$.
+- The bank offset is $i_f \div b$ (using integer division).
+
+In block-wise banking, the two are reversed.
+
+[app-banking]: appendix.html#array-banking-strategies-with-2-d-example
+
 
 Typechecking Array Accesses
 ---------------------------
