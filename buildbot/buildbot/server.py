@@ -8,17 +8,6 @@ from .db import JobDB, ARCHIVE_NAME, CODE_DIR, NotFoundError
 from datetime import datetime
 import re
 
-# Filename extensions to send as plain text for job file viewing.
-TEXT_EXTENSIONS = [
-    'ss',
-    'sea'
-    'c',
-    'cpp',
-    's',
-    'log',
-    'jou',
-]
-
 # Our Flask application.
 app = flask.Flask(__name__, instance_relative_config=True)
 
@@ -165,7 +154,7 @@ def job_file(name, filename):
 
     # Check whether we should force a plain-text MIME type.
     _, ext = os.path.splitext(filename)
-    mime = 'text/plain' if ext[1:] in TEXT_EXTENSIONS else None
+    mime = 'text/plain' if ext[1:] in app.config['TEXT_EXTENSIONS'] else None
 
     # Send the file.
     return flask.send_from_directory(db.job_dir(name), filename, mimetype=mime)
