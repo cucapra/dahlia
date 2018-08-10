@@ -114,7 +114,7 @@ def jobs_csv():
     )
     writer.writeheader()
 
-    for job in db.jobs:
+    for job in db._all():
         writer.writerow({
             'name': job['name'],
             'started': job['started'],
@@ -127,7 +127,7 @@ def jobs_csv():
 
 @app.route('/')
 def jobs_html():
-    return flask.render_template('joblist.html', jobs=db.jobs)
+    return flask.render_template('joblist.html', jobs=db._all())
 
 
 @app.route('/live.html')

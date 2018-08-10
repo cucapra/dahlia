@@ -207,17 +207,20 @@ def stage_hls(db, config):
     """
     prefix = config["HLS_COMMAND_PREFIX"]
     with work(db, 'seashelled', 'hlsing', 'hlsed') as job:
-        # Run Xilinx SDSoC compiler for hardware functions
+        # Run SDSoC commands to debug sds++ error
         platform = 'zed' # job['platform']
+        runl(job, prefix + ['sds++', '-sds-pf-info', platform], cwd=CODE_DIR)
+        
+        # Run Xilinx SDSoC compiler for hardware functions
         func_hw = job['func_main']
         c_hw = job['c_main']
         obj_hw = job['obj_main']
-        runl(job, prefix + ['sds++', '-sds-pf', platform, '-sds-hw', func_hw, c_hw, '-sds-end', '-clkid', '3', '-c', c_hw, obj_hw], cwd=CODE_DIR)
+        runl(job, prefix + ['sds++', '-sds-pf', platform, '-sds-hw', func_hw, c_hw, '-sds-end', '-clkid', '3', '-poll-mode', '1', '-verbose', '-Wall', '-O3', '-c', '-MMD', '-MP', '-MF"vsadd.d"', c_hw, '-o', obj_hw], cwd=CODE_DIR)
         
         # Run the Xilinx SDSoC compiler for host function
         c_main = 'main.cpp'  #job['c_host']
         obj_main = 'main.o'  #job['obj_host']
-        runl(job, prefix + ['sds++', '-c', c_main, obj_main], cwd=CODE_DIR)
+        runl(job, prefix + ['sds++', '-c', c_main, '-o', obj_main], cwd=CODE_DIR)
 
         # Run Xilinx SDSoC compiler for created objects
         runl(job, prefix + ['sds++', '-sds-pf', platform, '-clkid', '3', obj_hw, obj_main], cwd=CODE_DIR)

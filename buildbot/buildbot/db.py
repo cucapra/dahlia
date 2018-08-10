@@ -1,16 +1,14 @@
-import tinydb
 import threading
 import secrets
 import time
 import os
 from contextlib import contextmanager
+import json
 
-DB_FILENAME = 'db.json'
 JOBS_DIR = 'jobs'
 ARCHIVE_NAME = 'code'
 CODE_DIR = 'code'
-
-Job = tinydb.Query()
+INFO_FILENAME = 'info.json'
 
 
 @contextmanager
@@ -39,26 +37,46 @@ class JobDB:
         os.makedirs(self.base_path, exist_ok=True)
         os.makedirs(os.path.join(self.base_path, JOBS_DIR), exist_ok=True)
 
-        self.db = tinydb.TinyDB(os.path.join(base_path, DB_FILENAME))
-        self.jobs = self.db.table('jobs')
-
         self.cv = threading.Condition()
 
-    def _count(self, state):
-        """Get the number of jobs in the database in a given state.
+    def job_dir(self, job_name):
+        """Get the path to a job's work directory.
         """
-        return len(self.jobs.search(tinydb.Query().state == state))
+        return os.path.join(self.base_path, JOBS_DIR, job_name)
 
-    def _get(self, name):
-        """Get a job by its name.
+    def _info_path(self, name):
+        """Get the path to a job's info JSON file."""
+        return os.path.join(self.job_dir(name), INFO_FILENAME)
+
+    def _read(self, name):
+        """Read a job from its info file.
 
         Raise a NotFoundError if there is no such job.
         """
-        matches = self.jobs.search(tinydb.Query().name == name)
-        if not matches:
+        path = self._info_path(name)
+        if os.path.isfile(path):
+            with open(path) as f:
+                return json.load(f)
+        else:
             raise NotFoundError()
-        assert len(matches) == 1
-        return matches[0]
+
+    def _write(self, job):
+        """Write a job back to its info file.
+        """
+        with open(self._info_path(job['name']), 'w') as f:
+            json.dump(job, f)
+
+    def _all(self):
+        """Read all the jobs.
+
+        This is probably pretty slow, and its O(n) where n is the total
+        number of jobs in the system.
+        """
+        for name in os.listdir(os.path.join(self.base_path, JOBS_DIR)):
+            path = self._info_path(name)
+            if os.path.isfile(path):
+                with open(path) as f:
+                    yield json.load(f)
 
     def _acquire(self, old_state, new_state):
         """Look for a job in `old_state`, update it to `new_state`, and
@@ -66,26 +84,30 @@ class JobDB:
 
         Raise a `NotFoundError` if there is no such job.
         """
-        matches = self.jobs.search(tinydb.Query().state == old_state)
-        if not matches:
+        for job in self._all():
+            if job['state'] == old_state:
+                break
+        else:
             raise NotFoundError()
-        job = matches[0]
 
         job['state'] = new_state
         log(job, 'acquired in state {}'.format(new_state))
-        self.jobs.write_back([job])
+        with open(self._info_path(job['name']), 'w') as f:
+            json.dump(job, f)
 
         return job
 
     def _add(self, state):
         name = secrets.token_urlsafe(8)
-        doc_id = self.jobs.insert({
+        job = {
             'name': name,
             'started': time.time(),
             'state': state,
             'log': [],
-        })
-        return self.jobs.get(doc_id=doc_id)
+        }
+        os.mkdir(self.job_dir(name))
+        self._write(job)
+        return job
 
     def add(self, state):
         """Add a new job and return it.
@@ -103,7 +125,6 @@ class JobDB:
         """
         job = self.add(start_state)
         path = self.job_dir(job['name'])
-        os.mkdir(path)
         with chdir(path):
             yield job
         self.set_state(job, end_state)
@@ -114,7 +135,7 @@ class JobDB:
         with self.cv:
             job['state'] = state
             log(job, 'state changed to {}'.format(state))
-            self.jobs.write_back([job])
+            self._write(job)
             self.cv.notify_all()
 
     def acquire(self, old_state, new_state):
@@ -122,18 +143,18 @@ class JobDB:
         state to `new_state`, and return it.
         """
         with self.cv:
-            while not self._count(old_state):
+            while True:
+                try:
+                    job = self._acquire(old_state, new_state)
+                except NotFoundError:
+                    pass
+                else:
+                    break
                 self.cv.wait()
-            job = self._acquire(old_state, new_state)
             return job
 
     def get(self, name):
         """Get the job with the given name.
         """
         with self.cv:
-            return self._get(name)
-
-    def job_dir(self, job_name):
-        """Get the path to a job's work directory.
-        """
-        return os.path.join(self.base_path, JOBS_DIR, job_name)
+            return self._read(name)
