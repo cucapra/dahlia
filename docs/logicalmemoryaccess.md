@@ -100,28 +100,40 @@ Because banking factors aren't relevant for Equation 2, which is the main point 
 :::
 
 
-Multi-dimensional logical Access with Index Types
--------------------------------------------------
+Logical Access with Index Types
+-------------------------------
 
-Now, we'd like to talk about which indices are represented when we make a logical array access using our index types. Consider an access to array $a$:
+We now consider the meaning of logical accesses using Seashell's index types.
+We want to determine the *set* of elements accessed in an expression of the form 
+$\text{a}[i_0] \dots [i_n]$
+where each $i_x$ is of an index type
+$\text{idx}\langle 0 .. k_x, l_x .. h_x \rangle$.
+(This restricted form of index type, where the static range starts at 0, arises from Seashell's unrolled loops.)
 
-    for i in 0..L unroll x
-      for j in 0..M unroll y
-        for k in 0..N unroll z
-          access a[i][j][k]
+::: todo
+Do we need to make this simplifying assumption (that static ranges start at zero) yet? Maybe it doesn't hurt, but it does seem possible to do without it.
+If we *do* make the simplification immediately, I propose doing the simplification *first* to Equation 1, where $|0..k|$ can just become $k$.
+--A
+:::
 
-To generalize, we can represent such an access as:
-$$ \text{a}[i_0]..[i_n]$$
-
-Here, $i_0$..$i_n$ are index types, where index $i_x$ is $\text{idx}\langle 0 .. k_x, l_x .. h_x  \rangle$. Following our discussion with one-dimensional accesses, value each for all of these index type variables correspond to a set of dynamic numbers $\{\forall x \in 0 .. n, d_x \in l_x .. h_x\}$. We can derive the set type indices would represent for any such set of $d$s, substituting $i_k$ in Equation 2 with Equation 1:
+We can get the set of physical locations for this access by combining Equation 1, which describes the meaning of index types, with Equation 2, which describes the logical-to-physical mapping.
+For a given set of dynamic values $d_x$ for each index type, we substitute each $i_k$ in Equation 2 with the indices given in Equation 1:
 
 $$\tag{3}
-I_f = \left\{ \sum_{x=0}^{n} \left[ (s_x + |0..k_x| \times d_x) * \left( \prod_{x'=x+1}^{n}{\sigma_{x'}} \right) \right] ~|~ \forall x \in 0..n, s_x \in 0..k_x \right\}
+I_f = \left\{
+    \sum_{x=0}^{n} \left[ (s_x + |0..k_x| \times d_x) * \left( \prod_{x'=x+1}^{n}{\sigma_{x'}} \right) \right]
+    \;\middle|\;
+    x \in 0..n, s_x \in 0..k_x
+\right\}
 $$
 
-To put this into words, our index type can formalize the set of elements accessed when using multi-dimensional access into an array.  
+::: todo
+For intelligibility, maybe it would be nice to make the sub strict consistent between here and Equation 2 (that one uses $k$, and we use $x$ here for obvious reasons)?
+$j$ might work in both places, for example.
+--A
+:::
 
-**Example 2.** Consider this program:
+**Example.** Consider this program:
 
     int a[4][2] bank(4)
 
