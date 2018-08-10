@@ -2,7 +2,12 @@
 title: Logical Memory Accesses
 ---
 
-In this document, we'll describe how Seashell typechecks logical array accesses using [index types](https://capra.cs.cornell.edu/seashell/docs/indextype.html), and we'll argue that our methods are valid.
+This document describes Seashell's *logical access* expressions, which are a way of accessing memories using [index types][it].
+The idea is to let programs access the logical structure of an array, even a multidimensional array, while preserving information about the underlying physical banks being accessed.
+The key result is a set of sound typing rules that determine which banks in a memory are accessed when using a logical access expression---which determines how our type system "consumes" banks from the typing context.
+
+[it]: indextype.html
+
 
 Logical access with index types
 -------------------------------
