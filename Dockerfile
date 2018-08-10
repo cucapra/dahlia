@@ -20,7 +20,10 @@ ENV PATH /root/.opam/system/bin:${PATH}
 # Volume, port, and command for buildbot.
 VOLUME seashell/buildbot/instance
 EXPOSE 8000
-CMD ["make", "-C", "buildbot", "serve"]
+ENV PIPENV_PIPFILE=buildbot/Pipfile
+CMD ["pipenv", "run",
+     "gunicorn", "--bind", "0.0.0.0:8000", "--chdir", "buildbot",
+     "buildbot:app"]
 
 # Add Seashell source.
 ADD . seashell
