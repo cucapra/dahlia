@@ -15,13 +15,12 @@ Requires [Dune](https://github.com/ocaml/dune) and [Menhir](http://gallium.inria
 	$ opam install dune
 	$ opam install menhir
 
-Then for setup and use, build and install `seac` compiler:
+Then, build and install `seac` compiler:
 
     $ dune build
     $ dune install
 
-Also can use the makefile with `make build`
-
+(You can also just type `make` to do the same thing.)
 Now you can generate HLS programs from your Seashell programs.
 For example:
 
