@@ -11,6 +11,7 @@ import re
 # Filename extensions to send as plain text for job file viewing.
 TEXT_EXTENSIONS = [
     'ss',
+    'sea'
     'c',
     'cpp',
     's',
