@@ -9,21 +9,34 @@ The key result is a set of sound typing rules that determine which banks in a me
 [it]: indextype.html
 
 
-Logical access with index types
+Logical Access with Index Types
 -------------------------------
 
-Index types allow us to combine static and dynamic information about the indices we're accessing in unrolled loops. For instance, consider the following example: 
+Seashell uses [index types][it] for loop induction variables.
+Index types describe what we know statically about the set of locations that an index value will access.
+In a loop like this, for example:
 
-    for i in l..h unroll k
+    for i in l..h unroll k:
         access a[i]
 
-The variable *i* accessing array $\text{a}$ has type, $\text{idx}\langle 0 .. k, \frac{l}{k} .. \frac{h}{k} \rangle$. This type is comprised of a *static component*, $0 .. k$, and a *dynamic component*, $\frac{l}{k} .. \frac{h}{k}$. As described in the [semantics of index types](https://capra.cs.cornell.edu/seashell/docs/indextype.html#syntax-semantics), a value of an index type corresponds to a dynamic number $d \in \frac{l}{k}..\frac{h}{k}$. For any such $d$ type idx represents the set:
+The variable $i$ has the type
+$\text{idx}\langle 0 .. k, \frac{l}{k} .. \frac{h}{k} \rangle$.
+This type consists of a *static component*, $0 .. k$, and a *dynamic component*, $\frac{l}{k} .. \frac{h}{k}$.
+According to the [semantics of index types](https://capra.cs.cornell.edu/seashell/docs/indextype.html#syntax-semantics), a value of an index type is a (dynamic) number $d \in \frac{l}{k}..\frac{h}{k}$.
+For any such $d$, the value represents this set of locations:
 
 $$\tag{1}
 \{ s + |0..k| \times d ~|~ s \in 0..k \}
 $$
 
-**Usage.** For Seashell, it's important to know exactly which indices are being used given a particular array access, which may be inside an unrolled loop. Seashell's typechecker uses index types to determine these indices. Seashell allows for two styles of array accesses: *implicit* and *explicit*. For the latter, which do not appear inside unrolled loops, the programmer specifies a statically known bank number and a potentially dynamic index offset into that bank. An index type representation of such an access would have trivial single-value static and dynamic components (rather than ranges), as such an access represents only a single value. Therefore, for logical accesses we're concerned with the index types used to represent the indices involved in *implicit* accesses.  
+For Seashell, it's important to know exactly which indices are being used given a particular array access, which may be inside an unrolled loop. Seashell's typechecker uses index types to determine these indices. Seashell allows for two styles of array accesses: *implicit* and *explicit*. For the latter, which do not appear inside unrolled loops, the programmer specifies a statically known bank number and a potentially dynamic index offset into that bank. An index type representation of such an access would have trivial single-value static and dynamic components (rather than ranges), as such an access represents only a single value. Therefore, for logical accesses we're concerned with the index types used to represent the indices involved in *implicit* accesses.
+
+::: todo
+How does the implicit vs. explicit terminology differ from logical vs. physical? It sounds like it might be the same thing.
+And here, I'm not sure we need a discussion of physical accesses---unless we're going to go into more detail about how physical accesses work, we can stick to the logical view (and make the above paragraph shorter).
+--A
+:::
+
 
 Logical Multi-Dimensional Arrays
 --------------------------------
