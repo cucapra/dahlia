@@ -215,8 +215,7 @@ def stage_hls(db, config):
         func_hw = job['func_main']
         c_hw = job['c_main']
         obj_hw = job['obj_main']
-        runl(job,['pwd'])
-        runl(job, prefix + ['sdscc', '-sds-pf', platform, '-sds-hw', func_hw, c_hw, '-sds-end', '-clkid', '3', '-poll-mode', '1', '-verbose', '-Wall', '-O3', '-c', '-MMD', '-MP', '-MF"vsadd.d"', c_hw, '-o', obj_hw], cwd=CODE_DIR)
+        runl(job, prefix + ['sds++', '-sds-pf', platform, '-sds-hw', func_hw, c_hw, '-sds-end', '-clkid', '3', '-poll-mode', '1', '-verbose', '-Wall', '-O3', '-c', '-MMD', '-MP', '-MF"vsadd.d"', c_hw, '-o', obj_hw], cwd=CODE_DIR)
         
         # Run the Xilinx SDSoC compiler for host function
         c_main = 'main.cpp'  #job['c_host']
