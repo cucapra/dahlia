@@ -16,15 +16,13 @@ val make_for_impl : id -> expression -> expression -> int -> command -> command
 
 val make_var : id -> expression
 
-val make_array : int -> int -> type_node -> expression
-
 val make_if : expression -> command -> command
 
 val make_seq : command -> command -> command
 
-val make_phys_access : id -> expression -> expression -> expression
+val make_banked_aa : id -> expression -> expression -> expression
 
-val make_logl_access : id -> expression list -> expression
+val make_aa : id -> expression list -> expression
 
 val make_reassignment : expression -> expression -> command
 

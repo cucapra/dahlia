@@ -24,12 +24,6 @@ let make_for_impl x x1 x2 u body =
 let make_var id =
   EVar id
 
-let make_array s b t =
-  match t with
-  | TIndex _ -> EArray ((TIndex ((0, 1), (0, max_int))), b, (Array.make s (EInt (0, true))))
-  | TBool -> EArray (TBool, b, (Array.make s (EBool false)))
-  | _ -> failwith "Implement rest of array types"
-
 let make_reassignment e1 e2 =
   CReassign (e1, e2)
 
@@ -39,11 +33,11 @@ let make_if b body =
 let make_seq c1 c2 =
   CSeq (c1, c2)
 
-let make_phys_access id e1 e2 =
-  EPhysAccess (id, e1, e2)
+let make_banked_aa id e1 e2 =
+  EBankedAA (id, e1, e2)
 
-let make_logl_access id idx_exprs =
-  ELoglAccess (id, idx_exprs)
+let make_aa id idx_exprs =
+  EAA (id, idx_exprs)
 
 let make_function id args body =
   CFuncDef (id, args, body)

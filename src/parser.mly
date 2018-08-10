@@ -12,7 +12,7 @@ open Make_ast
 (* Keywords *)
 %token LET IF FOR TRUE FALSE INT_ANNOTATION 
        BOOL_ANNOTATION FLOAT_ANNOTATION
-       MUX UNROLL MEMORY BANK FUNC TYPE 
+       MUX UNROLL BANK FUNC TYPE 
 
 (* Parentheses, brackets, etc *)
 %token LPAREN RPAREN LBRACK RBRACK LSQUARE RSQUARE 
@@ -44,14 +44,11 @@ cmd:
     { make_muxdef s mid aid }
   | f = ID LPAREN a = args RPAREN SEMICOLON
     { make_app f a }
-  | TYPE tname = ID EQUAL tval = type_annotation (* FIXME *)
+  | TYPE tname = ID EQUAL tval = type_annotation SEMICOLON
     { make_typedef tname tval }
   | FUNC f = ID LPAREN a = annotated_args RPAREN 
     LBRACK body = cmd RBRACK
     { make_function f a body }
-  | MEMORY x = ID COLON t = type_annotation LSQUARE s = INT RSQUARE BANK 
-    LPAREN b = INT RPAREN SEMICOLON
-    { make_assignment x (make_array s b t) }
   | LET x = ID EQUAL e1 = expr SEMICOLON
     { make_assignment x e1 }
   | IF LPAREN b = expr RPAREN LBRACK body = cmd RBRACK
@@ -69,9 +66,9 @@ cmd:
 
 expr:
   | x = ID; a = access;
-    { make_logl_access x a }
+    { make_aa x a }
   | x = ID; LBRACK; idx1 = expr; RBRACK; LSQUARE; idx2 = expr; RSQUARE
-    { make_phys_access x idx1 idx2 }
+    { make_banked_aa x idx1 idx2 }
   | LPAREN e = expr RPAREN
     { e }
   | e1 = expr; bop = binop; e2 = expr

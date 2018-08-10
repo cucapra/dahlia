@@ -38,7 +38,6 @@ rule token =
   | "&&"         { AND }
   | "||"         { OR }
 
-  | "memory"     { MEMORY }
   | "mux"        { MUX }
   | "bank"       { BANK }
   | "unroll"     { UNROLL }

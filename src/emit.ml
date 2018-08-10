@@ -34,6 +34,9 @@ let s_pragma_bank id bf i =
       " factor="; (string_of_int bf) 
     ] |> indent i
 
+let compute_array_size dims =
+  List.fold_left (fun acc (s, _) -> s * acc) 1 dims
+
 let rec type_str = function
   | TBool
   | TFloat        -> "float"
@@ -55,14 +58,13 @@ let bop_str = function
   | BopOr -> "||"
 
 let rec emit_expr = function
-  | EInt (i, _)            -> emit_int i
-  | EFloat f               -> emit_float f
-  | EBool b                -> emit_bool b
-  | EVar v                 -> emit_var v
-  | EArray (_, _, a)       -> emit_array a
-  | EBinop (b, e1, e2)     -> emit_binop (b, e1, e2)
-  | EPhysAccess (id, b, i) -> emit_aa_phys (id, b, i)
-  | ELoglAccess (id, i)    -> emit_aa_logl (id, i)
+  | EInt (i, _)          -> emit_int i
+  | EFloat f             -> emit_float f
+  | EBool b              -> emit_bool b
+  | EVar v               -> emit_var v
+  | EBinop (b, e1, e2)   -> emit_binop (b, e1, e2)
+  | EBankedAA (id, b, i) -> emit_aa_phys (id, b, i)
+  | EAA (id, i)          -> emit_aa_logl (id, i)
 
 and emit_int i = string_of_int i
 
@@ -71,9 +73,6 @@ and emit_float f = string_of_float f
 and emit_bool b = if b then "1" else "0"
 
 and emit_var id = id
-
-and emit_array _ = 
-  failwith "Typechecker failed to catch literal array access"
 
 and emit_binop (b, e1, e2) = 
   concat [ (emit_expr e1); (bop_str b); (emit_expr e2) ]
@@ -147,14 +146,14 @@ let rec emit_cmd i cmd =
 and emit_assign_int (id, e) =
   concat [ "int "; id; " = "; (emit_expr e); ";" ]
 
-and emit_assign_arr (id, e, a, d) i =
+and emit_assign_arr (id, e, d) i =
   let bf = compute_bf d in
-  let arr_size = string_of_int (Array.length a) in
+  let arr_size = compute_array_size d in
   let part_pragma =
     if bf=1 then ""
     else s_pragma_bank id bf i
   in concat [
-    "int "; id; "["; arr_size; "]"; ";"; newline;
+    "int "; id; "["; (string_of_int arr_size); "]"; ";"; newline;
     part_pragma
   ]
 
@@ -162,10 +161,10 @@ and emit_assign_float (id, e) =
   concat [ "float "; id; " = "; (emit_expr e); ";" ]
 
 and emit_assign (id, e) i =
-  match !type_map id, e with
-  | TBool, _                        -> emit_assign_int (id, e)         |> indent i
-  | TArray (t, d), EArray (_, _, a) -> emit_assign_arr (id, e, a, d) i |> indent i
-  | TFloat, _                       -> emit_assign_float (id, e)       |> indent i
+  match !type_map id with
+  | TBool         -> emit_assign_int (id, e)         |> indent i
+  | TArray (t, d) -> emit_assign_arr (id, e, d) i |> indent i
+  | TFloat        -> emit_assign_float (id, e)       |> indent i
 
 and emit_reassign (target, e) i =
   concat [ (emit_expr target); " = "; (emit_expr e); ";" ] |> indent i
