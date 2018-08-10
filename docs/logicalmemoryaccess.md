@@ -208,22 +208,55 @@ In block-wise banking, the two are reversed.
 Typechecking Array Accesses
 ---------------------------
 
-We've been describing the method of determining which banks an array accesse would make. Now, we'd like to expand on how this might be of use in the Seashell type system. In general, the problem we're trying to solve is the following: restrict programs such that banks of memories can only be accessed once, to reflect the fact that in actual hardware, these memories have limited access ports. One way we might be able to do this is by tracking a set of banks that are available for use in accessing an array. When an access with a particular bank occurs, we mark the bank unreachable after that point. So, for any array $\text{a}$ in our typing context, associate it with some set $B$ of unconsumed banks, and when we access some bank $b \in B$, the set of banks associated with $B$ becomes $B \setminus b$.  
+::: todo
+Instead of jumping right into defining the type rules, I recommend inserting a section here first that derives the *bank set* for a given access (i.e., the set of banks that the access will touch).
+Then you can use the bank set to justify the rules.
+--A
+:::
+
+We've been describing the method of determining which banks an array access would make. Now, we'd like to expand on how this might be of use in the Seashell type system. In general, the problem we're trying to solve is the following: restrict programs such that banks of memories can only be accessed once, to reflect the fact that in actual hardware, these memories have limited access ports. One way we might be able to do this is by tracking a set of banks that are available for use in accessing an array. When an access with a particular bank occurs, we mark the bank unreachable after that point. So, for any array $\text{a}$ in our typing context, associate it with some set $B$ of unconsumed banks, and when we access some bank $b \in B$, the set of banks associated with $B$ becomes $B \setminus b$.  
 
 Now, we need a way to determine which accesses are being used and consumed when we use an index type. One way we could accomplish this is by generating every single index that our index types can represent, and then determine every single bank they access, using the methods we've described. However, we'd like to simplify this process. We'd like to come up with some simpler type rules that enforce memory access safety.
 
 ### Type Rules for One-Dimensional Access
+
+::: todo
+The below assumption seems to have already been made way at the beginning of the document.
+But I like the idea of introducing the assumption here (after deriving the bank set) instead!
+If it doesn't make the math too messy.
+--A
+:::
+
 We'll make the assumption that the static component of an index type will start at $0$, that is, any static component will be some range $0 .. k$. This will make it easier to reason about the indices we're accessing in a real seashell example. However, the generality should hold to our index type definition.   
 
 #### Type Rule 1
+
 For any one-dimensional array access into array $\text{a}$ with index type $i$, we will only consider it valid if the size of the static component of $i$ divides into the banking factor of $\text{a}$.
 
 #### Type Rule 2
+
+::: todo
+I think this part of the type rules---the notion that "consuming" an array index means you can't access it again---belongs somewhere else.
+For this purposes of this document, which is about finding out where logical accesses "go," we can just say "this access consumes these banks of the array."
+The meaning of *consumes* can be left to another discussion that dives into our affine types.
+--A
+:::
+
 Allow only one legal usage of index type $i$ to access $\text{a}$, if rule (1) holds. That is, if we have some access $\text{a}[i]$ in a program, then after that point in the program we cannot access $\text{a}$ again.
 
 It is evident from these rules, that our type checker is conservative about the design space of safe accesses. Our attempt through this document is to formally prove our accesses are safe, and not derive the complete design space of safe accesses. We hope to convince our index types are rigorous and flexible enough to attempt proofs with other type rules, which would make the type checker gradually less conservative.  
 
 We'd now like to demonstrate some proofs that show our rules only allow valid array accesses. Consider the following cases:  
+
+::: todo
+I'm not 100% sure we need all three of these cases.
+It seems like the second one is the most general, and the other two are special cases.
+Maybe it would be clearer to just go into the second one in detail---and leave it parameterized on $m$.
+This gets you a general type rule.
+Then you can give further intuition by examining the *consequences* of this rule for when $m=1$ and when $k=1$.
+Having three proofs ends up pretty repetitive.
+--A
+:::
 
 **banked array access with unroll factor = banking factor**
 
@@ -341,6 +374,13 @@ This shows us that our index type would be accessing a single bank at any time, 
 **Note- ** We're operating on a 1-D array, so this set already represents our "flattened indices" for multi-dimensional access. In fact, we can argue 1-D as a special case of the $I_f$ definition we provided earlier. We will proceed in the next section to arrive at primitive access rules for multi-dimensional access, and gradually improve on them.  
 
 ### Type Rules for Multi-Dimensional Access
+
+::: todo
+This looks like a good start, but it may not be necessary to separate the single-dimensional and multi-dimensional cases.
+I kind of expect that the math here won't get too wild, and it will end up resulting in conclusions that look really similar to the single-dimensional case.
+If we do the general math up front, then describing the consequences for the single-dimensional special case will be easy.
+--A
+:::
 
 Now we'd like to describe some type rules for when we use multiple index types to access an array.
 
