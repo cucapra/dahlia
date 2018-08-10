@@ -29,7 +29,7 @@ $$\tag{1}
 \{ s + |0..k| \times d ~|~ s \in 0..k \}
 $$
 
-For Seashell, it's important to know exactly which indices are being used given a particular array access, which may be inside an unrolled loop. Seashell's typechecker uses index types to determine these indices. Seashell allows for two styles of array accesses: *implicit* and *explicit*. For the latter, which do not appear inside unrolled loops, the programmer specifies a statically known bank number and a potentially dynamic index offset into that bank. An index type representation of such an access would have trivial single-value static and dynamic components (rather than ranges), as such an access represents only a single value. Therefore, for logical accesses we're concerned with the index types used to represent the indices involved in *implicit* accesses.
+Given an array access with our index types, this set representation allows us to precisely identify which indices (and subsequently memory banks) are accessed. This is important for the Seashell typechecker, which needs this information to enforce memory access safety.
 
 ::: todo
 How does the implicit vs. explicit terminology differ from logical vs. physical? It sounds like it might be the same thing.
@@ -50,11 +50,9 @@ We'll write array declarations like this:
 
 $$
 \text{a} : t[\sigma_0][\sigma_1] \dots [\sigma_n]
-\text{ bank}(b)
 $$
 
-where $\text{a}$ is the name of the array, $t$ is the element type (`int`, for example), each $\sigma_i$ is the size of a dimension, and $b$ is the banking factor for the underlying memory.
-(For now, there is only one banking factor that applies to the entire memory. We eventually want to allow per-dimension banking too.)
+where $\text{a}$ is the name of the array, $t$ is the element type (`int`, for example), and each $\sigma_i$ is the size of a dimension.
 
 Under the hood (that is, when we translate our Seashell program to HLS C), this multi-dimensional array is translated to a one-dimensional array.
 The flattened array, which we'll call $\text{a}_f$, has a size equal to the product of our Seashell array's dimensions:
@@ -63,7 +61,6 @@ $$
 \text{a}_f : t \left[
     \prod_{i=0}^{n} \sigma_i
 \right]
-\text{ bank}(b)
 $$
 
 ::: todo
@@ -75,8 +72,8 @@ Consider a logical access to an element in our array:
 
 $$\text{a}[i_0][i_1] \dots [i_n]$$
 
-where each $i_k$ is a plain old number (not an index type).
-This logical access corresponds to a physical access in $\text{a}_f$ that we can write as $\text{a}_f[i_f]$ where:
+Here, each $i_k$ is a plain old integer, and not an index type.
+This logical access corresponds to a physical access in $\text{a}_f$ that we can write as $\text{a}_f[i_f]$, where $i_f$ is defined as:
 
 $$\tag{2}
 i_f = \sum_{k=0}^{n} \left[i_k \times \left(\prod_{k'=k+1}^{n} \sigma_{k'} \right) \right]
@@ -86,13 +83,11 @@ $$
 Consider a two-dimensional array $\text{a}$ defined like this:
 
 $$
-\text{a} : t[4][2] \text{ bank} (4)
+\text{a} : t[4][2] 
 $$
 
 The flattened version, $\text{a}_f$, has size $8$.
 The logical access to $\text{a}[3][1]$ corresponds to a physical access $\text{a}_f[3 \times 2 + 1]$ or $\text{a}_f[7]$.
-
-Note that the banking factor is not used in logical access.
 
 ::: todo
 Because banking factors aren't relevant for Equation 2, which is the main point of this section, perhaps they shouldn't be introduced here?
