@@ -7,7 +7,7 @@ import traceback
 import shlex
 
 SEASHELL_EXT = '.ss'
-C_EXT = '.c'
+C_EXT = '.cpp'
 OBJ_EXT = '.o'
 
 
