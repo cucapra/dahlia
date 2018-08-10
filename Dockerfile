@@ -34,6 +34,6 @@ RUN eval `opam config env` ; dune build
 RUN eval `opam config env` ; dune install
 
 # Set up buildbot.
-RUN pipenv install
+RUN cd buildbot ; PIPENV_PIPFILE= pipenv install
 RUN cd buildbot ; yarn
 RUN cd buildbot ; yarn build

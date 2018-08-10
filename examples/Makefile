@@ -1,14 +1,14 @@
 .PHONY : all clean
 
-SS   := $(wildcard *.ss)
-CPP := $(SS:%.ss=%.cpp)
+SEA   := $(wildcard *.sea)
+CPP := $(SEA:%.sea=%.cpp)
 
 all: $(CPP)
 
 clean:
 	rm -r out
 
-%.cpp: %.ss
+%.cpp: %.sea
 	mkdir -p out
 	seac < $< > out/$@
 
