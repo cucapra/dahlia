@@ -207,8 +207,11 @@ def stage_hls(db, config):
     """
     prefix = config["HLS_COMMAND_PREFIX"]
     with work(db, 'seashelled', 'hlsing', 'hlsed') as job:
-        # Run Xilinx SDSoC compiler for hardware functions
+        # Run SDSoC commands to debug sds++ error
         platform = 'zed' # job['platform']
+        run1(job, prefix + ['sds++', 'sds-pf-info', platform], cwd=CODE_DIR)
+        
+        # Run Xilinx SDSoC compiler for hardware functions
         func_hw = job['func_main']
         c_hw = job['c_main']
         obj_hw = job['obj_main']
