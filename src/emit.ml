@@ -96,10 +96,6 @@ and emit_aa_phys (id, b, i) =
 
 (* FIXME: optimize? *)
 and flatten_access dims idx_exprs =
-    print_int (List.length dims);
-    print_newline ();
-    print_int (List.length idx_exprs);
-    print_newline ();
     match dims, idx_exprs with
     | _::td, hi::ti -> 
       let prod_dims = List.fold_left (fun e (d, _) -> d * e) 1 td in
