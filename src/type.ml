@@ -32,7 +32,12 @@ let rec check_expr exp (context, (delta: Context.delta)) =
   | EAA (id, i)                -> check_aa id i (context, delta)
 
 and check_int i is_stat (ctx, dta) = 
-  (if is_stat then (TIndex ((i, i+1), (0, 1))) else (TIndex ((0, 1), (0, max_int)))), (ctx, dta)
+  let typ =
+    if is_stat then
+      TIndex ((i, i+1), (0, 1))
+    else
+      TIndex ((0, 1), (min_int, max_int))
+  in typ, (ctx, dta)
 
 and check_float f (ctx, dta) = TFloat, (ctx, dta)
 
@@ -118,7 +123,8 @@ and check_for id r1 r2 body (c, d) =
   check_expr r2 (c1, d1) |> fun (r2_type, (c2, d2)) ->
   match r1_type, r2_type with
   | TIndex _, TIndex _ -> 
-    check_cmd body (Context.add_binding id (TIndex ((0, 1), (0, max_int))) c2, d2)
+    let typ = TIndex ((0, 1), (min_int, max_int))
+    in check_cmd body (Context.add_binding id typ c2, d2)
   | _ -> raise (TypeError range_error)
 
 and check_for_impl id r1 r2 body u (context, delta) =
@@ -131,9 +137,11 @@ and check_for_impl id r1 r2 body u (context, delta) =
     if (hs_1 - ls_1 = 1) && (hs_2 - ls_2 = 1) then (
       let range_size = ls_2 - ls_1 + 1 in
       if (range_size=u) then
-        check_cmd body ((Context.add_binding id (TIndex ((0, u), (0, 1))) c2), d2)
+        let typ = TIndex ((0, u), (0, 1))
+        in check_cmd body (Context.add_binding id typ c2, d2)
       else
-        check_cmd body ((Context.add_binding id (TIndex ((0, u), (0, (range_size/u)))) c2), d2))
+        let typ = TIndex ((0, u), (0, (range_size/u)))
+        in check_cmd body ((Context.add_binding id typ c2), d2))
     else raise (TypeError range_static_error)
   | _ -> raise (TypeError range_error)
 
@@ -141,6 +149,7 @@ and check_assignment id exp (context, delta) =
   check_expr exp (context, delta) |> fun (t, (c, d)) ->
   Context.add_binding id t c, delta
 
+(* TODO: rethink this *)
 and check_reassign target exp (context, delta) =
   match target, exp with
   | EBankedAA (id, idx1, idx2), expr ->
@@ -152,20 +161,14 @@ and check_reassign target exp (context, delta) =
   | EAA (id, idx), expr -> 
     check_aa id idx (context, delta) |> fun (_, (c', d')) ->
     (c', d')
-      (*
-    check_aa_impl id idx (context, delta) |> fun (t_arr, (c, d)) ->
-    check_expr expr (context, delta)      |> fun (t_exp, (c', d')) ->
-    if types_equal delta t_arr t_exp then (c', d')
-    else raise (TypeError "Tried to populate array with incorrect type") *)
   | _ -> raise (TypeError "Used reassign operator on illegal types")
 
 and check_funcdef id args body (context, delta) =
-  let context' = 
-    List.fold_left 
-      (fun ctx (arg_id, t) -> Context.add_binding arg_id t ctx) context args in
-  let context'', delta'' = check_cmd body (context', delta) in
-  Context.add_binding id (TFunc (List.map (fun (_, t) -> t) args)) context'', delta''
-  (* List.iter (fun (e, t) -> Hashtbl.remove context' (e, None)) args; *)
+  let add_argbind = fun ctx (arg_id, t) -> Context.add_binding arg_id t ctx in
+  let context' = List.fold_left add_argbind context args in
+  let context'', delta' = check_cmd body (context', delta) in
+  let argtypes = List.map (fun (_, t) -> t) args in
+  Context.add_binding id (TFunc argtypes) context'', delta'
 
 and check_app id args (context, delta) =
   let argtypes = List.map (fun a -> check_expr a (context, delta) |> fst) args in
