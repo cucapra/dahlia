@@ -1,0 +1,6 @@
+/* Work around a KaTeX problem where tags are positioned all the way to the
+ * right of the window. */
+.katex-display > .katex > .katex-html > .tag {
+    position: relative !important;
+    float: right;
+}

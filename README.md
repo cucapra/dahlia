@@ -6,6 +6,7 @@ Seashell provides a type system that makes programming FPGAs easier. To learn ab
   - [Notes about Seashell](https://capra.cs.cornell.edu/seashell/docs/index.html)
   - [Internal Seashell Wiki](https://github.com/cucapra/seashell/wiki)
   - [Seashell Roadmap](https://github.com/cucapra/seashell/wiki/Project-Roadmap)
+  - [Vim Syntax Highlighting](https://github.com/tedbauer/seashell.vim)
 
 ## Setup/Use
 
