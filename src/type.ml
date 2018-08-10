@@ -28,14 +28,13 @@ let rec types_equal delta t1 t2 =
 
 let rec check_expr exp (context, (delta: Context.delta)) =
   match exp with
-  | EInt (i, s)                  -> check_int i s (context, delta)
-  | EFloat f                     -> check_float f (context, delta)
-  | EBool _                      -> TBool, (context, delta)
-  | EVar x                       -> Context.get_binding x context, (context, delta) 
-  | EBinop (binop, e1, e2)       -> check_binop binop e1 e2 (context, delta)
-  | EArray _                     -> raise (TypeError "Can't refer to array literal")
-  | EPhysAccess (id, idx1, idx2) -> check_aa_expl id idx1 idx2 (context, delta)
-  | ELoglAccess (id, i)          -> check_aa_logl id i (context, delta)
+  | EInt (i, s)                -> check_int i s (context, delta)
+  | EFloat f                   -> check_float f (context, delta)
+  | EBool _                    -> TBool, (context, delta)
+  | EVar x                     -> Context.get_binding x context, (context, delta)
+  | EBinop (binop, e1, e2)     -> check_binop binop e1 e2 (context, delta)
+  | EBankedAA (id, idx1, idx2) -> check_banked_aa id idx1 idx2 (context, delta)
+  | EAA (id, i)                -> check_aa id i (context, delta)
 
 and check_int i is_stat (ctx, dta) = 
   (if is_stat then (TIndex ((i, i+1), (0, 1))) else (TIndex ((0, 1), (0, max_int)))), (ctx, dta)
@@ -49,7 +48,7 @@ and check_binop binop e1 e2 (c, d) =
   with Op_util.IllegalOperation -> 
     raise (TypeError (illegal_op binop t1 t2))
 
-and check_aa_expl id idx1 idx2 (c, d) =
+and check_banked_aa id idx1 idx2 (c, d) =
   check_expr idx1 (c, d)   |> fun (idx1_t, (c1, d1)) ->
   check_expr idx2 (c1, d1) |> fun (idx2_t, (c2, d2)) ->
   match idx1_t, idx2_t, Context.get_binding id c2 with
@@ -80,7 +79,7 @@ and compute_unrollf idx_exprs (c, d) =
     end
   | [] -> 1
 
-and check_aa_logl id idx_exprs (c, d) =
+and check_aa id idx_exprs (c, d) =
   match Context.get_binding id c with
   | TArray (t, dims) ->
     let bf = compute_bf dims in
@@ -148,14 +147,14 @@ and check_assignment id exp (context, delta) =
 
 and check_reassign target exp (context, delta) =
   match target, exp with
-  | EPhysAccess (id, idx1, idx2), expr ->
-    check_aa_expl id idx1 idx2 (context, delta) |> fun (t_arr, (c, d)) ->
+  | EBankedAA (id, idx1, idx2), expr ->
+    check_banked_aa id idx1 idx2 (context, delta) |> fun (t_arr, (c, d)) ->
     check_expr exp (c, d)                       |> fun (t_exp, (c', d')) ->
     if types_equal delta t_arr t_exp then (c', d')
     else raise (TypeError (unexpected_type id t_exp t_arr))
   | EVar id, expr -> (context, delta)
-  | ELoglAccess (id, idx), expr -> 
-    check_aa_logl id idx (context, delta) |> fun (_, (c', d')) ->
+  | EAA (id, idx), expr -> 
+    check_aa id idx (context, delta) |> fun (_, (c', d')) ->
     (c', d')
       (*
     check_aa_impl id idx (context, delta) |> fun (t_arr, (c, d)) ->

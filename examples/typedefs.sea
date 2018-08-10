@@ -1,4 +1,4 @@
-type number = int
+type number = int;
 
 func add(a: number, b: number) {
 
