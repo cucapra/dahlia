@@ -135,34 +135,50 @@ $j$ might work in both places, for example.
 
 **Example.** Consider this program:
 
-    int a[4][2] bank(4)
-
+    memory a: int[4][2] bank(4)
     for i in 0..4 unroll 2
         for j in 0..2 unroll 2
             access a[i][j]
 
-The types of $i$ and $j$ would then be:
-
- - $i : \text{idx}\langle 0 .. 2, 0 .. 2 \rangle$
- - $j : \text{idx}\langle 0 .. 2, 0 .. 1 \rangle$
-
-
-With these index type indices we can compute the elements of $I_f$. We do this by computing the following, $\forall$ $d_0 \in 0 .. 2$, $d_1 \in 0 .. 1$:
+The types of $i$ and $j$ are:
 
 $$
-\{(s_0 + |0..2|*d_0)*\sigma_1 + (s_1 + |0..2|*d_1)*1 ~|~ \forall s_0 \in 0 .. 2, s_1 \in 0 .. 2 \}
+\begin{aligned}
+i &: \text{idx}\langle 0 .. 2, 0 .. 2 \rangle \\
+j &: \text{idx}\langle 0 .. 2, 0 .. 1 \rangle
+\end{aligned}
 $$
 
-where $$ \sigma_1 = 2 $$
+The physical index set $I_f$ for a given
+$d_0 \in 0 .. 2$ and $d_1 \in 0 .. 1$ is:
 
-For a pair of $\langle d_0,d_1 \rangle = \langle 1,0 \rangle$:
+$$
+\{
+(s_0 + |0..2| \times d_0)*2 +
+(s_1 + |0..2|*d_1)
+\mid
+s_0 \in 0 .. 2, s_1 \in 0 .. 2
+\}
+$$
 
-  - $(0+2*1)*2 + (0+2*0)=4$
-  - $(0+2*1)*2 + (1+2*0)=5$
-  - $(1+2*1)*2 + (0+2*0)=6$
-  - $(1+2*1)*2 + (1+2*0)=7$
+For the loop iteration where $d_0=1$ and $d_1=0$, this set contains these indices:
+
+$$
+\begin{aligned}
+(0+2*1)*2 + (0+2*0) &= 4 \\
+(0+2*1)*2 + (1+2*0) &= 5 \\
+(1+2*1)*2 + (0+2*0) &= 6 \\
+(1+2*1)*2 + (1+2*0) &= 7 \\
+\end{aligned}
+$$
 
 Note that the banks should be arranged with an interleaved strategy. Alternatively, if we unroll the [outer loop by 4](https://capra.cs.cornell.edu/seashell/docs/appendix.html#example-2.2) then the memory arrangement should be block-wise. We will discuss further about banking in the next section. A 3-D array example is also provided in the [appendix](https://capra.cs.cornell.edu/seashell/docs/appendix.html#d-array-examples-to-visualize-multi-dimensional-access).
+
+::: todo
+I don't quite understand the note in the last paragraph. We haven't talked about banking at all yet, and we haven't even defined what "interleaved" or "block-wise" mean.
+Since $I_f$ just talks about the flat, bankless physical addresses, it's hard to see how banking comes in here.
+--A
+:::
 
 Bank access with index types
 ----------------------------
