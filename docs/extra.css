@@ -4,3 +4,21 @@
     position: relative !important;
     float: right;
 }
+
+.todo {
+    background: #f99;
+}
+
+span.todo {
+    outline: 4px solid #f99;
+}
+
+div.todo {
+    padding: 6px 8px;
+}
+div.todo > p:first-child {
+    margin-top: 0;
+}
+div.todo > p:last-child {
+    margin-bottom: 0;
+}

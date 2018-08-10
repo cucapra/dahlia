@@ -20,6 +20,7 @@ Then, build and install `seac` compiler:
     $ dune build
     $ dune install
 
+(You can also just type `make` to do the same thing.)
 Now you can generate HLS programs from your Seashell programs.
 For example:
 
