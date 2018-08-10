@@ -8,6 +8,7 @@ import shlex
 
 SEASHELL_EXT = '.ss'
 C_EXT = '.c'
+OBJ_EXT = '.o'
 
 
 class WorkError(Exception):
@@ -85,6 +86,12 @@ def run(cmd, **kwargs):
             _cmd_str(cmd),
             exc.filename,
         ))
+    except subprocess.TimeoutExpired as exc:
+        raise WorkError('$ {}\ntimeout after {} seconds{}'.format(
+            _cmd_str(cmd),
+            exc.timeout,
+            _stream_text(exc.stdout, exc.stderr),
+        ))
 
 
 def proc_log(job, cmd, proc, stdout=True, stderr=True):
@@ -104,7 +111,7 @@ def proc_log(job, cmd, proc, stdout=True, stderr=True):
     log(job, out)
 
 
-def runl(job, cmd, log_stdout=True, **kwargs):
+def runl(job, cmd, log_stdout=True, timeout=5, **kwargs):
     """Run a command and log its output.
 
     Return an exited process object, with output captured (in `stdout`
@@ -113,6 +120,7 @@ def runl(job, cmd, log_stdout=True, **kwargs):
     running the command is to collect data from stdout. Additional
     arguments are forwarded to `subprocess.run`.
     """
+    kwargs['timeout'] = timeout
     proc = run(cmd, **kwargs)
     proc_log(job, cmd, proc, stdout=log_stdout)
     return proc
@@ -184,7 +192,10 @@ def stage_seashell(db, config):
         # A filename for the translated C code.
         base, _ = os.path.splitext(source_name)
         c_name = base + C_EXT
+        obj_name = base + OBJ_EXT
+        job['func_main'] = base
         job['c_main'] = c_name
+        job['obj_main'] = obj_name
 
         # Write the C code.
         with open(os.path.join(code_dir, c_name), 'wb') as f:
@@ -196,9 +207,20 @@ def stage_hls(db, config):
     """
     prefix = config["HLS_COMMAND_PREFIX"]
     with work(db, 'seashelled', 'hlsing', 'hlsed') as job:
-        # Run the Xilinx SDSoC compiler.
-        c_main = job['c_main']
-        runl(job, prefix + ['sds++', '-c', c_main], cwd=CODE_DIR)
+        # Run Xilinx SDSoC compiler for hardware functions
+        platform = 'zed' # job['platform']
+        func_hw = job['func_main']
+        c_hw = job['c_main']
+        obj_hw = job['obj_main']
+        runl(job, prefix + ['sds++', '-sds-pf', platform, '-sds-hw', func_hw, c_hw, '-sds-end', '-clkid', '3', '-c', c_hw, obj_hw], cwd=CODE_DIR)
+        
+        # Run the Xilinx SDSoC compiler for host function
+        c_main = 'main.cpp'  #job['c_host']
+        obj_main = 'main.o'  #job['obj_host']
+        runl(job, prefix + ['sds++', '-c', c_main, obj_main], cwd=CODE_DIR)
+
+        # Run Xilinx SDSoC compiler for created objects
+        runl(job, prefix + ['sds++', '-sds-pf', platform, '-clkid', '3', obj_hw, obj_main], cwd=CODE_DIR)
 
 
 def work_threads(db, config):

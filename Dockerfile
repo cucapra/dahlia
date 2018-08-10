@@ -4,8 +4,9 @@ MAINTAINER Adrian Sampson <asampson@cs.cornell.edu>
 # Add pipenv for buildbot.
 RUN pip install pipenv
 
-# Add OCaml and enough dependencies to build OCaml packages.
-RUN apk add --no-cache opam ocaml-compiler-libs bash m4 build-base git
+# Add OCaml and enough dependencies to build OCaml packages. And Node/Yarn for
+# the buildbot "live" frontend.
+RUN apk add --no-cache opam ocaml-compiler-libs bash m4 build-base git yarn
 RUN opam init -y
 
 # Our OCaml dependencies. We already have ocamlbuild, so we have a workaround:
@@ -31,3 +32,5 @@ RUN eval `opam config env` ; dune install
 
 # Set up buildbot.
 RUN cd buildbot ; pipenv install
+RUN cd buildbot ; yarn
+RUN cd buildbot ; yarn build

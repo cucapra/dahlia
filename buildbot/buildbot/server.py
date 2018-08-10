@@ -85,8 +85,7 @@ def add_job():
             name = job['name']
 
     elif 'code' in request.values:
-        # Sanitize newlines.
-        code = request.values['code'].replace('\r\n', '\n')
+        code = request.values['code']
 
         # Create a job and save the code to a file.
         with db.create('uploading', 'unpacked') as job:
@@ -127,8 +126,13 @@ def jobs_csv():
 
 
 @app.route('/')
-def jobs_list():
+def jobs_html():
     return flask.render_template('joblist.html', jobs=db.jobs)
+
+
+@app.route('/live.html')
+def live_html():
+    return flask.render_template('live.html')
 
 
 @app.route('/jobs/<name>.html')

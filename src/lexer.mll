@@ -9,9 +9,9 @@ let fl = '-'? ['0'-'9'] frac?
 
 let id = ['a'-'z' 'A'-'Z' '_'] ['a'-'z' 'A'-'Z' '_' '0'-'9']*
 
-let ws = ['\t' ' ' '\n']
+let ws = ['\t' ' ' '\n' '\r']
 
-let comment = "//" [^ '\r' '\n']* '\n'
+let comment = "//" [^ '\r' '\n']* ['\n' '\r']
 
 rule token =
   parse

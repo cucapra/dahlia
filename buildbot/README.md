@@ -17,14 +17,19 @@ Also, `make serve` runs a production server using [Gunicorn][].
 
 The server keeps the data, including the database and the file trees for each job, in an `instance` directory here.
 
+To use the "live" browser interface, you will also need to get [Yarn][] (or [npm][]) and type `yarn` then `yarn build` to set up the necessary JavaScript.
+
 [gunicorn]: http://gunicorn.org
 [pipenv]: http://pipenv.org
+[yarn]: https://yarnpkg.com/en/
+[npm]: http://npmjs.com
 
 
 Using the Buildbot
 ------------------
 
 There is a browser interface that lets you view jobs and start new ones.
+There's even a hacky interface for compiling code interactively.
 It's also possible to do everything from the command line using [curl][].
 
 To submit a job, upload a file to the `/jobs` endpoint:
