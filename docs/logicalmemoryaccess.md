@@ -14,9 +14,9 @@ Index types allow us to combine static and dynamic information about the indices
 
 The variable *i* accessing array $\text{a}$ has type, $\text{idx}\langle 0 .. k, \frac{l}{k} .. \frac{h}{k} \rangle$. This type is comprised of a *static component*, $0 .. k$, and a *dynamic component*, $\frac{l}{k} .. \frac{h}{k}$. As described in the [semantics of index types](https://capra.cs.cornell.edu/seashell/docs/indextype.html#syntax-semantics), a value of an index type corresponds to a dynamic number $d \in \frac{l}{k}..\frac{h}{k}$. For any such $d$ type idx represents the set:
 
-##### equation 1
-
-$$\{ s + |0..k| \times d ~|~ s \in 0..k\}$$
+$$\tag{1}
+\{ s + |0..k| \times d ~|~ s \in 0..k \}
+$$
 
 **Usage.** For Seashell, it's important to know exactly which indices are being used given a particular array access, which may be inside an unrolled loop. Seashell's typechecker uses index types to determine these indices. Seashell allows for two styles of array accesses: *implicit* and *explicit*. For the latter, which do not appear inside unrolled loops, the programmer specifies a statically known bank number and a potentially dynamic index offset into that bank. An index type representation of such an access would have trivial single-value static and dynamic components (rather than ranges), as such an access represents only a single value. Therefore, for logical accesses we're concerned with the index types used to represent the indices involved in *implicit* accesses.  
 
@@ -39,9 +39,7 @@ $$
 
 Logical accesses to a Seashell multi-dimensonal array look like this: $\text{a}[i_0][i_1]..[i_n]$. We'd like to access these higher-dimensional arrays with our Seashell index types, but to first examine how working with these arrays might work, it would be useful to first consider $i_0..i_n$ as plain old integers. To compute what our flattened index $i_f$ would be based on our logical indices $i_0..i_n$, we could use the following method: 
 
-##### equation 2
-
-$$
+$$\tag{2}
 i_f = \sum_{k=0}^{n} \left[i_k * \left(\prod_{k'=k+1}^{n} \sigma_{k'} \right) \right]
 $$
 
@@ -66,11 +64,11 @@ Now, we'd like to talk about which indices are represented when we make a logica
 To generalize, we can represent such an access as:
 $$ \text{a}[i_0]..[i_n]$$
 
-Here, $i_0$..$i_n$ are index types, where index $i_x$ is $\text{idx}\langle 0 .. k_x, l_x .. h_x  \rangle$. Following our discussion with one-dimensional accesses, value each for all of these index type variables correspond to a set of dynamic numbers $\{\forall x \in 0 .. n, d_x \in l_x .. h_x\}$. We can derive the set type indices would represent for any such set of $d$s, substituting $i_k$ in equation 2 with equation 1:
+Here, $i_0$..$i_n$ are index types, where index $i_x$ is $\text{idx}\langle 0 .. k_x, l_x .. h_x  \rangle$. Following our discussion with one-dimensional accesses, value each for all of these index type variables correspond to a set of dynamic numbers $\{\forall x \in 0 .. n, d_x \in l_x .. h_x\}$. We can derive the set type indices would represent for any such set of $d$s, substituting $i_k$ in Equation 2 with Equation 1:
 
-##### equation 3
-
-$$ I_f = \left\{ \sum_{x=0}^{n} \left[ (s_x + |0..k_x| \times d_x) * \left( \prod_{x'=x+1}^{n}{\sigma_{x'}} \right) \right] ~|~ \forall x \in 0..n, s_x \in 0..k_x \right\} $$
+$$\tag{3}
+I_f = \left\{ \sum_{x=0}^{n} \left[ (s_x + |0..k_x| \times d_x) * \left( \prod_{x'=x+1}^{n}{\sigma_{x'}} \right) \right] ~|~ \forall x \in 0..n, s_x \in 0..k_x \right\}
+$$
 
 To put this into words, our index type can formalize the set of elements accessed when using multi-dimensional access into an array.  
 
