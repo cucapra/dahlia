@@ -6,7 +6,7 @@ from contextlib import contextmanager
 import traceback
 import shlex
 
-SEASHELL_EXT = '.ss'
+SEASHELL_EXT = '.sea'
 C_EXT = '.cpp'
 OBJ_EXT = '.o'
 
