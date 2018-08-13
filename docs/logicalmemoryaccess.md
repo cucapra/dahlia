@@ -54,7 +54,7 @@ $$
 
 where $\text{a}$ is the name of the array, $t$ is the element type (`int`, for example), and each $\sigma_i$ is the size of a dimension.
 
-Under the hood (that is, when we translate our Seashell program to HLS C), this multi-dimensional array is translated to a one-dimensional array.
+Under the hood (i.e. when we translate our Seashell program to HLS C), this multi-dimensional array is translated to a one-dimensional array.
 The flattened array, which we'll call $\text{a}_f$, has a size equal to the product of our Seashell array's dimensions:
 
 $$
@@ -72,11 +72,11 @@ Consider a logical access to an element in our array:
 
 $$\text{a}[i_0][i_1] \dots [i_n]$$
 
-Here, each $i_k$ is a plain old integer, and not an index type.
+Here, each $i_j$ is a plain old integer, and not an index type.
 This logical access corresponds to a physical access in $\text{a}_f$ that we can write as $\text{a}_f[i_f]$, where $i_f$ is defined as:
 
 $$\tag{2}
-i_f = \sum_{k=0}^{n} \left[i_k \times \left(\prod_{k'=k+1}^{n} \sigma_{k'} \right) \right]
+i_f = \sum_{j=0}^{n} \left[i_j \times \left(\prod_{j'=j+1}^{n} \sigma_{j'} \right) \right]
 $$
 
 **Example.**
@@ -101,8 +101,8 @@ Logical Access with Index Types
 We now consider the meaning of logical accesses using Seashell's index types.
 We want to determine the *set* of elements accessed in an expression of the form 
 $\text{a}[i_0] \dots [i_n]$
-where each $i_x$ is of an index type
-$\text{idx}\langle 0 .. k_x, l_x .. h_x \rangle$.
+where each $i_j$ is of an index type
+$\text{idx}\langle l_{s_j} .. h_{s_j}, l_{d_j} .. h_{d_j} \rangle$.
 (This restricted form of index type, where the static range starts at 0, arises from Seashell's unrolled loops.)
 
 ::: todo
@@ -112,13 +112,13 @@ If we *do* make the simplification immediately, I propose doing the simplificati
 :::
 
 We can get the set of physical locations for this access by combining Equation 1, which describes the meaning of index types, with Equation 2, which describes the logical-to-physical mapping.
-For a given set of dynamic values $d_x$ for each index type, we substitute each $i_k$ in Equation 2 with the indices given in Equation 1:
+For a given set of dynamic values $d_j$ for each index type, we substitute each $i_k$ in Equation 2 with the indices given in Equation 1:
 
 $$\tag{3}
 I_f = \left\{
-    \sum_{x=0}^{n} \left[ (s_x + |0..k_x| \times d_x) * \left( \prod_{x'=x+1}^{n}{\sigma_{x'}} \right) \right]
+    \sum_{j=0}^{n} \left[ (s_j + |l_{s_j}..h_{s_j}| \times d_j) * \left( \prod_{j'=j+1}^{n}{\sigma_{j'}} \right) \right]
     \;\middle|\;
-    x \in 0..n, s_x \in 0..k_x
+    j \in 0..n, s_j \in s_{s_j} .. h_{s_j}
 \right\}
 $$
 
@@ -167,7 +167,7 @@ $$
 \end{aligned}
 $$
 
-Note that the banks should be arranged with an interleaved strategy. Alternatively, if we unroll the [outer loop by 4](https://capra.cs.cornell.edu/seashell/docs/appendix.html#example-2.2) then the memory arrangement should be block-wise. We will discuss further about banking in the next section. A 3-D array example is also provided in the [appendix](https://capra.cs.cornell.edu/seashell/docs/appendix.html#d-array-examples-to-visualize-multi-dimensional-access).
+A 3-D array example is also provided in the [appendix](https://capra.cs.cornell.edu/seashell/docs/appendix.html#d-array-examples-to-visualize-multi-dimensional-access).
 
 ::: todo
 I don't quite understand the note in the last paragraph. We haven't talked about banking at all yet, and we haven't even defined what "interleaved" or "block-wise" mean.
@@ -197,11 +197,22 @@ We focus on interleaving in this document, where for a given flattened index $i_
 
 In block-wise banking, the two are reversed.
 
+### Banking in Seashell
+
+To represent the banking of an array $\text{a}$ with banking factor $b$, we'll extend our array notation:
+
+$$
+\text{a}: t[\sigma_0] \dots [\sigma_n] \text{ bank} (b)
+$$
+
+We'll actually define this to mean the division of memory $\text{a}_f$ into $b$ banks. In the future, we'd perhaps like to support finer banking across each dimension of a multi-dimensional array, but for now we'll stick with this simpler scheme.
+
 [app-banking]: appendix.html#array-banking-strategies-with-2-d-example
 
 
 Typechecking Array Accesses
 ---------------------------
+
 
 ::: todo
 Instead of jumping right into defining the type rules, I recommend inserting a section here first that derives the *bank set* for a given access (i.e., the set of banks that the access will touch).
