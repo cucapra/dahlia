@@ -196,10 +196,7 @@ def stage_seashell(db, config):
         # A filename for the translated C code.
         base, _ = os.path.splitext(source_name)
         c_name = base + C_EXT
-        obj_name = base + OBJ_EXT
-        job['func_main'] = base
-        job['c_main'] = c_name
-        job['obj_main'] = obj_name
+        job['hw_basename'] = base
 
         # Write the C code.
         with open(os.path.join(code_dir, c_name), 'wb') as f:
@@ -224,16 +221,16 @@ def stage_hls(db, config):
     """
     prefix = config["HLS_COMMAND_PREFIX"]
     with work(db, 'seashelled', 'hlsing', 'hlsed') as job:
-        func_hw = job['func_main']
-        c_hw = job['c_main']
-        obj_hw = job['obj_main']
+        hw_basename = job['hw_basename']
+        hw_c = hw_basename + C_EXT
+        hw_o = hw_basename + OBJ_EXT
 
         # Run Xilinx SDSoC compiler for hardware functions.
         runl(
             job,
-            _sds_cmd(prefix, func_hw, c_hw) + [
-                '-c', '-MMD', '-MP', '-MF"vsadd.d"', c_hw,
-                '-o', obj_hw,
+            _sds_cmd(prefix, hw_basename, hw_c) + [
+                '-c', '-MMD', '-MP', '-MF"vsadd.d"', hw_c,
+                '-o', hw_o,
             ],
             cwd=CODE_DIR
         )
@@ -241,7 +238,7 @@ def stage_hls(db, config):
         # Run the Xilinx SDSoC compiler for host function.
         runl(
             job,
-            _sds_cmd(prefix, func_hw, c_hw) + [
+            _sds_cmd(prefix, hw_basename, hw_c) + [
                 '-c', '-MMD', '-MP', '-MF"main.d"', C_MAIN,
                 '-o', HOST_O,
             ],
@@ -254,15 +251,15 @@ def stage_synth(db, config):
     """
     prefix = config["HLS_COMMAND_PREFIX"]
     with work(db, 'hlsed', 'synthing', 'synthed') as job:
-        func_hw = job['func_main']
-        c_hw = job['c_main']
-        obj_hw = job['obj_main']
+        hw_basename = job['hw_basename']
+        hw_c = hw_basename + C_EXT
+        hw_o = hw_basename + OBJ_EXT
 
         # Run Xilinx SDSoC compiler for created objects.
         runl(
             job,
-            _sds_cmd(prefix, func_hw, c_hw) + [
-                obj_hw, HOST_O, '-o', EXECUTABLE,
+            _sds_cmd(prefix, hw_basename, hw_c) + [
+                hw_o, HOST_O, '-o', EXECUTABLE,
             ],
             cwd=CODE_DIR,
         )
