@@ -111,7 +111,7 @@ def proc_log(job, cmd, proc, stdout=True, stderr=True):
     log(job, out)
 
 
-def runl(job, cmd, log_stdout=True, timeout=60*60, **kwargs):
+def runl(job, cmd, log_stdout=True, timeout=60*10, **kwargs):
     """Run a command and log its output.
 
     Return an exited process object, with output captured (in `stdout`
@@ -203,7 +203,7 @@ def stage_seashell(db, config):
 
 
 def stage_hls(db, config):
-    """Work stage: compile C code with HLS toolchain.
+    """Work stage: compile C code to O files with HLS toolchain.
     """
     prefix = config["HLS_COMMAND_PREFIX"]
     with work(db, 'seashelled', 'hlsing', 'hlsed') as job:
@@ -225,6 +225,21 @@ def stage_hls(db, config):
         
         # Run Xilinx SDSoC compiler for created objects
         #runl(job, prefix + ['sds++', '-sds-pf', platform, '-clkid', '3', obj_hw, obj_main], cwd=CODE_DIR)
+        #runl(job, prefix + ['sds++', '-sds-pf', platform, '-sds-hw', func_hw, c_hw, '-sds-end', '-clkid', '3', '-poll-mode', '1', '-verbose', '-O3', obj_hw, obj_main, '-o', 'sdsoc'], cwd=CODE_DIR)
+
+def stage_synth(db, config):
+    """Work stage: compile O files to bitstream with HLS toolchain.
+    """
+    prefix = config["HLS_COMMAND_PREFIX"]
+    with work(db, 'hlsed', 'synthing', 'synthed') as job:
+        platform = 'zed' # job['platform']
+        func_hw = job['func_main']
+        c_hw = job['c_main']
+        obj_hw = job['obj_main']
+        obj_main = 'main.o'  #job['obj_host']
+        
+        # Run Xilinx SDSoC compiler for created objects
+        #runl(job, prefix + ['sds++', '-sds-pf', platform, '-clkid', '3', obj_hw, obj_main], cwd=CODE_DIR)
         runl(job, prefix + ['sds++', '-sds-pf', platform, '-sds-hw', func_hw, c_hw, '-sds-end', '-clkid', '3', '-poll-mode', '1', '-verbose', '-O3', obj_hw, obj_main, '-o', 'sdsoc'], cwd=CODE_DIR)
 
 
@@ -232,6 +247,6 @@ def work_threads(db, config):
     """Get a list of (unstarted) Thread objects for processing tasks.
     """
     out = []
-    for stage in (stage_unpack, stage_seashell, stage_hls):
+    for stage in (stage_unpack, stage_seashell, stage_hls, stage_synth):
         out.append(WorkThread(db, config, stage))
     return out
