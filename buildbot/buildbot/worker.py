@@ -216,14 +216,20 @@ def _sds_cmd(prefix, func_hw, c_hw):
     ]
 
 
+def _hw_filenames(job):
+    """For a given job, get its hardware source file's basename, C
+    filename, and object filename.
+    """
+    hw_basename = job['hw_basename']
+    return hw_basename, hw_basename + C_EXT, hw_basename + OBJ_EXT
+
+
 def stage_hls(db, config):
     """Work stage: compile C code to O files with HLS toolchain.
     """
     prefix = config["HLS_COMMAND_PREFIX"]
     with work(db, 'seashelled', 'hlsing', 'hlsed') as job:
-        hw_basename = job['hw_basename']
-        hw_c = hw_basename + C_EXT
-        hw_o = hw_basename + OBJ_EXT
+        hw_basename, hw_c, hw_o = _hw_filenames(job)
 
         # Run Xilinx SDSoC compiler for hardware functions.
         runl(
@@ -251,9 +257,7 @@ def stage_synth(db, config):
     """
     prefix = config["HLS_COMMAND_PREFIX"]
     with work(db, 'hlsed', 'synthing', 'synthed') as job:
-        hw_basename = job['hw_basename']
-        hw_c = hw_basename + C_EXT
-        hw_o = hw_basename + OBJ_EXT
+        hw_basename, hw_c, hw_o = _hw_filenames(job)
 
         # Run Xilinx SDSoC compiler for created objects.
         runl(
