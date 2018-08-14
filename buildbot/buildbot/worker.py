@@ -9,6 +9,10 @@ import shlex
 SEASHELL_EXT = '.sea'
 C_EXT = '.cpp'
 OBJ_EXT = '.o'
+SDS_PLATFORM = 'zed'
+C_MAIN = 'main.cpp'  # Currently, the host code *must* be named this.
+HOST_O = 'main.o'  # The .o file for host code.
+EXECUTABLE = 'sdsoc'
 
 
 class WorkError(Exception):
@@ -202,41 +206,66 @@ def stage_seashell(db, config):
             f.write(hls_code)
 
 
+def _sds_cmd(prefix, func_hw, c_hw):
+    """Make a sds++ command with all our standard arguments.
+    """
+    return prefix + [
+        'sds++',
+        '-sds-pf', SDS_PLATFORM,
+        '-sds-hw', func_hw, c_hw, '-sds-end',
+        '-clkid', '3',
+        '-poll-mode', '1',
+        '-verbose', '-Wall', '-O3',
+    ]
+
+
 def stage_hls(db, config):
     """Work stage: compile C code to O files with HLS toolchain.
     """
     prefix = config["HLS_COMMAND_PREFIX"]
     with work(db, 'seashelled', 'hlsing', 'hlsed') as job:
-        # Run SDSoC commands to debug sds++ error
-        platform = 'zed' # job['platform']
-        runl(job, prefix + ['sds++', '-sds-pf-info', platform], cwd=CODE_DIR)
-        
-        # Run Xilinx SDSoC compiler for hardware functions
         func_hw = job['func_main']
         c_hw = job['c_main']
         obj_hw = job['obj_main']
-        runl(job, prefix + ['sds++', '-sds-pf', platform, '-sds-hw', func_hw, c_hw, '-sds-end', '-clkid', '3', '-poll-mode', '1', '-verbose', '-Wall', '-O3', '-c', '-MMD', '-MP', '-MF"vsadd.d"', c_hw, '-o', obj_hw], cwd=CODE_DIR)
-        
-        # Run the Xilinx SDSoC compiler for host function
-        c_main = 'main.cpp'  #job['c_host']
-        obj_main = 'main.o'  #job['obj_host']
-        # runl(job, prefix + ['sds++', '-c', c_main, '-o', obj_main], cwd=CODE_DIR)
-        runl(job, prefix + ['sds++', '-sds-pf', platform, '-sds-hw', func_hw, c_hw, '-sds-end', '-clkid', '3', '-poll-mode', '1', '-verbose', '-DSDSOC', '-Wall', '-O3', '-c', '-MMD', '-MP', '-MF"main.d"', c_main, '-o', obj_main], cwd=CODE_DIR)
-        
+
+        # Run Xilinx SDSoC compiler for hardware functions.
+        runl(
+            job,
+            _sds_cmd(prefix, func_hw, c_hw) + [
+                '-c', '-MMD', '-MP', '-MF"vsadd.d"', c_hw,
+                '-o', obj_hw,
+            ],
+            cwd=CODE_DIR
+        )
+
+        # Run the Xilinx SDSoC compiler for host function.
+        runl(
+            job,
+            _sds_cmd(prefix, func_hw, c_hw) + [
+                '-c', '-MMD', '-MP', '-MF"main.d"', C_MAIN,
+                '-o', HOST_O,
+            ],
+            cwd=CODE_DIR
+        )
+
+
 def stage_synth(db, config):
     """Work stage: compile O files to bitstream with HLS toolchain.
     """
     prefix = config["HLS_COMMAND_PREFIX"]
     with work(db, 'hlsed', 'synthing', 'synthed') as job:
-        platform = 'zed' # job['platform']
         func_hw = job['func_main']
         c_hw = job['c_main']
         obj_hw = job['obj_main']
-        obj_main = 'main.o'  #job['obj_host']
-        
-        # Run Xilinx SDSoC compiler for created objects
-        #runl(job, prefix + ['sds++', '-sds-pf', platform, '-clkid', '3', obj_hw, obj_main], cwd=CODE_DIR)
-        runl(job, prefix + ['sds++', '-sds-pf', platform, '-sds-hw', func_hw, c_hw, '-sds-end', '-clkid', '3', '-poll-mode', '1', '-verbose', '-O3', obj_hw, obj_main, '-o', 'sdsoc'], cwd=CODE_DIR)
+
+        # Run Xilinx SDSoC compiler for created objects.
+        runl(
+            job,
+            _sds_cmd(prefix, func_hw, c_hw) + [
+                obj_hw, HOST_O, '-o', EXECUTABLE,
+            ],
+            cwd=CODE_DIR,
+        )
 
 
 def work_threads(db, config):
