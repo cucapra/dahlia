@@ -1,36 +1,53 @@
 from functools import *
+from itertools import *
+import sys
 
-def generate_indices(static_vals, dynamic_vals, dims):
+def generate_indices(select_tuples, static_sizes, dims):
+
     prod = lambda x: reduce(lambda y, acc: y*acc, dims[x+1:])
-    for static_range in static_vals:
-        for dynamic_range in dynamic_vals:
-            for s in static_range:
-                for d in dynamic_range:
-                    total=0
-                    print("\t- ", end='')
-                    for i in range(len(dims)-1):
-                        print("(" + str(s) + "+" + str(len(static_range)) + \
-                              "*" + str(d) + ")*" + str(prod(i)) + "+", end='')
-                        total += (s + len(static_range)*d)*prod(i)
 
-                    print("=" + str(total))
+    final = []
+
+    for t in select_tuples:
+        
+        total = 0
+        result = ""
+        vals = ""
+        for i in range(len(dims)-1):
+            s, d = t[i]
+            vals += ("s" + str(i) + "=" + str(s) + ", d" + str(i) + "=" + str(d) + "; ")
+
+            result += ("(" + str(s) + "+" + str(static_sizes[i]) + \
+                       "*" + str(d) + ")*" + str(prod(i)) + "+")
+            total += (s + static_sizes[i]*d)*prod(i)
+
+        result = result[:-1]
+        vals = vals[:-2]
+
+        final = final + [("\t\u2022 " + vals + " => " + result + "=" + str(total), total)]
+
+    for (s, _) in sorted(final, key=lambda t: t[1]):
+        print(s)
+
 
 def compute_result(dims, idx_types):
     array_dims = reduce(lambda acc, d: acc + "[" + str(d) + "]", dims, "")
-    print("Accessing array a" + array_dims + ".")
-    print("Accessing with the following indexes:")
+    print("\033[1mAccessing array a" + array_dims + ".")
+    print("Accessing with the following indexes:\033[0m")
 
     for (s, d) in idx_types:
-        print("\t- idx<0.." + str(s) + ", 0.." + str(d) + ">")
+        print("\t\u2022 idx<0.." + str(s) + ", 0.." + str(d) + ">")
 
-    print("Computing index set:")
+    print("\033[1mComputing index set:\033[0m")
 
-    idx_smap = []
-    idx_dmap = []
+    idx_map = []
+    static_sizes = []
     for (s, d) in idx_types:
-        idx_smap = idx_smap + ([[i for i in range(s)]])
-        idx_dmap = idx_dmap + ([[i for i in range(d)]])
-    generate_indices(idx_smap, idx_dmap, dims + [1])
+        idx_map = idx_map + [ list(product( [ i for i in range(s) ], [ i for i in range(d) ] )) ]
+        static_sizes = static_sizes + [s]
+
+    select_tuples = list(product(*idx_map))
+    generate_indices(select_tuples, static_sizes, dims + [1])
 
 def process_idx(s):
     """
@@ -61,7 +78,7 @@ def process_dims(s):
         return list(map(int, result))
 
 if __name__ == "__main__":
-    print("Please enter your array dimensions in as a comma-separated list")
+    print("\033[1mPlease enter your array dimensions in as a comma-separated list:\033[0m")
 
     dims = []
     idx_types = []
@@ -70,9 +87,10 @@ if __name__ == "__main__":
         dims = process_dims(input("  >> "))
     except Exception as e:
         print(e)
+        sys.exit(1)
 
-    print("Enter your index type accessors in this format: [l1_s, h1_s, " + \
-          "l1_d, h1_d]; ... [ln_s, hn_s, ln_d, hn_d]")
+    print("\033[1mEnter your index type accessors in this format: [l1_s, h1_s, " + \
+          "l1_d, h1_d]; ... [ln_s, hn_s, ln_d, hn_d] (starts are inclusive, ends are not)\033[0m")
 
     idx_types = process_idx(input("  >> "))
 
