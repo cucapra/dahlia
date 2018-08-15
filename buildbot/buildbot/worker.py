@@ -252,11 +252,19 @@ def stage_hls(db, config):
         )
 
 
+def stage_timeout(db, config):
+    with work(db, 'hlsed', 'pondering', 'timedout') as job:
+        runl(
+            job,
+            ['top'],
+            cwd=CODE_DIR,
+        )
+
 def stage_synth(db, config):
     """Work stage: compile O files to bitstream with HLS toolchain.
     """
     prefix = config["HLS_COMMAND_PREFIX"]
-    with work(db, 'hlsed', 'synthing', 'synthed') as job:
+    with work(db, 'timedout', 'synthing', 'synthed') as job:
         hw_basename, hw_c, hw_o = _hw_filenames(job)
 
         # Run Xilinx SDSoC compiler for created objects.
@@ -273,6 +281,6 @@ def work_threads(db, config):
     """Get a list of (unstarted) Thread objects for processing tasks.
     """
     out = []
-    for stage in (stage_unpack, stage_seashell, stage_hls, stage_synth):
+    for stage in (stage_unpack, stage_seashell, stage_hls, stage_timeout, stage_synth):
         out.append(WorkThread(db, config, stage))
     return out
