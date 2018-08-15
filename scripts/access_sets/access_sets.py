@@ -2,8 +2,11 @@ from functools import *
 from itertools import *
 import sys
 
-def generate_indices(select_tuples, static_sizes, dims):
+bold_start = "\033[1m"
+bold_end   = "\033[0m"
+bullet     = "\u2022"
 
+def generate_indices(select_tuples, static_sizes, dims, bf):
     prod = lambda x: reduce(lambda y, acc: y*acc, dims[x+1:])
 
     final = []
@@ -15,8 +18,8 @@ def generate_indices(select_tuples, static_sizes, dims):
         vals = ""
         for i in range(len(dims)-1):
             s, d = t[i]
-            vals += ("s" + str(i) + "=" + str(s) + ", d" + str(i) + "=" + str(d) + "; ")
-
+            vals += ("s" + str(i) + "=" + str(s) + ", d" + str(i) + \
+                     "=" + str(d) + "; ")
             result += ("(" + str(s) + "+" + str(static_sizes[i]) + \
                        "*" + str(d) + ")*" + str(prod(i)) + "+")
             total += (s + static_sizes[i]*d)*prod(i)
@@ -24,30 +27,34 @@ def generate_indices(select_tuples, static_sizes, dims):
         result = result[:-1]
         vals = vals[:-2]
 
-        final = final + [("\t\u2022 " + vals + " => " + result + "=" + str(total), total)]
+        final = final + [("\t" + bullet + " " + vals + " => index accessed: " + \
+                result + "=" + str(total), total)]
 
-    for (s, _) in sorted(final, key=lambda t: t[1]):
-        print(s)
+    for (s, t) in sorted(final, key=lambda t: t[1]):
+        print(s + "; bank accessed: " + str(t) + " mod " + str(bf) + \
+              "=" + str(t % bf))
 
 
-def compute_result(dims, idx_types):
+def compute_result(dims, idx_types, bf):
     array_dims = reduce(lambda acc, d: acc + "[" + str(d) + "]", dims, "")
-    print("\033[1mAccessing array a" + array_dims + ".")
-    print("Accessing with the following indexes:\033[0m")
+    print(bold_start + "Accessing array a" + array_dims + ".")
+    print("Accessing with the following indexes:" + bold_end)
 
     for (s, d) in idx_types:
-        print("\t\u2022 idx<0.." + str(s) + ", 0.." + str(d) + ">")
+        print("\t" + bullet + " idx<0.." + str(s) + ", 0.." + str(d) + ">")
 
-    print("\033[1mComputing index set:\033[0m")
+    print(bold_start + "Computing index set:" + bold_end)
 
     idx_map = []
     static_sizes = []
     for (s, d) in idx_types:
-        idx_map = idx_map + [ list(product( [ i for i in range(s) ], [ i for i in range(d) ] )) ]
+        sd_prod = [ list(product( [ i for i in range(s) ], [ i for i in range(d) ] )) ]
+        idx_map = idx_map + sd_prod
         static_sizes = static_sizes + [s]
 
     select_tuples = list(product(*idx_map))
-    generate_indices(select_tuples, static_sizes, dims + [1])
+    generate_indices(select_tuples, static_sizes, dims + [1], bf)
+
 
 def process_idx(s):
     """
@@ -66,6 +73,7 @@ def process_idx(s):
     idx_ranges            = list(map(process_idx, idx_nums))
     return idx_ranges
 
+
 def process_dims(s):
     """
     Given a string of comma separated numbers, returns a list of numbers.
@@ -77,8 +85,9 @@ def process_dims(s):
     else:
         return list(map(int, result))
 
+
 if __name__ == "__main__":
-    print("\033[1mPlease enter your array dimensions in as a comma-separated list:\033[0m")
+    print(bold_start + "Please enter your array dimensions in as a comma-separated list:" + bold_end)
 
     dims = []
     idx_types = []
@@ -89,10 +98,13 @@ if __name__ == "__main__":
         print(e)
         sys.exit(1)
 
-    print("\033[1mEnter your index type accessors in this format: [l1_s, h1_s, " + \
-          "l1_d, h1_d]; ... [ln_s, hn_s, ln_d, hn_d] (starts are inclusive, ends are not)\033[0m")
+    print(bold_start + "Enter your index type accessors in this format: [l1_s, h1_s, " + \
+          "l1_d, h1_d]; ... [ln_s, hn_s, ln_d, hn_d] (starts are inclusive, ends are not)" + bold_end)
 
     idx_types = process_idx(input("  >> "))
 
-    compute_result(dims, idx_types)
-    
+    print(bold_start + "Enter a banking factor:" + bold_end)
+
+    bf = int(input("  >> "))
+
+    compute_result(dims, idx_types, bf)
