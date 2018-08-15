@@ -13,6 +13,7 @@ all: $(HTML)
 clean:
 	rm *.html style.css
 
+# Build HTML.
 PANDOC_ARGS := -f markdown -t html -s --katex=$(KATEX_URL) \
 	-c style.css -c extra.css
 %.html: %.md style.css
@@ -20,6 +21,10 @@ PANDOC_ARGS := -f markdown -t html -s --katex=$(KATEX_URL) \
 
 style.css:
 	curl -o $@ $(CSS_URL)
+
+# Build PDFs, just for fun.
+%.pdf: %.md
+	pandoc $< -o $@
 
 # Deployment.
 RSYNCARGS := --compress --recursive --checksum --itemize-changes \
