@@ -256,7 +256,7 @@ def stage_timeout(db, config):
     with work(db, 'hlsed', 'pondering', 'timedout') as job:
         runl(
             job,
-            ['top'],
+            ['sleep 120'],
             cwd=CODE_DIR,
         )
 
