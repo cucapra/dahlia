@@ -3,7 +3,7 @@ title: Notes About Seashell
 ---
 Read some notes about aspects of Seashell's design:
 
-* [An introduction to Seashell.](indextype.html)
+* [An introduction to Seashell.](seashellintro.html)
   We discuss some basic Seashell programs that showcase the capabilities of the language's type system.
 
 * [Index types.](indextype.html)
