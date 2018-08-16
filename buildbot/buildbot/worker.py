@@ -115,7 +115,7 @@ def proc_log(job, cmd, proc, stdout=True, stderr=True):
     log(job, out)
 
 
-def runl(job, cmd, log_stdout=True, timeout=200, **kwargs):
+def runl(job, cmd, log_stdout=True, timeout=60, **kwargs):
     """Run a command and log its output.
 
     Return an exited process object, with output captured (in `stdout`
