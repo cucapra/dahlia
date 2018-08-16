@@ -64,17 +64,6 @@ and check_banked_aa id idx1 idx2 (c, d) =
       else
         raise (TypeError static_bank_error)
     end
-  | TIndex _, TIndex _, TMux (id, s) ->
-    begin
-      let (ls_1, hs_1) = s1 in
-      let (ld_1, hd_1) = d1 in
-      if ls_1 = hs_1 1 then
-
-      else
-        raise (TypeError "Illegal bank; fix this error message!")
-
-
-    end
   | t1, _, _ ->
     raise (TypeError (illegal_accessor_type t1 id))
 
