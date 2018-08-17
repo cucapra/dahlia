@@ -274,6 +274,7 @@ def stage_synth(db, config):
             _sds_cmd(prefix, hw_basename, hw_c) + [
                 hw_o, HOST_O, '-o', EXECUTABLE,
             ],
+            timeout=1800,
             cwd=CODE_DIR,
         )
 
