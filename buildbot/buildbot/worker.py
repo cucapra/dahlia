@@ -251,6 +251,16 @@ def stage_hls(db, config):
             ],
             cwd=CODE_DIR
         )
+        
+        # Run Xilinx SDSoC compiler for created objects.
+        runl(
+            job,
+            _sds_cmd(prefix, hw_basename, hw_c) + [
+                hw_o, HOST_O, '-o', EXECUTABLE,
+            ],
+            timeout=1800,
+            cwd=CODE_DIR,
+        )
 
 
 def stage_synth(db, config):
@@ -275,6 +285,6 @@ def work_threads(db, config):
     """Get a list of (unstarted) Thread objects for processing tasks.
     """
     out = []
-    for stage in (stage_unpack, stage_seashell, stage_hls, stage_synth):
+    for stage in (stage_unpack, stage_seashell, stage_hls):
         out.append(WorkThread(db, config, stage))
     return out
