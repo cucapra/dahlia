@@ -238,7 +238,7 @@ def stage_hls(db, config):
                 '-c', '-MMD', '-MP', '-MF"vsadd.d"', hw_c,
                 '-o', hw_o,
             ],
-            timeout=60,
+            timeout=120,
             cwd=CODE_DIR
         )
 
