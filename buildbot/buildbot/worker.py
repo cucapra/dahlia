@@ -225,7 +225,7 @@ def _hw_filenames(job):
 
 
 def stage_hls(db, config):
-    """Work stage: compile C code to O files with HLS toolchain.
+    """Work stage: compile C code to O files and then to bitstream with HLS toolchain.
     """
     prefix = config["HLS_COMMAND_PREFIX"]
     with work(db, 'seashelled', 'hlsing', 'hlsed') as job:
@@ -252,24 +252,6 @@ def stage_hls(db, config):
             cwd=CODE_DIR
         )
         
-        # Run Xilinx SDSoC compiler for created objects.
-        runl(
-            job,
-            _sds_cmd(prefix, hw_basename, hw_c) + [
-                hw_o, HOST_O, '-o', EXECUTABLE,
-            ],
-            timeout=1800,
-            cwd=CODE_DIR,
-        )
-
-
-def stage_synth(db, config):
-    """Work stage: compile O files to bitstream with HLS toolchain.
-    """
-    prefix = config["HLS_COMMAND_PREFIX"]
-    with work(db, 'hlsed', 'synthing', 'synthed') as job:
-        hw_basename, hw_c, hw_o = _hw_filenames(job)
-
         # Run Xilinx SDSoC compiler for created objects.
         runl(
             job,
