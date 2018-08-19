@@ -1,6 +1,6 @@
 # Scripts
 This directory contains some handy scripts.
 
-## Script List
+## Contents
 
- - `access_sets.py`: given a multidimensional array definition and some index type accessors, generates the set of indices accessed.
+ - `access_sets/access_sets.py`: given a multidimensional array definition and some index type accessors, generates the set of indices accessed.
