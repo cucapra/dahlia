@@ -12,7 +12,8 @@ RUN opam init -y
 # Our OCaml dependencies. We already have ocamlbuild, so we have a workaround:
 # https://github.com/ocaml/ocamlbuild/issues/109
 ENV CHECK_IF_PREINSTALLED=false
-RUN opam install dune menhir core
+RUN opam install depext
+RUN opam config exec -- opam depext --install dune menhir core.v0.10.0
 
 # Add opam bin directory to our $PATH so we can run seac.
 ENV PATH /root/.opam/system/bin:${PATH}

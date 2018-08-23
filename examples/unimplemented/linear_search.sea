@@ -10,5 +10,4 @@ func binary_search(target: int, arr: int[10], out: int[1]) {
 
   }
 
-
 }

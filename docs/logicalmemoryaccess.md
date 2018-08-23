@@ -103,7 +103,7 @@ We want to determine the *set* of elements accessed in an expression of the form
 $\text{a}[i_0] \dots [i_n]$
 where each $i_j$ is of an index type
 $\text{idx}\langle l_{s_j} .. h_{s_j}, l_{d_j} .. h_{d_j} \rangle$.
-(This restricted form of index type, where the static range starts at 0, arises from Seashell's unrolled loops.)
+(This restricted form of index type, where the static range starts at $0$, arises from Seashell's unrolled loops.)
 
 ::: todo
 Do we need to make this simplifying assumption (that static ranges start at zero) yet? Maybe it doesn't hurt, but it does seem possible to do without it.
@@ -118,7 +118,7 @@ $$\tag{3}
 I_f = \left\{
     \sum_{j=0}^{n} \left[ (s_j + |l_{s_j}..h_{s_j}| \times d_j) * \left( \prod_{j'=j+1}^{n}{\sigma_{j'}} \right) \right]
     \;\middle|\;
-    j \in 0..n, s_j \in s_{s_j} .. h_{s_j}
+    j \in 0..n, s_j \in l_{s_j} .. h_{s_j}
 \right\}
 $$
 
@@ -212,6 +212,23 @@ We'll actually define this to mean the division of memory $\text{a}_f$ into $b$ 
 
 Typechecking Array Accesses
 ---------------------------
+
+We've been describing methods of determining the indices represented by index types in array accesses. Now we'd like to use this information to determine the banks that are accessed, given these indices. We can describe the _bank set_ of a particular array access, given a couple of simplifying assumptions:
+
+  1. We can assume that static components of index types start at $0$, e.g. an index type will always have type $\text{idx}\langle 0 .. h_s, l_d, h_d \rangle$; Seashell's unrolled loops imply this.
+  2. We can assume a particular banking strategy. In particular for this section, we'll assume we're using bank interleaving; we can produce a similar set with other strategies as well.
+
+With these assumptions, we can define this bank set $B$ like this:
+
+$$\tag{4}
+B = \left\{
+    \left( \sum_{j=0}^{n} \left[ (s_j + |0..h_{s_j}| \times d_j) * \left( \prod_{j'=j+1}^{n}{\sigma_{j'}} \right) \right] \right) \bmod b
+    \;\middle|\;
+    j \in 0..n, s_j \in l_{s_j} .. h_{s_j}
+\right\}
+$$
+
+### Type Rules
 
 
 ::: todo

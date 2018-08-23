@@ -53,15 +53,17 @@ and check_banked_aa id idx1 idx2 (c, d) =
   check_expr idx2 (c1, d1) |> fun (idx2_t, (c2, d2)) ->
   match idx1_t, idx2_t, Context.get_binding id c2 with
   | TIndex (s1, d1), TIndex (_, _), TArray (a_t, _) ->
-    let (ls_1, hs_1) = s1 in
-    let (ld_1, hd_1) = d1 in
-    if ls_1 - hs_1 = 1 && hd_1 - ld_1 = max_int then
-      begin
-        try a_t, (Context.consume_aa id ls_1 c2, d2) 
-        with AlreadyConsumed i -> raise (TypeError (illegal_bank i id))
-      end
-    else
-      raise (TypeError static_bank_error)
+    begin
+      let (ls_1, hs_1) = s1 in
+      let (ld_1, hd_1) = d1 in
+      if ls_1 - hs_1 = 1 && hd_1 - ld_1 = 1 then
+        begin
+          try a_t, (Context.consume_aa id ls_1 c2, d2) 
+          with AlreadyConsumed i -> raise (TypeError (illegal_bank i id))
+        end
+      else
+        raise (TypeError static_bank_error)
+    end
   | t1, _, _ ->
     raise (TypeError (illegal_accessor_type t1 id))
 
