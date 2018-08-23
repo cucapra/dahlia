@@ -123,7 +123,7 @@ I_f = \left\{
 $$
 
 ::: todo
-For intelligibility, maybe it would be nice to make the sub strict consistent between here and Equation 2 (that one uses $k$, and we use $x$ here for obvious reasons)?
+For intelligibility, maybe it would be nice to make the subscript consistent between here and Equation 2 (that one uses $k$, and we use $x$ here for obvious reasons)?
 $j$ might work in both places, for example.
 --A
 :::
