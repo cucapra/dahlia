@@ -115,7 +115,7 @@ def proc_log(job, cmd, proc, stdout=True, stderr=True):
     log(job, out)
 
 
-def runl(job, cmd, log_stdout=True, timeout=200, **kwargs):
+def runl(job, cmd, log_stdout=True, timeout=60, **kwargs):
     """Run a command and log its output.
 
     Return an exited process object, with output captured (in `stdout`
@@ -226,7 +226,7 @@ def _hw_filenames(job):
 
 
 def stage_hls(db, config):
-    """Work stage: compile C code to O files with HLS toolchain.
+    """Work stage: compile C code to O files and then to bitstream with HLS toolchain.
     """
     prefix = config["HLS_COMMAND_PREFIX"]
     with work(db, 'seashelled', 'hlsing', 'hlsed') as job:
@@ -239,6 +239,7 @@ def stage_hls(db, config):
                 '-c', '-MMD', '-MP', '-MF"vsadd.d"', hw_c,
                 '-o', hw_o,
             ],
+            timeout=120,
             cwd=CODE_DIR
         )
 
@@ -251,29 +252,14 @@ def stage_hls(db, config):
             ],
             cwd=CODE_DIR
         )
-
-
-def stage_timeout(db, config):
-    with work(db, 'hlsed', 'pondering', 'timedout') as job:
-        runl(
-            job,
-            ['top'],
-            cwd=CODE_DIR,
-        )
-
-def stage_synth(db, config):
-    """Work stage: compile O files to bitstream with HLS toolchain.
-    """
-    prefix = config["HLS_COMMAND_PREFIX"]
-    with work(db, 'timedout', 'synthing', 'synthed') as job:
-        hw_basename, hw_c, hw_o = _hw_filenames(job)
-
+        
         # Run Xilinx SDSoC compiler for created objects.
         runl(
             job,
             _sds_cmd(prefix, hw_basename, hw_c) + [
                 hw_o, HOST_O, '-o', EXECUTABLE,
             ],
+            timeout=1800,
             cwd=CODE_DIR,
         )
 
@@ -282,6 +268,6 @@ def work_threads(db, config):
     """Get a list of (unstarted) Thread objects for processing tasks.
     """
     out = []
-    for stage in (stage_unpack, stage_seashell, stage_hls, stage_timeout, stage_synth):
+    for stage in (stage_unpack, stage_seashell, stage_hls):
         out.append(WorkThread(db, config, stage))
     return out
