@@ -192,4 +192,118 @@ $$ab \bmod ac = ab - \lfloor \frac{ab}{ac} \rfloor ac
             = a (b - \lfloor \frac{b}{c} \rfloor c )  
             = a (b \bmod c)  $$ 
 
+Index type array access proofs
+-------------
 
+**banked array access with unroll factor = banking factor**
+
+where $l > n$   
+
+    int a[l bank(k)]
+    for i in 0..n unroll k
+        access a[i]
+
+Here, $i$ has type $\text{idx}\langle 0 .. k, 0 .. \frac{n}{k}\rangle$. For any $d \in 0 .. \frac{n}{k}$, $\text{i}$ represents:
+
+$$
+\{ s + k * d ~|~ s \in 0 .. k \}
+$$
+
+We mentioned earlier that assuming an interleaved banking style, we can determine the bank an index accesses with $i \bmod b$, where $i$ is some integer and $b$ is the number of banks. So the banks that the set above accesses would be:
+
+$$
+\{ s + k * d ~|~ s \in 0 .. k \} \bmod k
+$$
+
+Using the following expansion with modulus:
+$(a + b) \bmod c =  (a \bmod c + b \bmod c) \bmod c$
+
+$$
+\{ ((s \bmod k) + (k*d \bmod k)) \bmod k ~|~ s \in 0 .. k \}
+$$
+
+$$
+\{ s \bmod k ~|~ s \in 0 .. k \}
+$$
+
+We know the following about $s$,
+
+  - $s < k$
+
+which helps us express this set as a range:
+
+$$
+\{ 0 .. k \}
+$$
+
+This range shows us that our index type would be accessing all $k$ distinct banks by any access, and we'd never access some non-existent bank or not access an existent bank. Allowing accesses that follow rule (1) would guarantee this access. Rule(2) would disallow any further accesses, preventing banks from being accessed multiple times.  
+
+**banked array access with unroll factor factor of banking factor**
+
+where $l > n$ and $m \in N$  
+
+    int a[l bank(m*k)]
+    for i in 0..n unroll k
+        access a[i]
+
+Here, $i$ has type $\text{idx}\langle 0 .. k, 0 .. \frac{n}{k}\rangle$. For any $d \in 0 .. \frac{n}{k}$, $\text{i}$ represents:
+
+$$
+\{ s + k * d ~|~ s \in 0 .. k \}
+$$
+
+We mentioned earlier that assuming an interleaved banking style, we can determine the bank an index accesses with $i \bmod b$, where $i$ is some integer and $b$ is the number of banks. So the banks that the set above accesses would be:
+
+$$
+\{ ((s \bmod m*k) + (k*d \bmod m*k)) \bmod m*k ~|~ s \in 0 .. k \}
+$$
+
+We know a couple things that help us rewrite this set:
+
+  - $s < mk$
+  - $kd \bmod mk = k (d \bmod m)$ [proof](https://capra.cs.cornell.edu/seashell/docs/appendix.html#modulus-proof), [image](https://imgur.com/a/9cEQHGr)
+
+So then, we have:
+
+$$
+\{ s + k (d \bmod m) ~|~ s \in 0 .. k \}
+$$
+
+We can then express this as a range:
+
+$$
+k (d \bmod m) .. \left( k (d \bmod m) + k \right)
+$$
+
+This range shows us that our index type would be accessing $k$ distinct banks at any time, and we'd never access some non-existent bank. For $d=0$ we'd access $0..k$, and for $d=(m-1)$ we'd access $(mk-k)..mk$. Allowing accesses that follow rule (1) would guarantee this. Then, because we can't know what $d$ is statically, we can follow rule (2) and conservatively disallow any further accesses, preventing banks from being accessed multiple times.  
+
+**banked array access with an unroll factor of 1**
+
+where $l > n$ and $k > 1$  
+
+    int a[l bank(k)]
+    for i in 0..n unroll 1
+        access a[i]
+
+This is clearly a special case of the case above. Here, $i$ has type $\text{idx}\langle 0 .. 1, 0 .. k \rangle$. For any $d \in 0 .. k$, $\text{i}$ represents:
+
+$$
+\{ s + 1 * d ~|~ s \in 0 .. 1 \}
+$$
+
+We can determine the banks we access from:
+
+
+$$
+\{ ((s \bmod k) + (d \bmod k)) \bmod k ~|~ s \in 0 .. 1 \}
+$$
+
+Since we know that $s$ can take only the value $0$  
+
+We have:
+
+$$
+\{ d \bmod k \}
+$$
+
+This shows us that our index type would be accessing a single bank at any time, and we'd never access some non-existent bank. For $d=0$ we'd access $0$, and for $d=k-1$ we'd access $k-1$. Allowing accesses that follow rule (1) would allow this. We can follow rule (2) and conservatively disallow any further accesses, preventing banks from being accessed multiple times. But this also limits accessing other banks, which would of course be a safe operation.  
