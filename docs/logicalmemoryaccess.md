@@ -43,8 +43,8 @@ Accessing Multi-Dimensional Arrays
 
 Hardware memories are inherently one dimensional---they map a linear range of addresses to values.
 You can loosely think of banked memories as two dimensional, where the first dimension is the bank number.
-HLS compilers typically only support one-dimensional arrays.
-In Seashell, however, we want to support logically multi-dimensional arrays and map them to banked memories.
+
+However, high-level languages usually employ logically higher dimensional arrays to simplify programs. HLS compilers typically only support logically one-dimensional arrays corresponding to the physical memories, and higher dimensional arrays are manually rolled out to one dimension. In Seashell, however, we want to support logically multi-dimensional arrays and map them to banked memories.
 
 We'll write array declarations like this:
 
@@ -103,7 +103,6 @@ We want to determine the *set* of elements accessed in an expression of the form
 $\text{a}[i_0] \dots [i_n]$
 where each $i_j$ is of an index type
 $\text{idx}\langle l_{s_j} .. h_{s_j}, l_{d_j} .. h_{d_j} \rangle$.
-(This restricted form of index type, where the static range starts at $0$, arises from Seashell's unrolled loops.)
 
 ::: todo
 Do we need to make this simplifying assumption (that static ranges start at zero) yet? Maybe it doesn't hurt, but it does seem possible to do without it.
@@ -130,7 +129,6 @@ $j$ might work in both places, for example.
 
 **Example.** Consider this program:
 
-    memory a: int[4][2] bank(4)
     for i in 0..4 unroll 2
         for j in 0..2 unroll 2
             access a[i][j]
@@ -176,17 +174,18 @@ Since $I_f$ just talks about the flat, bankless physical addresses, it's hard to
 :::
 
 
-Banking
+Banking in logical arrays
 -------
 
 ::: todo
 I changed the title of this section from "Bank access with index types" because it doesn't seem to have to do with index types at all---it just introduces the concept of banking and how to map flattened offsets to bank/offset pairs.
 Also, this might be a good place to move the above discussion of $\text{bank}(b)$ that seemed premature.
 --A
+I agree it's a little off-putting. I wanted to show that determining the bank with index types is as same as with integer types, and note on 'banking' to be in the appendix
+--S
 :::
 
-To define Seashell's typing rules for logical accesses, we need to know which banks each access touches.
-Specifically, we need to know how to map any flattened index $i_f$ to a bank number and an offset within that bank.
+To define Seashell's typing rules for logical accesses, we need to know which banks each access employs. Since we can convert logical access to a physical access with equation 3, we specifically need to know how to map any flattened index $i_f$ to a bank number and an offset within that bank. With this one-dimensional representation, we can simply use intuitions from one-dimensional array bank access.
 
 There are two common approaches to banking: interleaving and block-wise.
 (See more details [in the appendix][app-banking].)
@@ -206,6 +205,10 @@ $$
 $$
 
 We'll actually define this to mean the division of memory $\text{a}_f$ into $b$ banks. In the future, we'd perhaps like to support finer banking across each dimension of a multi-dimensional array, but for now we'll stick with this simpler scheme.
+
+**Example.** 
+
+    memory a: int[4][2] bank(4)
 
 [app-banking]: appendix.html#array-banking-strategies-with-2-d-example
 
@@ -239,90 +242,8 @@ Then you can use the bank set to justify the rules.
 
 We've been describing the method of determining which banks an array access would make. Now, we'd like to expand on how this might be of use in the Seashell type system. In general, the problem we're trying to solve is the following: restrict programs such that banks of memories can only be accessed once, to reflect the fact that in actual hardware, these memories have limited access ports. One way we might be able to do this is by tracking a set of banks that are available for use in accessing an array. When an access with a particular bank occurs, we mark the bank unreachable after that point. So, for any array $\text{a}$ in our typing context, associate it with some set $B$ of unconsumed banks, and when we access some bank $b \in B$, the set of banks associated with $B$ becomes $B \setminus b$.  
 
-Now, we need a way to determine which accesses are being used and consumed when we use an index type. One way we could accomplish this is by generating every single index that our index types can represent, and then determine every single bank they access, using the methods we've described. However, we'd like to simplify this process. We'd like to come up with some simpler type rules that enforce memory access safety.
 
 ### Type Rules for One-Dimensional Access
-
-::: todo
-The below assumption seems to have already been made way at the beginning of the document.
-But I like the idea of introducing the assumption here (after deriving the bank set) instead!
-If it doesn't make the math too messy.
---A
-:::
-
-We'll make the assumption that the static component of an index type will start at $0$, that is, any static component will be some range $0 .. k$. This will make it easier to reason about the indices we're accessing in a real seashell example. However, the generality should hold to our index type definition.   
-
-#### Type Rule 1
-
-For any one-dimensional array access into array $\text{a}$ with index type $i$, we will only consider it valid if the size of the static component of $i$ divides into the banking factor of $\text{a}$.
-
-#### Type Rule 2
-
-::: todo
-I think this part of the type rules---the notion that "consuming" an array index means you can't access it again---belongs somewhere else.
-For this purposes of this document, which is about finding out where logical accesses "go," we can just say "this access consumes these banks of the array."
-The meaning of *consumes* can be left to another discussion that dives into our affine types.
---A
-:::
-
-Allow only one legal usage of index type $i$ to access $\text{a}$, if rule (1) holds. That is, if we have some access $\text{a}[i]$ in a program, then after that point in the program we cannot access $\text{a}$ again.
-
-It is evident from these rules, that our type checker is conservative about the design space of safe accesses. Our attempt through this document is to formally prove our accesses are safe, and not derive the complete design space of safe accesses. We hope to convince our index types are rigorous and flexible enough to attempt proofs with other type rules, which would make the type checker gradually less conservative.  
-
-We'd now like to demonstrate some proofs that show our rules only allow valid array accesses. Consider the following cases:  
-
-::: todo
-I'm not 100% sure we need all three of these cases.
-It seems like the second one is the most general, and the other two are special cases.
-Maybe it would be clearer to just go into the second one in detail---and leave it parameterized on $m$.
-This gets you a general type rule.
-Then you can give further intuition by examining the *consequences* of this rule for when $m=1$ and when $k=1$.
-Having three proofs ends up pretty repetitive.
---A
-:::
-
-**banked array access with unroll factor = banking factor**
-
-where $l > n$   
-
-    int a[l bank(k)]
-    for i in 0..n unroll k
-        access a[i]
-
-Here, $i$ has type $\text{idx}\langle 0 .. k, 0 .. \frac{n}{k}\rangle$. For any $d \in 0 .. \frac{n}{k}$, $\text{i}$ represents:
-
-$$
-\{ s + k * d ~|~ s \in 0 .. k \}
-$$
-
-We mentioned earlier that assuming an interleaved banking style, we can determine the bank an index accesses with $i \bmod b$, where $i$ is some integer and $b$ is the number of banks. So the banks that the set above accesses would be:
-
-$$
-\{ s + k * d ~|~ s \in 0 .. k \} \bmod k
-$$
-
-Using the following expansion with modulus:
-$(a + b) \bmod c =  (a \bmod c + b \bmod c) \bmod c$
-
-$$
-\{ ((s \bmod k) + (k*d \bmod k)) \bmod k ~|~ s \in 0 .. k \}
-$$
-
-$$
-\{ s \bmod k ~|~ s \in 0 .. k \}
-$$
-
-We know the following about $s$,
-
-  - $s < k$
-
-which helps us express this set as a range:
-
-$$
-\{ 0 .. k \}
-$$
-
-This range shows us that our index type would be accessing all $k$ distinct banks by any access, and we'd never access some non-existent bank or not access an existent bank. Allowing accesses that follow rule (1) would guarantee this access. Rule(2) would disallow any further accesses, preventing banks from being accessed multiple times.  
 
 **banked array access with unroll factor factor of banking factor**
 
@@ -363,36 +284,45 @@ $$
 
 This range shows us that our index type would be accessing $k$ distinct banks at any time, and we'd never access some non-existent bank. For $d=0$ we'd access $0..k$, and for $d=(m-1)$ we'd access $(mk-k)..mk$. Allowing accesses that follow rule (1) would guarantee this. Then, because we can't know what $d$ is statically, we can follow rule (2) and conservatively disallow any further accesses, preventing banks from being accessed multiple times.  
 
-**banked array access with an unroll factor of 1**
+Now, we need a way to determine which accesses are being used and consumed when we use an index type. One way we could accomplish this is by generating every single index that our index types can represent, and then determine every single bank they access, using the methods we've described. However, we'd like to simplify this process. We'd like to come up with some simpler type rules that enforce memory access safety.
 
-where $l > n$ and $k > 1$  
+::: todo
+The below assumption seems to have already been made way at the beginning of the document.
+But I like the idea of introducing the assumption here (after deriving the bank set) instead!
+If it doesn't make the math too messy.
+--A
+:::
 
-    int a[l bank(k)]
-    for i in 0..n unroll 1
-        access a[i]
+We'll make the assumption that the static component of an index type will start at $0$, that is, any static component will be some range $0 .. k$. This will make it easier to reason about the indices we're accessing in a real seashell example. However, the generality should hold to our index type definition.   
 
-This is clearly a special case of the case above. Here, $i$ has type $\text{idx}\langle 0 .. 1, 0 .. k \rangle$. For any $d \in 0 .. k$, $\text{i}$ represents:
+#### Type Rule 1
 
-$$
-\{ s + 1 * d ~|~ s \in 0 .. 1 \}
-$$
+For any one-dimensional array access into array $\text{a}$ with index type $i$, we will only consider it valid if the size of the static component of $i$ divides into the banking factor of $\text{a}$.
 
-We can determine the banks we access from:
+::: todo
+I think this part of the type rules---the notion that "consuming" an array index means you can't access it again---belongs somewhere else.
+For this purposes of this document, which is about finding out where logical accesses "go," we can just say "this access consumes these banks of the array."
+The meaning of *consumes* can be left to another discussion that dives into our affine types.
+--A
 
+Moved to appendix under basic type rules we need
+--S
+:::
 
-$$
-\{ ((s \bmod k) + (d \bmod k)) \bmod k ~|~ s \in 0 .. 1 \}
-$$
+It is evident from this rule, that our type checker is conservative about the design space of safe accesses. Our attempt through this document is to formally prove our accesses are safe, and not derive the complete design space of safe accesses. We hope to convince our index types are rigorous and flexible enough to attempt proofs with other type rules, which would make the type checker gradually less conservative.  
 
-Since we know that $s$ can take only the value $0$  
+::: todo
+I'm not 100% sure we need all three of these cases.
+It seems like the second one is the most general, and the other two are special cases.
+Maybe it would be clearer to just go into the second one in detail---and leave it parameterized on $m$.
+This gets you a general type rule.
+Then you can give further intuition by examining the *consequences* of this rule for when $m=1$ and when $k=1$.
+Having three proofs ends up pretty repetitive.
+--A
 
-We have:
-
-$$
-\{ d \bmod k \}
-$$
-
-This shows us that our index type would be accessing a single bank at any time, and we'd never access some non-existent bank. For $d=0$ we'd access $0$, and for $d=k-1$ we'd access $k-1$. Allowing accesses that follow rule (1) would allow this. We can follow rule (2) and conservatively disallow any further accesses, preventing banks from being accessed multiple times. But this also limits accessing other banks, which would of course be a safe operation.  
+b=mk case moved higher, others moved to appendix 
+--S
+:::
 
 **Note- ** We're operating on a 1-D array, so this set already represents our "flattened indices" for multi-dimensional access. In fact, we can argue 1-D as a special case of the $I_f$ definition we provided earlier. We will proceed in the next section to arrive at primitive access rules for multi-dimensional access, and gradually improve on them.  
 
