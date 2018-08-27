@@ -155,6 +155,7 @@ def stage_unpack(db, config):
     """
     with work(db, 'uploaded', 'unpacking', 'unpacked') as job:
         # Unzip the archive into the code directory.
+        print("Starting to unzip")
         runl(job, ["unzip", "-d", CODE_DIR, "{}.zip".format(ARCHIVE_NAME)])
 
         # Check for single-directory zip files: if the code directory
