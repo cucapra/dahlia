@@ -28,7 +28,7 @@ To use the "live" browser interface, you will also need to get [Yarn][] (or [npm
 Using the Buildbot
 ------------------
 
-There is a browser interface that lets you view jobs and start new ones.
+There is a [browser interface](http://gorgonzola.cs.cornell.edu:8000/) that lets you view jobs and start new ones.
 There's even a hacky interface for compiling code interactively.
 It's also possible to do everything from the command line using [curl][].
 
