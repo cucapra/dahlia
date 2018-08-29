@@ -184,7 +184,7 @@ Also, this might be a good place to move the above discussion of $\text{bank}(b)
 :::
 
 ::: todo
-I agree it's a little off-putting. I wanted to show that determining the bank with index types is as same as with integer types, and note on 'banking' to be in the appendix
+I agree it's a little off-putting. I wanted to show that determining the bank with index types is as same as with integer types, and note on 'banking' to be in the appendix. Would it make a difference to make the title 'banking in logical arrays'?
 --S
 :::
 
@@ -219,23 +219,19 @@ We'll actually define this to mean the division of memory $\text{a}_f$ into $b$ 
 Typechecking Array Accesses
 ---------------------------
 
-We've been describing methods of determining the indices represented by index types in array accesses. Now we'd like to use this information to determine the banks that are accessed, given these indices. We can describe the _bank set_ of a particular array access, given a couple of simplifying assumptions:
+We've been describing methods of determining the indices represented by index types in array accesses. Now we'd like to use this information to determine the banks that are accessed, given these indices. We can describe the _bank set_ of a particular array access, given the simplifying assumption:
 
-  1. We can assume that static components of index types start at $0$, e.g. an index type will always have type $\text{idx}\langle 0 .. h_s, l_d, h_d \rangle$; Seashell's unrolled loops imply this.
-  2. We can assume a particular banking strategy. In particular for this section, we'll assume we're using bank interleaving; we can produce a similar set with other strategies as well.
+  * We can assume a particular banking strategy. In particular for this section, we'll assume we're using bank interleaving; we can produce a similar set with other strategies as well.
 
-With these assumptions, we can define this bank set $B$ like this:
+we can define this bank set $B$ like this:
 
 $$\tag{4}
 B = \left\{
-    \left( \sum_{j=0}^{n} \left[ (s_j + |0..h_{s_j}| \times d_j) * \left( \prod_{j'=j+1}^{n}{\sigma_{j'}} \right) \right] \right) \bmod b
+    \left( \sum_{j=0}^{n} \left[ (s_j + |l_{s_j}..h_{s_j}| \times d_j) * \left( \prod_{j'=j+1}^{n}{\sigma_{j'}} \right) \right] \right) \bmod b
     \;\middle|\;
     j \in 0..n, s_j \in l_{s_j} .. h_{s_j}
 \right\}
 $$
-
-### Type Rules
-
 
 ::: todo
 Instead of jumping right into defining the type rules, I recommend inserting a section here first that derives the *bank set* for a given access (i.e., the set of banks that the access will touch).
@@ -243,12 +239,20 @@ Then you can use the bank set to justify the rules.
 --A
 :::
 
-We've been describing the method of determining which banks an array access would make. Now, we'd like to expand on how this might be of use in the Seashell type system. In general, the problem we're trying to solve is the following: restrict programs such that banks of memories can only be accessed once, to reflect the fact that in actual hardware, these memories have limited access ports. One way we might be able to do this is by tracking a set of banks that are available for use in accessing an array. When an access with a particular bank occurs, we mark the bank unreachable after that point. So, for any array $\text{a}$ in our typing context, associate it with some set $B$ of unconsumed banks, and when we access some bank $b \in B$, the set of banks associated with $B$ becomes $B \setminus b$.  
-
+Noe that we've described the method of determining which banks an array access would make, we can expand on how this might be of use in the Seashell type system. In general, the problem we're trying to solve is the following: restrict programs such that banks of memories can only be accessed once, to reflect the fact that in actual hardware, these memories have limited access ports. One way we might be able to do this is by tracking a set of banks that are available for use in accessing an array. When an access with a particular bank occurs, we mark the bank unreachable after that point. So, for any array $\text{a}$ in our typing context, associate it with some set $B$ of unconsumed banks, and when we access some bank $b \in B$, the set of banks associated with $B$ becomes $B \setminus b$.  
 
 ### Type Rules for One-Dimensional Access
 
+$$\tag{5}
+B = \left\{ 
+    ( s + |l_{s}..h_{s}| \times d ) \bmod b ~|~ s \in l_{s}..h_{s} 
+    \right\}
+$$
+
 **banked array access with unroll factor factor of banking factor**
+
+1. We can assume that static components of index types start at $0$, e.g. an index type will always have type $\text{idx}\langle 0 .. h_s, l_d, h_d \rangle$; Seashell's unrolled loops imply this.
+  
 
 where $l > n$ and $m \in N$  
 
@@ -297,6 +301,8 @@ If it doesn't make the math too messy.
 :::
 
 We'll make the assumption that the static component of an index type will start at $0$, that is, any static component will be some range $0 .. k$. This will make it easier to reason about the indices we're accessing in a real seashell example. However, the generality should hold to our index type definition.   
+
+### Type Rules
 
 #### Type Rule 1
 
