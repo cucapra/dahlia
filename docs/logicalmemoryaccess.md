@@ -181,6 +181,9 @@ Banking in logical arrays
 I changed the title of this section from "Bank access with index types" because it doesn't seem to have to do with index types at all---it just introduces the concept of banking and how to map flattened offsets to bank/offset pairs.
 Also, this might be a good place to move the above discussion of $\text{bank}(b)$ that seemed premature.
 --A
+:::
+
+::: todo
 I agree it's a little off-putting. I wanted to show that determining the bank with index types is as same as with integer types, and note on 'banking' to be in the appendix
 --S
 :::
@@ -304,7 +307,9 @@ I think this part of the type rules---the notion that "consuming" an array index
 For this purposes of this document, which is about finding out where logical accesses "go," we can just say "this access consumes these banks of the array."
 The meaning of *consumes* can be left to another discussion that dives into our affine types.
 --A
+:::
 
+::: todo
 Moved to appendix under basic type rules we need
 --S
 :::
@@ -319,7 +324,9 @@ This gets you a general type rule.
 Then you can give further intuition by examining the *consequences* of this rule for when $m=1$ and when $k=1$.
 Having three proofs ends up pretty repetitive.
 --A
+:::
 
+::: todo
 b=mk case moved higher, others moved to appendix 
 --S
 :::
