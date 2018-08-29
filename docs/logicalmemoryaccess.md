@@ -257,10 +257,10 @@ $$
 
 Loop unrolling we currently express do not have an offset prior to the static portion. Therefore, we can consider following assumption,
 
-:: todo
+::: todo
 I'm tripping myself here, I cannot visualize why static portion would start from an arbitrary value than 0. dynamic portion also start from 0 in the proof. :(
 --S
-::
+:::
 
 * We can assume that static components of index types start at $0$, i.e. an index type will always have type $\text{idx}\langle 0 .. h_s, l_d, h_d \rangle$; Seashell's unrolled loops imply this.
   
