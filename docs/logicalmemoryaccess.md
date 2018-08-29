@@ -2,14 +2,14 @@
 title: Logical Memory Accesses
 ---
 
-This document describes Seashell's *logical access* expressions, which are a way of accessing memories using [index types][it].
-The idea is to let programs access the logical structure of an array, even a multidimensional array, while preserving information about the underlying physical banks being accessed.
-The key result is a set of sound typing rules that determine which banks in a memory are accessed when using a logical access expression---which determines how our type system "consumes" banks from the typing context.
+This document describes Seashell's *logical access* expressions, which is to access memories using [index types][it].
+Logical access in Seashell lets programs access the logical structure of an array, even a multidimensional array, while preserving information about the underlying physical banks being accessed.
+The document goes on to introduce a set of sound typing rules that determine whether a bank access during a logical memory access is safe. 
 
 [it]: indextype.html
 
 
-Logical Access with Index Types
+Logical Access of an Index Type
 -------------------------------
 
 Seashell uses [index types][it] for loop induction variables.
@@ -20,21 +20,26 @@ In a loop like this, for example:
         access a[i]
 
 The variable $i$ has the type
-$\text{idx}\langle 0 .. k, \frac{l}{k} .. \frac{h}{k} \rangle$.
-This type consists of a *static component*, $0 .. k$, and a *dynamic component*, $\frac{l}{k} .. \frac{h}{k}$.
-According to the [semantics of index types](https://capra.cs.cornell.edu/seashell/docs/indextype.html#syntax-semantics), a value of an index type is a (dynamic) number $d \in \frac{l}{k}..\frac{h}{k}$.
+$\text{idx}\langle l_s .. h_s, l_d .. h_d \rangle$.
+This type consists of a *static component*, $l_s .. h_s$, and a *dynamic component*, $l_d .. h_d$.
+According to the [semantics of index types](https://capra.cs.cornell.edu/seashell/docs/indextype.html#syntax-semantics), a value used as an index type is a (dynamic) number $d \in l_d .. h_d$.
 For any such $d$, the value represents this set of locations:
 
 $$\tag{1}
-\{ s + |0..k| \times d ~|~ s \in 0..k \}
+\{ s + |l_s .. h_s| \times d ~|~ s \in l_s .. h_s \}
 $$
 
-Given an array access with our index types, this set representation allows us to precisely identify which indices (and subsequently memory banks) are accessed. This is important for the Seashell typechecker, which needs this information to enforce memory access safety.
+Given an array access with our index types, this set representation allows us to precisely identify which indices (and subsequently memory banks) are accessed. 
 
 ::: todo
 How does the implicit vs. explicit terminology differ from logical vs. physical? It sounds like it might be the same thing.
 And here, I'm not sure we need a discussion of physical accesses---unless we're going to go into more detail about how physical accesses work, we can stick to the logical view (and make the above paragraph shorter).
 --A
+:::
+
+::: todo
+I think this suggestion is now achieved
+--S
 :::
 
 
@@ -87,13 +92,17 @@ $$
 $$
 
 The flattened version, $\text{a}_f$, has size $8$.
-The logical access to $\text{a}[3][1]$ corresponds to a physical access $\text{a}_f[3 \times 2 + 1]$ or $\text{a}_f[7]$.
+The logical access to $\text{a}[3][1]$ corresponds to a physical access $\text{a}_f[3 \times 2 + 1]$ i.e., $\text{a}_f[7]$.
 
 ::: todo
 Because banking factors aren't relevant for Equation 2, which is the main point of this section, perhaps they shouldn't be introduced here?
 --A
 :::
 
+::: todo
+I think this suggestion is is also followed now
+--S
+:::
 
 Logical Access with Index Types
 -------------------------------
@@ -108,6 +117,11 @@ $\text{idx}\langle l_{s_j} .. h_{s_j}, l_{d_j} .. h_{d_j} \rangle$.
 Do we need to make this simplifying assumption (that static ranges start at zero) yet? Maybe it doesn't hurt, but it does seem possible to do without it.
 If we *do* make the simplification immediately, I propose doing the simplification *first* to Equation 1, where $|0..k|$ can just become $k$.
 --A
+:::
+
+::: todo
+We've attempted to do without the simplification right up to the type rule. Maybe even then it's not needed, but I'm struggling a little to comprehend what it means to have arbitrary boundaries for static and dynamic part.
+--S
 :::
 
 We can get the set of physical locations for this access by combining Equation 1, which describes the meaning of index types, with Equation 2, which describes the logical-to-physical mapping.
@@ -125,6 +139,11 @@ $$
 For intelligibility, maybe it would be nice to make the subscript consistent between here and Equation 2 (that one uses $k$, and we use $x$ here for obvious reasons)?
 $j$ might work in both places, for example.
 --A
+:::
+
+::: todo
+I think generalization has taken this inconsistency away?
+--S
 :::
 
 **Example.** Consider this program:
@@ -173,6 +192,10 @@ Since $I_f$ just talks about the flat, bankless physical addresses, it's hard to
 --A
 :::
 
+::: todo
+I think this has been duly removed
+--S
+:::
 
 Banking in logical arrays
 -------
@@ -209,6 +232,10 @@ $$
 
 We'll actually define this to mean the division of memory $\text{a}_f$ into $b$ banks. In the future, we'd perhaps like to support finer banking across each dimension of a multi-dimensional array, but for now we'll stick with this simpler scheme.
 
+::: todo
+Note- Change in syntax to bank each dimension would require an update here.
+:::
+
 **Example.** 
 
     memory a: int[4][2] bank(4)
@@ -239,9 +266,12 @@ Then you can use the bank set to justify the rules.
 --A
 :::
 
-Now, we need a way to determine which accesses are being used and consumed when we use an index type. One way we could accomplish this is by generating every single index that our index types can represent, and then determine every single bank they access, using the methods we've described. However, we'd like to simplify this process. We'd like to come up with some simpler type rules that enforce memory access safety.
+::: todo
+I think this suggestion is now achieved
+--S
+:::
 
-Therefore, we can expand on how this might be of use in the Seashell type system. In general, the problem we're trying to solve is the following: restrict programs such that banks of memories can only be accessed once, to reflect the fact that in actual hardware, these memories have limited access ports. One way we might be able to do this is by tracking a set of banks that are available for use in accessing an array. When an access with a particular bank occurs, we mark the bank unreachable after that point. So, for any array $\text{a}$ in our typing context, associate it with some set $B$ of unconsumed banks, and when we access some bank $b \in B$, the set of banks associated with $B$ becomes $B \setminus b$.  
+With the knowledge of which bankes we access, we can expand on how this might be of use in the Seashell type system. In general, the problem we're trying to solve is the following: restrict programs such that banks of memories can only be accessed once, to reflect the fact that in actual hardware, these memories have limited access ports. One way we might be able to do this is by tracking a set of banks that are available for use in accessing an array. When an access with a particular bank occurs, we mark the bank unreachable after that point. So, for any array $\text{a}$ in our typing context, associate it with some set $B$ of unconsumed banks, and when we access some bank $b \in B$, the set of banks associated with $B$ becomes $B \setminus b$. However, we'd like to simplify this process. We'd like to come up with some simpler type rules that enforce memory access safety.
 
 ### Type Rules for One-Dimensional Access
 
@@ -255,43 +285,54 @@ $$
 
 **banked array access with unroll factor divides banking factor**
 
-Loop unrolling we currently express do not have an offset prior to the static portion. Therefore, we can consider following assumption,
-
 ::: todo
 I'm tripping myself here, I cannot visualize why static portion would start from an arbitrary value than 0. dynamic portion also start from 0 in the proof. :(
+
+To remove
+Loop unrolling we currently express do not have an offset prior to the static portion. Therefore, we can consider following assumption,
+
+* We can assume that static components of index types start at $0$, i.e. an index type will always have type $\text{idx}\langle 0 .. h_s, l_d, h_d \rangle$; Seashell's unrolled loops imply this.
+
 --S
 :::
 
-* We can assume that static components of index types start at $0$, i.e. an index type will always have type $\text{idx}\langle 0 .. h_s, l_d, h_d \rangle$; Seashell's unrolled loops imply this.
-  
 Our attempt now, is to determine the set of banks accessed given the unroll factor divides banking factor.
 
-We would write such a loop as follows:
+We can write such a loop as follows:
 
-where $l > n$ and $m \in N$  
+where $ ~|~ l..h ~|~ = n$
+and   $len > n$ and $m \in N$  
 
-    int a[l bank(m*k)]
-    for i in 0..n unroll k
+    int a[len bank(m*k)]
+    for i in l..h unroll k
         access a[i]
 
-Here, $i$ has type $\text{idx}\langle 0 .. k, 0 .. \frac{n}{k}\rangle$. For any $d \in 0 .. \frac{n}{k}$, $\text{i}$ represents:
+Here, $i$ has type $\text{idx}\langle l_s .. h_s, l_d .. h_d \rangle$. 
+
+Since $ ~|~ l_s .. h_s ~|~ = k$ For any $d \in l_d .. h_d$, $\text{i}$ represents:
 
 $$
-\{ s + k * d ~|~ s \in 0 .. k \}
+\{ s + k * d ~|~ s \in l_s .. h_s \}
 $$
 
 From equation 5, the corresponding set of banks accessed would be:
 
 $$
-\{ s + k * d ~|~ s \in 0 .. k \} \bmod m * k
+\{ s + k * d ~|~ s \in l_s .. h_s \} \bmod m * k
 $$
 
 Using the following expansion with modulus:
 $(a + b) \bmod c =  (a \bmod c + b \bmod c) \bmod c$
 
 $$
-\{ ((s \bmod m*k) + (k*d \bmod m*k)) \bmod m*k ~|~ s \in 0 .. k \}
+\{ ((s \bmod m*k) + (k*d \bmod m*k)) \bmod m*k ~|~ s \in l_s .. h_s \}
 $$
+
+::: todo
+Without s mapped 0..k first statement is now incorrect. Need some revision or go back to 0..k here.
+
+--S
+:::
 
 We know a couple things that help us rewrite this set:
 
@@ -301,7 +342,7 @@ We know a couple things that help us rewrite this set:
 So then, we have:
 
 $$
-\{ s + k (d \bmod m) ~|~ s \in 0 .. k \}
+\{ s + k (d \bmod m) ~|~ s \in l_s .. h_s \}
 $$
 
 We can then express this as a range:
@@ -310,7 +351,7 @@ $$
 k (d \bmod m) .. \left( k (d \bmod m) + k \right)
 $$
 
-This range shows us that our index type would be accessing $k$ distinct banks at any time, and we'd never access some non-existent bank. For $d=0$ we'd access $0..k$, and for $d=(m-1)$ we'd access $(mk-k)..mk$. Allowing accesses that follow our condition of unroll factor dividing into the bank factor would guarantee this.
+This range shows us that our index type would be accessing $k$ distinct banks at any time, and we'd never access some non-existent bank. If $l=0$, then for $d=0$ we'd access $0..k$, and for $d=(m-1)$ we'd access $(mk-k)..mk$. Allowing accesses that follow our condition of unroll factor dividing into the bank factor would guarantee this.
 
 ::: todo
 The below assumption seems to have already been made way at the beginning of the document.
