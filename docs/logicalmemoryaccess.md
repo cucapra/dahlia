@@ -300,8 +300,7 @@ Our attempt now, is to determine the set of banks accessed given the unroll fact
 
 We can write such a loop as follows:
 
-where $ | l..h | = n$
-and   $len > n$ and $m \in N$  
+where $~|~ l..h | = n$, $len > n$ and $m \in N$  
 
     int a[len bank(m*k)]
     for i in l..h unroll k
@@ -321,7 +320,7 @@ $$
 \{ s + k * d ~|~ s \in l_s .. h_s \} \bmod m * k
 $$
 
-Using the following expansion with modulus:
+Using the following expansion with modulus:  
 $(a + b) \bmod c =  (a \bmod c + b \bmod c) \bmod c$
 
 $$
