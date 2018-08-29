@@ -239,9 +239,13 @@ Then you can use the bank set to justify the rules.
 --A
 :::
 
-Noe that we've described the method of determining which banks an array access would make, we can expand on how this might be of use in the Seashell type system. In general, the problem we're trying to solve is the following: restrict programs such that banks of memories can only be accessed once, to reflect the fact that in actual hardware, these memories have limited access ports. One way we might be able to do this is by tracking a set of banks that are available for use in accessing an array. When an access with a particular bank occurs, we mark the bank unreachable after that point. So, for any array $\text{a}$ in our typing context, associate it with some set $B$ of unconsumed banks, and when we access some bank $b \in B$, the set of banks associated with $B$ becomes $B \setminus b$.  
+Now, we need a way to determine which accesses are being used and consumed when we use an index type. One way we could accomplish this is by generating every single index that our index types can represent, and then determine every single bank they access, using the methods we've described. However, we'd like to simplify this process. We'd like to come up with some simpler type rules that enforce memory access safety.
+
+Therefore, we can expand on how this might be of use in the Seashell type system. In general, the problem we're trying to solve is the following: restrict programs such that banks of memories can only be accessed once, to reflect the fact that in actual hardware, these memories have limited access ports. One way we might be able to do this is by tracking a set of banks that are available for use in accessing an array. When an access with a particular bank occurs, we mark the bank unreachable after that point. So, for any array $\text{a}$ in our typing context, associate it with some set $B$ of unconsumed banks, and when we access some bank $b \in B$, the set of banks associated with $B$ becomes $B \setminus b$.  
 
 ### Type Rules for One-Dimensional Access
+
+One dimensional arrays are a special case of array accesses, but has significance due to actual hardware being one dimensional and multi-dimensional arrays can be expanded to one dimension by the programmer.
 
 $$\tag{5}
 B = \left\{ 
@@ -249,10 +253,20 @@ B = \left\{
     \right\}
 $$
 
-**banked array access with unroll factor factor of banking factor**
+**banked array access with unroll factor divides banking factor**
 
-1. We can assume that static components of index types start at $0$, e.g. an index type will always have type $\text{idx}\langle 0 .. h_s, l_d, h_d \rangle$; Seashell's unrolled loops imply this.
+Loop unrolling we currently express do not have an offset prior to the static portion. Therefore, we can consider following assumption,
+
+:: todo
+I'm tripping myself here, I cannot visualize why static portion would start from an arbitrary value than 0. dynamic portion also start from 0 in the proof. :(
+--S
+::
+
+* We can assume that static components of index types start at $0$, i.e. an index type will always have type $\text{idx}\langle 0 .. h_s, l_d, h_d \rangle$; Seashell's unrolled loops imply this.
   
+Our attempt now, is to determine the set of banks accessed given the unroll factor divides banking factor.
+
+We would write such a loop as follows:
 
 where $l > n$ and $m \in N$  
 
@@ -266,7 +280,14 @@ $$
 \{ s + k * d ~|~ s \in 0 .. k \}
 $$
 
-We mentioned earlier that assuming an interleaved banking style, we can determine the bank an index accesses with $i \bmod b$, where $i$ is some integer and $b$ is the number of banks. So the banks that the set above accesses would be:
+From equation 5, the corresponding set of banks accessed would be:
+
+$$
+\{ s + k * d ~|~ s \in 0 .. k \} \bmod m * k
+$$
+
+Using the following expansion with modulus:
+$(a + b) \bmod c =  (a \bmod c + b \bmod c) \bmod c$
 
 $$
 \{ ((s \bmod m*k) + (k*d \bmod m*k)) \bmod m*k ~|~ s \in 0 .. k \}
@@ -289,9 +310,7 @@ $$
 k (d \bmod m) .. \left( k (d \bmod m) + k \right)
 $$
 
-This range shows us that our index type would be accessing $k$ distinct banks at any time, and we'd never access some non-existent bank. For $d=0$ we'd access $0..k$, and for $d=(m-1)$ we'd access $(mk-k)..mk$. Allowing accesses that follow rule (1) would guarantee this. Then, because we can't know what $d$ is statically, we can follow rule (2) and conservatively disallow any further accesses, preventing banks from being accessed multiple times.  
-
-Now, we need a way to determine which accesses are being used and consumed when we use an index type. One way we could accomplish this is by generating every single index that our index types can represent, and then determine every single bank they access, using the methods we've described. However, we'd like to simplify this process. We'd like to come up with some simpler type rules that enforce memory access safety.
+This range shows us that our index type would be accessing $k$ distinct banks at any time, and we'd never access some non-existent bank. For $d=0$ we'd access $0..k$, and for $d=(m-1)$ we'd access $(mk-k)..mk$. Allowing accesses that follow our condition of unroll factor dividing into the bank factor would guarantee this.
 
 ::: todo
 The below assumption seems to have already been made way at the beginning of the document.
@@ -299,8 +318,6 @@ But I like the idea of introducing the assumption here (after deriving the bank 
 If it doesn't make the math too messy.
 --A
 :::
-
-We'll make the assumption that the static component of an index type will start at $0$, that is, any static component will be some range $0 .. k$. This will make it easier to reason about the indices we're accessing in a real seashell example. However, the generality should hold to our index type definition.   
 
 ### Type Rules
 
