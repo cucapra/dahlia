@@ -300,7 +300,7 @@ Our attempt now, is to determine the set of banks accessed given the unroll fact
 
 We can write such a loop as follows:
 
-where $ ~|~ l..h ~|~ = n$
+where $ | l..h | = n$
 and   $len > n$ and $m \in N$  
 
     int a[len bank(m*k)]
@@ -309,7 +309,7 @@ and   $len > n$ and $m \in N$
 
 Here, $i$ has type $\text{idx}\langle l_s .. h_s, l_d .. h_d \rangle$. 
 
-Since $ ~|~ l_s .. h_s ~|~ = k$ For any $d \in l_d .. h_d$, $\text{i}$ represents:
+Since $ | l_s .. h_s | = k$ For any $d \in l_d .. h_d$, $\text{i}$ represents:
 
 $$
 \{ s + k * d ~|~ s \in l_s .. h_s \}
