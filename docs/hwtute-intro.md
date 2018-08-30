@@ -8,7 +8,12 @@ This tutorial is targeted to introduce hardware programming in high-level langua
 Buildbot itself hides away some other tools that can be replaced with different tools,
  * Vivado HLS, which is a C/C++ to Verilog/VHDL translator on top of Vivado synthesis tool flow
  * Xilinx Zedboard SoC development board, which has an arm CPU and a Zync FPGA with memory and interconnections which have some configurability
- 
+
+### Prerequisites
+* Basic knowledge on C/C++
+* Some means to create files, zip them and submit them to [Buildbot](http://gorgonzola.cs.cornell.edu:8000/) to run externally
+  or a backend with [seac compiler](https://github.com/cucapra/seashell), HLS backend and a CPU-FPGA heterogeneous backend to run locally.
+
 We'll be going through the following examples to get familiarized with the tools and to use the infrastructure to create interesting programs.
 
 1. [vector-vector add on host processor](hwtute-01.html)  
