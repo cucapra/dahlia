@@ -5,7 +5,7 @@ This tutorial is targeted to introduce hardware programming in high-level langua
  * Seashell, which is a type overlay to ensure hardware safety of your program and porgram synthesis to C/C++
  * Buildbot, which is infrastructure created to submit a seashell program and receive hardware results
  
-Buildbot itself hides away some other tools that can be replaced to different tools,
+Buildbot itself hides away some other tools that can be replaced with different tools,
  * Vivado HLS, which is a C/C++ to Verilog/VHDL translator on top of Vivado synthesis tool flow
  * Xilinx Zedboard SoC development board, which has an arm CPU and a Zync FPGA with memory and interconnections which have some configurability
  
