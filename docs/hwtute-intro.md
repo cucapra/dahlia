@@ -11,13 +11,13 @@ Buildbot itself hides away some other tools that can be replaced to different to
  
 We'll be going through the following examples to get familiarized with the tools and to use the infrastructure to create interesting programs.
 
-1. [vector-vector add on host processor](hwtute-01.html)
-   Run a program on heterogeneous platform host processor
-2. [vector-vector add on reconfigurable hardware controlled by the host processor](hwtute-02.html)
-   Design and interface hardware module in Buildbot, Familiarize with Seashell, Run a CPU-FPGA program on a heterogeneous platform
-3. [optimized vector-vector add on reconfigurable hardware controlled by the host processor](hwtute-03.html)
-   Introduce to commonly used hardware optimizations, array partition, loop unroll and pipelining
-4. [matrix multiplication]()
-   Usage and optimization of nested loops, Using local variables, 
-5. [convolution]()
-   Data transfer methods, Using memory, 
+1. [vector-vector add on host processor](hwtute-01.html)  
+   - Run a program on heterogeneous platform host processor
+2. [vector-vector add on reconfigurable hardware controlled by the host processor](hwtute-02.html)  
+   - Design and interface hardware module in Buildbot, Familiarize with Seashell, Run a CPU-FPGA program on a heterogeneous platform
+3. [optimized vector-vector add on reconfigurable hardware controlled by the host processor](hwtute-03.html)  
+   - Introduce to commonly used hardware optimizations, array partition, loop unroll and pipelining
+4. [matrix multiplication]()  
+   - Usage and optimization of nested loops, Using local variables, 
+5. [convolution]()  
+   - Data transfer methods, Using memory, 
