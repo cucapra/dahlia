@@ -327,27 +327,24 @@ $$
 \{ ((s \bmod m*k) + (k*d \bmod m*k)) \bmod m*k ~|~ s \in l_s .. h_s \}
 $$
 
-::: todo
-Without s mapped 0..k first statement is now incorrect. Need some revision or go back to 0..k here.
-
---S
-:::
-
 We know a couple things that help us rewrite this set:
 
-  - $s < mk$
+  - $~|~ l_s .. h_s | < mk$
+  
+Therefore, $s \bmod mk$ is unique
+
   - $kd \bmod mk = k (d \bmod m)$ [proof](https://capra.cs.cornell.edu/seashell/docs/appendix.html#modulus-proof), [image](https://imgur.com/a/9cEQHGr)
 
 So then, we have:
 
 $$
-\{ s + k (d \bmod m) ~|~ s \in l_s .. h_s \}
+\{ s mod mk + k (d \bmod m) ~|~ s \in l_s .. h_s \}
 $$
 
 We can then express this as a range:
 
 $$
-k (d \bmod m) .. \left( k (d \bmod m) + k \right)
+\left( l_s mod mk + k (d \bmod m) \right) .. \left( h_s mod mk + k (d \bmod m) \right)
 $$
 
 This range shows us that our index type would be accessing $k$ distinct banks at any time, and we'd never access some non-existent bank. If $l=0$, then for $d=0$ we'd access $0..k$, and for $d=(m-1)$ we'd access $(mk-k)..mk$. Allowing accesses that follow our condition of unroll factor dividing into the bank factor would guarantee this.
