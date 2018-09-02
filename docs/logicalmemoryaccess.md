@@ -407,21 +407,36 @@ Now we'd like to describe some type rules for when we use multiple index types t
 **Type Rule 1.** The product of the unroll factors influencing the types $i_0..i_n$ must equal the banking factor of the array they're accessing.
 
 
-    int a[x][y] bank(b1*b2)
+    int a[x][y] bank(b)
 
-    for i in range 0..x unroll b1
-        for j in range 0..y unroll b2
+    for i in range 0..x unroll k1
+        for j in range 0..y unroll k2
 	    access[i][j]
 
 
-Intuitively, we unroll this loop $b=b_1*b_2$ times, so we're simultaneously accessing $b$ values, and there better be $b$ banks we can access. Our index types are the following types:
+Intuitively, we unroll this loop $b$ times, i.e. simultaneously accessing $b$ values, and there better be $b$ banks we can access. Our index types are the following types:
 
- - $\text{idx}\langle 0 .. b_1, 0 .. \frac{x}{b1} \rangle$
- - $\text{idx}\langle 0 .. b_2, 0 .. \frac{y}{b2} \rangle$
+ - $\text{idx}\langle 0 .. k_1, 0 .. \frac{x}{k_1} \rangle$
+ - $\text{idx}\langle 0 .. k_2, 0 .. \frac{y}{k_2} \rangle$
 
 Then we can compute $I_f$ for all $d\in 0 .. \frac{x}{b}$, 
 
-$$ I_f = \left\{ \sum_{x=0}^{n} \left[ (s_x + |0..k_x| \times d_x) * \left( \prod_{x'=x+1}^{n}{\sigma_{x'}} \right) \right] ~|~ s_0 \in 0..b_0, s_1 \in 0.. b_1 \right\} $$
+$$
+I_f = \left\{
+    \sum_{j=0}^{n} \left[ (s_j + |l_{s_j}..h_{s_j}| \times d_j) * \left( \prod_{j'=j+1}^{n}{\sigma_{j'}} \right) \right]
+    \;\middle|\;
+    j \in 0..n, s_j \in l_{s_j} .. h_{s_j}
+\right\}
+$$
 
 The banks accessed would be:
 
+$$
+B = \left\{
+    \left( \sum_{j=0}^{n} \left[ (s_j + |l_{s_j}..h_{s_j}| \times d_j) * \left( \prod_{j'=j+1}^{n}{\sigma_{j'}} \right) \right] \right) \bmod b
+    \;\middle|\;
+    j \in 0..n, s_j \in l_{s_j} .. h_{s_j}
+\right\}
+$$
+
+Since $k_j divides \sigma_{j}$ 
