@@ -439,4 +439,6 @@ B = \left\{
 \right\}
 $$
 
-Since $k_j divides \sigma_{j}$ 
+Since $k_j$ divides $\sigma_{j}$ 
+
+
