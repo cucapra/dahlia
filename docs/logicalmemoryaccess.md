@@ -338,13 +338,13 @@ Therefore, $s \bmod mk$ is unique
 So then, we have:
 
 $$
-\{ s mod mk + k (d \bmod m) ~|~ s \in l_s .. h_s \}
+\{ s \bmod mk + k (d \bmod m) ~|~ s \in l_s .. h_s \}
 $$
 
 We can then express this as a range:
 
 $$
-\left( l_s mod mk + k (d \bmod m) \right) .. \left( h_s mod mk + k (d \bmod m) \right)
+\left( l_s \bmod mk + k (d \bmod m) \right) .. \left( h_s \bmod mk + k (d \bmod m) \right)
 $$
 
 This range shows us that our index type would be accessing $k$ distinct banks at any time, and we'd never access some non-existent bank. If $l=0$, then for $d=0$ we'd access $0..k$, and for $d=(m-1)$ we'd access $(mk-k)..mk$. Allowing accesses that follow our condition of unroll factor dividing into the bank factor would guarantee this.
@@ -439,6 +439,34 @@ B = \left\{
 \right\}
 $$
 
-Since $k_j$ divides $\sigma_{j}$ 
+We consider the bank factor to be the multiplication of all unroll factors, $b = k_1 \times .. \times k_n$
 
+The case where $j=n-1$, $~|~ l_{s_n-1} .. h_{s_n-1} | = k_{n-1} < b$,
+which gives us a unique value and a constant offset in the form of
 
+$$
+\{ s \bmod b + k_{n-1} (d \bmod b/k_{n-1}) ~|~ s \in l_s .. h_s \}
+$$
+
+Therefore, each should access a different bank.
+
+The case where $j<n-1$, 
+Since $k_j$ divides $\sigma_{j}$,
+
+$$
+\{ \left[ (s_j + |l_{s_j}..h_{s_j}| \times d_j) * \left( \prod_{j'=j+1}^{n}{\sigma_{j'}} \right) \right] \bmod b \}
+$$
+
+$\left( \prod_{j'=j+1}^{n}{k_{j'}} \right) = \Kappa$ and $\left( \prod_{j'=j+1}^{n}{|l_{d_j}..h_{d_j}|_{j'}} \right) = \Delta$
+
+$$
+\{ \Kappa \( \left[ (s_j + k_j \times d_j) *  \Delta \right] \bmod b \) \}
+$$
+
+$~|~ l_{s_j} .. h_{s_j} | = k_j < b$,
+which gives us a unique value and a constant offset, offsetted further by a multiplicant.
+
+::: todo
+But adding unique values don't ensure resulting in a unique value. The offset has to make sure the range of unique values each produce are different.
+--S
+:::
