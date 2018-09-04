@@ -22,24 +22,24 @@ let string_of_binop = function
   | BopAnd   -> "&&"
 
 let illegal_bank i id =
-  "Type error: Illegal bank access on array " ^ id ^ ": " ^ string_of_int i
+  "[Type error] memory \"" ^ id ^ "\" illegal access: bank " ^ string_of_int i
 
 let range_error =
-  "Type error: Range start/end must be integers"
+  "[Type error] range start/end must be integers"
 
 let unexpected_type id actual expected =
-  "Type error: " ^ id ^
+  "[Type error] " ^ id ^
   " was of type " ^ (string_of_type actual) ^
   " but type " ^ (string_of_type expected) ^ " was expected"
 
 let illegal_accessor_type t id =
-  "Type error: can't access array " ^ id ^ " with type " ^ (string_of_type t)
+  "[Type error] can't access array " ^ id ^ " with type " ^ (string_of_type t)
 
 let illegal_access id =
-  "Type error: can't index into non-array " ^ id
+  "[Type error] can't index into non-array " ^ id
 
 let illegal_op binop t1 t2 =
-  "Type error: can't apply operator '" ^
+  "[Type error] can't apply operator '" ^
   (string_of_binop binop) ^ 
   "' to " ^ 
   (string_of_type t1) ^ 
@@ -47,20 +47,20 @@ let illegal_op binop t1 t2 =
   (string_of_type t2)
 
 let small_mux =
-  "Illegal access operation: mux is smaller than array banking factor"
+  "[Type error] illegal access operation: mux is smaller than array banking factor"
 
 let illegal_app id =
-  id ^ " is not a function and cannot be applied"
+  "[Type error] " ^ id ^ " is not a function and cannot be applied"
 
 let illegal_mux =
-  "Type error: can't use multiplexer to access non-array"
+  "[Type error] can't use multiplexer to access non-array"
 
 let static_bank_error =
-  "Bank accessor must be static"
+  "[Type error] Bank accessor must be static"
 
 let improper_unroll =
-  "Type Error: unroll factor must be a multiple of banking factor"
+  "[Type Error] unroll factor must be a multiple of banking factor"
 
 let range_static_error =
-  "Type Error: range start/end must be static"
+  "[Type Error] range start/end must be static"
 
