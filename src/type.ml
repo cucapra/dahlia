@@ -56,7 +56,7 @@ and check_banked_aa id idx1 idx2 (c, d) =
     begin
       let (ls_1, hs_1) = s1 in
       let (ld_1, hd_1) = d1 in
-      if ls_1 - hs_1 = 1 && hd_1 - ld_1 = 1 then
+      if hs_1 - ls_1 = 1 && hd_1 - ld_1 = 1 then
         begin
           try a_t, (Context.consume_aa id ls_1 c2, d2) 
           with AlreadyConsumed i -> raise (TypeError (illegal_bank i id))
