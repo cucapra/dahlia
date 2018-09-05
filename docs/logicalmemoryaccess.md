@@ -454,7 +454,7 @@ The case where $j<n-1$,
 Since $k_j$ divides $\sigma_{j}$,
 
 $$
-\left{ \left[  \right] \bmod b \right}
+\left\{ \left[  \right] \bmod b \right\}
 $$
 
 (s_j + |l_{s_j}..h_{s_j}| \times d_j) * \left( \prod_{j'=j+1}^{n}{\sigma_{j'}} \right)
@@ -465,7 +465,7 @@ $= \Theta$ and $\left( \prod_{j'=j+1}^{n}{|l_{d_j}..h_{d_j}|_{j'}} \right) = \De
 \prod_{j'=j+1}^{n}{k_{j'}}
 
 $$
-\left{ \Theta \left( \left[ (s_j + k_j \times d_j) *  \Delta \right] \bmod b \right) \right}
+\left\{ \Theta \left( \left[ (s_j + k_j \times d_j) *  \Delta \right] \bmod b \right) \right\}
 $$
 
 $~|~ l_{s_j} .. h_{s_j} | = k_j < b$,
