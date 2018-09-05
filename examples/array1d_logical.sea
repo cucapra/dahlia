@@ -1,0 +1,14 @@
+/////////////////////////////////////////////
+// 1d array logical access
+// - This application uses a banked array as input
+// with regular banking, accessed logically with 
+// unroll to access different banks
+////////////////////////////////////////////
+
+func madd(a: float[1024 bank(32)], b: float) {
+
+  for (let i = 0..1023) unroll 32 {
+    b := a[i];
+  } 
+
+}
