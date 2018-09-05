@@ -1,25 +1,23 @@
 ---
 title: Index Types in Seashell
 ---
-This note expands on the meaning and capabilities of *index types* in Seashell, which are our way of handling loop unrolling and banked memories by combining static and dynamic information about index sets.
+This note expands on the meaning and capabilities of *index types* in Seashell,
+which are our way of handling loop unrolling and banked memories by combining
+static and dynamic information about sets of indices.
 
 Syntax & Semantics
 ------------------
 
-We will need notation for half-closed integer intervals, which might be written
-something like $[l, h)$ but we will write as $l..h$ for simplicity (and to
-suggest syntax in real programming languages). To be perfectly explicit,
-$l..h$ denotes the set of natural numbers $\{ n \in \mathbb{N} ~|~ l \le n < h \}$.
-We will sometimes write $|l..h|$ to mean $h-l$, i.e., the size of the set.
+We use the notation $l..h$ to mean the interval of numbers
+$\{ n \in \mathbb{N} ~|~ l \le n < h \}$ and $|l..h|$ to mean the size of the
+set (i.e. $h - l$).
 
-An *index type* consists of two such intervals: a static interval and a dynamic interval.
-We write type as
-$\text{idx}\langle l_s .. h_s, l_d .. h_d \rangle$.
-Intuitively, a value of an index type consists of a *single* dynamic number $d \in l_d..h_d$.
-For any $d$, the value corresponds to a *set* of indices $s + |l_s..h_s| \times d$ for every $s \in l_s..h_s$.
-To restate this notion in set notation,
-a given dynamic value $d \in l_d..h_d$ for the type
-$\text{idx}\langle l_s .. h_s, l_d .. h_d \rangle$
+An *index type* consists of two intervals: a static interval and a dynamic interval.
+We write type as $\text{idx}\langle l_s .. h_s, l_d .. h_d \rangle$.
+A value of an index type consists of a *single* dynamic number $d \in l_d..h_d$.
+For any $d$, the value corresponds to a *set* of indices $s + |l_s..h_s| \times d$
+for every $s \in l_s..h_s$.  To restate this notion in set notation, a given
+dynamic value $d \in l_d..h_d$ for the type $\text{idx}\langle l_s .. h_s, l_d .. h_d \rangle$
 represents this set of numbers:
 
 $$\{ s + |l_s..h_s| \times d ~|~ s \in l_s..h_s\}$$
@@ -38,8 +36,8 @@ $\{s + 5 \times 1 ~|~ s \in 0..5\} = 6..10$.
 Index types generalize `int` and `static int`, i.e., the types for ordinary dynamic integers and for static integers.
 For example, $\text{idx}\langle 42..43, 0..1 \rangle$ has a single value that represents a single number, 42.
 And $\text{idx}\langle 0..1, 0..2^{64} \rangle$ is the type of 64-bit unsigned integers.
-So a core language might have *only* index types, where `int` is syntactic sugar for the latter type, for example.
-Put differently, index types can describe a fluid amount of static "knowledge" about sets of numbers, including "no static information" and "totally known statically" and points in between.
+So a core language might have *only* index types, where `int` is syntactic sugar for the latter type.
+Put differently, index types can describe a fluid amount of static "knowledge" about sets of numbers, including "no static information" and "full static information" and points in between.
 
 **Value space.**
 Index types have sets of values, each of which represents a set of indices. So
@@ -156,7 +154,7 @@ has type
 $\text{idx}\langle (l_s + 5) .. (h_s + 5), l_d .. h_d \rangle$.
 Each value of this type still represents $|l_s..h_s| = |(l_s+5)..(h_s+5)|$ distinct indices, just beginning at a different dynamic location.
 The dynamic value of this type is a "no-op": at run time, no addition needs to occur to get the appropriate value of $i+5$.
-(To see this, observe that the dynamic component of the $i+5$ value is identical to the dynamic component of $i$; only the static component has changed. This is completely done at compile time.)
+(To see this, observe that the dynamic component of the $i+5$ value is identical to the dynamic component of $i$; only the static component has changed which can be computed at compile time.)
 
 We would like to come up with a general strategy for determining the type of expressions like $i+i'$ and $i \times i'$, given constraints on the types.
 This is forthcoming.
