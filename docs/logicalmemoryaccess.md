@@ -459,7 +459,7 @@ $$
 
 (s_j + |l_{s_j}..h_{s_j}| \times d_j) * \left( \prod_{j'=j+1}^{n}{\sigma_{j'}} \right)
 
-$= \Kappa$ and $\left( \prod_{j'=j+1}^{n}{|l_{d_j}..h_{d_j}|_{j'}} \right) = \Delta$
+$= \Theta$ and $\left( \prod_{j'=j+1}^{n}{|l_{d_j}..h_{d_j}|_{j'}} \right) = \Delta$
 
 \left(  \right) 
 \prod_{j'=j+1}^{n}{k_{j'}}
