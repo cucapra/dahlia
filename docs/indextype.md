@@ -93,15 +93,52 @@ Consider the value space of $i$, which is:
 
 $$
 \begin{aligned}
-&\phantom{=}
-\{ s + |l_s..h_s| \times d ~|~ s \in l_s..h_s, d \in l_d..h_d\}
-\\
-&=
-\left\{ s + k \times d ~|~ s \in 0..k, d \in \frac{l}{k}..\frac{h}{k}\right\}
+S_u &= \{ s + |l_s..h_s| \times d \mid s \in l_s..h_s, d \in l_d..h_d\} \\
+    &= \left\{ s + k \times d \mid s \in 0..k, d \in \frac{l}{k}..\frac{h}{k}\right\}
 \end{aligned}
 $$
 
-which should be equal to $l..h$, but I don't yet have an algebraic argument for why.
+which is equal to $l..h$.
+
+**Proof.** For unrolling, we want to show that $S_u = l..h$. This ensures that
+an unrolled loop accesses exactly the elements that the original loop did. The
+proof shows that there are exactly $n = |l..h|$ distinct natural numbers in
+$S_u$ with $l$ and $h$ being the lower and upper bounds. Since there are only
+$n-1$ natural numbers in $l..h$, this implies that $S_u = l..h$.
+
+$$
+\begin{aligned}
+S_u &= \left\{ s + k \times d \mid s \in 0..k, d \in \frac{l}{k}..\frac{h}{k}\right\} \\
+    &= \bigcup_{d \in \frac{l}{k}..\frac{h}{k}}\{ s + k \times d \mid s \in 0..k \}
+\end{aligned}
+$$
+
+Let each of the smaller subsets be $S_i$ where $i$ is equal to the value of
+$d$.  Therefore, we have $S_u = \cup S_i$. Next, we show that each $S_i$ has
+exactly $k$ elements and that $\max(S_i) \leq min(S_{i+1})$. The first
+assertion is trivially true since $s$ ranges from $0$ to $k-1$. For the second
+assertion, we have
+
+$$
+\begin{aligned}
+\max(S_i) &= k - 1 + k \times i = k \times (i + 1) - 1 \\
+\min(S_{i+1}) &= 0 + k \times (i + 1) = k \times (i + 1)
+\end{aligned}
+$$
+
+Since $k$ and $i$ are both positive natural numbers, $\max(S_i) < \min(S_{i+1})$.
+Therefore, the union of $S_i$ has $(\frac{h}{k} - \frac{l}{k}) \times k =
+|l..h|$ elements.
+
+Finally, we show that $0$ and $n-1$ form the lower and upper bounds. Since $s$,
+$k$, and $d$ are positive, the $\min(S_u) = 0 + k \times \frac{l}{k} = l$ and
+$\max(S_u) = k + k \times \frac{h - k}{k} = h$. Therefore, $S_u = l..h$.
+
+**Multidimensional accesses**. This reasoning can be easily extended to
+multiple dimensions. The expression $s + k \times d$ repeates for each
+dimension's configration.  The elements of $S_u$ can be represented as a
+n-tuple. Since each dimension has a separate and independent component in the
+tuple, the reasoning above can be applied to each element.
 
 Operations
 ----------
