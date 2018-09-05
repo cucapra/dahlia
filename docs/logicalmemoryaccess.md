@@ -457,7 +457,9 @@ $$
 \left{ \left[ (s_j + |l_{s_j}..h_{s_j}| \times d_j) * \left( \prod_{j'=j+1}^{n}{\sigma_{j'}} \right) \right] \bmod b \right}
 $$
 
-$\left( \prod_{j'=j+1}^{n}{k_{j'}} \right) = \Kappa$ and $\left( \prod_{j'=j+1}^{n}{|l_{d_j}..h_{d_j}|_{j'}} \right) = \Delta$
+$\left(  \right) = \Kappa$ and $\left( \prod_{j'=j+1}^{n}{|l_{d_j}..h_{d_j}|_{j'}} \right) = \Delta$
+
+\prod_{j'=j+1}^{n}{k_{j'}}
 
 $$
 \left{ \Theta \left( \left[ (s_j + k_j \times d_j) *  \Delta \right] \bmod b \right) \right}
