@@ -6,8 +6,10 @@ This note expands on the meaning and capabilities of *index types* in Seashell, 
 Syntax & Semantics
 ------------------
 
-We will need notation for half-closed integer intervals, which might be written something like $[l, h)$ but we will write as $l..h$ for simplicity (and for to suggest syntax in real programming languages).
-To be perfectly explicit, $l..h$ denotes the set of natural numbers $\{ n \in \mathbb{N} ~|~ l \le n < h \}$.
+We will need notation for half-closed integer intervals, which might be written
+something like $[l, h)$ but we will write as $l..h$ for simplicity (and to
+suggest syntax in real programming languages). To be perfectly explicit,
+$l..h$ denotes the set of natural numbers $\{ n \in \mathbb{N} ~|~ l \le n < h \}$.
 We will sometimes write $|l..h|$ to mean $h-l$, i.e., the size of the set.
 
 An *index type* consists of two such intervals: a static interval and a dynamic interval.
@@ -40,11 +42,10 @@ So a core language might have *only* index types, where `int` is syntactic sugar
 Put differently, index types can describe a fluid amount of static "knowledge" about sets of numbers, including "no static information" and "totally known statically" and points in between.
 
 **Value space.**
-Index types have sets of values, each of which represents a set of indices.
-So there's a sort of two-level set organization going on here.
-It's worth considering the *aggregate* set of indices represented by *all* values in a given index.
-For a given type
-$\text{idx}\langle l_s .. h_s, l_d .. h_d \rangle$,
+Index types have sets of values, each of which represents a set of indices. So
+there's a sort of two-level set organization going on here.  It's worth
+considering the *aggregate* set of indices represented by *all* values in a
+given index.  For a given type $\text{idx}\langle l_s .. h_s, l_d .. h_d \rangle$,
 this set is given by:
 
 $$
@@ -58,12 +59,10 @@ $$
 \end{aligned}
 $$
 
-Furthermore, it is a theorem (probably true?) that the above union is disjoint, i.e., the intersection of those sets is empty.
-
 For Loops
 ---------
 
-Seashell's syntax for unrolled "for" loops looks roughly like this:
+Seashell's syntax for unrolled `for` loops looks roughly like this:
 
     for i in l..h unroll k:
         <body>
@@ -82,11 +81,12 @@ That is,
 unless we eventually want to deal with partially unrolled iterations, which can get messy.
 
 **Special cases.**
-It's worth considering two special cases: no unrolling, where $k=1$, and full unrolling, where $k=|l..h|$.
-In the former, the type degenerates to
-$\text{idx}\langle 0 .. 1, l .. h \rangle$, i.e., the type of plain integers in $l..h$.
-In the latter, it degenerates to
-$\text{idx}\langle 0 .. k, l .. (l+1) \rangle$, i.e., the *static* type denoting a single set of integers in $l .. (l+k)$.
+It's worth considering two special cases: no unrolling, where $k=1$, and full
+unrolling, where $k=|l..h|$.  In the former, the type degenerates to
+$\text{idx}\langle 0 .. 1, l .. h \rangle$, i.e., the type of plain integers in
+$l..h$.  In the latter, it degenerates to $\text{idx}\langle 0 .. k, l .. (l+1)
+\rangle$, i.e., the *static* type denoting a single set of integers in
+$l..(l+k)$.
 
 **Iteration space.**
 Consider the value space of $i$, which is:
@@ -128,7 +128,7 @@ $$
 
 Since $k$ and $i$ are both positive natural numbers, $\max(S_i) < \min(S_{i+1})$.
 Therefore, the union of $S_i$ has $(\frac{h}{k} - \frac{l}{k}) \times k =
-|l..h|$ elements.
+|l..h|$ elements. (This also implies that each set is disjoint.)
 
 Finally, we show that $0$ and $n-1$ form the lower and upper bounds. Since $s$,
 $k$, and $d$ are positive, the $\min(S_u) = 0 + k \times \frac{l}{k} = l$ and
