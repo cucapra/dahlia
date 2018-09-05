@@ -460,7 +460,7 @@ $$
 $\left( \prod_{j'=j+1}^{n}{k_{j'}} \right) = \Kappa$ and $\left( \prod_{j'=j+1}^{n}{|l_{d_j}..h_{d_j}|_{j'}} \right) = \Delta$
 
 $$
-\{ \Theta \( \left[ (s_j + k_j \times d_j) *  \Delta \right] \bmod b \) \}
+\left{ \Theta \left( \left[ (s_j + k_j \times d_j) *  \Delta \right] \bmod b \right) \right}
 $$
 
 $~|~ l_{s_j} .. h_{s_j} | = k_j < b$,
