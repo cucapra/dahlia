@@ -164,7 +164,7 @@ Altered the title a little, as our attempt is to introduce index types in this d
 :::
 
 ::: todo
-Yes, that proof will go into the other document.
+Yes, that proof will go into the other document. -R
 :::
 
 Operations
