@@ -124,10 +124,10 @@ and check_for id r1 r2 body (ctx, d) =
   | _ -> raise (TypeError range_error)
 
 and check_for_impl id r1 r2 body u (ctx, delta) =
-  check_expr r1 (ctx, delta) |> fun (r1_type, (c1, d1)) ->
+  check_expr r1 (ctx, delta) |> fun (r1_type, (_, _)) ->
   check_expr r2 (ctx, delta) |> fun (r2_type, (c2, d2)) ->
   match r1_type, r2_type with
-  | TIndex (st1, dyn1), TIndex (st2, dyn2) ->
+  | TIndex (st1, _), TIndex (st2, _) ->
     let (ls_1, hs_1) = st1 in
     let (ls_2, hs_2) = st2 in
     if (hs_1 - ls_1 = 1) && (hs_2 - ls_2 = 1) then (
@@ -144,7 +144,7 @@ and check_for_impl id r1 r2 body u (ctx, delta) =
 
 (* TODO(rachit): [d] is unused. Is this a mistake? *)
 and check_assignment id exp (ctx, delta) =
-  check_expr exp (ctx, delta) |> fun (t, (c, d)) ->
+  check_expr exp (ctx, delta) |> fun (t, (c, _)) ->
   Context.add_binding id t c, delta
 
 (* TODO(ted): rethink this *)

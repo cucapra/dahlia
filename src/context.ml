@@ -26,7 +26,7 @@ let empty_gamma = {
 
 let empty_delta = StringMap.empty
 
-let rec create_set s =
+let create_set s =
   let rec create_set' i acc =
     if i=0 then (IntSet.add 0 acc)
     else create_set' (i-1) (IntSet.add i acc)
@@ -45,7 +45,7 @@ let add_binding id t g =
       type_map = type_map' ;
       indices_available = indices_available'
     }
-  | t -> { g with type_map = type_map' }
+  | _ -> { g with type_map = type_map' }
 
 let add_alias_binding id t d =
   StringMap.add id t d
@@ -70,7 +70,7 @@ let consume_aa id i g =
   }
   else raise (AlreadyConsumed i)
 
-let rec consume_aa_lst id lst g =
+let consume_aa_lst id lst g =
   let consume_indices = fun context bank ->
     try consume_aa id bank context
     with AlreadyConsumed i -> raise (AlreadyConsumed i)
