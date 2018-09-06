@@ -124,8 +124,8 @@ and check_for id r1 r2 body (ctx, d) =
   | _ -> raise (TypeError range_error)
 
 and check_for_impl id r1 r2 body u (ctx, delta) =
-  check_expr r1 (ctx, delta) |> fun (r1_type, (_, _)) ->
-  check_expr r2 (ctx, delta) |> fun (r2_type, (c2, d2)) ->
+  check_expr r1 (ctx, delta) |> fun (r1_type, (ctx1, d1)) ->
+  check_expr r2 (ctx1, d1)   |> fun (r2_type, (ctx2, d2)) ->
   match r1_type, r2_type with
   | TIndex (st1, _), TIndex (st2, _) ->
     let (ls_1, hs_1) = st1 in
@@ -135,17 +135,17 @@ and check_for_impl id r1 r2 body u (ctx, delta) =
       (* FIXME: redundant *)
       if (range_size=u) then
         let typ = TIndex ((0, u), (0, 1))
-        in check_cmd body (Context.add_binding id typ c2, d2)
+        in check_cmd body (Context.add_binding id typ ctx2, d2)
       else
         let typ = TIndex ((0, u), (0, (range_size/u)))
-        in check_cmd body ((Context.add_binding id typ c2), d2))
+        in check_cmd body ((Context.add_binding id typ ctx2), d2))
     else raise (TypeError range_static_error)
   | _ -> raise (TypeError range_error)
 
 (* TODO(rachit): [d] is unused. Is this a mistake? *)
 and check_assignment id exp (ctx, delta) =
-  check_expr exp (ctx, delta) |> fun (t, (c, _)) ->
-  Context.add_binding id t c, delta
+  check_expr exp (ctx, delta) |> fun (t, (c, d)) ->
+  Context.add_binding id t c, d
 
 (* TODO(ted): rethink this *)
 and check_reassign target exp (ctx, delta) =
