@@ -259,7 +259,7 @@ def stage_hls(db, config):
             _sds_cmd(prefix, hw_basename, hw_c) + [
                 hw_o, HOST_O, '-o', EXECUTABLE,
             ],
-            timeout=1800,
+            timeout=100,
             cwd=CODE_DIR,
         )
 
