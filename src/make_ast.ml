@@ -16,10 +16,10 @@ let make_binop bop e1 e2 =
   EBinop (bop, e1, e2)
 
 let make_for x x1 x2 e =
-  CFor (x, x1, x2, e)
+  CFor (x, x1, x2, 1, e)
 
 let make_for_impl x x1 x2 u body =
-  CForImpl (x, x1, x2, u, body)
+  CFor (x, x1, x2, u, body)
 
 let make_var id =
   EVar id

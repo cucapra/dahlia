@@ -97,8 +97,7 @@ let rec check_cmd cmd (ctx, delta) =
   match cmd with
   | CSeq (c1, c2)                  -> check_seq c1 c2 (ctx, delta)
   | CIf (cond, cmd)                -> check_if cond cmd (ctx, delta)
-  | CFor (x, r1, r2, body)         -> check_for x r1 r2 body (ctx, delta)
-  | CForImpl (x, r1, r2, u, body)  -> check_for_impl x r1 r2 body u (ctx, delta)
+  | CFor (x, r1, r2, uo, body)     -> check_for_impl x r1 r2 body uo (ctx, delta)
   | CAssign (x, e1)                -> check_assignment x e1 (ctx, delta)
   | CReassign (target, exp)        -> check_reassign target exp (ctx, delta)
   | CFuncDef (id, args, body)      -> check_funcdef id args body (ctx, delta)
@@ -114,15 +113,6 @@ and check_if cond cmd (ctx, delta) =
   | TBool, (ctx', dta') -> check_cmd cmd (ctx', dta')
   | t, _ -> raise (TypeError (unexpected_type "conditional" t TBool))
 
-and check_for id r1 r2 body (ctx, d) =
-  check_expr r1 (ctx, d)   |> fun (r1_type, (ctx1, d1)) ->
-  check_expr r2 (ctx1, d1) |> fun (r2_type, (ctx2, d2)) ->
-  match r1_type, r2_type with
-  | TIndex _, TIndex _ ->
-    let typ = TIndex ((0, 1), (min_int, max_int))
-    in check_cmd body (Context.add_binding id typ ctx2, d2)
-  | _ -> raise (TypeError range_error)
-
 and check_for_impl id r1 r2 body u (ctx, delta) =
   check_expr r1 (ctx, delta) |> fun (r1_type, (ctx1, d1)) ->
   check_expr r2 (ctx1, d1)   |> fun (r2_type, (ctx2, d2)) ->
@@ -132,13 +122,8 @@ and check_for_impl id r1 r2 body u (ctx, delta) =
     let (ls_2, hs_2) = st2 in
     if (hs_1 - ls_1 = 1) && (hs_2 - ls_2 = 1) then (
       let range_size = ls_2 - ls_1 + 1 in
-      (* FIXME: redundant *)
-      if (range_size=u) then
-        let typ = TIndex ((0, u), (0, 1))
-        in check_cmd body (Context.add_binding id typ ctx2, d2)
-      else
-        let typ = TIndex ((0, u), (0, (range_size/u)))
-        in check_cmd body ((Context.add_binding id typ ctx2), d2))
+      let typ = TIndex ((0, u), (0, (range_size/u)))
+      in check_cmd body ((Context.add_binding id typ ctx2), d2))
     else raise (TypeError range_static_error)
   | _ -> raise (TypeError range_error)
 
