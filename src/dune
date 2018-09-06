@@ -6,3 +6,7 @@
 (library
   (name seashell)
   (libraries core))
+
+(env
+  (default
+    (flags (:standard -short-paths -w A-4))))

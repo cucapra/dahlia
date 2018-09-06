@@ -20,7 +20,7 @@ let rec types_equal (delta : delta) (t1 : type_node) (t2 : type_node) : bool =
 let rec check_expr (exp : expression) (ctx, (delta: Context.delta)) =
   match exp with
   | EInt (i, s)                -> check_int i s (ctx, delta)
-  | EFloat f                   -> check_float f (ctx, delta)
+  | EFloat _                   -> check_float (ctx, delta)
   | EBool _                    -> TBool, (ctx, delta)
   | EVar x                     -> Context.get_binding x ctx, (ctx, delta)
   | EBinop (binop, e1, e2)     -> check_binop binop e1 e2 (ctx, delta)
@@ -35,7 +35,7 @@ and check_int i is_stat (ctx, dta) =
       TIndex ((0, 1), (min_int, max_int))
   in typ, (ctx, dta)
 
-and check_float f (ctx, dta) = TFloat, (ctx, dta)
+and check_float (ctx, dta) = TFloat, (ctx, dta)
 
 and check_binop binop e1 e2 (c, d) =
   check_expr e1 (c, d)   |> fun (t1, (c1, d1)) ->
@@ -79,22 +79,19 @@ and check_aa id idx_exprs (c, d) =
     let num_dimensions = List.length dims in
     let access_dimensions = List.length idx_exprs in
     if num_dimensions != access_dimensions
-      then raise 
+      then raise
         (TypeError (incorrect_aa_dims id num_dimensions access_dimensions))
     else
       let bf = compute_bf dims in
       let unrollf = compute_unrollf idx_exprs (c, d) in
       if (bf mod unrollf)=0 then
-        try 
+        try
           let banks = Core.List.range 0 (unrollf-1) in
           t, (Context.consume_aa_lst id banks c, d)
-        with AlreadyConsumed bank -> raise (TypeError (illegal_bank bank id)) 
-      else 
+        with AlreadyConsumed bank -> raise (TypeError (illegal_bank bank id))
+      else
         raise (TypeError "TypeError: unroll factor must be factor of banking factor")
   | _ -> raise (TypeError "TypeError: tried to index into non-array")
-
-and check_idx id idx a_t (c, d) =
-  a_t, (Context.consume_aa_lst id idx c, d)
 
 let rec check_cmd cmd (ctx, delta) =
   match cmd with
@@ -145,6 +142,7 @@ and check_for_impl id r1 r2 body u (ctx, delta) =
     else raise (TypeError range_static_error)
   | _ -> raise (TypeError range_error)
 
+(* TODO(rachit): [d] is unused. Is this a mistake? *)
 and check_assignment id exp (ctx, delta) =
   check_expr exp (ctx, delta) |> fun (t, (c, d)) ->
   Context.add_binding id t c, delta
@@ -152,13 +150,13 @@ and check_assignment id exp (ctx, delta) =
 (* TODO(ted): rethink this *)
 and check_reassign target exp (ctx, delta) =
   match target, exp with
-  | EBankedAA (id, idx1, idx2), expr ->
+  | EBankedAA (id, idx1, idx2), _ ->
     check_banked_aa id idx1 idx2 (ctx, delta) |> fun (t_arr, (c, d)) ->
     check_expr exp (c, d)                     |> fun (t_exp, (c', d')) ->
     if types_equal delta t_arr t_exp then (c', d')
     else raise (TypeError (unexpected_type id t_exp t_arr))
-  | EVar id, expr -> (ctx, delta)
-  | EAA (id, idx), expr ->
+  | EVar _, _ -> (ctx, delta)
+  | EAA (id, idx), _ ->
     check_aa id idx (ctx, delta) |> fun (_, (c', d')) -> (c', d')
   | _ -> raise (TypeError "Used reassign operator on illegal types")
 
