@@ -1,8 +1,0 @@
-/////////////////////////////////////////////
-// 1d array logical access
-// - This application uses a banked array as input
-// with regular banking, accessed logically with
-// unroll to access different banks
-////////////////////////////////////////////
-
-readd a[i] as c;
