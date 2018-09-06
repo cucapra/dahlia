@@ -100,6 +100,33 @@ S_u &= \{ s + |l_s..h_s| \times d \mid s \in l_s..h_s, d \in l_d..h_d\} \\
 \end{aligned}
 $$
 
+which is equal to $l..h$.
+
+**Proof.** For unrolling, we want to show that $S_u = l..h$. This ensures that
+an unrolled loop accesses exactly the elements that the original loop did. The
+proof shows that there are exactly $n = |l..h|$ distinct natural numbers in $S_u$
+with $0$ and $n-1$ being the lower and upper bounds.
+
+$$
+\begin{aligned}
+S_u &= \left\{ s + k \times d \mid s \in 0..k, d \in \frac{l}{k}..\frac{h}{k}\right\} \\
+    &= \bigcup_{d \in \frac{l}{k}..\frac{h}{k}}\{ s + k \times d \mid s \in 0..k \}
+\end{aligned}
+$$
+
+Let each of the smaller subsets be $S_i$ where $i$ is equal to the value of $d$.
+Therefore, we have $S_u = \cup S_i$. Next, we show that each $S_i$ has exactly
+$k$ elements and that $\max(S_i) \leq min(S_{i+1})$.
+
+$$
+\begin{aligned}
+\max(S_i) = k - 1 +
+\end{aligned}
+$$
+
+\end{aligned}
+$$
+
 ::: todo
 Will it be useful to do this proof for the general case, starting from an arbitrary number $l_s$ (rather than limiting to 0 to k). I think the proof still holds without much change.
 --S
