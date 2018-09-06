@@ -43,6 +43,7 @@ let rec type_str = function
   | TIndex _      -> "int"
   | TArray _ -> failwith "Implement array type stringified version"
   | TAlias id -> type_str (!delta_map id)
+  | _ -> failwith "Implement me!"
 
 let bop_str = function
   | BopEq -> "="
@@ -166,6 +167,7 @@ and emit_assign (id, e) i =
   | TBool         -> emit_assign_int (id, e)         |> indent i
   | TArray (_, d) -> emit_assign_arr (id, e, d) i    |> indent i
   | TFloat        -> emit_assign_float (id, e)       |> indent i
+  | _ -> failwith "Fail me!"
 
 and emit_reassign (target, e) i =
   concat [ (emit_expr target); " = "; (emit_expr e); ";" ] |> indent i

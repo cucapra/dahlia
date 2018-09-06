@@ -10,6 +10,7 @@ let rec string_of_type = function
   | TAlias id -> id
   | TFloat -> "float"
   | TFunc _ -> "func"
+  | _ -> failwith "Implement me!"
 
 let string_of_binop = function
   | BopEq    -> "="
