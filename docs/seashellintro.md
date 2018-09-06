@@ -8,7 +8,7 @@ In this document, we'll illustrate the capabilities of Seashell's type system by
 
 ## Memory Access
 
-Seashell supports a couple of ways to access memories. In each method, Seashell enforces _memory access safety_: that is, when the programmer accesses a memory bank, Seashell prevents the programmer from doing so again. This reflects the fact that memory banks have limited access ports. Seashell also requires that the memory banks accessed are specified _statically_, so no multiplexer will be generated in the hardware. This is in effort to make Seashell programs more explicit: multiplexers should only appear when the programmer explicitly specifies it. 
+Seashell supports a couple of ways to access memories. In each method, Seashell enforces _memory access safety_: that is, when the programmer accesses a memory bank, Seashell prevents the programmer from doing so again. This reflects the fact that memory banks have limited access ports. Seashell also requires that the memory banks accessed are specified _statically_, so no multiplexer will be generated in the hardware. This is in effort to make Seashell programs more explicit: multiplexers should only appear when the programmer explicitly specifies it.
 
 ### Banked Memory Access
 

@@ -10,24 +10,24 @@ open Make_ast
 %token <float> FLOAT
 
 (* Keywords *)
-%token LET IF FOR TRUE FALSE INT_ANNOTATION 
+%token LET IF FOR TRUE FALSE INT_ANNOTATION
        BOOL_ANNOTATION FLOAT_ANNOTATION
-       MUX UNROLL BANK FUNC TYPE 
+       MUX UNROLL BANK FUNC TYPE
 
 (* Parentheses, brackets, etc *)
-%token LPAREN RPAREN LBRACK RBRACK LSQUARE RSQUARE 
+%token LPAREN RPAREN LBRACK RBRACK LSQUARE RSQUARE
 
 (* Operations *)
 %token EQUAL NEQ GEQ LEQ LT GT EQ PLUS MINUS TIMES
-       AND OR REASSIGN 
+       AND OR REASSIGN
 
 (* Other *)
-%token SEMICOLON COLON RANGE_DOTS COMMA 
+%token SEMICOLON COLON RANGE_DOTS COMMA
 
 (* Precedences *)
 %right OR
 %right AND
-%left NEQ GEQ LEQ LT GT EQ 
+%left NEQ GEQ LEQ LT GT EQ
 %left PLUS MINUS
 %left TIMES
 
@@ -46,7 +46,7 @@ cmd:
     { make_app f a }
   | TYPE tname = ID EQUAL tval = type_annotation SEMICOLON
     { make_typedef tname tval }
-  | FUNC f = ID LPAREN a = annotated_args RPAREN 
+  | FUNC f = ID LPAREN a = annotated_args RPAREN
     LBRACK body = cmd RBRACK
     { make_function f a body }
   | LET x = ID EQUAL e1 = expr SEMICOLON
@@ -54,11 +54,11 @@ cmd:
   | IF LPAREN b = expr RPAREN LBRACK body = cmd RBRACK
     { make_if b body }
   | e1 = expr; REASSIGN; e2 = expr; SEMICOLON
-    { make_reassignment e1 e2 } 
+    { make_reassignment e1 e2 }
   | FOR LPAREN LET x = ID EQUAL x1 = expr RANGE_DOTS x2 = expr RPAREN UNROLL u = INT
     LBRACK c = cmd RBRACK
     { make_for_impl x x1 x2 u c }
-  | FOR LPAREN LET x = ID EQUAL x1 = expr RANGE_DOTS x2 = expr RPAREN 
+  | FOR LPAREN LET x = ID EQUAL x1 = expr RANGE_DOTS x2 = expr RPAREN
     LBRACK c = cmd RBRACK
     { make_for x x1 x2 c } ;
   | c1 = cmd c2 = cmd
@@ -86,7 +86,7 @@ expr:
 
 annotated_id:
   | x = ID COLON t = type_annotation
-    { (x, t) } 
+    { (x, t) }
 
 annotated_args:
   | a = separated_list(COMMA, annotated_id ) { a }
@@ -113,7 +113,7 @@ access:
 type_annotation:
   | BOOL_ANNOTATION { TBool }
   | INT_ANNOTATION { TIndex ((0, 1), (min_int, max_int)) }
-  | FLOAT_ANNOTATION { TFloat } 
+  | FLOAT_ANNOTATION { TFloat }
   | t = type_annotation a = array_def
     { TArray (t, a) }
   | x = ID { TAlias x }

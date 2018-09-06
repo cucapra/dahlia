@@ -3,7 +3,7 @@ open Ast
 let rec string_of_type = function
   | TBool -> "bool"
   | TArray (t, _) -> (string_of_type t) ^ " array"
-  | TIndex (s, d) -> 
+  | TIndex (s, d) ->
     let (ls, hs), (ld, hd) = s, d in
     "idx<" ^ (string_of_int ls) ^ " .. " ^ (string_of_int hs) ^
     ", " ^ (string_of_int ld) ^ " .. " ^ (string_of_int hd) ^ ">"
@@ -44,10 +44,10 @@ let illegal_access id =
 
 let illegal_op binop t1 t2 =
   "[Type error] can't apply operator '" ^
-  (string_of_binop binop) ^ 
-  "' to " ^ 
-  (string_of_type t1) ^ 
-  " and " ^ 
+  (string_of_binop binop) ^
+  "' to " ^
+  (string_of_type t1) ^
+  " and " ^
   (string_of_type t2)
 
 let small_mux =
@@ -72,5 +72,5 @@ let incorrect_aa_dims aname expected actual =
   let e_dim_end = if expected = 1 then "" else "s" in
   let a_dim_end = if actual   = 1 then "" else "s" in
   "[Type Error] array \"" ^ aname ^ "\" has " ^ (string_of_int expected) ^
-  " dimension" ^ e_dim_end ^ "; attempted array access implies " ^ 
+  " dimension" ^ e_dim_end ^ "; attempted array access implies " ^
   (string_of_int actual) ^ " dimension" ^ a_dim_end

@@ -13,16 +13,16 @@ for (let i = 0..1) {
 
 ## current C out
 ```
-int main() 
-{ 
-	int a[2]; 
-	int c[2]; 
-	int  b = 10; 
+int main()
+{
+	int a[2];
+	int c[2];
+	int  b = 10;
 	for (int i = 0; i < 1; i += 1) {
-		c[0+2*i] = a[0+2*i] + b; 
+		c[0+2*i] = a[0+2*i] + b;
 		c[1+2*i] = a[1+2*i] + b;
-	} 
-	return 0; 
+	}
+	return 0;
 }
 ```
 
@@ -31,7 +31,7 @@ int main()
 void madd(float A[N*N], float B, float C[N*N])
 {
   int i;
-  
+
   for (i = 0; i < N * N; i++)
       C[i] = A[i] + B;
 }

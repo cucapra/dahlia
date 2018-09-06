@@ -12,7 +12,7 @@ def generate_indices(select_tuples, static_sizes, dims, bf):
     final = []
 
     for t in select_tuples:
-        
+
         total = 0
         result = ""
         vals = ""

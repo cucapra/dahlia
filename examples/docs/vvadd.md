@@ -1,7 +1,7 @@
 ## 2018 July 11
 
-Trying out different designs with vvadd  
-For the purposes of this document, BF is banking factor, UF is unroll factor  
+Trying out different designs with vvadd
+For the purposes of this document, BF is banking factor, UF is unroll factor
 
 ### 1. No spcifications is illegal- no unroll is explicit
 
@@ -104,7 +104,7 @@ void madd(float a[1024], float b[1024], float c[1024]) {
 }
 ```
 
-### 4a. 
+### 4a.
 
 ```
 func madd(a: float[1024] bank(1), b: float[1024] bank(1), c: float[1024] bank(1)) {
@@ -122,7 +122,7 @@ Invalid array accessor
 
 * The culpit seems to be unroll- Unroll decides what type of array access.
 
-### 4b. 
+### 4b.
 
 ```
 func madd(a: float[1024] bank(1), b: float[1024] bank(1), c: float[1024] bank(1)) {
@@ -176,7 +176,7 @@ func madd(a: float[1024], b: float[1024], c: float[1024] bank(1)) {
   for (let i = 0..1023) unroll 32 {
     c[i] := a[i] + b[i];
   }
-  
+
 }
 ```
 
@@ -243,7 +243,7 @@ func madd(a: float[1024] bank(32), b: float[1024] bank(32), c: float[1024]) {
 Illegal bank access: 1
 ```
 
-### 10. Simple array[bank][index] access  
+### 10. Simple array[bank][index] access
 
 ```
 func madd(a: float[1024], b: float[1024], c: float[1024] bank(2)) {
@@ -260,7 +260,7 @@ func madd(a: float[1024], b: float[1024], c: float[1024] bank(2)) {
 
 * Error is unroll using this access
 
-### 10a. Simple array[bank][index] access   
+### 10a. Simple array[bank][index] access
 
 ```
 func madd(a: float[1024], b: float[1024], c: float[1024] bank(2)) {
@@ -279,7 +279,7 @@ Illegal bank access: 0
 
 * Because multiple read
 
-### 10b. Simple array[bank][index] access   
+### 10b. Simple array[bank][index] access
 
 ```
 func madd(a: float[1024] bank(2), b: float[1024] bank(2), c: float[1024] bank(2)) {
@@ -298,7 +298,7 @@ Illegal bank access: 0
 
 * Is this an illegal access? Yes, still multiple read
 
-### 10c. Simple array[bank][index] access  
+### 10c. Simple array[bank][index] access
 
 ```
 func madd(a: float[1024] bank(2), b: float[1024] bank(2), c: float[1024] bank(2)) {
@@ -325,7 +325,7 @@ void madd(float a[1024], float b[1024], float c[1024]) {
 
 * This is valid because access type is correct and no read multi access
 
-### 10d. Simple array[bank][index] access  
+### 10d. Simple array[bank][index] access
 
 ```
 func madd(a: float[1024], b: float[1024], c: float[1024] bank(2)) {
@@ -344,7 +344,7 @@ Illegal bank access: 1
 
 * This error makes sense, but shouldn't either 11 or 11a be valid? The error here is no banks.
 
-### 11. Using array[bank][index] access in unroll, 
+### 11. Using array[bank][index] access in unroll,
 
 ```
 func madd(a: float[1024], b: float[1024], c: float[1024] bank(2)) {
@@ -454,13 +454,13 @@ void madd(float a[1024], float b[1024], float c[1024]) {
 ### 12b. Nested for vvadd using one loop index
 
 ```
-func madd(a: float[1024] bank(16), b: float[1024] bank(16), c: float[1024] bank(16)) {   
-                               
-  for (let i = 0..31) unroll 4 {       
-    for (let j = 0..31) {              
-      c[2*i+1] := a[2*i+1] + b[2*i+1]; 
-    }                                  
-  }                                    
+func madd(a: float[1024] bank(16), b: float[1024] bank(16), c: float[1024] bank(16)) {
+
+  for (let i = 0..31) unroll 4 {
+    for (let j = 0..31) {
+      c[2*i+1] := a[2*i+1] + b[2*i+1];
+    }
+  }
 
 }
 ```
@@ -476,11 +476,11 @@ void madd(float a[1024], float b[1024], float c[1024]) {
                         c[2*i+1] = a[2*i+1]+b[2*i+1];
                 }
         }
-        
+
 }
 ```
 
-### 13a. Nested for vvadd using both indeces no unroll 
+### 13a. Nested for vvadd using both indeces no unroll
 
 ```
 func madd(a: float[1024] bank(16), b: float[1024] bank(16), c: float[1024] bank(16)) {
@@ -507,7 +507,7 @@ void madd(float a[1024], float b[1024], float c[1024]) {
 }
 ```
 
-### 13b. Nested for vvadd using both indeces no unroll 
+### 13b. Nested for vvadd using both indeces no unroll
 
 ```
 func madd(a: float[1024] bank(16), b: float[1024] bank(16), c: float[1024] bank(16)) {
@@ -640,11 +640,11 @@ void madd(float a[1024], float b[1024], float c[1024]) {
 }
 ```
 
-* Multiplier in loop doesn't matter? Only two unrolls seem to hurt seashell.  
+* Multiplier in loop doesn't matter? Only two unrolls seem to hurt seashell.
 
 ## 2018 July 17
 
-### 1. Roundabout way with unroll 1 is invalid because of invalid index equations  
+### 1. Roundabout way with unroll 1 is invalid because of invalid index equations
 
 ```
 func madd(a: float[1024] bank(32), b: float[1024] bank(32), c: float[32]) {
@@ -656,11 +656,11 @@ func madd(a: float[1024] bank(32), b: float[1024] bank(32), c: float[32]) {
   }
 
 }
-```  
+```
 
 `Illegal operation: can't apply operator '+' to index with static and dynamic information and index with static and dynamic information`
 
-### 2. explicit notation for first loop works. 
+### 2. explicit notation for first loop works.
 
 ```
 func madd(a: float[1024] bank(32), b: float[1024] bank(32), c: float[32]) {
