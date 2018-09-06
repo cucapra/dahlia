@@ -4,7 +4,7 @@ title: Logical Memory Accesses
 
 This document describes Seashell's *logical access* expressions, which is to access memories using [index types][it].
 Logical access in Seashell lets programs access the logical structure of an array, even a multidimensional array, while preserving information about the underlying physical banks being accessed.
-The document goes on to introduce a set of sound typing rules that determine whether a bank access during a logical memory access is safe. 
+The document goes on to introduce a set of sound typing rules that determine whether a bank access during a logical memory access is safe.
 
 [it]: indextype.html
 
@@ -29,7 +29,7 @@ $$\tag{1}
 \{ s + |l_s .. h_s| \times d ~|~ s \in l_s .. h_s \}
 $$
 
-Given an array access with our index types, this set representation allows us to precisely identify which indices (and subsequently memory banks) are accessed. 
+Given an array access with our index types, this set representation allows us to precisely identify which indices (and subsequently memory banks) are accessed.
 
 ::: todo
 How does the implicit vs. explicit terminology differ from logical vs. physical? It sounds like it might be the same thing.
@@ -88,7 +88,7 @@ $$
 Consider a two-dimensional array $\text{a}$ defined like this:
 
 $$
-\text{a} : t[4][2] 
+\text{a} : t[4][2]
 $$
 
 The flattened version, $\text{a}_f$, has size $8$.
@@ -108,7 +108,7 @@ Logical Access with Index Types
 -------------------------------
 
 We now consider the meaning of logical accesses using Seashell's index types.
-We want to determine the *set* of elements accessed in an expression of the form 
+We want to determine the *set* of elements accessed in an expression of the form
 $\text{a}[i_0] \dots [i_n]$
 where each $i_j$ is of an index type
 $\text{idx}\langle l_{s_j} .. h_{s_j}, l_{d_j} .. h_{d_j} \rangle$.
@@ -236,7 +236,7 @@ We'll actually define this to mean the division of memory $\text{a}_f$ into $b$ 
 Note- Change in syntax to bank each dimension would require an update here.
 :::
 
-**Example.** 
+**Example.**
 
     memory a: int[4][2] bank(4)
 
@@ -278,8 +278,8 @@ With the knowledge of which bankes we access, we can expand on how this might be
 One dimensional arrays are a special case of array accesses, but has significance due to actual hardware being one dimensional and multi-dimensional arrays can be expanded to one dimension by the programmer.
 
 $$\tag{5}
-B = \left\{ 
-    ( s + |l_{s}..h_{s}| \times d ) \bmod b ~|~ s \in l_{s}..h_{s} 
+B = \left\{
+    ( s + |l_{s}..h_{s}| \times d ) \bmod b ~|~ s \in l_{s}..h_{s}
     \right\}
 $$
 
@@ -300,13 +300,13 @@ Our attempt now, is to determine the set of banks accessed given the unroll fact
 
 We can write such a loop as follows:
 
-where $~|~ l..h | = n$, $len > n$ and $m \in N$  
+where $~|~ l..h | = n$, $len > n$ and $m \in N$
 
     int a[len bank(m*k)]
     for i in l..h unroll k
         access a[i]
 
-Here, $i$ has type $\text{idx}\langle l_s .. h_s, l_d .. h_d \rangle$. 
+Here, $i$ has type $\text{idx}\langle l_s .. h_s, l_d .. h_d \rangle$.
 
 Since $~|~ l_s .. h_s | = k$ For any $d \in l_d .. h_d$, $\text{i}$ represents:
 
@@ -320,7 +320,7 @@ $$
 \{ s + k * d ~|~ s \in l_s .. h_s \} \bmod m * k
 $$
 
-Using the following expansion with modulus:  
+Using the following expansion with modulus:
 $(a + b) \bmod c =  (a \bmod c + b \bmod c) \bmod c$
 
 $$
@@ -330,7 +330,7 @@ $$
 We know a couple things that help us rewrite this set:
 
   - $~|~ l_s .. h_s | < mk$
-  
+
 Therefore, $s \bmod mk$ is unique
 
   - $kd \bmod mk = k (d \bmod m)$ [proof](https://capra.cs.cornell.edu/seashell/docs/appendix.html#modulus-proof), [image](https://imgur.com/a/9cEQHGr)
@@ -374,7 +374,7 @@ Moved to appendix under basic type rules we need
 --S
 :::
 
-It is evident from this rule, that our type checker is conservative about the design space of safe accesses. Our attempt through this document is to formally prove our accesses are safe, and not derive the complete design space of safe accesses. We hope to convince our index types are rigorous and flexible enough to attempt proofs with other type rules, which would make the type checker gradually less conservative.  
+It is evident from this rule, that our type checker is conservative about the design space of safe accesses. Our attempt through this document is to formally prove our accesses are safe, and not derive the complete design space of safe accesses. We hope to convince our index types are rigorous and flexible enough to attempt proofs with other type rules, which would make the type checker gradually less conservative.
 
 ::: todo
 I'm not 100% sure we need all three of these cases.
@@ -387,11 +387,11 @@ Having three proofs ends up pretty repetitive.
 :::
 
 ::: todo
-b=mk case moved higher, others moved to appendix 
+b=mk case moved higher, others moved to appendix
 --S
 :::
 
-**Note- ** We're operating on a 1-D array, so this set already represents our "flattened indices" for multi-dimensional access. In fact, we can argue 1-D as a special case of the $I_f$ definition we provided earlier. We will proceed in the next section to arrive at primitive access rules for multi-dimensional access, and gradually improve on them.  
+**Note- ** We're operating on a 1-D array, so this set already represents our "flattened indices" for multi-dimensional access. In fact, we can argue 1-D as a special case of the $I_f$ definition we provided earlier. We will proceed in the next section to arrive at primitive access rules for multi-dimensional access, and gradually improve on them.
 
 ### Type Rules for Multi-Dimensional Access
 
@@ -419,7 +419,7 @@ Intuitively, we unroll this loop $b$ times, i.e. simultaneously accessing $b$ va
  - $\text{idx}\langle 0 .. k_1, 0 .. \frac{x}{k_1} \rangle$
  - $\text{idx}\langle 0 .. k_2, 0 .. \frac{y}{k_2} \rangle$
 
-Then we can compute $I_f$ for all $d\in 0 .. \frac{x}{b}$, 
+Then we can compute $I_f$ for all $d\in 0 .. \frac{x}{b}$,
 
 $$
 I_f = \left\{
@@ -450,7 +450,7 @@ $$
 
 Therefore, each should access a different bank.
 
-The case where $j<n-1$, 
+The case where $j<n-1$,
 Since $k_j$ divides $\sigma_{j}$,
 
 $$

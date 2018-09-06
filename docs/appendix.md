@@ -5,7 +5,7 @@ title: Appendix
 3-D array examples to visualize multi-dimensional access
 --------------------------------------------------------
 
-##### Example 1 
+##### Example 1
 Consider a three-dimensional array $\text{a}$ defined like this:
 
 $$a:t[2][5][3] \text{ bank} (5)$$
@@ -14,7 +14,7 @@ The flattened version, $\text{a}_f$, would have size $N=30$. Say we make an acce
 
 Note that the banking factor is not used in this example.
 
-##### Example 2a 
+##### Example 2a
 Let's consider an access to the array we considered earlier.
 $$a:t[2][5][3] \text{ bank} (5)$$
 
@@ -28,7 +28,7 @@ $$
 (0 + 1 \times 1) \times 15 + (4 + 5 \times 0) \times 3 + (0 + 1 \times 2) \times 1 = 29
 $$
 
-##### Example 2b 
+##### Example 2b
 Let's try to access the same array as before with the dynamic index set $d=\{1,0,2\}$
 
 From the equation,
@@ -37,7 +37,7 @@ $$
 \{ (s_0 + 1 \times 1) \times 15 + (s_1 + 5 \times 0) \times 3 + (s_2 + 1 \times 2) \times 1 ~|~ s_0 \in 0..1, s_1 \in 0..5, s_2 \in 0..1 \} = \{17,20,23,26,29\}
 $$
 
-##### Example 2c 
+##### Example 2c
 Consider this program:
 
     int a[2][5][3] bank(5)
@@ -64,7 +64,7 @@ Array banking strategies with 3-D example
 
 We are interested in the indices being used to access $\text{a}_f$, so we can restrict the banks that a Seashell programmer can access. However, which banks the programmer accesses is influenced by the array banking strategy. Here are a few ways we could bank $\text{a}_f$.
 
-#### Bank Interleaving 
+#### Bank Interleaving
 We could interleave the elements of $\text{a}_f$ among its banks, like this (each rectangle represents a bank):
 
 | 0 5 10 15 20 25 | 1 6 11 16 21 26 | 2 7 12 17 22 27 | 3 8 13 18 23 28 | 4 9 14 19 24 29 |
@@ -72,7 +72,7 @@ We could interleave the elements of $\text{a}_f$ among its banks, like this (eac
 
 Then, given an index $i_f$ into $\text{a}_f$, we could determine the bank being accessed with $i \bmod b$. The index offset into the bank would be $i / b$.
 
-#### Bank Chunking 
+#### Bank Chunking
 We could simply divide $a_f$ into banks, like this:
 
 | 0 1 2 3 4 5 | 6 7 8 9 10 11 | 12 13 14 15 16 17 | 18 19 20 21 22 23 | 24 25 26 27 28 29 |
@@ -82,21 +82,21 @@ Then, we could use $i / b$ to find the relevant bank, and $i \bmod b$ to find th
 
 Both have use cases, but we won't go into those here.
 
-##### Example 3  
+##### Example 3
 Consider the array $a$ defined in example 1. Assume interleaving. If we index into $a_f$ with $i_f=29$, the bank accessed would be $29 \bmod 5 = 4$, and the index into this bank would be $29 / 5 = 5$. In other words, we would access the 5th element in the 4th bank.
 
 2-D array examples to visualize multi-dimensional access
 --------------------------------------------------------
 
 
-##### Example 1 
+##### Example 1
 Consider a two-dimensional array $\text{a}$ defined like this:
 
 $$a:t[4][2] \text{ bank} (4)$$
 
 The flattened version, $\text{a}_f$, would have size $N=8$. Say we make an access $\text{a}[3][1]$. Using our formula we defined, we'd access $\text{a}_f$ with $i_f=7$.
 
-Note that the banking factor is not used.  
+Note that the banking factor is not used.
 
 ##### Example 2.1
 Consider this program:
@@ -188,16 +188,16 @@ Both have use cases, but we won't go into those here. For the remainder of this 
 Modulus proof
 -------------
 
-$$ab \bmod ac = ab - \lfloor \frac{ab}{ac} \rfloor ac   
-            = a (b - \lfloor \frac{b}{c} \rfloor c )  
-            = a (b \bmod c)  $$ 
+$$ab \bmod ac = ab - \lfloor \frac{ab}{ac} \rfloor ac
+            = a (b - \lfloor \frac{b}{c} \rfloor c )
+            = a (b \bmod c)  $$
 
 Index type array access proofs
 -------------
 
 **banked array access with unroll factor = banking factor**
 
-where $l > n$   
+where $l > n$
 
     int a[l bank(k)]
     for i in 0..n unroll k
@@ -236,11 +236,11 @@ $$
 \{ 0 .. k \}
 $$
 
-This range shows us that our index type would be accessing all $k$ distinct banks by any access, and we'd never access some non-existent bank or not access an existent bank. Allowing accesses that follow rule (1) would guarantee this access. Rule(2) would disallow any further accesses, preventing banks from being accessed multiple times.  
+This range shows us that our index type would be accessing all $k$ distinct banks by any access, and we'd never access some non-existent bank or not access an existent bank. Allowing accesses that follow rule (1) would guarantee this access. Rule(2) would disallow any further accesses, preventing banks from being accessed multiple times.
 
 **banked array access with unroll factor factor of banking factor**
 
-where $l > n$ and $m \in N$  
+where $l > n$ and $m \in N$
 
     int a[l bank(m*k)]
     for i in 0..n unroll k
@@ -275,11 +275,11 @@ $$
 k (d \bmod m) .. \left( k (d \bmod m) + k \right)
 $$
 
-This range shows us that our index type would be accessing $k$ distinct banks at any time, and we'd never access some non-existent bank. For $d=0$ we'd access $0..k$, and for $d=(m-1)$ we'd access $(mk-k)..mk$. Allowing accesses that follow rule (1) would guarantee this. Then, because we can't know what $d$ is statically, we can follow rule (2) and conservatively disallow any further accesses, preventing banks from being accessed multiple times.  
+This range shows us that our index type would be accessing $k$ distinct banks at any time, and we'd never access some non-existent bank. For $d=0$ we'd access $0..k$, and for $d=(m-1)$ we'd access $(mk-k)..mk$. Allowing accesses that follow rule (1) would guarantee this. Then, because we can't know what $d$ is statically, we can follow rule (2) and conservatively disallow any further accesses, preventing banks from being accessed multiple times.
 
 **banked array access with an unroll factor of 1**
 
-where $l > n$ and $k > 1$  
+where $l > n$ and $k > 1$
 
     int a[l bank(k)]
     for i in 0..n unroll 1
@@ -298,7 +298,7 @@ $$
 \{ ((s \bmod k) + (d \bmod k)) \bmod k ~|~ s \in 0 .. 1 \}
 $$
 
-Since we know that $s$ can take only the value $0$  
+Since we know that $s$ can take only the value $0$
 
 We have:
 
@@ -306,7 +306,7 @@ $$
 \{ d \bmod k \}
 $$
 
-This shows us that our index type would be accessing a single bank at any time, and we'd never access some non-existent bank. For $d=0$ we'd access $0$, and for $d=k-1$ we'd access $k-1$. Allowing accesses that follow rule (1) would allow this. We can follow rule (2) and conservatively disallow any further accesses, preventing banks from being accessed multiple times. But this also limits accessing other banks, which would of course be a safe operation.  
+This shows us that our index type would be accessing a single bank at any time, and we'd never access some non-existent bank. For $d=0$ we'd access $0$, and for $d=k-1$ we'd access $k-1$. Allowing accesses that follow rule (1) would allow this. We can follow rule (2) and conservatively disallow any further accesses, preventing banks from being accessed multiple times. But this also limits accessing other banks, which would of course be a safe operation.
 
 Some basic type rules we depend on
 -----------

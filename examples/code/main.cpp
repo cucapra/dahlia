@@ -43,7 +43,7 @@ static int result_check(float *D, float *D_sw)
 {
      for (int i = 0; i < N * N; i++) {
           if (D_sw[i] != D[i]) {
-               std::cout << "Mismatch: data index=" << i << "d=" << D_sw[i] 
+               std::cout << "Mismatch: data index=" << i << "d=" << D_sw[i]
                         << ", dout=" << D[i] << std::endl;
                return 1;
           }
@@ -53,12 +53,12 @@ static int result_check(float *D, float *D_sw)
 
 int vsadd_test(float *A,  float *B, float *C, float *C_sw)
 {
-     std::cout << "Testing " << NUM_TESTS << " iterations of " << N << "x" << N 
+     std::cout << "Testing " << NUM_TESTS << " iterations of " << N << "x" << N
                << " floating point vvadd..." << std::endl;
 
      perf_counter hw_ctr, sw_ctr;
-     
-     for (int i = 0; i < NUM_TESTS; i++) 
+
+     for (int i = 0; i < NUM_TESTS; i++)
      {
           init_arrays(A, B, C, C_sw);
 
@@ -96,7 +96,7 @@ int main(int argc, char* argv[]){
      B = (float *)sds_alloc(sizeof(float));
      C = (float *)sds_alloc(N * N * sizeof(float));
      C_sw = (float *)malloc(N * N * sizeof(float));
-     
+
      if (!A || !B || !C || !C_sw) {
           if (A) sds_free(A);
           if (B) sds_free(B);
@@ -106,7 +106,7 @@ int main(int argc, char* argv[]){
      }
 
      test_passed = vsadd_test(A, B, C, C_sw);
-     
+
      std::cout << "TEST " << (test_passed ? "FAILED" : "PASSED") << std::endl;
 
      sds_free(A);

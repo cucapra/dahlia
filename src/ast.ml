@@ -1,6 +1,6 @@
 type id = string
 
-(* A [type_node] is one of the following: 
+(* A [type_node] is one of the following:
  *   - [TBool]: a boolean type
  *   - [TArray (t, [(s1, bf1)..(sn, bfn)] is an array type with elements of
  *     type [t]. It has [n] dimensions, each of size [sn] and banking factor [bfn]
@@ -11,10 +11,10 @@ type id = string
  *         TIndex ((n, n+1), (0, 1))
  *       + A normal old dynamic integer would have type
  *         TIndex ((0, 1) (min_int, max_int))
- *   - [TFunc t]: a function type where [t] is a list of the types of its 
- *     arguments (the order of the list corresponds to the order of the 
+ *   - [TFunc t]: a function type where [t] is a list of the types of its
+ *     arguments (the order of the list corresponds to the order of the
  *     arguments)
- *   - [TAlias i]: an alias type where [i] is an id; under a typing context 
+ *   - [TAlias i]: an alias type where [i] is an id; under a typing context
  *     [c] this may or may not map to another [type_node]
  *   - [TFloat]: a float type
  *   - [TMux (id, s) a mux type that encapsulates a memory with id [id] and
@@ -23,7 +23,7 @@ type type_node =
   | TBool
   | TArray of type_node * (int * int) list
   | TIndex of (int * int) * (int * int)
-  | TFunc of type_node list 
+  | TFunc of type_node list
   | TAlias of id
   | TFloat
   | TMux of id * int
@@ -48,7 +48,7 @@ type binop =
  *   - [EFloat f]: a float with value [f]
  *   - [EVar i]: a variable with id [i]
  *   - [EBool b]: a boolean with truth value [b]
- *   - [EBinop (b, e1, e2)]: a binop [b] between two expressions 
+ *   - [EBinop (b, e1, e2)]: a binop [b] between two expressions
  *     [e1] and [e2]
  *   - [EAA (id, [e1, ..., en])]: an array access where [id] is being
  *     accessed with expressions [e1], ..., [en], where [n] is the number

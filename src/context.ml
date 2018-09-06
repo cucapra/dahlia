@@ -3,17 +3,17 @@ open Ast
 exception AlreadyConsumed of int
 exception NoBinding
 
-module StringMap = 
+module StringMap =
   Map.Make(struct type t = id;; let compare = String.compare end)
 
 module IntSet =
-  Set.Make(struct 
+  Set.Make(struct
     type t = int
     let compare a b = if a > b then 1 else if a < b then -1 else 0
   end)
 
 type gamma = {
-  type_map : type_node StringMap.t ; 
+  type_map : type_node StringMap.t ;
   indices_available: IntSet.t StringMap.t
 }
 
@@ -38,8 +38,8 @@ let compute_bf b =
 let add_binding id t g =
   let type_map' = StringMap.add id t g.type_map in
   match t with
-  | TArray (_, banking) -> 
-    let indices_available' = 
+  | TArray (_, banking) ->
+    let indices_available' =
       StringMap.add id (create_set (compute_bf banking)) g.indices_available in
     {
       type_map = type_map' ;
@@ -62,11 +62,11 @@ let rem_binding id g =
   { g with type_map = StringMap.remove id g.type_map }
 
 let consume_aa id i g =
-  if IntSet.mem i (StringMap.find id g.indices_available) then { 
-    g with indices_available = 
-      StringMap.add id 
-        (IntSet.remove i (StringMap.find id g.indices_available)) 
-        g.indices_available 
+  if IntSet.mem i (StringMap.find id g.indices_available) then {
+    g with indices_available =
+      StringMap.add id
+        (IntSet.remove i (StringMap.find id g.indices_available))
+        g.indices_available
   }
   else raise (AlreadyConsumed i)
 
