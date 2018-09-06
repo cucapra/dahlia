@@ -1,4 +1,4 @@
-Tutorial on hardware programming
+Tutorial on hardware programming with Seashell
 -------
 
 This tutorial is targeted to introduce hardware programming in high-level languages to C programmers or hardware programmers interested in moving into high level synthesis. This tutorial will use:
@@ -12,7 +12,7 @@ Buildbot itself hides away some other tools that can be replaced with different 
 ### Prerequisites
 * Basic knowledge on C/C++
 * Some means to create files, zip them and submit them to [Buildbot](http://gorgonzola.cs.cornell.edu:8000/) to run externally
-  or a backend with [seac compiler](https://github.com/cucapra/seashell), HLS backend and a CPU-FPGA heterogeneous backend to run locally.
+  or a backend with [seac compiler](https://github.com/cucapra/seashell), HLS and a CPU-FPGA heterogeneous platform to run locally.
 
 We'll be going through the following examples to get familiarized with the tools and to use the infrastructure to create interesting programs.
 
