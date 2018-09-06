@@ -142,6 +142,7 @@ and check_for_impl id r1 r2 body u (ctx, delta) =
     else raise (TypeError range_static_error)
   | _ -> raise (TypeError range_error)
 
+(* TODO(rachit): [d] is unused. Is this a mistake? *)
 and check_assignment id exp (ctx, delta) =
   check_expr exp (ctx, delta) |> fun (t, (c, d)) ->
   Context.add_binding id t c, d
