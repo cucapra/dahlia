@@ -85,8 +85,7 @@ type expression =
  *   - [CFuncDef, CTypeDef, CMuxDef, CApp]: TODO *)
 type command =
   | CAssign of id * expression
-  | CFor of id * expression * expression * command
-  | CForImpl of id * expression * expression * int * command
+  | CFor of id * expression * expression * int option * command
   | CReassign of expression * expression
   | CIf of expression * command
   | CSeq of command * command

@@ -135,8 +135,7 @@ let rec emit_cmd i cmd =
   match cmd with
   | CAssign (id, e)                -> emit_assign (id, e) i
   | CReassign (target, e)          -> emit_reassign (target, e) i
-  | CFor (id, r1, r2, body)        -> emit_for (id, r1, r2, body, None) i
-  | CForImpl (id, r1, r2, u, body) -> emit_for (id, r1, r2, body, (Some u)) i
+  | CFor (id, r1, r2, u, body) -> emit_for (id, r1, r2, body, u) i
   | CIf (cond, body)               -> emit_if (cond, body) i
   | CSeq (c1, c2)                  -> emit_seq (c1, c2) i
   | CFuncDef (id, args, body)      -> emit_fun (id, args, body) i
