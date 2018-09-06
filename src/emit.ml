@@ -173,10 +173,7 @@ and emit_reassign (target, e) i =
 
 and emit_for (id, r1, r2, body, u) i =
   let unroll_pragma =
-    (match u with
-     | None -> ""
-     | Some u' ->
-       concat [ newline; (s_pragma_unroll (emit_int u') (i+1)) ]) in
+    concat [ newline; (s_pragma_unroll (emit_int u) (i+1)) ] in
   concat [
     "for (int "; id; " = "; (emit_expr r1); "; "; id;
     " <= "; (emit_expr r2); "; "; id; " += 1) {";
@@ -216,10 +213,5 @@ and emit_typedef (id, t) i =
   concat [ "typedef "; (type_str t); " "; id; ";" ]
   |> indent i
 
-<<<<<<< HEAD
-=======
-and emit_muxdef = "" (* No need to emit anything *)
-
->>>>>>> Remove unused variables from emit.ml
 and generate_c cmd =
   emit_cmd 0 cmd

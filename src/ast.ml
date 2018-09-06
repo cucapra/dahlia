@@ -71,11 +71,9 @@ type expression =
 (* A [command] is one of the following:
  *   - [CAssign (i, e)]: a representation of assignment of
  *     expression [e] to id [i]
- *   - [CFor (i, x1, x2, b)]: a representation of a for loop
- *     with counter variable [i], range [x1..x2], and body [b]
- *   - [CForImpl (i, x1, x2, u, b)]: a representation of an
- *     unrolled loop with counter variable [i], range [x1..x2],
- *     unroll factor [u] and body [b]
+ *   - [CFor (i, x1, x2, u, b)]: a representation of an
+ *     loop with counter variable [i], range [x1..x2], and body [b],
+       as well an unroll amount specified by [u].
  *   - [CReassign (t, e)]: a representation of a reassignment
  *     of target [t] to expression [e]
  *   - [CIf (e, b)]: a representation of an if statement with
@@ -85,7 +83,7 @@ type expression =
  *   - [CFuncDef, CTypeDef, CMuxDef, CApp]: TODO *)
 type command =
   | CAssign of id * expression
-  | CFor of id * expression * expression * int option * command
+  | CFor of id * expression * expression * int * command
   | CReassign of expression * expression
   | CIf of expression * command
   | CSeq of command * command

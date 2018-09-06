@@ -97,10 +97,7 @@ let rec check_cmd cmd (ctx, delta) =
   match cmd with
   | CSeq (c1, c2)                  -> check_seq c1 c2 (ctx, delta)
   | CIf (cond, cmd)                -> check_if cond cmd (ctx, delta)
-  | CFor (x, r1, r2, uo, body)     -> (match uo with
-                                       | None -> check_for x r1 r2 body (ctx, delta)
-                                       | Some u ->
-                                           check_for_impl x r1 r2 body u (ctx, delta))
+  | CFor (x, r1, r2, uo, body)     -> check_for_impl x r1 r2 body uo (ctx, delta)
   | CAssign (x, e1)                -> check_assignment x e1 (ctx, delta)
   | CReassign (target, exp)        -> check_reassign target exp (ctx, delta)
   | CFuncDef (id, args, body)      -> check_funcdef id args body (ctx, delta)
@@ -115,15 +112,6 @@ and check_if cond cmd (ctx, delta) =
   match check_expr cond (ctx, delta) with
   | TBool, (ctx', dta') -> check_cmd cmd (ctx', dta')
   | t, _ -> raise (TypeError (unexpected_type "conditional" t TBool))
-
-and check_for id r1 r2 body (ctx, d) =
-  let (r1_type, (ctx1, d1)) = check_expr r1 (ctx, d) in
-  let (r2_type, (ctx2, d2)) = check_expr r2 (ctx1, d1) in
-  match r1_type, r2_type with
-  | TIndex _, TIndex _ ->
-    let typ = TIndex ((0, 1), (min_int, max_int))
-    in check_cmd body (Context.add_binding id typ ctx2, d2)
-  | _ -> raise (TypeError range_error)
 
 and check_for_impl id r1 r2 body u (ctx, delta) =
   check_expr r1 (ctx, delta) |> fun (r1_type, (ctx1, d1)) ->
