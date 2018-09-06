@@ -147,7 +147,12 @@ let rec emit_cmd i cmd =
 and emit_assign_int (id, e) =
   concat [ "int "; id; " = "; (emit_expr e); ";" ]
 
+<<<<<<< HEAD
 and emit_assign_arr (id, _, d) i =
+=======
+(* FIXME(rachit): [e] is unused. Remove it from param list or use it. *)
+and emit_assign_arr (id, e, d) i =
+>>>>>>> Remove unused variables from emit.ml
   let bf = compute_bf d in
   let arr_size = compute_array_size d in
   let part_pragma =
@@ -217,5 +222,10 @@ and emit_typedef (id, t) i =
   concat [ "typedef "; (type_str t); " "; id; ";" ]
   |> indent i
 
+<<<<<<< HEAD
+=======
+and emit_muxdef = "" (* No need to emit anything *)
+
+>>>>>>> Remove unused variables from emit.ml
 and generate_c cmd =
   emit_cmd 0 cmd
