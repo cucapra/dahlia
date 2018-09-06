@@ -4,24 +4,20 @@ open Error_msg
 
 exception TypeError of string
 
-let type_of_id id g =
-  Context.get_binding id g
-
-let type_of_alias_id id d =
-  Context.get_alias_binding id d
-
 let compute_bf lst =
   List.fold_left (fun acc (_, b) -> acc * b) 1 lst
 
-let rec types_equal delta t1 t2 =
+(** Computes equality between [t1] and [t2] and handles type aliases.
+ *  Also special cases [TIndex] so that any two [TIndex] are equal. *)
+let rec types_equal (delta : delta) (t1 : type_node) (t2 : type_node) : bool =
   match t1, t2 with
   | TArray (a1, d1), TArray (a2, d2) -> d1=d2 && types_equal delta a1 a2
   | TIndex _, TIndex _ -> true
-  | TAlias t1, t2 -> types_equal delta (Context.get_alias_binding t1 delta) t2
-  | t1, TAlias t2 -> types_equal delta t1 (Context.get_alias_binding t2 delta)
+  | TAlias ta, t | t, TAlias ta ->
+      types_equal delta t (Context.get_alias_binding ta delta)
   | t1, t2 -> t1=t2
 
-let rec check_expr exp (ctx, (delta: Context.delta)) =
+let rec check_expr (exp : expression) (ctx, (delta: Context.delta)) =
   match exp with
   | EInt (i, s)                -> check_int i s (ctx, delta)
   | EFloat f                   -> check_float f (ctx, delta)

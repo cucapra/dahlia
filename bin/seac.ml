@@ -1,6 +1,7 @@
 open Seashell
 open Lexer
 open Lexing
+open Context
 
 let no_typecheck = ref false
 
@@ -24,8 +25,8 @@ let _ =
       let (ctx, dta) =
         Type.check_cmd commands (Context.empty_gamma, Context.empty_delta)
       in
-      Emit.set_type_map (fun id -> Type.type_of_id id ctx);
-      Emit.set_delta_map (fun id -> Type.type_of_alias_id id dta)
+      Emit.set_type_map (fun id -> Context.get_binding id ctx);
+      Emit.set_delta_map (fun id -> Context.get_alias_binding id dta)
     else ();
 
     print_endline (Emit.generate_c commands)
