@@ -162,6 +162,7 @@ and emit_assign_float (id, e) =
 
 and emit_assign (id, e) i =
   match !type_map id with
+  | TIndex _      -> emit_assign_int (id, e)         |> indent i
   | TBool         -> emit_assign_int (id, e)         |> indent i
   | TArray (t, d) -> emit_assign_arr (id, e, d) i    |> indent i
   | TFloat        -> emit_assign_float (id, e)       |> indent i

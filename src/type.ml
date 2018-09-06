@@ -135,6 +135,7 @@ and check_for_impl id r1 r2 body u (ctx, delta) =
     let (ls_2, hs_2) = st2 in
     if (hs_1 - ls_1 = 1) && (hs_2 - ls_2 = 1) then (
       let range_size = ls_2 - ls_1 + 1 in
+      (* FIXME: redundant *)
       if (range_size=u) then
         let typ = TIndex ((0, u), (0, 1))
         in check_cmd body (Context.add_binding id typ c2, d2)

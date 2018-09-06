@@ -3,7 +3,10 @@ open Ast
 let rec string_of_type = function
   | TBool -> "bool"
   | TArray (t, _) -> (string_of_type t) ^ " array"
-  | TIndex (s, d) -> "index"
+  | TIndex (s, d) -> 
+    let (ls, hs), (ld, hd) = s, d in
+    "idx<" ^ (string_of_int ls) ^ " .. " ^ (string_of_int hs) ^
+    ", " ^ (string_of_int ld) ^ " .. " ^ (string_of_int hd) ^ ">"
   | TAlias id -> id
   | TFloat -> "float"
   | TFunc _ -> "func"
