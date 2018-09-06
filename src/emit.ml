@@ -41,7 +41,7 @@ let rec type_str = function
   | TBool
   | TFloat        -> "float"
   | TIndex _      -> "int"
-  | TArray (t, _) -> failwith "Implement array type stringified version"
+  | TArray _ -> failwith "Implement array type stringified version"
   | TAlias id -> type_str (!delta_map id)
 
 let bop_str = function
@@ -141,11 +141,12 @@ let rec emit_cmd i cmd =
   | CFuncDef (id, args, body)      -> emit_fun (id, args, body) i
   | CApp (id, args)                -> emit_app (id, args) i
   | CTypeDef (id, t)               -> emit_typedef (id, t) i
-  | CMuxDef (m_id, a_id, s)        -> emit_muxdef (m_id, a_id, s)
+  | CMuxDef _        -> emit_muxdef
 
 and emit_assign_int (id, e) =
   concat [ "int "; id; " = "; (emit_expr e); ";" ]
 
+(* FIXME(rachit): [e] is unused. Remove it from param list or use it. *)
 and emit_assign_arr (id, e, d) i =
   let bf = compute_bf d in
   let arr_size = compute_array_size d in
@@ -164,7 +165,7 @@ and emit_assign (id, e) i =
   match !type_map id with
   | TIndex _      -> emit_assign_int (id, e)         |> indent i
   | TBool         -> emit_assign_int (id, e)         |> indent i
-  | TArray (t, d) -> emit_assign_arr (id, e, d) i    |> indent i
+  | TArray (_, d) -> emit_assign_arr (id, e, d) i    |> indent i
   | TFloat        -> emit_assign_float (id, e)       |> indent i
 
 and emit_reassign (target, e) i =
@@ -215,7 +216,7 @@ and emit_typedef (id, t) i =
   concat [ "typedef "; (type_str t); " "; id; ";" ]
   |> indent i
 
-and emit_muxdef (m_id, a_id, s) = "" (* No need to emit anything *)
+and emit_muxdef = "" (* No need to emit anything *)
 
 and generate_c cmd =
   emit_cmd 0 cmd
