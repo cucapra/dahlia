@@ -89,6 +89,10 @@ $l..(l+k)$.
 **Iteration space.**
 Consider the value space of $i$, which is:
 
+::todo
+I suggest using a symbol which means the value space of i, maybe span(I)? $S_u$ is a little misleading as it alludes to somethign to do with unrolling, but here we just refer to all the i's.
+--S
+::
 $$
 \begin{aligned}
 S_u &= \{ s + |l_s..h_s| \times d \mid s \in l_s..h_s, d \in l_d..h_d\} \\
@@ -96,10 +100,15 @@ S_u &= \{ s + |l_s..h_s| \times d \mid s \in l_s..h_s, d \in l_d..h_d\} \\
 \end{aligned}
 $$
 
+::todo
+Will it be useful to do this proof for the general case, starting from an arbitrary number $l_s$ (rather than limiting to 0 to k). I think the proof still holds without much change.
+--S
+::
+
 which is equal to $l..h$.
 
-**Proof.** For unrolling, we want to show that $S_u = l..h$. This ensures that
-an unrolled loop accesses exactly the elements that the original loop did. The
+**Proof.** We want to show that $S_u = l..h$ to ensures that
+index types refer to exactly the elements that the original loop did. The
 proof shows that there are exactly $n = |l..h|$ distinct natural numbers in
 $S_u$ with $l$ and $h$ being the lower and upper bounds. Since there are only
 $n-1$ natural numbers in $l..h$, this implies that $S_u = l..h$.
@@ -132,11 +141,21 @@ Finally, we show that $0$ and $n-1$ form the lower and upper bounds. Since $s$,
 $k$, and $d$ are positive, the $\min(S_u) = 0 + k \times \frac{l}{k} = l$ and
 $\max(S_u) = k + k \times \frac{h - k}{k} = h$. Therefore, $S_u = l..h$.
 
-**Multidimensional accesses**. This reasoning can be easily extended to
-multiple dimensions. The expression $s + k \times d$ repeates for each
-dimension's configration.  The elements of $S_u$ can be represented as a
+::todo
+The property of sets being disjoint seems useful for our access proofs. Maybe we can use it there.
+--S
+::
+
+**Iteration space for multidimensional arrays**. This reasoning can be easily extended to
+multiple dimensions. The expression $s + k \times d$ repeats for each
+dimension's configuration.  The elements of $S_u$ can be represented as an
 n-tuple. Since each dimension has a separate and independent component in the
 tuple, the reasoning above can be applied to each element.
+
+::todo
+Altered the title a little, as our attempt is to introduce index types in this document and introduce what it means to access with an index type in the logical memory access document. I buy this, but the difficulty with multi-d comes with translating it to a single dimension hardware array. Maybe we can make this notion of independence between dimensions to manifest itself once we move to the 1-d representation?
+--S
+::
 
 Operations
 ----------
