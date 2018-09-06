@@ -1,5 +1,4 @@
 open Ast
-open Context
 
 exception IllegalOperation
 
