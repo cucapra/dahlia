@@ -64,3 +64,9 @@ let improper_unroll =
 let range_static_error =
   "[Type Error] range start/end must be static"
 
+let incorrect_aa_dims aname expected actual =
+  let e_dim_end = if expected = 1 then "" else "s" in
+  let a_dim_end = if actual   = 1 then "" else "s" in
+  "[Type Error] array \"" ^ aname ^ "\" has " ^ (string_of_int expected) ^
+  " dimension" ^ e_dim_end ^ "; attempted array access implies " ^ 
+  (string_of_int actual) ^ " dimension" ^ a_dim_end

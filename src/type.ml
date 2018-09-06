@@ -72,11 +72,7 @@ and compute_unrollf idx_exprs (c, d) =
   | h::t ->
     begin
       match check_expr h (c, d) with
-      | TIndex ((ls, hs), _), _ -> 
-        if hs - ls = 1 then
-          raise (TypeError "Index must contain static information")
-        else
-          (hs - ls) * compute_unrollf t (c, d)
+      | TIndex ((ls, hs), _), _ -> (hs - ls) * compute_unrollf t (c, d)
       | _ -> raise (TypeError "Logical array access must be with idx types")
     end
   | [] -> 1
@@ -84,15 +80,21 @@ and compute_unrollf idx_exprs (c, d) =
 and check_aa id idx_exprs (c, d) =
   match Context.get_binding id c with
   | TArray (t, dims) ->
-    let bf = compute_bf dims in
-    let unrollf = compute_unrollf idx_exprs (c, d) in
-    if (bf mod unrollf)=0 then
-      try 
-        let banks = Core.List.range 0 (unrollf-1) in
-        t, (Context.consume_aa_lst id banks c, d)
-      with AlreadyConsumed bank -> raise (TypeError (illegal_bank bank id)) 
-    else 
-      raise (TypeError "TypeError: unroll factor must be factor of banking factor")
+    let num_dimensions = List.length dims in
+    let access_dimensions = List.length idx_exprs in
+    if num_dimensions != access_dimensions
+      then raise 
+        (TypeError (incorrect_aa_dims id num_dimensions access_dimensions))
+    else
+      let bf = compute_bf dims in
+      let unrollf = compute_unrollf idx_exprs (c, d) in
+      if (bf mod unrollf)=0 then
+        try 
+          let banks = Core.List.range 0 (unrollf-1) in
+          t, (Context.consume_aa_lst id banks c, d)
+        with AlreadyConsumed bank -> raise (TypeError (illegal_bank bank id)) 
+      else 
+        raise (TypeError "TypeError: unroll factor must be factor of banking factor")
   | _ -> raise (TypeError "TypeError: tried to index into non-array")
 
 and check_idx id idx a_t (c, d) =
