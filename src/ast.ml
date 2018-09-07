@@ -1,4 +1,4 @@
-type id = string
+type id = string [@@deriving show]
 
 (* A [type_node] is one of the following:
  *   - [TBool]: a boolean type
@@ -27,6 +27,7 @@ type type_node =
   | TAlias of id
   | TFloat
   | TMux of id * int
+  [@@deriving show]
 
 type binop =
   | BopEq
@@ -40,6 +41,7 @@ type binop =
   | BopAnd
   | BopTimes
   | BopOr
+  [@@deriving show]
 
 (* An [expression] is one of the following:
  *   - [EInt (i, s)]: an integer expression with value [i];
@@ -67,6 +69,7 @@ type expression =
   | EBinop of binop * expression * expression
   | EAA of id * expression list
   | EBankedAA of id * expression * expression
+  [@@deriving show]
 
 (* A [command] is one of the following:
  *   - [CAssign (i, e)]: a representation of assignment of
@@ -91,3 +94,6 @@ type command =
   | CTypeDef of id * type_node
   | CMuxDef of id * id * int
   | CApp of id * expression list
+  [@@deriving show]
+
+let string_of_command (cmd : command) : string = show_command cmd
