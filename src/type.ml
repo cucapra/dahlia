@@ -19,34 +19,30 @@ let rec types_equal (delta : delta) (t1 : type_node) (t2 : type_node) : bool =
 
 let rec check_expr (exp : expression) (ctx, (delta: Context.delta)) =
   match exp with
-  | EInt (i, s)                -> check_int i s (ctx, delta)
-  | EFloat _                   -> check_float (ctx, delta)
+  | EFloat _                   -> TFloat, (ctx, delta)
   | EBool _                    -> TBool, (ctx, delta)
+  | EInt (i, s)                -> check_int i s, (ctx, delta)
   | EVar x                     -> Context.get_binding x ctx, (ctx, delta)
   | EBinop (binop, e1, e2)     -> check_binop binop e1 e2 (ctx, delta)
   | EBankedAA (id, idx1, idx2) -> check_banked_aa id idx1 idx2 (ctx, delta)
   | EAA (id, i)                -> check_aa id i (ctx, delta)
 
-and check_int i is_stat (ctx, dta) =
-  let typ =
-    if is_stat then
-      TIndex ((i, i+1), (0, 1))
-    else
-      TIndex ((0, 1), (min_int, max_int))
-  in typ, (ctx, dta)
-
-and check_float (ctx, dta) = TFloat, (ctx, dta)
+and check_int i is_stat =
+  if is_stat then
+    TIndex ((i, i+1), (0, 1))
+  else
+    TIndex ((0, 1), (min_int, max_int))
 
 and check_binop binop e1 e2 (c, d) =
-  check_expr e1 (c, d)   |> fun (t1, (c1, d1)) ->
-  check_expr e2 (c1, d1) |> fun (t2, (c2, d2)) ->
+  let (t1, (c1, d1)) = check_expr e1 (c, d) in
+  let (t2, (c2, d2)) = check_expr e2 (c1, d1) in
   try (Op_util.type_of_op t1 t2 d binop), (c2, d2)
   with Op_util.IllegalOperation ->
     raise (TypeError (illegal_op binop t1 t2))
 
 and check_banked_aa id idx1 idx2 (c, d) =
-  check_expr idx1 (c, d)   |> fun (idx1_t, (c1, d1)) ->
-  check_expr idx2 (c1, d1) |> fun (idx2_t, (c2, d2)) ->
+  let (idx1_t, (c1, d1)) = check_expr idx1 (c, d) in
+  let (idx2_t, (c2, d2)) = check_expr idx2 (c1, d1) in
   match idx1_t, idx2_t, Context.get_binding id c2 with
   | TIndex (s1, d1), TIndex (_, _), TArray (a_t, _) ->
     begin
@@ -88,7 +84,7 @@ and check_aa id idx_exprs (c, d) =
         try
           let banks = Core.List.range 0 (unrollf-1) in
           t, (Context.consume_aa_lst id banks c, d)
-        with AlreadyConsumed bank -> raise (TypeError (illegal_bank bank id))
+        with AlreadyConsumed bank -> raise @@ TypeError (illegal_bank bank id)
       else
         raise (TypeError "TypeError: unroll factor must be factor of banking factor")
   | _ -> raise (TypeError "TypeError: tried to index into non-array")
@@ -114,22 +110,22 @@ and check_if cond cmd (ctx, delta) =
   | t, _ -> raise (TypeError (unexpected_type "conditional" t TBool))
 
 and check_for_impl id r1 r2 body u (ctx, delta) =
-  check_expr r1 (ctx, delta) |> fun (r1_type, (ctx1, d1)) ->
-  check_expr r2 (ctx1, d1)   |> fun (r2_type, (ctx2, d2)) ->
+  let r1_type, (ctx1, d1) = check_expr r1 (ctx, delta) in
+  let r2_type, (ctx2, d2) = check_expr r2 (ctx1, d1) in
   match r1_type, r2_type with
   | TIndex (st1, _), TIndex (st2, _) ->
     let (ls_1, hs_1) = st1 in
     let (ls_2, hs_2) = st2 in
-    if (hs_1 - ls_1 = 1) && (hs_2 - ls_2 = 1) then (
+    if (hs_1 - ls_1 = 1) && (hs_2 - ls_2 = 1) then
       let range_size = ls_2 - ls_1 + 1 in
       let typ = TIndex ((0, u), (0, (range_size/u)))
-      in check_cmd body ((Context.add_binding id typ ctx2), d2))
+      in check_cmd body (Context.add_binding id typ ctx2, d2)
     else raise (TypeError range_static_error)
   | _ -> raise (TypeError range_error)
 
 and check_assignment id exp (ctx, delta) =
-  check_expr exp (ctx, delta) |> fun (t, (c, d)) ->
-  Context.add_binding id t c, d
+  let (t, (c, d)) = check_expr exp (ctx, delta) in
+  (Context.add_binding id t c), d
 
 (* TODO(ted): rethink this *)
 and check_reassign target exp (ctx, delta) =
@@ -138,10 +134,10 @@ and check_reassign target exp (ctx, delta) =
     check_banked_aa id idx1 idx2 (ctx, delta) |> fun (t_arr, (c, d)) ->
     check_expr exp (c, d)                     |> fun (t_exp, (c', d')) ->
     if types_equal delta t_arr t_exp then (c', d')
-    else raise (TypeError (unexpected_type id t_exp t_arr))
+    else raise @@ TypeError (unexpected_type id t_exp t_arr)
   | EVar _, _ -> (ctx, delta)
   | EAA (id, idx), _ ->
-    check_aa id idx (ctx, delta) |> fun (_, (c', d')) -> (c', d')
+    snd @@ check_aa id idx (ctx, delta)
   | _ -> raise (TypeError "Used reassign operator on illegal types")
 
 and check_funcdef id args body (ctx, delta) =
@@ -152,20 +148,17 @@ and check_funcdef id args body (ctx, delta) =
   Context.add_binding id (TFunc argtypes) context'', delta'
 
 and check_app id args (ctx, delta) =
-  let argtypes = List.map (fun a -> check_expr a (ctx, delta) |> fst) args in
+  let check_params arg param =
+    if not (types_equal delta arg param)
+    then raise @@ TypeError (
+      unexpected_type ("in function app of " ^ id ^ ", arg was") arg param)
+    else () in
+  let argtypes = List.map (fun a -> fst @@ check_expr a (ctx, delta)) args in
   match Context.get_binding id ctx with
-  | TFunc param_types ->
-    List.iter2
-      (fun arg param ->
-         if not (types_equal delta arg param)
-         then raise (TypeError (unexpected_type
-          ("in function app of " ^ id ^ ", arg was") arg param))
-         else ()) argtypes param_types;
-    (ctx, delta)
+  | TFunc param_types -> List.iter2 check_params argtypes param_types; (ctx, delta)
   | _ -> raise (TypeError (illegal_app id))
 
-and check_typedef id t (ctx, delta) =
-  ctx, (Context.add_alias_binding id t delta)
+and check_typedef id t (ctx, delta) = ctx, (Context.add_alias_binding id t delta)
 
 and check_muxdef mux_id a_id size (ctx, delta) =
   Context.add_binding mux_id (TMux (a_id, size)) ctx, delta
