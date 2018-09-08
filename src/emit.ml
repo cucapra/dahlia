@@ -20,8 +20,8 @@ let indent n s = indent' n s ""
 
 let newline = "\n"
 
-let concat =
-  List.fold_left (fun acc e -> acc ^ e) ""
+let concat = List.fold_left (fun acc e -> acc ^ e) ""
+
 let s_pragma_unroll u i =
   concat [ "#pragma HLS UNROLL factor="; u ]
   |> indent i
@@ -59,21 +59,13 @@ let bop_str = function
   | BopOr -> "||"
 
 let rec emit_expr = function
-  | EInt (i, _)          -> emit_int i
-  | EFloat f             -> emit_float f
-  | EBool b              -> emit_bool b
-  | EVar v               -> emit_var v
+  | EInt (i, _)          -> string_of_int i
+  | EFloat f             -> string_of_float f
+  | EBool b              -> if b then "1" else "0"
+  | EVar id              -> id
   | EBinop (b, e1, e2)   -> emit_binop (b, e1, e2)
   | EBankedAA (id, b, i) -> emit_aa_phys (id, b, i)
   | EAA (id, i)          -> emit_aa_logl (id, i)
-
-and emit_int i = string_of_int i
-
-and emit_float f = string_of_float f
-
-and emit_bool b = if b then "1" else "0"
-
-and emit_var id = id
 
 and emit_binop (b, e1, e2) =
   concat [ (emit_expr e1); (bop_str b); (emit_expr e2) ]
@@ -94,7 +86,10 @@ and emit_aa_phys (id, b, i) =
     concat [ id; "["; (emit_expr b); " + "; (string_of_int bf); "*("; (emit_expr i); ")]" ]
   | _ -> failwith "Tried to index into non-array"
 
-(* FIXME: optimize? *)
+(* FIXME: optimize?
+ * @tedbauer What kind of optimization were you thinking off? It's generally
+ * a good idea to document future optimizations that you don't want to immediately
+ * work on. If it's significant, open an issue and point to it. -- @rachitnigam *)
 and flatten_access dims idx_exprs =
     match dims, idx_exprs with
     | _::td, hi::ti ->
@@ -173,12 +168,12 @@ and emit_reassign (target, e) i =
 
 and emit_for (id, r1, r2, body, u) i =
   let unroll_pragma =
-    concat [ newline; (s_pragma_unroll (emit_int u) (i+1)) ] in
+    concat [ newline; (s_pragma_unroll (string_of_int u) (i+1)) ] in
   concat [
     "for (int "; id; " = "; (emit_expr r1); "; "; id;
     " <= "; (emit_expr r2); "; "; id; " += 1) {";
     unroll_pragma; newline
-  ]
+    ]
   |> fun s -> concat [ s; (emit_cmd (i+1) body); newline; (indent i "}") ]
   |> indent i
 
@@ -193,13 +188,12 @@ and emit_seq (c1, c2) i =
   concat [ (emit_cmd i c1); newline; (emit_cmd i c2); ]
 
 and emit_pragmas lst i =
-  (fun acc elem ->
-     match elem with
+  let f acc elem = match elem with
      | id, TArray (_, d) ->
-       let bf = compute_bf d in
-       concat [ acc; (s_pragma_bank id bf (i+1)); newline; ]
-     | _ -> acc)
-  |> fun f -> List.fold_left f "" lst
+         let bf = compute_bf d in
+         concat [ acc; (s_pragma_bank id bf (i+1)); newline; ]
+     | _ -> acc in
+  List.fold_left f "" lst
 
 and emit_fun (id, args, body) i =
   let pragmas = emit_pragmas args i in
