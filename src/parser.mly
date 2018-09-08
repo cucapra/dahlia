@@ -1,6 +1,5 @@
 %{
 open Ast
-open Make_ast
 %}
 
 %token EOF
@@ -41,48 +40,48 @@ prog:
 
 cmd:
   | MUX s = INT; mid = ID; LPAREN; aid = ID; RPAREN; SEMICOLON
-    { make_muxdef s mid aid }
+    { CMuxDef (mid, aid, s) }
   | f = ID LPAREN a = args RPAREN SEMICOLON
-    { make_app f a }
+    { CApp (f, a) }
   | TYPE tname = ID EQUAL tval = type_annotation SEMICOLON
-    { make_typedef tname tval }
+    { CTypeDef (tname, tval) }
   | FUNC f = ID LPAREN a = annotated_args RPAREN
     LBRACK body = cmd RBRACK
-    { make_function f a body }
+    { CFuncDef (f, a, body) }
   | LET x = ID EQUAL e1 = expr SEMICOLON
-    { make_assignment x e1 }
+    { CAssign (x, e1) }
   | IF LPAREN b = expr RPAREN LBRACK body = cmd RBRACK
-    { make_if b body }
+    { CIf (b, body) }
   | e1 = expr; REASSIGN; e2 = expr; SEMICOLON
-    { make_reassignment e1 e2 }
+    { CReassign (e1, e2) }
   | FOR LPAREN LET x = ID EQUAL x1 = expr RANGE_DOTS x2 = expr RPAREN UNROLL u = INT
     LBRACK c = cmd RBRACK
-    { make_for_impl x x1 x2 u c }
+    { CFor (x, x1, x2, u, c) }
   | FOR LPAREN LET x = ID EQUAL x1 = expr RANGE_DOTS x2 = expr RPAREN
     LBRACK c = cmd RBRACK
-    { make_for x x1 x2 c } ;
+    { CFor (x, x1, x2, 1, c) } ;
   | c1 = cmd c2 = cmd
-    { make_seq c1 c2 }
+    { CSeq (c1, c2) }
 
 expr:
   | x = ID; a = access;
-    { make_aa x a }
+    { EAA (x, a) }
   | x = ID; LBRACK; idx1 = expr; RBRACK; LSQUARE; idx2 = expr; RSQUARE
-    { make_banked_aa x idx1 idx2 }
+    { EBankedAA (x, idx1, idx2) }
   | LPAREN e = expr RPAREN
     { e }
   | e1 = expr; bop = binop; e2 = expr
-    { make_binop bop e1 e2 } ;
+    { EBinop (bop, e1, e2) } ;
   | x = INT
-    { make_int x }
+    { EInt (x, true) }
   | f = FLOAT
-    { make_float f }
+    { EFloat f }
   | TRUE
-    { make_bool true }
+    { EBool true }
   | FALSE
-    { make_bool false }
+    { EBool false }
   | x = ID
-    { make_var x }
+    { EVar x }
 
 annotated_id:
   | x = ID COLON t = type_annotation
