@@ -129,7 +129,7 @@ and check_aa id idx_exprs (c, d) =
  * type-checking command [cmd], Raises [TypeError s]. *)
 let rec check_cmd cmd (ctx, delta) =
   match cmd with
-  | CSeq (c1, c2)                  -> check_seq c1 c2 (ctx, delta)
+  | CSeq clist                     -> check_seq clist (ctx, delta)
   | CIf (cond, cmd)                -> check_if cond cmd (ctx, delta)
   | CFor (x, r1, r2, uo, body)     -> check_for x r1 r2 body uo (ctx, delta)
   | CAssign (x, e1)                -> check_assignment x e1 (ctx, delta)
@@ -139,10 +139,9 @@ let rec check_cmd cmd (ctx, delta) =
   | CTypeDef (id, t)               -> check_typedef id t (ctx, delta)
   | CMuxDef (mux_id, mem_id, size) -> check_muxdef mux_id mem_id size (ctx, delta)
 
-(** [check_seq c1 c2 (c, d)] is [(c', d')], an updated context resulting from
- * type-checking [c1], followed by [c2]. *)
-and check_seq c1 c2 (ctx, delta) =
-  check_cmd c1 (ctx, delta) |> fun (ctx', delta') -> check_cmd c2 (ctx', delta')
+and check_seq clist (ctx, delta) =
+  let f (c, d) cmd = check_cmd cmd (c, d) in
+  List.fold_left f (ctx, delta) clist
 
 (** [check_if cond cmd (c, d)] is [(c', d')], an updated context resulting from
  * type-checking [cond], followed by [cmd]. *)
