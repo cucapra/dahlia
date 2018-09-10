@@ -12,8 +12,7 @@ jobs:
           name: Install OCaml packages
           command: |
             sudo apt-get install -y m4
-            opam install dune menhir && eval $(opam env)
-            eval "$(dune external-lib-deps --missing @install 2>&1 | grep 'opam' | sed 's/.*\(opam .*\)/\1/') -y"
+            opam install .
 
       - run:
           name: Build Seashell
@@ -25,8 +24,5 @@ jobs:
       - run:
           name: Run Seashell examples
           command: |
-            eval $(opam env)
-            dune build
-            dune install
             cd examples
             make all
