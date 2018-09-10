@@ -15,14 +15,10 @@ jobs:
             opam install .
 
       - run:
-          name: Build Seashell
+          name: Build Seashell and run examples
           command: |
             eval $(opam env)
             dune build
             dune install
-
-      - run:
-          name: Run Seashell examples
-          command: |
             cd examples
             make all
