@@ -20,7 +20,7 @@ The following are required to build the seashell compiler.
 
 Install dependencies (in addition to OCaml and OPAM) and update the OPAM environment:
 
-    $ eval "$(dune external-lib-deps --missing @install 2>&1 | grep 'opam' | sed 's/.*\(opam .*\)/\1/')" -y
+    $ opam install . && eval `opam env`
 
 Then, run the following commands to install the `seac` CLI tool:
 
