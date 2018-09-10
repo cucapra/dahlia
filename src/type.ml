@@ -4,6 +4,11 @@ open Error_msg
 
 exception TypeError of string
 
+(** [compute_bf d] is a banking factor [b], computed from [d], where
+ * [d] specifies the banking structure of some [TArray (t, d)].
+ * This relies on the assumption that our ideas about banking across
+ * multiple dimensions is correct; these ideas are detailed in
+ * [https://capra.cs.cornell.edu/seashell/docs/indextype.html]. *)
 let compute_bf lst =
   List.fold_left (fun acc (_, b) -> acc * b) 1 lst
 
@@ -17,6 +22,10 @@ let rec types_equal (delta : delta) (t1 : type_node) (t2 : type_node) : bool =
       types_equal delta t (Context.get_alias_binding ta delta)
   | t1, t2 -> t1=t2
 
+(** [check_expr exp (ctx, delta)] is [t, (ctx', delta')], where [t] is the
+ * type of [exp] under context (ctx, delta) and (ctx', delta') is an updated
+ * context resulting from evaluating [exp]. Raises [TypeError s] if there
+ * is a type error in [exp].*)
 let rec check_expr (exp : expression) (ctx, (delta: Context.delta)) =
   match exp with
   | EFloat _                   -> TFloat, (ctx, delta)
@@ -27,6 +36,10 @@ let rec check_expr (exp : expression) (ctx, (delta: Context.delta)) =
   | EBankedAA (id, idx1, idx2) -> check_banked_aa id idx1 idx2 (ctx, delta)
   | EAA (id, i)                -> check_aa id i (ctx, delta)
 
+(** [check_int i is_stat] is [TIndex (s, d)], the index type representation
+ * of the integer [i], which could be static or non-static, depending on
+ * [is_stat]. This representation is detailed in
+ * [https://capra.cs.cornell.edu/seashell/docs/indextype.html]. *)
 and check_int i is_stat =
   if is_stat then
     TIndex ((i, i+1), (0, 1))
@@ -40,6 +53,14 @@ and check_binop binop e1 e2 (c, d) =
   with Op_util.IllegalOperation ->
     raise (TypeError (illegal_op binop t1 t2))
 
+(* [check_banked_aa id idx1 idx2 (c, d)] represents a _banked
+ * array access_, with a bank number specified by [idx1] and an index into this
+ * bank specified by [idx2]. It is the value [t, (c', d')] where [t] is the
+ * type of the elements of array [id], and (c', d') is an updated context
+ * resulting from evaluating [idx1] and [idx2], and consuming the appopriate
+ * indices of array [id]. Raises [TypeError s] if:
+ *   - [idx1] or [idx2] are illegal types (non-index types)
+ *   - illegal banks are accessed (i.e. already-consumed indices) *)
 and check_banked_aa id idx1 idx2 (c, d) =
   let (idx1_t, (c1, d1)) = check_expr idx1 (c, d) in
   let (idx2_t, (c2, d2)) = check_expr idx2 (c1, d1) in
@@ -59,6 +80,10 @@ and check_banked_aa id idx1 idx2 (c, d) =
   | t1, _, _ ->
     raise (TypeError (illegal_accessor_type t1 id))
 
+(** [compute_unrollf idx_exprs (c, d)] is the unroll factor [u] implied by
+ * the index type accessors [idx_exprs], each of which should be of type
+ * [TIndex (s, d)]. Raises [TypeError s] if [idx_exprs] contains invalid
+ * array access types, i.e. non-index types. *)
 and compute_unrollf idx_exprs (c, d) =
   match idx_exprs with
   | h::t ->
@@ -123,6 +148,9 @@ and check_for_impl id r1 r2 body u (ctx, delta) =
     else raise (TypeError range_static_error)
   | _ -> raise (TypeError range_error)
 
+(** [check_assignment id exp (c, d)] is [(c', d')], where [(c', d')]
+ * contain a binding from [id] to the type of expression [exp] under
+ * the context (c, d). *)
 and check_assignment id exp (ctx, delta) =
   let (t, (c, d)) = check_expr exp (ctx, delta) in
   (Context.add_binding id t c), d
@@ -140,6 +168,13 @@ and check_reassign target exp (ctx, delta) =
     snd @@ check_aa id idx (ctx, delta)
   | _ -> raise (TypeError "Used reassign operator on illegal types")
 
+(** [check_funcdef id args body (ctx, delta)] is [(ctx', delta')], where
+ * [ctx'] contains a new binding [id] to [TFunc args], and [delta'] contains
+ * possibly new type alias bindings.
+ *   - [args] is a list [(a1, t1)..(an, tn)], where [ai] is an argument of
+       the function with type [ti]. The order of the list implies the order
+       of the function arguments.
+     - [body] is a command representing the body of the function. *)
 and check_funcdef id args body (ctx, delta) =
   let add_argbind = fun ctx (arg_id, t) -> Context.add_binding arg_id t ctx in
   let context' = List.fold_left add_argbind ctx args in
@@ -160,5 +195,10 @@ and check_app id args (ctx, delta) =
 
 and check_typedef id t (ctx, delta) = ctx, (Context.add_alias_binding id t delta)
 
+(** [check_muxdef mux_id a_id size (c, d)] produces a context [(c', d')] containing
+ * a new binding from [id] to [TMux (a_id, size)], where:
+ *   - [m_id] is the id of a multiplexer
+ *   - [a_id] is the id of the memory encapsulated by mux [m_id]
+     - [size] is the number of inputs for the mux [m_id] *)
 and check_muxdef mux_id a_id size (ctx, delta) =
   Context.add_binding mux_id (TMux (a_id, size)) ctx, delta
