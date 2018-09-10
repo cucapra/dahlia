@@ -8,7 +8,9 @@ all: $(CPP)
 clean:
 	rm -r out
 
-%.cpp: %.sea
+out:
 	mkdir -p out
-	seac < $< > out/$@
+
+%.cpp: %.sea | out
+	seac $< > out/$@
 

@@ -10,7 +10,7 @@ jobs:
 
       - run:
           name: Install OCaml packages
-          command: sudo apt-get install -y m4 && opam install -y ounit menhir dune core ppx_deriving
+          command: sudo apt-get install -y m4 && opam install -y ounit menhir dune core ppx_deriving cmdliner
 
       - run:
           name: Build Seashell
