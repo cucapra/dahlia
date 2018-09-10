@@ -10,12 +10,23 @@ jobs:
 
       - run:
           name: Install OCaml packages
-          command: sudo apt-get install -y m4 && dune external-lib-deps --missing @install && eval "$(dune external-lib-deps --missing @install 2>&1 | grep 'opam' | sed 's/.*\(opam .*\)/\1/') -y"
+          command: |
+            sudo apt-get install -y m4
+            opam install dune
+            eval "$(dune external-lib-deps --missing @install 2>&1 | grep 'opam' | sed 's/.*\(opam .*\)/\1/') -y"
 
       - run:
           name: Build Seashell
-          command: eval $(opam env) && dune build && dune install
+          command: |
+            eval $(opam env)
+            dune build
+            dune install
 
       - run:
           name: Run Seashell examples
-          command: eval $(opam env) && dune build && dune install && cd examples && make all
+          command: |
+            eval $(opam env)
+            dune build
+            dune install
+            cd examples
+            make all
