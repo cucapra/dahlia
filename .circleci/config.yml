@@ -13,9 +13,6 @@ jobs:
           command: |
             sudo apt-get install -y m4
             opam install dune && eval $(opam env)
-            echo "HERE"
-            dune external-lib-deps --missing @install
-            echo "THERE"
             eval "$(dune external-lib-deps --missing @install 2>&1 | grep 'opam' | sed 's/.*\(opam .*\)/\1/') -y"
 
       - run:
