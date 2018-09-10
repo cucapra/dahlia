@@ -10,12 +10,19 @@ Seashell provides a type system that makes programming FPGAs easier. To learn ab
 
 ## Setup/Use
 
+### Requirements
+The following are required to build the seashell compiler.
+  - [Opam](https://opam.ocaml.org/blog/opam-2-0-0-rc4/).
+  - [Dune](https://github.com/ocaml/dune). Run `opam install dune`.
+  - Menhir. Run `opam install menhir`.
+
+### Installation
+
 Install dependencies (in addition to OCaml and OPAM) and update the OPAM environment:
 
-	$ opam install dune menhir core
-	$ eval $(opam config env)
+    $ opam install . && eval `opam env`
 
-Then, build and install `seac` compiler:
+Then, run the following commands to install the `seac` CLI tool:
 
     $ dune build
     $ dune install
@@ -24,4 +31,8 @@ Then, build and install `seac` compiler:
 Now you can generate HLS programs from your Seashell programs.
 For example:
 
-    $ seac < examples/float.sea > float.c
+    $ seac examples/float.sea > float.c
+
+For more information about the CLI options, run:
+
+    $ seac --help
