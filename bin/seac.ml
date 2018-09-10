@@ -22,7 +22,7 @@ let typecheck_with_error (ast : Ast.command) : (gamma * delta) option =
   try
     Some (Type.check_cmd ast (Context.empty_gamma, Context.empty_delta))
   with
-    Type.TypeError s -> print_endline s; None
+    Type.TypeError s -> Core.fprintf stderr "%s\n" s; exit(-1)
 
 let ( >>= ) opt f = match opt with
 | Some v -> f v
