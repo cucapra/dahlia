@@ -6,7 +6,7 @@
 (library
   (name seashell)
   (preprocess (pps ppx_deriving.std))
-  (libraries core ppx_deriving.runtime cmdliner extlib menhir))
+  (libraries core ppx_deriving.runtime cmdliner extlib))
 
 (env
   (default

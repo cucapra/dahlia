@@ -12,7 +12,7 @@ jobs:
           name: Install OCaml packages
           command: |
             sudo apt-get install -y m4
-            opam install dune && eval $(opam env)
+            opam install dune menhir && eval $(opam env)
             eval "$(dune external-lib-deps --missing @install 2>&1 | grep 'opam' | sed 's/.*\(opam .*\)/\1/') -y"
 
       - run:
