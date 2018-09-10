@@ -1,6 +1,6 @@
-type id = string
+type id = string [@@deriving show]
 
-(* A [type_node] is one of the following: 
+(* A [type_node] is one of the following:
  *   - [TBool]: a boolean type
  *   - [TArray (t, [(s1, bf1)..(sn, bfn)] is an array type with elements of
  *     type [t]. It has [n] dimensions, each of size [sn] and banking factor [bfn]
@@ -11,10 +11,10 @@ type id = string
  *         TIndex ((n, n+1), (0, 1))
  *       + A normal old dynamic integer would have type
  *         TIndex ((0, 1) (min_int, max_int))
- *   - [TFunc t]: a function type where [t] is a list of the types of its 
- *     arguments (the order of the list corresponds to the order of the 
+ *   - [TFunc t]: a function type where [t] is a list of the types of its
+ *     arguments (the order of the list corresponds to the order of the
  *     arguments)
- *   - [TAlias i]: an alias type where [i] is an id; under a typing context 
+ *   - [TAlias i]: an alias type where [i] is an id; under a typing context
  *     [c] this may or may not map to another [type_node]
  *   - [TFloat]: a float type
  *   - [TMux (id, s) a mux type that encapsulates a memory with id [id] and
@@ -23,10 +23,11 @@ type type_node =
   | TBool
   | TArray of type_node * (int * int) list
   | TIndex of (int * int) * (int * int)
-  | TFunc of type_node list 
+  | TFunc of type_node list
   | TAlias of id
   | TFloat
   | TMux of id * int
+  [@@deriving show]
 
 type binop =
   | BopEq
@@ -40,6 +41,7 @@ type binop =
   | BopAnd
   | BopTimes
   | BopOr
+  [@@deriving show]
 
 (* An [expression] is one of the following:
  *   - [EInt (i, s)]: an integer expression with value [i];
@@ -48,7 +50,7 @@ type binop =
  *   - [EFloat f]: a float with value [f]
  *   - [EVar i]: a variable with id [i]
  *   - [EBool b]: a boolean with truth value [b]
- *   - [EBinop (b, e1, e2)]: a binop [b] between two expressions 
+ *   - [EBinop (b, e1, e2)]: a binop [b] between two expressions
  *     [e1] and [e2]
  *   - [EAA (id, [e1, ..., en])]: an array access where [id] is being
  *     accessed with expressions [e1], ..., [en], where [n] is the number
@@ -67,15 +69,14 @@ type expression =
   | EBinop of binop * expression * expression
   | EAA of id * expression list
   | EBankedAA of id * expression * expression
+  [@@deriving show]
 
 (* A [command] is one of the following:
  *   - [CAssign (i, e)]: a representation of assignment of
  *     expression [e] to id [i]
- *   - [CFor (i, x1, x2, b)]: a representation of a for loop
- *     with counter variable [i], range [x1..x2], and body [b]
- *   - [CForImpl (i, x1, x2, u, b)]: a representation of an
- *     unrolled loop with counter variable [i], range [x1..x2],
- *     unroll factor [u] and body [b]
+ *   - [CFor (i, x1, x2, u, b)]: a representation of an
+ *     loop with counter variable [i], range [x1..x2], and body [b],
+       as well an unroll amount specified by [u].
  *   - [CReassign (t, e)]: a representation of a reassignment
  *     of target [t] to expression [e]
  *   - [CIf (e, b)]: a representation of an if statement with
@@ -85,8 +86,7 @@ type expression =
  *   - [CFuncDef, CTypeDef, CMuxDef, CApp]: TODO *)
 type command =
   | CAssign of id * expression
-  | CFor of id * expression * expression * command
-  | CForImpl of id * expression * expression * int * command
+  | CFor of id * expression * expression * int * command
   | CReassign of expression * expression
   | CIf of expression * command
   | CSeq of command * command
@@ -94,3 +94,6 @@ type command =
   | CTypeDef of id * type_node
   | CMuxDef of id * id * int
   | CApp of id * expression list
+  [@@deriving show]
+
+let string_of_command (cmd : command) : string = show_command cmd

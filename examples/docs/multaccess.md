@@ -1,6 +1,6 @@
 ## 2018 July 12
 
-### 1. Initial design 
+### 1. Initial design
 
 ```
 func mmul(a: float[9] bank(3), b: float[9] bank(3), c: float[3]) {

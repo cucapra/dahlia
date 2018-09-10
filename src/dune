@@ -5,4 +5,9 @@
 
 (library
   (name seashell)
-  (libraries core))
+  (preprocess (pps ppx_deriving.std))
+  (libraries core ppx_deriving.runtime cmdliner extlib))
+
+(env
+  (default
+    (flags (:standard -short-paths -w +a-4 -warn-error +a-4))))

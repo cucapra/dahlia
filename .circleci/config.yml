@@ -10,12 +10,15 @@ jobs:
 
       - run:
           name: Install OCaml packages
-          command: sudo apt-get install -y m4 && opam install -y ounit menhir dune core
+          command: |
+            sudo apt-get install -y m4
+            opam install .
 
       - run:
-          name: Build Seashell
-          command: eval $(opam env) && dune build && dune install
-
-      - run:
-          name: Run Seashell examples
-          command: eval $(opam env) && dune build && dune install && cd examples && make all
+          name: Build Seashell and run examples
+          command: |
+            eval $(opam env)
+            dune build
+            dune install
+            cd examples
+            make all

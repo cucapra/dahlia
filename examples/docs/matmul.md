@@ -17,7 +17,7 @@ func mmul(a: float[1024] bank(32), b: float[1024] bank(32), c: float[1024]) {
 ```
 
 gives `Can't implicitly access array by indexing into c with type int`
-adding `c[0][]` gives `Illegal bank access: 32` probably due to array b banked cyclically.  
+adding `c[0][]` gives `Illegal bank access: 32` probably due to array b banked cyclically.
 
 
 ### 2. Attempt 2
@@ -36,9 +36,9 @@ func mmul(a: float[1024] bank(32), b: float[1024] bank(32), c: float[1024]) {
 }
 ```
 
-gives `Illegal bank access 0 on array c`  
+gives `Illegal bank access 0 on array c`
 
-### 3. Proposed version  
+### 3. Proposed version
 
 ```
 func mmul(a: float[32]:[32] bank(32), b: float[32] bank(32):[32], c: float[32]:[32]) {
@@ -52,5 +52,5 @@ func mmul(a: float[32]:[32] bank(32), b: float[32] bank(32):[32], c: float[32]:[
   }
 
 }
-```  
+```
 
