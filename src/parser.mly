@@ -1,5 +1,13 @@
 %{
 open Ast
+
+let parse_sequence c1 c2 =
+  match c1, c2 with
+  | CSeq cmds1, CSeq cmds2 -> CSeq (cmds1 @ cmds2)
+  | c, CSeq cmds           -> CSeq (c :: cmds)
+  | CSeq cmds, c           -> CSeq (cmds @ [c])
+  | c1, c2                 -> CSeq ([c1; c2])
+
 %}
 
 %token EOF
@@ -39,7 +47,7 @@ prog:
 
 cmd:
   | acmd     { $1 }
-  | acmd cmd { CSeq ($1, $2) }
+  | acmd cmd  { parse_sequence $1 $2 }
 
 acmd:
   | MUX INT ID LPAREN ID RPAREN SEMICOLON                   { CMuxDef ($3, $5, $2) }

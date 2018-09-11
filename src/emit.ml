@@ -128,15 +128,15 @@ and emit_app (id, args) i =
 
 let rec emit_cmd i cmd =
   match cmd with
-  | CAssign (id, e)                -> emit_assign (id, e) i
-  | CReassign (target, e)          -> emit_reassign (target, e) i
+  | CAssign (id, e)            -> emit_assign (id, e) i
+  | CReassign (target, e)      -> emit_reassign (target, e) i
   | CFor (id, r1, r2, u, body) -> emit_for (id, r1, r2, body, u) i
-  | CIf (cond, body)               -> emit_if (cond, body) i
-  | CSeq (c1, c2)                  -> emit_seq (c1, c2) i
-  | CFuncDef (id, args, body)      -> emit_fun (id, args, body) i
-  | CApp (id, args)                -> emit_app (id, args) i
-  | CTypeDef (id, t)               -> emit_typedef (id, t) i
-  | CMuxDef _                      -> ""
+  | CIf (cond, body)           -> emit_if (cond, body) i
+  | CSeq clist                 -> emit_seq clist i
+  | CFuncDef (id, args, body)  -> emit_fun (id, args, body) i
+  | CApp (id, args)            -> emit_app (id, args) i
+  | CTypeDef (id, t)           -> emit_typedef (id, t) i
+  | CMuxDef _                  -> ""
 
 and emit_assign_int (id, e) =
   concat [ "int "; id; " = "; (emit_expr e); ";" ]
@@ -184,8 +184,9 @@ and emit_if (cond, body) i =
   ]
   |> indent i
 
-and emit_seq (c1, c2) i =
-  concat [ (emit_cmd i c1); newline; (emit_cmd i c2); ]
+and emit_seq clist i =
+  let f acc cmd = concat [ acc; newline; (emit_cmd i cmd) ] in
+  List.fold_left f "" clist
 
 and emit_pragmas lst i =
   let f acc elem = match elem with

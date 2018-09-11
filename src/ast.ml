@@ -89,7 +89,7 @@ type command =
   | CFor of id * expression * expression * int * command
   | CReassign of expression * expression
   | CIf of expression * command
-  | CSeq of command * command
+  | CSeq of command list
   | CFuncDef of id * (id * type_node) list * command
   | CTypeDef of id * type_node
   | CMuxDef of id * id * int
