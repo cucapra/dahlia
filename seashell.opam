@@ -16,5 +16,4 @@ depends: [
   "ppx_deriving"
   "ppx_expect"
   "cmdliner"
-  "extlib"
 ]
