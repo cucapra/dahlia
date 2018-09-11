@@ -1,14 +1,5 @@
 open Lexer
 open Lexing
-open Context
-
-let ( >>= ) opt f = match opt with
-| Some v -> f v
-| None -> None
-
-let ( >= ) opt f = match opt with
-| Some v -> Some (f v)
-| None -> None
 
 let pp_position lexbuf =
   let pos = lexbuf.lex_curr_p in
@@ -23,9 +14,14 @@ let parse_with_error prog =
   | Parser.Error ->
     failwith ("Syntax error on " ^ pp_position lexbuf)
 
-let typecheck_with_error (ast : Ast.command) : (gamma * delta) option =
+let typecheck_with_error (ast : Ast.command) =
   try
-    Some (Type.check_cmd ast (Context.empty_gamma, Context.empty_delta))
+    Type.check_cmd ast (Context.empty_gamma, Context.empty_delta)
   with
-    Type.TypeError s -> Core.fprintf stderr "%s\n" s; exit(-1)
+    Type.TypeError s -> failwith s
 
+
+let emit_code ast ctx dta =
+  Emit.set_type_map (fun id -> Context.get_binding id ctx);
+  Emit.set_delta_map (fun id -> Context.get_alias_binding id dta);
+  print_endline (Emit.generate_c ast)

@@ -4,16 +4,14 @@ open Compile_utils
 
 let seac filename no_typecheck =
   let prog = Std.input_file filename in
-  parse_with_error prog |> fun ast -> begin
+  let ast = parse_with_error prog in
+  let (ctx, dta) = begin
     if not no_typecheck then
       typecheck_with_error ast
     else
-      Some (Context.empty_gamma, Context.empty_delta)
-  end
-  >= fun (ctx, dta) ->
-    Emit.set_type_map (fun id -> Context.get_binding id ctx);
-    Emit.set_delta_map (fun id -> Context.get_alias_binding id dta);
-    print_endline (Emit.generate_c ast)
+      Context.empty_gamma, Context.empty_delta
+  end in
+  emit_code ast ctx dta
 
 let filename =
   let doc = "The file to be compiler by the seashell compiler." in
