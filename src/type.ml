@@ -24,7 +24,7 @@ let rec types_equal (delta : delta) (t1 : type_node) (t2 : type_node) : bool =
 
 (** [check_expr exp (ctx, delta)] is [t, (ctx', delta')], where [t] is the
  * type of [exp] under context (ctx, delta) and (ctx', delta') is an updated
- * context resulting from evaluating [exp]. Raises [TypeError s] if there
+ * context resulting from type-checking [exp]. Raises [TypeError s] if there
  * is a type error in [exp].*)
 let rec check_expr (exp : expression) (ctx, (delta: Context.delta)) =
   match exp with
@@ -46,6 +46,9 @@ and check_int i is_stat =
   else
     TIndex ((0, 1), (min_int, max_int))
 
+(** [check_binop b e1 e2 (c, d)] is [(t, (c', d')], where [t] is the type of
+ * the expression [EBinop (b, e1, e2)] and [(c', d')] is the updated context
+ * resulting from the type-checking of [e1] and [e2]. *)
 and check_binop binop e1 e2 (c, d) =
   let (t1, (c1, d1)) = check_expr e1 (c, d) in
   let (t2, (c2, d2)) = check_expr e2 (c1, d1) in
@@ -57,7 +60,7 @@ and check_binop binop e1 e2 (c, d) =
  * array access_, with a bank number specified by [idx1] and an index into this
  * bank specified by [idx2]. It is the value [t, (c', d')] where [t] is the
  * type of the elements of array [id], and (c', d') is an updated context
- * resulting from evaluating [idx1] and [idx2], and consuming the appopriate
+ * resulting from type-checking [idx1] and [idx2], and consuming the appopriate
  * indices of array [id]. Raises [TypeError s] if:
  *   - [idx1] or [idx2] are illegal types (non-index types)
  *   - illegal banks are accessed (i.e. already-consumed indices) *)
@@ -81,8 +84,8 @@ and check_banked_aa id idx1 idx2 (c, d) =
     raise (TypeError (illegal_accessor_type t1 id))
 
 (** [compute_unrollf idx_exprs (c, d)] is the unroll factor [u] implied by
- * the index type accessors [idx_exprs], each of which should be of type
- * [TIndex (s, d)]. Raises [TypeError s] if [idx_exprs] contains invalid
+ * the index type accessor expressions [idx_exprs], each of which should be of
+ * type [TIndex (s, d)]. Raises [TypeError s] if [idx_exprs] contains invalid
  * array access types, i.e. non-index types. *)
 and compute_unrollf idx_exprs (c, d) =
   match idx_exprs with
@@ -94,6 +97,14 @@ and compute_unrollf idx_exprs (c, d) =
     end
   | [] -> 1
 
+(** [check_aa id idx_exprs (c, d)] represents a _normal array access_,
+ * accessing array with identifier [id], where [idx_exprs] is a list of
+ * expressions representing the index accessors. It produces [t, (c', d')],
+ * where [t] is the type of the array elements of array [id], and [(c', d')] is
+ * the updated context resulting from typechecking each expression in [idx_exprs]
+ * and consuming the appropriate array indices. Raises [TypeError s] if:
+ *  - an expression in [idx_exprs] is an illegal type (i.e. not TIndex _)
+    - illegal banks are accessed (i.e. already consumed banks) *)
 and check_aa id idx_exprs (c, d) =
   match Context.get_binding id c with
   | TArray (t, dims) ->
@@ -114,11 +125,13 @@ and check_aa id idx_exprs (c, d) =
         raise (TypeError "TypeError: unroll factor must be factor of banking factor")
   | _ -> raise (TypeError "TypeError: tried to index into non-array")
 
+(** [check_cmd cmd (c, d)] is [(c', d')], an updated context resutling from
+ * type-checking command [cmd], Raises [TypeError s]. *)
 let rec check_cmd cmd (ctx, delta) =
   match cmd with
   | CSeq (c1, c2)                  -> check_seq c1 c2 (ctx, delta)
   | CIf (cond, cmd)                -> check_if cond cmd (ctx, delta)
-  | CFor (x, r1, r2, uo, body)     -> check_for_impl x r1 r2 body uo (ctx, delta)
+  | CFor (x, r1, r2, uo, body)     -> check_for x r1 r2 body uo (ctx, delta)
   | CAssign (x, e1)                -> check_assignment x e1 (ctx, delta)
   | CReassign (target, exp)        -> check_reassign target exp (ctx, delta)
   | CFuncDef (id, args, body)      -> check_funcdef id args body (ctx, delta)
@@ -126,15 +139,26 @@ let rec check_cmd cmd (ctx, delta) =
   | CTypeDef (id, t)               -> check_typedef id t (ctx, delta)
   | CMuxDef (mux_id, mem_id, size) -> check_muxdef mux_id mem_id size (ctx, delta)
 
+(** [check_seq c1 c2 (c, d)] is [(c', d')], an updated context resulting from
+ * type-checking [c1], followed by [c2]. *)
 and check_seq c1 c2 (ctx, delta) =
   check_cmd c1 (ctx, delta) |> fun (ctx', delta') -> check_cmd c2 (ctx', delta')
 
+(** [check_if cond cmd (c, d)] is [(c', d')], an updated context resulting from
+ * type-checking [cond], followed by [cmd]. *)
 and check_if cond cmd (ctx, delta) =
   match check_expr cond (ctx, delta) with
   | TBool, (ctx', dta') -> check_cmd cmd (ctx', dta')
   | t, _ -> raise (TypeError (unexpected_type "conditional" t TBool))
 
-and check_for_impl id r1 r2 body u (ctx, delta) =
+(** [check_for id r1 r2 body u (c, d)] is [(c', d')], an updated context resulting
+ * from evaluating the following:
+ *   - [r1] and [r2], which are the start and ends of the for loop counter variable;
+ *     these should be static ints (represented by index types)
+ *   - [body], the body of the for loop
+ * Additionally, unroll factor [u] influences the type bound to [id] (see Seashell
+ * notes) *)
+and check_for id r1 r2 body u (ctx, delta) =
   let r1_type, (ctx1, d1) = check_expr r1 (ctx, delta) in
   let r2_type, (ctx2, d2) = check_expr r2 (ctx1, d1) in
   match r1_type, r2_type with
@@ -155,7 +179,10 @@ and check_assignment id exp (ctx, delta) =
   let (t, (c, d)) = check_expr exp (ctx, delta) in
   (Context.add_binding id t c), d
 
-(* TODO(ted): rethink this *)
+(** [check_reassign target exp (c, d)] is an updated context [(c', d')],
+ * resulting from type-checking [target] and [exp]. [target] could be:
+ *   - an array access, banked or not
+ *   - a variable that already is bound *)
 and check_reassign target exp (ctx, delta) =
   match target, exp with
   | EBankedAA (id, idx1, idx2), _ ->
@@ -182,6 +209,9 @@ and check_funcdef id args body (ctx, delta) =
   let argtypes = List.map (fun (_, t) -> t) args in
   Context.add_binding id (TFunc argtypes) context'', delta'
 
+(** [check_app id args (c, d)] is [(c', d')], where [(c', d')] is the
+ * context resulting from type-checking the function with identifier [id] with
+ * the arguments represented by [args], where [args] an expression list. *)
 and check_app id args (ctx, delta) =
   let check_params arg param =
     if not (types_equal delta arg param)
@@ -193,6 +223,8 @@ and check_app id args (ctx, delta) =
   | TFunc param_types -> List.iter2 check_params argtypes param_types; (ctx, delta)
   | _ -> raise (TypeError (illegal_app id))
 
+(** [check_typedef id t (c, d)] is [(c, d')], where [d'] is an updated delta with
+ * a new binding from [id] to [t]. *)
 and check_typedef id t (ctx, delta) = ctx, (Context.add_alias_binding id t delta)
 
 (** [check_muxdef mux_id a_id size (c, d)] produces a context [(c', d')] containing
