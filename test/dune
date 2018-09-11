@@ -1,0 +1,5 @@
+(library
+  (name test)
+  (preprocess (pps ppx_expect))
+  (inline_tests (deps should-compile/vsadd.sea))
+  (libraries seashell core extlib))

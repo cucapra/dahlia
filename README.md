@@ -36,3 +36,12 @@ For example:
 For more information about the CLI options, run:
 
     $ seac --help
+
+### Testing
+
+We are using [ppx_expect](https://github.com/janestreet/ppx_expect). The tests
+can be run using `dune runtest`.
+
+If after a major change, the test output needs to be changed, first verify that
+the diff looks like you want it to and then run `dune promote` to automatically
+run the file.

@@ -1,6 +1,6 @@
 .PHONY: build test watch
 
-SRCS:=src bin
+SRCS:=src bin test
 
 build:
 	dune build && dune install
