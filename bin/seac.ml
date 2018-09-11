@@ -1,45 +1,19 @@
-open Seashell
-open Lexer
-open Lexing
-open Context
 open Cmdliner
-
-let print_position outx lexbuf =
-  let pos = lexbuf.lex_curr_p in
-  Core.fprintf outx "line %d, column %d"
-    pos.pos_lnum (pos.pos_cnum - pos.pos_bol + 1)
-
-let parse_with_error lexbuf =
-  try Some (Parser.prog Lexer.token lexbuf) with
-  | SyntaxError msg ->
-    Core.fprintf stderr "%a: %s\n" print_position lexbuf msg;
-    None
-  | Parser.Error ->
-    Core.fprintf stderr "Syntax error on %a\n" print_position lexbuf;
-    exit (-1)
-
-let typecheck_with_error (ast : Ast.command) : (gamma * delta) option =
-  try
-    Some (Type.check_cmd ast (Context.empty_gamma, Context.empty_delta))
-  with
-    Type.TypeError s -> Core.fprintf stderr "%s\n" s; exit(-1)
-
-let ( >>= ) opt f = match opt with
-| Some v -> f v
-| None -> None
+open Seashell
+open Compile_utils
 
 let seac filename no_typecheck =
-  let lexbuf = Lexing.from_string @@ Std.input_file filename in
-  parse_with_error lexbuf  >>= fun ast -> begin
+  let prog = Std.input_file filename in
+  parse_with_error prog |> fun ast -> begin
     if not no_typecheck then
       typecheck_with_error ast
     else
       Some (Context.empty_gamma, Context.empty_delta)
   end
-  >>= fun (ctx, dta) ->
+  >= fun (ctx, dta) ->
     Emit.set_type_map (fun id -> Context.get_binding id ctx);
     Emit.set_delta_map (fun id -> Context.get_alias_binding id dta);
-    print_endline (Emit.generate_c ast); None
+    print_endline (Emit.generate_c ast)
 
 let filename =
   let doc = "The file to be compiler by the seashell compiler." in
