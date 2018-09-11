@@ -38,6 +38,10 @@ prog:
   | cmd EOF { $1 }
 
 cmd:
+  | acmd     { $1 }
+  | acmd cmd { CSeq ($1, $2) }
+
+acmd:
   | MUX INT ID LPAREN ID RPAREN SEMICOLON                   { CMuxDef ($3, $5, $2) }
   | ID LPAREN args RPAREN SEMICOLON                         { CApp ($1, $3) }
   | TYPE ID EQUAL type_annotation SEMICOLON                 { CTypeDef ($2, $4) }
@@ -45,11 +49,10 @@ cmd:
   | LET ID EQUAL expr SEMICOLON                             { CAssign ($2, $4) }
   | IF LPAREN expr RPAREN LBRACK cmd RBRACK                 { CIf ($3, $6) }
   | expr REASSIGN expr SEMICOLON                            { CReassign ($1, $3) }
-  | FOR LPAREN LET x = ID EQUAL x1 = expr RANGE_DOTS x2 = expr RPAREN UNROLL u = INT
-    LBRACK c = cmd RBRACK                                   { CFor (x, x1, x2, u, c) }
-  | FOR LPAREN LET x = ID EQUAL x1 = expr RANGE_DOTS x2 = expr RPAREN
-    LBRACK c = cmd RBRACK                                   { CFor (x, x1, x2, 1, c) }
-  | cmd cmd                                                 { CSeq ($1, $2) }
+  | FOR LPAREN LET ID EQUAL expr RANGE_DOTS expr RPAREN UNROLL INT
+    LBRACK cmd RBRACK                                       { CFor ($4, $6, $8, $11, $13) }
+  | FOR LPAREN LET ID EQUAL expr RANGE_DOTS expr RPAREN
+    LBRACK cmd RBRACK                                       { CFor ($4, $6, $8, 1, $11) }
 
 expr:
   | ID access                                   { EAA ($1, $2) }
