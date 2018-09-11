@@ -18,7 +18,5 @@ jobs:
           name: Build Seashell and run examples
           command: |
             eval $(opam env)
-            dune build
-            dune install
-            cd examples
-            make all
+            make
+            make test
