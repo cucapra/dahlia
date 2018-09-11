@@ -22,7 +22,7 @@ In the future, we expect to make seashell capable of writing this program too. F
 #define NUM_TESTS 1024 // Number of iterations run to average out results
 
 int main(int argc, char* argv[]){
-     std::cout << "TEST FOR VECTOR-VECOTR ADD" << std::endl;
+     std::cout << "TEST FOR VECTOR-VECTOR ADD" << std::endl;
      int test_passed = 0;
      float *A, *B, *C_sw;
 
