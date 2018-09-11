@@ -27,7 +27,7 @@ int main(int argc, char* argv[]){
      float *A, *B, *C_sw;
 
      A = (float *)malloc(N * N * sizeof(float));
-     B = (float *)malloc(sizeof(float));
+     B = (float *)malloc(N * N * sizeof(float));
      C_sw = (float *)malloc(N * N * sizeof(float));
 
      if (!A || !B || !C_sw) {
