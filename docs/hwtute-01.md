@@ -134,8 +134,17 @@ void vvadd_sw(float *A, float *B, float *C)
 }
 ```
 
+Now, we can run this program through the synthesis flow, push the binaries to an FPGA and run it, which would give an output such as the following,
+
+```
+TEST FOR VECTOR-VECTOR ADD
+Testing 1024 iterations of 32x32 floating point vvadd...
+Average number of CPU cycles running mmultadd in software: 7223
+TEST PASSED
+```
+
 ::::todo
-This needs to be verified after running. Buildbot cannot run it as it will look for a sea file. Not sure if it's a good idea to change it, as we might provide host program too in a sea file.
+Buildbot cannot run it as it will look for a sea file. Not sure if it's a good idea to change it, as we might provide host program too in a sea file.
 ::::
 
 ### How not to write this program
