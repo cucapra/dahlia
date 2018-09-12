@@ -1,7 +1,7 @@
 open Ast
 
 exception AlreadyConsumed of int
-exception NoBinding
+exception NoBinding of id
 
 module StringMap =
   Map.Make(struct type t = id;; let compare = String.compare end)
@@ -52,14 +52,11 @@ let add_alias_binding id t d =
 
 let get_binding id g =
   try StringMap.find id g.type_map
-  with Not_found -> raise NoBinding
+  with Not_found -> raise (NoBinding id)
 
 let get_alias_binding id d =
   try StringMap.find id d
-  with Not_found -> raise NoBinding
-
-let rem_binding id g =
-  { g with type_map = StringMap.remove id g.type_map }
+  with Not_found -> raise (NoBinding id)
 
 let consume_aa id i g =
   if IntSet.mem i (StringMap.find id g.indices_available) then {

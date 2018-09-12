@@ -65,8 +65,8 @@ and check_binop binop e1 e2 (c, d) =
  *   - [idx1] or [idx2] are illegal types (non-index types)
  *   - illegal banks are accessed (i.e. already-consumed indices) *)
 and check_banked_aa id idx1 idx2 (c, d) =
-  let (idx1_t, (c1, d1)) = check_expr idx1 (c, d) in
-  let (idx2_t, (c2, d2)) = check_expr idx2 (c1, d1) in
+  let idx1_t, (c1, d1) = check_expr idx1 (c, d) in
+  let idx2_t, (c2, d2) = check_expr idx2 (c1, d1) in
   match idx1_t, idx2_t, Context.get_binding id c2 with
   | TIndex (s1, d1), TIndex (_, _), TArray (a_t, _) ->
     begin
@@ -75,13 +75,12 @@ and check_banked_aa id idx1 idx2 (c, d) =
       if hs_1 - ls_1 = 1 && hd_1 - ld_1 = 1 then
         begin
           try a_t, (Context.consume_aa id ls_1 c2, d2)
-          with AlreadyConsumed i -> raise (TypeError (illegal_bank i id))
+          with AlreadyConsumed i -> raise @@ TypeError (illegal_bank i id)
         end
       else
         raise (TypeError static_bank_error)
     end
-  | t1, _, _ ->
-    raise (TypeError (illegal_accessor_type t1 id))
+  | t1, _, _ -> raise @@ TypeError (illegal_accessor_type t1 id)
 
 (** [compute_unrollf idx_exprs (c, d)] is the unroll factor [u] implied by
  * the index type accessor expressions [idx_exprs], each of which should be of

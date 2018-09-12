@@ -4,6 +4,7 @@ open Seashell
 open Compile_utils
 
 let seac filename no_typecheck =
+  Printexc.record_backtrace false;
   let prog = In_channel.read_all filename in
   let ast = parse_with_error prog in
   let (ctx, dta) = begin

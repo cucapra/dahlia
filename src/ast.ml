@@ -56,7 +56,6 @@ let string_of_binop = function
   | BopAnd -> "&&"
   | BopOr -> "||"
 
-
 (* An [expression] is one of the following:
  *   - [EInt (i, s)]: an integer expression with value [i];
  *     if [s] is [true], it's a static integer; otherwise, it's
