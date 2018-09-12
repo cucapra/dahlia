@@ -23,7 +23,6 @@ let%expect_test "should-compile/vsadd.sea" =
     } |}]
 ;;
 
-
 let%expect_test "should-compile/array1d_logical.sea" =
   compile "should-compile/array1d_logical.sea";
   [%expect {|

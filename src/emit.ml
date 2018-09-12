@@ -45,19 +45,6 @@ let rec type_str = function
   | TAlias id -> type_str (!delta_map id)
   | _ -> failwith "Implement me!"
 
-let bop_str = function
-  | BopEq -> "="
-  | BopNeq -> "!="
-  | BopGeq -> ">="
-  | BopLeq -> "<="
-  | BopLt -> "<"
-  | BopGt -> ">"
-  | BopPlus -> "+"
-  | BopMinus -> "-"
-  | BopTimes -> "*"
-  | BopAnd -> "&&"
-  | BopOr -> "||"
-
 let rec emit_expr = function
   | EInt (i, _)          -> string_of_int i
   | EFloat f             -> string_of_float f
@@ -68,7 +55,7 @@ let rec emit_expr = function
   | EAA (id, i)          -> emit_aa_logl (id, i)
 
 and emit_binop (b, e1, e2) =
-  concat [ (emit_expr e1); (bop_str b); (emit_expr e2) ]
+  concat [ (emit_expr e1); (string_of_binop b); (emit_expr e2) ]
 
 and determine_bf id =
   match !type_map id with

@@ -21,12 +21,12 @@ type id = string [@@deriving show]
  *     this mux (not memory) is of size [s] *)
 type type_node =
   | TBool
+  | TFloat
+  | TAlias of id
+  | TMux of id * int
   | TArray of type_node * (int * int) list
   | TIndex of (int * int) * (int * int)
   | TFunc of type_node list
-  | TAlias of id
-  | TFloat
-  | TMux of id * int
   [@@deriving show]
 
 type binop =
@@ -42,6 +42,20 @@ type binop =
   | BopTimes
   | BopOr
   [@@deriving show]
+
+let string_of_binop = function
+  | BopEq -> "="
+  | BopNeq -> "!="
+  | BopGeq -> ">="
+  | BopLeq -> "<="
+  | BopLt -> "<"
+  | BopGt -> ">"
+  | BopPlus -> "+"
+  | BopMinus -> "-"
+  | BopTimes -> "*"
+  | BopAnd -> "&&"
+  | BopOr -> "||"
+
 
 (* An [expression] is one of the following:
  *   - [EInt (i, s)]: an integer expression with value [i];

@@ -12,19 +12,6 @@ let rec string_of_type = function
   | TFunc _ -> "func"
   | _ -> failwith "Implement me!"
 
-let string_of_binop = function
-  | BopEq    -> "="
-  | BopNeq   -> "!="
-  | BopGeq   -> ">="
-  | BopLeq   -> "<="
-  | BopLt    -> "<"
-  | BopGt    -> ">"
-  | BopPlus  -> "+"
-  | BopMinus -> "-"
-  | BopTimes -> "*"
-  | BopOr    -> "||"
-  | BopAnd   -> "&&"
-
 let illegal_bank i id =
   "[Type error] memory \"" ^ id ^ "\" illegal access: bank " ^ string_of_int i
 
