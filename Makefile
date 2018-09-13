@@ -6,7 +6,7 @@ build:
 	dune build && dune install
 
 test:
-	dune runtest
+	$(MAKE) && dune runtest
 
 watch:
-	find $(SRCS) | entr -cp make
+	find $(SRCS) | entr -cp make test

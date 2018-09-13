@@ -19,7 +19,7 @@ let parse_sequence c1 c2 =
 (* Keywords *)
 %token LET IF FOR TRUE FALSE INT_ANNOTATION
        BOOL_ANNOTATION FLOAT_ANNOTATION
-       MUX UNROLL BANK FUNC TYPE
+       MUX UNROLL BANK FUNC TYPE WRITE AS
 
 (* Parentheses, brackets, etc *)
 %token LPAREN RPAREN LBRACK RBRACK LSQUARE RSQUARE
@@ -46,10 +46,11 @@ prog:
   | cmd EOF { $1 }
 
 cmd:
-  | acmd     { $1 }
+  | acmd      { $1 }
   | acmd cmd  { parse_sequence $1 $2 }
 
 acmd:
+  | WRITE expr AS ID SEMICOLON                              { CWrite($2, $4)}
   | MUX INT ID LPAREN ID RPAREN SEMICOLON                   { CMuxDef ($3, $5, $2) }
   | ID LPAREN args RPAREN SEMICOLON                         { CApp ($1, $3) }
   | TYPE ID EQUAL type_annotation SEMICOLON                 { CTypeDef ($2, $4) }
@@ -61,13 +62,14 @@ acmd:
     LBRACK cmd RBRACK                                       { CFor ($4, $6, $8, $11, $13) }
   | FOR LPAREN LET ID EQUAL expr RANGE_DOTS expr RPAREN
     LBRACK cmd RBRACK                                       { CFor ($4, $6, $8, 1, $11) }
+  | expr                                                    { CExpr $1 }
 
 expr:
   | ID access                                   { EAA ($1, $2) }
   | ID LBRACK expr RBRACK LSQUARE expr RSQUARE  { EBankedAA ($1, $3, $6) }
   | LPAREN expr RPAREN                          { $2 }
   | expr binop expr                             { EBinop ($2, $1, $3) }
-  | INT                                         { EInt ($1, true) }
+  | INT                                         { EInt $1 }
   | FLOAT                                       { EFloat $1 }
   | TRUE                                        { EBool true }
   | FALSE                                       { EBool false }

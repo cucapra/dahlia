@@ -41,12 +41,13 @@ let rec type_str = function
   | TBool
   | TFloat        -> "float"
   | TIndex _      -> "int"
-  | TArray _ -> failwith "Implement array type stringified version"
   | TAlias id -> type_str (!delta_map id)
-  | _ -> failwith "Implement me!"
+  | TArray _ -> failwith "Implement array type stringified version"
+  | TMux _ -> failwith "Implement muxes me!"
+  | TFunc _ -> failwith "Cannot emit function type."
 
 let rec emit_expr = function
-  | EInt (i, _)          -> string_of_int i
+  | EInt i          -> string_of_int i
   | EFloat f             -> string_of_float f
   | EBool b              -> if b then "1" else "0"
   | EVar id              -> id
@@ -115,6 +116,7 @@ and emit_app (id, args) i =
 
 let rec emit_cmd i cmd =
   match cmd with
+  | CWrite _                   -> ""
   | CAssign (id, e)            -> emit_assign (id, e) i
   | CReassign (target, e)      -> emit_reassign (target, e) i
   | CFor (id, r1, r2, u, body) -> emit_for (id, r1, r2, body, u) i
@@ -123,7 +125,12 @@ let rec emit_cmd i cmd =
   | CFuncDef (id, args, body)  -> emit_fun (id, args, body) i
   | CApp (id, args)            -> emit_app (id, args) i
   | CTypeDef (id, t)           -> emit_typedef (id, t) i
-  | CMuxDef _                  -> ""
+  | CMuxDef (_, mid, s)        -> emit_mux mid s i
+  | CExpr e                    -> emit_expr e
+
+and emit_mux mem_id size i =
+  concat ["/* Mux "; show_id mem_id; ": "; string_of_int size; "/*"]
+  |> indent i
 
 and emit_assign_int (id, e) =
   concat [ "int "; id; " = "; (emit_expr e); ";" ]

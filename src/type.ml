@@ -26,25 +26,15 @@ let rec types_equal (delta : delta) (t1 : type_node) (t2 : type_node) : bool =
  * type of [exp] under context (ctx, delta) and (ctx', delta') is an updated
  * context resulting from type-checking [exp]. Raises [TypeError s] if there
  * is a type error in [exp].*)
-let rec check_expr (exp : expression) (ctx, (delta: Context.delta)) =
+let rec check_expr exp (ctx, delta) =
   match exp with
   | EFloat _                   -> TFloat, (ctx, delta)
   | EBool _                    -> TBool, (ctx, delta)
-  | EInt (i, s)                -> check_int i s, (ctx, delta)
+  | EInt i                     -> TIndex ((i, i+1), (0, 1)), (ctx, delta)
   | EVar x                     -> Context.get_binding x ctx, (ctx, delta)
   | EBinop (binop, e1, e2)     -> check_binop binop e1 e2 (ctx, delta)
   | EBankedAA (id, idx1, idx2) -> check_banked_aa id idx1 idx2 (ctx, delta)
   | EAA (id, i)                -> check_aa id i (ctx, delta)
-
-(** [check_int i is_stat] is [TIndex (s, d)], the index type representation
- * of the integer [i], which could be static or non-static, depending on
- * [is_stat]. This representation is detailed in
- * [https://capra.cs.cornell.edu/seashell/docs/indextype.html]. *)
-and check_int i is_stat =
-  if is_stat then
-    TIndex ((i, i+1), (0, 1))
-  else
-    TIndex ((0, 1), (min_int, max_int))
 
 (** [check_binop b e1 e2 (c, d)] is [(t, (c', d')], where [t] is the type of
  * the expression [EBinop (b, e1, e2)] and [(c', d')] is the updated context
@@ -53,8 +43,7 @@ and check_binop binop e1 e2 (c, d) =
   let (t1, (c1, d1)) = check_expr e1 (c, d) in
   let (t2, (c2, d2)) = check_expr e2 (c1, d1) in
   try (Op_util.type_of_op t1 t2 d binop), (c2, d2)
-  with Op_util.IllegalOperation ->
-    raise (TypeError (illegal_op binop t1 t2))
+  with Op_util.IllegalOperation -> raise @@ TypeError (illegal_op binop t1 t2)
 
 (* [check_banked_aa id idx1 idx2 (c, d)] represents a _banked
  * array access_, with a bank number specified by [idx1] and an index into this
@@ -69,17 +58,14 @@ and check_banked_aa id idx1 idx2 (c, d) =
   let idx2_t, (c2, d2) = check_expr idx2 (c1, d1) in
   match idx1_t, idx2_t, Context.get_binding id c2 with
   | TIndex (s1, d1), TIndex (_, _), TArray (a_t, _) ->
-    begin
-      let (ls_1, hs_1) = s1 in
-      let (ld_1, hd_1) = d1 in
-      if hs_1 - ls_1 = 1 && hd_1 - ld_1 = 1 then
-        begin
-          try a_t, (Context.consume_aa id ls_1 c2, d2)
-          with AlreadyConsumed i -> raise @@ TypeError (illegal_bank i id)
-        end
-      else
-        raise (TypeError static_bank_error)
-    end
+    let (ls_1, hs_1) = s1 and (ld_1, hd_1) = d1 in
+    if hs_1 - ls_1 = 1 && hd_1 - ld_1 = 1 then
+      begin
+        try a_t, (Context.consume_aa id ls_1 c2, d2)
+        with AlreadyConsumed i -> raise @@ TypeError (illegal_bank i id)
+      end
+    else
+      raise (TypeError static_bank_error)
   | t1, _, _ -> raise @@ TypeError (illegal_accessor_type t1 id)
 
 (** [compute_unrollf idx_exprs (c, d)] is the unroll factor [u] implied by
@@ -137,6 +123,8 @@ let rec check_cmd cmd (ctx, delta) =
   | CApp (id, args)                -> check_app id args (ctx, delta)
   | CTypeDef (id, t)               -> check_typedef id t (ctx, delta)
   | CMuxDef (mux_id, mem_id, size) -> check_muxdef mux_id mem_id size (ctx, delta)
+  | CExpr expr                     -> snd @@ check_expr expr (ctx, delta)
+  | CWrite _                       -> failwith "capabilities not implemented"
 
 and check_seq clist (ctx, delta) =
   let f (c, d) cmd = check_cmd cmd (c, d) in
