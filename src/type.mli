@@ -3,6 +3,5 @@ open Context
 
 exception TypeError of string
 
-val check_expr : expr -> (gamma * delta) -> type_node * (gamma * delta)
-
-val check_cmd : command -> (gamma * delta) -> (gamma * delta)
+(** Typechecks the command and returns the final type environment. *)
+val typecheck : command -> gamma

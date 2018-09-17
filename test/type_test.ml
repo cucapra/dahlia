@@ -30,9 +30,6 @@ let%expect_test "boolean" =
     int y = 0; |}]
 ;;
 
-let%expect_test "type aliases" =
+let%expect_test "type aliases get erased" =
   compile_string "type b = bool; type i = int; type x = i;";
-  [%expect {|
-    typedef float b;
-    typedef int i;
-    typedef int x; |}]
+  [%expect {| |}]

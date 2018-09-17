@@ -97,7 +97,6 @@ let%expect_test "should-compile/multaccess.sea" =
 let%expect_test "should-compile/typedefs.sea" =
   compile "should-compile/typedefs.sea";
   [%expect {|
-    typedef int number;
     void add(int a, int b) {
 
     	int x = a+b;

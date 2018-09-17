@@ -16,12 +16,11 @@ let parse_with_error prog =
 
 let typecheck_with_error (ast : Ast.command) =
   try
-    Type.check_cmd ast (Context.empty_gamma, Context.empty_delta)
+    Type.typecheck ast
   with
     Type.TypeError s -> failwith s
 
 
-let emit_code ast ctx dta =
+let emit_code ast ctx =
   Emit.set_type_map (fun id -> Context.get_binding id ctx);
-  Emit.set_delta_map (fun id -> Context.get_alias_binding id dta);
   print_endline (Emit.generate_c ast)

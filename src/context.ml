@@ -17,14 +17,10 @@ type gamma = {
   indices_available: IntSet.t StringMap.t
 }
 
-type delta = type_node StringMap.t
-
 let empty_gamma = {
   type_map = StringMap.empty ;
   indices_available = StringMap.empty
 }
-
-let empty_delta = StringMap.empty
 
 let create_set s =
   let rec create_set' i acc =
@@ -47,15 +43,8 @@ let add_binding id t g =
     }
   | _ -> { g with type_map = type_map' }
 
-let add_alias_binding id t d =
-  StringMap.add id t d
-
 let get_binding id g =
   try StringMap.find id g.type_map
-  with Not_found -> raise (NoBinding id)
-
-let get_alias_binding id d =
-  try StringMap.find id d
   with Not_found -> raise (NoBinding id)
 
 let consume_aa id i g =

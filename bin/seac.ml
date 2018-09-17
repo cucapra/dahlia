@@ -3,17 +3,17 @@ open Cmdliner
 open Seashell
 open Compile_utils
 
-let seac filename no_typecheck =
-  Printexc.record_backtrace false;
+let seac filename no_typecheck : unit =
   let prog = In_channel.read_all filename in
   let ast = parse_with_error prog in
-  let (ctx, dta) = begin
+  let rast = Resolve_alias.remove_aliases ast in
+  let ctx = begin
     if not no_typecheck then
-      typecheck_with_error ast
+      typecheck_with_error rast
     else
-      Context.empty_gamma, Context.empty_delta
+      Context.empty_gamma
   end in
-  emit_code ast ctx dta
+  emit_code rast ctx
 
 let filename =
   let doc = "The file to be compiler by the seashell compiler." in
