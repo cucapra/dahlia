@@ -1,15 +1,6 @@
 (library
   (name test)
-  (preprocess (pps ppx_expect))
+  (preprocess (pps ppx_expect ppxlib.runner))
   (inline_tests
-    (deps should-compile/vsadd.sea
-          should-compile/array1d_logical.sea
-          should-compile/array1d_physical.sea
-          should-compile/crlf.sea
-          should-compile/float.sea
-          should-compile/logical_access.sea
-          should-compile/multaccess.sea
-          should-compile/typedefs.sea
-          should-compile/vsadd_nrl.sea
-          should-compile/vvadd.sea))
+    (deps (glob_files should-compile/*.ml)))
   (libraries seashell core))

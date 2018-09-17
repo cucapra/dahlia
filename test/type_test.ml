@@ -5,6 +5,7 @@ open Test_utils
 let%expect_test "let expressions" =
   compile_string "let y = 10;";
   [%expect {| int y = 10; |}]
+
 ;;
 
 let%expect_test "add" =
@@ -35,4 +36,3 @@ let%expect_test "type aliases" =
     typedef float b;
     typedef int i;
     typedef int x; |}]
-;;
