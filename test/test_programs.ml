@@ -33,7 +33,7 @@ let%expect_test "should-compile/array1d_physical.sea" =
     void madd(float a[1024], float b, float c) {
     	#pragma HLS ARRAY_PARTITION variable=a factor=32
     	for (int i = 0; i <= 31; i += 1) {
-    		#pragma HLS UNROLL factor=1
+
 
     		b = a[0 + 32*(i)];
     		c = a[1 + 32*(i)];
@@ -85,7 +85,7 @@ let%expect_test "should-compile/multaccess.sea" =
     	#pragma HLS ARRAY_PARTITION variable=b factor=3
 
     	for (int i = 0; i <= 3; i += 1) {
-    		#pragma HLS UNROLL factor=1
+
     		for (int j = 0; j <= 3; j += 1) {
     			#pragma HLS UNROLL factor=3
     			c[1*(i)] = a[1*(i*3+j)]+b[1*(i*3+j)];
@@ -112,7 +112,7 @@ let%expect_test "should-compile/vsadd_nrl.sea" =
     	#pragma HLS ARRAY_PARTITION variable=a factor=32
     	#pragma HLS ARRAY_PARTITION variable=c factor=32
     	for (int i = 0; i <= 31; i += 1) {
-    		#pragma HLS UNROLL factor=1
+
 
     		c[0 + 32*(i)] = a[0 + 32*(i)]+b;
     		c[1 + 32*(i)] = a[1 + 32*(i)]+b;
