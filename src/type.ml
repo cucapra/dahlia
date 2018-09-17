@@ -12,18 +12,6 @@ exception TypeError of string
 let compute_bf dims =
   List.fold_left (fun acc (_, b) -> acc * b) 1 dims
 
-(** Computes equality between [t1] and [t2] and handles type aliases.
- *  Also special cases [TIndex] so that any two [TIndex] are equal. *)
-let rec types_equal (t1 : type_node) (t2 : type_node) : bool =
-  match t1, t2 with
-  | TArray (a1, d1), TArray (a2, d2) -> d1=d2 && types_equal a1 a2
-  | TIndex _, TIndex _ -> true
-  | TAlias _, _ | _, TAlias _ ->
-      (*types_equal delta t (Context.get_alias_binding ta delta)*)
-      (**TODO(rachit): Add malformed AST exception *)
-      failwith "TAlias should not be present in AST after resolution pass."
-  | t1, t2 -> t1=t2
-
 (** [check_expr exp (ctx, delta)] is [t, (ctx', delta')], where [t] is the
  * type of [exp] under context (ctx, delta) and (ctx', delta') is an updated
  * context resulting from type-checking [exp]. Raises [TypeError s] if there
@@ -176,11 +164,17 @@ and check_reassign target exp ctx =
   | EBankedAA (id, idx1, idx2), _ ->
     check_banked_aa id idx1 idx2 ctx |> fun (t_arr, c) ->
     check_expr exp c                 |> fun (t_exp, c') ->
-    if types_equal t_arr t_exp then c'
-    else raise @@ TypeError (unexpected_type id t_exp t_arr)
-  | EVar _, _ -> ctx
-  | EAA (id, idx), _ ->
-    snd @@ check_aa id idx ctx
+    if t_arr = t_exp then c'
+    else raise @@ TypeError (reassign_type_mismatch t_exp t_arr)
+  | EVar id, expr ->
+      let (typ, c1) = check_expr expr ctx in
+      if get_binding id ctx = typ then c1
+      else raise @@ TypeError (reassign_type_mismatch (get_binding id ctx) typ)
+  | EAA (id, idx), expr ->
+      let (tl, c1) = check_aa id idx ctx in
+      let (tr, c2) = check_expr expr c1 in
+      if tl = tr then c2
+      else raise @@ TypeError (reassign_type_mismatch tl tr)
   | _ -> raise (TypeError "Used reassign operator on illegal types")
 
 (** [check_funcdef id args body (ctx, delta)] is [(ctx', delta')], where
@@ -202,7 +196,7 @@ and check_funcdef id args body ctx =
  * the arguments represented by [args], where [args] an expression list. *)
 and check_app id args ctx =
   let check_params arg param =
-    if not (types_equal arg param)
+    if not (arg = param)
     then raise @@ TypeError (
       unexpected_type ("in function app of " ^ id ^ ", arg was") arg param)
     else () in

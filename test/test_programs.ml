@@ -59,41 +59,6 @@ let%expect_test "should-compile/float.sea" =
     } |}]
 ;;
 
-let%expect_test "should-compile/logical_access.sea" =
-  compile "should-compile/logical_access.sea";
-  [%expect {|
-    void logl_access(int a[240]) {
-    	#pragma HLS ARRAY_PARTITION variable=a factor=30
-    	for (int i = 0; i <= 9; i += 1) {
-    		#pragma HLS UNROLL factor=5
-    		for (int j = 0; j <= 3; j += 1) {
-    			#pragma HLS UNROLL factor=2
-    			for (int k = 0; k <= 6; k += 1) {
-    				#pragma HLS UNROLL factor=3
-    				a[24*(i)+6*(j)+1*(k)] = 2;
-    			}
-    		}
-    	}
-    } |}]
-;;
-
-let%expect_test "should-compile/multaccess.sea" =
-  compile "should-compile/multaccess.sea";
-  [%expect {|
-    void mmul(float a[9], float b[9], float c[3]) {
-    	#pragma HLS ARRAY_PARTITION variable=a factor=3
-    	#pragma HLS ARRAY_PARTITION variable=b factor=3
-
-    	for (int i = 0; i <= 3; i += 1) {
-
-    		for (int j = 0; j <= 3; j += 1) {
-    			#pragma HLS UNROLL factor=3
-    			c[1*(i)] = a[1*(i*3+j)]+b[1*(i*3+j)];
-    		}
-    	}
-    } |}]
-;;
-
 let%expect_test "should-compile/typedefs.sea" =
   compile "should-compile/typedefs.sea";
   [%expect {|
@@ -133,3 +98,17 @@ let%expect_test "should-compile/vvadd.sea" =
     	}
     } |}]
 ;;
+
+(** TODO(rachit): These tests need + on idx types to be implemented
+
+let%expect_test "should-compile/logical_access.sea" =
+  compile "should-compile/logical_access.sea";
+  [%expect {| |}]
+;;
+
+let%expect_test "should-compile/multaccess.sea" =
+  compile "should-compile/multaccess.sea";
+  [%expect {| |}]
+;;
+
+*)

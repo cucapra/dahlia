@@ -55,6 +55,12 @@ let improper_unroll =
 let range_static_error =
   "[Type Error] range start/end must be static"
 
+let reassign_type_mismatch t_lval t_rval =
+  "[Type Error] cannot assign value of type `" ^
+  (string_of_type t_rval) ^
+  "' to L-value of type `" ^
+  (string_of_type t_lval) ^ "'"
+
 let incorrect_aa_dims aname expected actual =
   let e_dim_end = if expected = 1 then "" else "s" in
   let a_dim_end = if actual   = 1 then "" else "s" in

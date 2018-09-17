@@ -19,3 +19,16 @@ let%expect_test "Cannot access non-existent bank" =
   [%expect {|
     [Type error] memory `a' illegal access: bank 1 |}]
 ;;
+
+let%expect_test "Cannot assign incorrect type to array" =
+  compile_string_with_failure "func foo(a: int[10], x: bool) { a[1] := x; }";
+  [%expect {|
+    [Type Error] cannot assign value of type `bool' to L-value of type `idx<0 .. 1, -4611686018427387904 .. 4611686018427387903>' |}]
+;;
+
+let%expect_test "Cannot reassign to different type" =
+  compile_string_with_failure "let x = 2.5; x := 1;";
+  [%expect {|
+    [Type Error] cannot assign value of type `idx<1 .. 2, 0 .. 1>' to L-value of type `float' |}]
+;;
+
