@@ -103,6 +103,7 @@ type expr =
  *   - [CSeq (c1, c2)]: a representation of the command [c1]
  *     followed by [c2]
  *   - [CFuncDef, CTypeDef, CMuxDef, CApp]: TODO *)
+(** TODO(rachit): Add CEmpty *)
 type command =
   | CWrite of expr * id
   | CAssign of id * expr
