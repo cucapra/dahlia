@@ -1,5 +1,16 @@
 open Ast
-open Context
+
+module StringMap =
+  Map.Make(struct type t = id;; let compare = String.compare end)
+
+type delta = type_node StringMap.t
+
+let add_alias_binding id t d =
+  StringMap.add id t d
+
+let get_alias_binding id d =
+  try StringMap.find id d
+  with Not_found -> raise (Context.NoBinding id)
 
 let rec resolve_type typ dta = match typ with
   | TBool | TFloat | TMux _ | TIndex _ -> typ
@@ -30,3 +41,5 @@ and resolve_cmd cmd dta : command * delta = match cmd with
       let (c1, dta1) = resolve_cmd c dta in
       CFuncDef(id, id_typ_lst1, c1), dta1
   | CTypeDef (id, typ) -> cmd, add_alias_binding id (resolve_type typ dta) dta
+
+let remove_aliases cmd = fst @@ resolve_cmd cmd StringMap.empty

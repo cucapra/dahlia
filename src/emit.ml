@@ -1,16 +1,12 @@
 open Ast
 
 let type_map = ref (fun _ -> failwith "TypeMap has not been set")
-let delta_map = ref (fun _ -> failwith "DeltaMap has not been set")
 
 let compute_bf d =
   List.fold_left (fun acc (_, d) -> d * acc) 1 d
 
 let set_type_map t =
   type_map := t
-
-let set_delta_map t =
-  delta_map := t
 
 let rec indent' n s acc =
   if n=0 then acc ^ s
@@ -37,11 +33,11 @@ let s_pragma_bank id bf i =
 let compute_array_size dims =
   List.fold_left (fun acc (s, _) -> s * acc) 1 dims
 
-let rec type_str = function
+let type_str = function
   | TBool
   | TFloat        -> "float"
   | TIndex _      -> "int"
-  | TAlias id -> type_str (!delta_map id)
+  | TAlias _ -> failwith "Should be impossible: Final AST contains TAlias"
   | TArray _ -> failwith "Implement array type stringified version"
   | TMux _ -> failwith "Implement muxes me!"
   | TFunc _ -> failwith "Cannot emit function type."
@@ -124,7 +120,7 @@ let rec emit_cmd i cmd =
   | CSeq clist                 -> emit_seq clist i
   | CFuncDef (id, args, body)  -> emit_fun (id, args, body) i
   | CApp (id, args)            -> emit_app (id, args) i
-  | CTypeDef (id, t)           -> emit_typedef (id, t) i
+  | CTypeDef _                 -> "" (** Not needed since aliases are resolved in original code. *)
   | CMuxDef (_, mid, s)        -> emit_mux mid s i
   | CExpr e                    -> emit_expr e
 
@@ -196,10 +192,6 @@ and emit_fun (id, args, body) i =
     "void "; id; "("; (emit_anno_args args); ") {";
     newline; pragmas; (emit_cmd (i+1) body); newline; (indent i "}")
   ]
-  |> indent i
-
-and emit_typedef (id, t) i =
-  concat [ "typedef "; (type_str t); " "; id; ";" ]
   |> indent i
 
 and generate_c cmd =
