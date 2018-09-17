@@ -9,4 +9,4 @@ test:
 	$(MAKE) && dune runtest
 
 watch:
-	find $(SRCS) | entr -cp make test
+	dune runtest -w
