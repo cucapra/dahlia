@@ -10,7 +10,7 @@ build: [ "dune" "build" ]
 install: [ "dune" "install" ]
 remove: ["ocamlfind" "remove" "project"]
 depends: [
-  "dune" {>= "1.2.0"}
+  "dune"
   "menhir"
   "core"
   "ppx_deriving"
