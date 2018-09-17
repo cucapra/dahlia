@@ -12,6 +12,7 @@ jobs:
           name: Install OCaml packages
           command: |
             sudo apt-get install -y m4
+            opam update
             opam install .
 
       - run:
