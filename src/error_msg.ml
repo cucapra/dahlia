@@ -13,7 +13,7 @@ let rec string_of_type = function
   | _ -> failwith "Implement me!"
 
 let illegal_bank i id =
-  "[Type error] memory \"" ^ id ^ "\" illegal access: bank " ^ string_of_int i
+  "[Type error] memory `" ^ id ^ "' illegal access: bank " ^ string_of_int i
 
 let range_error =
   "[Type error] range start/end must be integers"
@@ -58,6 +58,6 @@ let range_static_error =
 let incorrect_aa_dims aname expected actual =
   let e_dim_end = if expected = 1 then "" else "s" in
   let a_dim_end = if actual   = 1 then "" else "s" in
-  "[Type Error] array \"" ^ aname ^ "\" has " ^ (string_of_int expected) ^
+  "[Type Error] array `" ^ aname ^ "' has " ^ (string_of_int expected) ^
   " dimension" ^ e_dim_end ^ "; attempted array access implies " ^
   (string_of_int actual) ^ " dimension" ^ a_dim_end
