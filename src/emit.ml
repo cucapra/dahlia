@@ -19,8 +19,8 @@ let newline = "\n"
 let concat = List.fold_left (fun acc e -> acc ^ e) ""
 
 let s_pragma_unroll u i =
-  concat [ "#pragma HLS UNROLL factor="; u ]
-  |> indent i
+  if u = "1" then ""
+  else concat [ "#pragma HLS UNROLL factor="; u ] |> indent i
 
 let s_pragma_bank id bf i =
   if bf=1 then ""
