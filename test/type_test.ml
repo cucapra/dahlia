@@ -7,7 +7,7 @@ let%expect_test "let expressions" =
   [%expect {| int y = 10; |}]
 
 let%expect_test "add" =
-  compile_string "let x = 2.5; let z = 3.5; x + z";
+  compile_string "let x = 2.5; let z = 3.5; x + z;";
   [%expect {|
     float x = 2.5;
     float z = 3.5;

@@ -62,7 +62,7 @@ acmd:
     LBRACK cmd RBRACK                                       { CFor ($4, $6, $8, $11, $13) }
   | FOR LPAREN LET ID EQUAL expr RANGE_DOTS expr RPAREN
     LBRACK cmd RBRACK                                       { CFor ($4, $6, $8, 1, $11) }
-  | expr                                                    { CExpr $1 }
+  | expr SEMICOLON                                          { CExpr $1 }
 
 expr:
   | ID access                                   { EAA ($1, $2) }
