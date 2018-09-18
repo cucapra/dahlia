@@ -32,3 +32,8 @@ let%expect_test "Cannot reassign to different type" =
     [Type Error] cannot assign value of type `idx<1 .. 2, 0 .. 1>' to L-value of type `float' |}]
 ;;
 
+let%expect_test "Cannot use array twice" =
+  compile_string_with_failure "func foo(a: int[10]) { let x = a[1]; let y = a[1]; }";
+  [%expect {|
+    [Type Error] cannot assign value of type `idx<1 .. 2, 0 .. 1>' to L-value of type `float' |}]
+;;

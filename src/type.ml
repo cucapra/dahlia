@@ -93,7 +93,7 @@ and check_aa id idx_exprs c : type_node * gamma =
       let unrollf = compute_unrollf idx_exprs c in
       if (bf mod unrollf)=0 then
         try
-          let banks = Core.List.range 0 (unrollf-1) in
+          let banks = Core.List.range 0 unrollf in
           t, (Context.consume_aa_lst id banks c)
         with AlreadyConsumed bank -> raise @@ TypeError (illegal_bank bank id)
       else
