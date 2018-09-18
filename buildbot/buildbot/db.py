@@ -97,16 +97,29 @@ class JobDB:
 
         return job
 
-    def _add(self, state):
-        name = secrets.token_urlsafe(8)
+    def _init(self, name, state):
+        """Given the name of a job *whose directory already exists*,
+        initialize with a database entry. In other words, create the job
+        for existing on-disk job-related files. Return the new job.
+        """
         job = {
             'name': name,
             'started': time.time(),
             'state': state,
             'log': [],
         }
-        os.mkdir(self.job_dir(name))
         self._write(job)
+        return job
+
+    def _gen_name(self):
+        """Generate a new, random job name.
+        """
+        return secrets.token_urlsafe(8)
+
+    def _add(self, state):
+        name = self._gen_name()
+        os.mkdir(self.job_dir(name))
+        job = self._init(name, state)
         return job
 
     def add(self, state):
@@ -118,16 +131,20 @@ class JobDB:
         return job
 
     @contextmanager
-    def create(self, start_state, end_state):
-        """A context manager for creating initializing a new job. The
-        job directory is created, and the working directory is
-        temporarily changed there.
+    def create(self, state):
+        """A context manager for creating a new job. A directory is
+        created for the job, and the working directory is temporarily
+        changed there, and *then* the job is initialized in the given
+        state. The context gets the new job's name.
         """
-        job = self.add(start_state)
-        path = self.job_dir(job['name'])
-        with chdir(path):
-            yield job
-        self.set_state(job, end_state)
+        name = self._gen_name()
+        job_dir = self.job_dir(name)
+        os.mkdir(job_dir)
+        with chdir(job_dir):
+            yield name
+        with self.cv:
+            self._init(name, state)
+            self.cv.notify_all()
 
     def set_state(self, job, state):
         """Update a job's state.

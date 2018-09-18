@@ -70,19 +70,17 @@ def add_job():
             return 'invalid extension {}'.format(ext), 400
 
         # Create the job and save the archive file.
-        with db.create('uploading', 'uploaded') as job:
+        with db.create('uploaded') as name:
             file.save(ARCHIVE_NAME + ext)
-            name = job['name']
 
     elif 'code' in request.values:
         code = request.values['code']
 
         # Create a job and save the code to a file.
-        with db.create('uploading', 'unpacked') as job:
+        with db.create('unpacked') as name:
             os.mkdir(CODE_DIR)
             with open(os.path.join(CODE_DIR, 'main.ss'), 'w') as f:
                 f.write(code)
-            name = job['name']
 
     else:
         return 'missing code or file', 400
