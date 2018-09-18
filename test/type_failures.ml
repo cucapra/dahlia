@@ -17,7 +17,7 @@ let%expect_test "Cannot access one dimensional array as multidimensional" =
 let%expect_test "Cannot access non-existent bank" =
   compile_string_with_failure "func foo(a: int[10], x: int) { a{1}[1] }";
   [%expect {|
-    [Type error] memory `a' illegal access: bank 1 |}]
+    [Type error] Bank 1 already consumed for memory `a' |}]
 ;;
 
 let%expect_test "Cannot assign incorrect type to array" =
@@ -35,5 +35,5 @@ let%expect_test "Cannot reassign to different type" =
 let%expect_test "Cannot use array twice" =
   compile_string_with_failure "func foo(a: int[10]) { let x = a[1]; let y = a[1]; }";
   [%expect {|
-    [Type Error] cannot assign value of type `idx<1 .. 2, 0 .. 1>' to L-value of type `float' |}]
+    [Type error] Bank 0 already consumed for memory `a' |}]
 ;;
