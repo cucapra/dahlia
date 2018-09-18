@@ -9,7 +9,7 @@ exception TypeError of string
  * This relies on the assumption that our ideas about banking across
  * multiple dimensions is correct; these ideas are detailed in
  * [https://capra.cs.cornell.edu/seashell/docs/indextype.html]. *)
-let compute_bf dims =
+let compute_bank_factor dims =
   List.fold_left (fun acc (_, b) -> acc * b) 1 dims
 
 (** [check_expr exp (ctx, delta)] is [t, (ctx', delta')], where [t] is the
@@ -62,15 +62,12 @@ and check_banked_aa id idx1 idx2 c : type_node * gamma =
  * the index type accessor expressions [idx_exprs], each of which should be of
  * type [TIndex (s, d)]. Raises [TypeError s] if [idx_exprs] contains invalid
  * array access types, i.e. non-index types. *)
-and compute_unrollf idx_exprs c =
+and compute_unroll_factor idx_exprs c =
   match idx_exprs with
-  | h::t ->
-    begin
-      match check_expr h c with
-      | TIndex ((ls, hs), _), _ -> (hs - ls) * compute_unrollf t c
-      | _ -> raise (TypeError "Logical array access must be with idx types")
-    end
   | [] -> 1
+  | h::t -> match check_expr h c with
+    | TIndex ((ls, hs), _), _ -> (hs - ls) * compute_unroll_factor t c
+    | _ -> raise (TypeError "Logical array access must be with idx types")
 
 (** [check_aa id idx_exprs (c, d)] represents a _normal array access_,
  * accessing array with identifier [id], where [idx_exprs] is a list of
@@ -89,9 +86,9 @@ and check_aa id idx_exprs c : type_node * gamma =
       then raise
         (TypeError (incorrect_aa_dims id num_dimensions access_dimensions))
     else
-      let bf = compute_bf dims in
-      let unrollf = compute_unrollf idx_exprs c in
-      if (bf mod unrollf)=0 then
+      let bf = compute_bank_factor dims in
+      let unrollf = compute_unroll_factor idx_exprs c in
+      if (bf mod unrollf) = 0 then
         try
           let banks = Core.List.range 0 unrollf in
           t, (Context.consume_aa_lst id banks c)

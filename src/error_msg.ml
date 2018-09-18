@@ -13,7 +13,7 @@ let rec string_of_type = function
   | _ -> failwith "Implement me!"
 
 let illegal_bank i id =
-  "[Type error] memory `" ^ id ^ "' illegal access: bank " ^ string_of_int i
+  "[Type error] Bank " ^ (string_of_int i) ^ " already consumed for memory `" ^ id ^ "'"
 
 let range_error =
   "[Type error] range start/end must be integers"
