@@ -94,12 +94,15 @@ access:
   | LSQUARE expr RSQUARE          { [$2] }
   | LSQUARE expr RSQUARE access   { $2 :: $4 }
 
-type_annotation:
+basic_type:
   | BOOL_ANNOTATION             { TBool }
   | INT_ANNOTATION              { TIndex ((0, 1), (min_int, max_int)) }
   | FLOAT_ANNOTATION            { TFloat }
-  | type_annotation array_def   { TArray ($1, $2) }
   | ID                          { TAlias $1 }
+
+type_annotation:
+  | basic_type             { $1 }
+  | basic_type array_def   { TArray ($1, $2) }
 
 %inline binop:
   | NEQ     { BopNeq }
