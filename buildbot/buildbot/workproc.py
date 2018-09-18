@@ -1,8 +1,30 @@
 import curio
 import os
+from . import worker
+from . import db
+from flask.config import Config
+import sys
 
 
 class WorkProc:
+    def __init__(self, basedir):
+        # Load the configuration. We're just reusing Flask's simple
+        # configuration component here.
+        self.config = Config(basedir)
+        self.config.from_object('buildbot.config_default')
+        self.config.from_pyfile('buildbot.cfg', silent=True)
+
+        # Create the database.
+        self.db = db.JobDB(basedir)
+
+    def start(self):
+        """Create and start the worker threads.
+        """
+        threads = worker.work_threads(self.db, self.config)
+        for thread in threads:
+            if not thread.is_alive():
+                thread.start()
+
     async def handle(self, client, addr):
         """Handle an incoming socket connection.
         """
@@ -23,4 +45,6 @@ class WorkProc:
 
 
 if __name__ == '__main__':
-    WorkProc().serve()
+    p = WorkProc(sys.argv[1])
+    p.start()
+    p.serve()
