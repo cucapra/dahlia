@@ -30,6 +30,7 @@ type type_node =
   | TFloat
   | TAlias of id
   | TMux of id * int
+  | TLin of type_node
   | TArray of type_node * (int * int) list
   | TIndex of (int * int) * (int * int)
   | TFunc of type_node list

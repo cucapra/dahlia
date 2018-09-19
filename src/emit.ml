@@ -33,10 +33,10 @@ let s_pragma_bank id bf i =
 let compute_array_size dims =
   List.fold_left (fun acc (s, _) -> s * acc) 1 dims
 
-let type_str = function
-  | TBool
-  | TFloat        -> "float"
-  | TIndex _      -> "int"
+let rec type_str = function
+  | TBool | TFloat -> "float"
+  | TIndex _ -> "int"
+  | TLin t -> Printf.sprintf "/* Linear %s */" (type_str t)
   | TAlias _ -> failwith "Should be impossible: Final AST contains TAlias"
   | TArray _ -> failwith "Implement array type stringified version"
   | TMux _ -> failwith "Implement muxes me!"
