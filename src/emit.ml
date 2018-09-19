@@ -34,8 +34,8 @@ let compute_array_size dims =
   List.fold_left (fun acc (s, _) -> s * acc) 1 dims
 
 let rec type_str = function
-  | TBool | TFloat -> "float"
-  | TIndex _ -> "int"
+  | TBool | TIndex _ -> "int"
+  | TFloat -> "float"
   | TLin t -> Printf.sprintf "/* Linear %s */" (type_str t)
   | TAlias _ -> failwith "Should be impossible: Final AST contains TAlias"
   | TArray _ -> failwith "Implement array type stringified version"
@@ -43,7 +43,7 @@ let rec type_str = function
   | TFunc _ -> failwith "Cannot emit function type."
 
 let rec emit_expr = function
-  | EInt i          -> string_of_int i
+  | EInt i               -> string_of_int i
   | EFloat f             -> string_of_float f
   | EBool b              -> if b then "1" else "0"
   | EVar id              -> id
@@ -91,13 +91,13 @@ and emit_aa_logl (id, idx_exprs) =
   | _ -> failwith "Tried to index into non-array"
 
 and argvals =
-  List.map ((fun (id, t) ->
+  List.map (fun (id, t) ->
     match t with
       | TArray (t, d) ->
         let s = List.fold_left (fun acc (s, _) -> s * acc) 1 d in
         concat [ (type_str t); " "; id; "["; (string_of_int s); "]" ]
       | t -> concat [ (type_str t); " "; id  ]
-  ))
+  )
 
 and emit_args args =
   (fun acc e -> concat [ acc; ", "; e ]) |> fun f ->
@@ -112,7 +112,7 @@ and emit_app (id, args) i =
 
 let rec emit_cmd i cmd =
   match cmd with
-  | CWrite _                   -> ""
+  | CCap _                     -> ""
   | CAssign (id, e)            -> emit_assign (id, e) i
   | CReassign (target, e)      -> emit_reassign (target, e) i
   | CFor (id, r1, r2, u, body) -> emit_for (id, r1, r2, body, u) i
