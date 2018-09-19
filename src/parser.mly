@@ -19,7 +19,7 @@ let parse_sequence c1 c2 =
 (* Keywords *)
 %token LET IF FOR TRUE FALSE INT_ANNOTATION
        BOOL_ANNOTATION FLOAT_ANNOTATION
-       MUX UNROLL BANK FUNC TYPE WRITE AS
+       MUX UNROLL BANK FUNC TYPE WRITE READ AS
 
 (* Parentheses, brackets, etc *)
 %token LPAREN RPAREN LBRACK RBRACK LSQUARE RSQUARE
@@ -50,7 +50,8 @@ cmd:
   | acmd cmd  { parse_sequence $1 $2 }
 
 acmd:
-  | WRITE expr AS ID SEMICOLON                              { CWrite($2, $4)}
+  | WRITE expr AS ID SEMICOLON                              { CCap(Write, $2, $4)}
+  | READ expr AS ID SEMICOLON                               { CCap(Read, $2, $4)}
   | MUX INT ID LPAREN ID RPAREN SEMICOLON                   { CMuxDef ($3, $5, $2) }
   | ID LPAREN args RPAREN SEMICOLON                         { CApp ($1, $3) }
   | TYPE ID EQUAL type_annotation SEMICOLON                 { CTypeDef ($2, $4) }

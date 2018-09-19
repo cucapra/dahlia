@@ -47,6 +47,7 @@ rule token =
   | "||"         { OR }
 
   | "write"      { WRITE }
+  | "read"       { READ }
   | "as"         { AS }
 
   | "mux"        { MUX }

@@ -47,7 +47,7 @@ let rec resolve_cmd_seq clst dta = match clst with
       c1 :: ctl, dta2
 
 and resolve_cmd cmd dta : command * delta = match cmd with
-  | CMuxDef _ | CWrite _ | CAssign _ | CReassign _ | CApp _ | CExpr _ -> cmd, dta
+  | CMuxDef _ | CCap _ | CAssign _ | CReassign _ | CApp _ | CExpr _ -> cmd, dta
   | CIf (e, c) ->
       let (c1, dta1) = resolve_cmd c dta in
       CIf (e, c1), dta1

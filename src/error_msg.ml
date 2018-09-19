@@ -21,8 +21,17 @@ let access_without_index_type typ =
   sprintf "[Type error] Cannot index into array with %s; expected an index type."
     (string_of_type typ)
 
-let range_error =
-  "[Type error] range start/end must be integers"
+let range_error t1 t2 =
+  sprintf
+    "[Type error] Expected range start and end to be integers, received start: %s, end %s."
+    (string_of_type t1)
+    (string_of_type t2)
+
+let range_static_error t1 t2 =
+  sprintf
+    "[Type Error] Expected range start and end to be static integers, received start:%s, end:%s."
+    (string_of_type t1)
+    (string_of_type t2)
 
 let unexpected_type id actual expected =
   "[Type error] " ^ id ^
@@ -58,8 +67,8 @@ let static_bank_error =
 let improper_unroll =
   "[Type Error] unroll factor must be a multiple of banking factor"
 
-let range_static_error =
-  "[Type Error] range start/end must be static"
+let cap_non_array =
+  "[Type Error] Only array expressions are allowed in capability statements."
 
 let reassign_type_mismatch t_lval t_rval =
   "[Type Error] cannot assign value of type `" ^
