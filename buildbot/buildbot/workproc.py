@@ -11,6 +11,10 @@ SOCKNAME = 'workproc.sock'
 
 
 class WorkProc:
+    """A container process for our worker threads that can receive
+    notifications from a Unix domain socket.
+    """
+
     def __init__(self, basedir):
         self.basedir = basedir
 
@@ -55,6 +59,21 @@ class WorkProc:
             pass
         finally:
             os.unlink(sockpath)
+
+
+def notify(basedir, jobname):
+    """Notify a running workproc that a new job has been added to the
+    database (via the socket in basedir).
+    """
+    curio.run(_notify, basedir, jobname)
+
+
+async def _notify(basedir, jobname):
+    sockpath = os.path.join(basedir, SOCKNAME)
+    line = (jobname + '\n').encode('utf8')
+    sock = await curio.open_unix_connection(sockpath)
+    await sock.makefile('wb').write(line)
+    await sock.close()
 
 
 if __name__ == '__main__':
