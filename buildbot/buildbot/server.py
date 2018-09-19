@@ -3,7 +3,7 @@ from flask import request
 import os
 from io import StringIO
 import csv
-from . import worker
+from . import workproc
 from .db import JobDB, ARCHIVE_NAME, CODE_DIR, NotFoundError
 from datetime import datetime
 import re
@@ -49,13 +49,27 @@ def _datetime_filter(value, withtime=True):
 
 
 @app.before_first_request
-def start_work_threads():
-    """Create and start our worker threads.
+def start_workers():
+    """Start the workers, if necessary.
+
+    In WORKER_THREADS mode, start a bunch of threads *in this process*
+    to do the work. This is *not safe* if there might be multiple server
+    processes or threads, which will all start different copies of the
+    worker threads! Otherwise, we will use an existing workproc.
     """
-    work_threads = worker.work_threads(db, app.config)
-    for thread in work_threads:
-        if not thread.is_alive():
-            thread.start()
+    if app.config['WORKER_THREADS']:
+        proc = workproc.WorkProc(app.instance_path)
+        proc.start()
+
+
+def notify_workers(jobname):
+    """Notify the workers that a new job has been created.
+
+    Unless we're in WORKER_THREADS mode, we send a message to the
+    (already-running) workproc.
+    """
+    if not app.config['WORKER_THREADS']:
+        workproc.notify(app.instance_path, jobname)
 
 
 @app.route('/jobs', methods=['POST'])
@@ -72,6 +86,7 @@ def add_job():
         # Create the job and save the archive file.
         with db.create('uploaded') as name:
             file.save(ARCHIVE_NAME + ext)
+        notify_workers(name)
 
     elif 'code' in request.values:
         code = request.values['code']
@@ -81,6 +96,7 @@ def add_job():
             os.mkdir(CODE_DIR)
             with open(os.path.join(CODE_DIR, 'main.ss'), 'w') as f:
                 f.write(code)
+        notify_workers(name)
 
     else:
         return 'missing code or file', 400

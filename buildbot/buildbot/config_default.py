@@ -1,6 +1,15 @@
+# The extensions to allow for uploaded code archives.
 UPLOAD_EXTENSIONS = ['zip']
+
+# The executable name for the Seashell compiler (seac).
 SEASHELL_COMPILER = 'seac'
+
+# A prefix command to use *before* the invocations of Xilinx tools.
 HLS_COMMAND_PREFIX = []
+
+# Spawn threads inside the server process for the workers (instead of
+# using a separate worker process).
+WORKER_THREADS = True
 
 # Filename extensions to send as plain text for job file viewing.
 TEXT_EXTENSIONS = [
