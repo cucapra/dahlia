@@ -58,7 +58,7 @@ def start_workers():
     worker threads! Otherwise, we will use an existing workproc.
     """
     if app.config['WORKER_THREADS']:
-        proc = workproc.WorkProc(app.instance_path)
+        proc = workproc.WorkProc(app.instance_path, db)
         proc.start()
 
 

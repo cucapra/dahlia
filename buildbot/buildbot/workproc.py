@@ -1,7 +1,7 @@
 import curio
 import os
 from . import worker
-from . import db
+from .db import JobDB
 from flask.config import Config
 import sys
 
@@ -15,7 +15,12 @@ class WorkProc:
     notifications from a Unix domain socket.
     """
 
-    def __init__(self, basedir):
+    def __init__(self, basedir, db=None):
+        """Create a container using a given base directory for the
+        storage and socket. Optionally, provide a database object to use
+        that instead of creating a new one (to, for example, reuse its
+        internal locks).
+        """
         self.basedir = basedir
 
         # Load the configuration. We're just reusing Flask's simple
@@ -25,7 +30,7 @@ class WorkProc:
         self.config.from_pyfile('buildbot.cfg', silent=True)
 
         # Create the database.
-        self.db = db.JobDB(basedir)
+        self.db = db or JobDB(basedir)
 
     def start(self):
         """Create and start the worker threads.
