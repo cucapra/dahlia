@@ -24,7 +24,7 @@ EXPOSE 8000
 ENV PIPENV_PIPFILE=buildbot/Pipfile
 CMD ["pipenv", "run", \
      "gunicorn", "--bind", "0.0.0.0:8000", "--chdir", "buildbot", \
-     "buildbot:app"]
+     "buildbot.server:app"]
 
 # Add Seashell source.
 ADD . seashell

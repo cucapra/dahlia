@@ -10,7 +10,7 @@ Running the Buildbot
 To run your own server, get [pipenv][], then type `pipenv install`.
 Then, to run a local server:
 
-    $ FLASK_APP=buildbot pipenv run flask run
+    $ FLASK_APP=buildbot.server pipenv run flask run
 
 You can also use `make dev` as a shortcut (with debugging enabled).
 Also, `make serve` runs a production server using [Gunicorn][].
