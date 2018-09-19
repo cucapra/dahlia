@@ -6,8 +6,14 @@ from flask.config import Config
 import sys
 
 
+INSTANCE_DIR = 'instance'
+SOCKNAME = 'workproc.sock'
+
+
 class WorkProc:
     def __init__(self, basedir):
+        self.basedir = basedir
+
         # Load the configuration. We're just reusing Flask's simple
         # configuration component here.
         self.config = Config(basedir)
@@ -38,10 +44,11 @@ class WorkProc:
                 with self.db.cv:
                     self.db.cv.notify_all()
 
-    def serve(self, sockpath='workproc.sock'):
+    def serve(self, sockname=SOCKNAME):
         """Start listening on a Unix domain socket for incoming
         messages. Run indefinitely (until the server is interrupted).
         """
+        sockpath = os.path.join(self.basedir, SOCKNAME)
         try:
             curio.run(curio.unix_server, sockpath, self.handle)
         except KeyboardInterrupt:
@@ -51,6 +58,6 @@ class WorkProc:
 
 
 if __name__ == '__main__':
-    p = WorkProc(sys.argv[1])
+    p = WorkProc(sys.argv[1] if len(sys.argv) > 1 else INSTANCE_DIR)
     p.start()
     p.serve()
