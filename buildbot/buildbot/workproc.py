@@ -21,16 +21,16 @@ class WorkProc:
         that instead of creating a new one (to, for example, reuse its
         internal locks).
         """
-        self.basedir = basedir
+        self.basedir = os.path.abspath(basedir)
 
         # Load the configuration. We're just reusing Flask's simple
         # configuration component here.
-        self.config = Config(basedir)
+        self.config = Config(self.basedir)
         self.config.from_object('buildbot.config_default')
         self.config.from_pyfile('buildbot.cfg', silent=True)
 
         # Create the database.
-        self.db = db or JobDB(basedir)
+        self.db = db or JobDB(self.basedir)
 
     def start(self):
         """Create and start the worker threads.
