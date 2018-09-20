@@ -4,6 +4,7 @@ from . import worker
 from .db import JobDB
 from flask.config import Config
 import sys
+import subprocess
 
 
 INSTANCE_DIR = 'instance'
@@ -53,7 +54,7 @@ class WorkProc:
                 with self.db.cv:
                     self.db.cv.notify_all()
 
-    def serve(self, sockname=SOCKNAME):
+    def serve(self):
         """Start listening on a Unix domain socket for incoming
         messages. Run indefinitely (until the server is interrupted).
         """
@@ -79,6 +80,17 @@ async def _notify(basedir, jobname):
     sock = await curio.open_unix_connection(sockpath)
     await sock.makefile('wb').write(line)
     await sock.close()
+
+
+def launch(basedir, force=False):
+    """Spawn a new worker process. Unless `force` is set, do nothing if
+    the socket already exists (which is evidence that a worker is
+    already running).
+    """
+    sockpath = os.path.join(basedir, SOCKNAME)
+    if os.path.exists(sockpath) and not force:
+        return
+    subprocess.Popen([sys.executable, '-m', __name__, basedir])
 
 
 if __name__ == '__main__':

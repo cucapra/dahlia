@@ -59,11 +59,17 @@ def start_workers():
     In WORKER_THREADS mode, start a bunch of threads *in this process*
     to do the work. This is *not safe* if there might be multiple server
     processes or threads, which will all start different copies of the
-    worker threads! Otherwise, we will use an existing workproc.
+    worker threads!
+
+    Otherwise, in WORKER_PROCESS mode, try starting the workproc if it
+    does not already seem to be running (as evidenced by the presence of
+    its Unix domain socket).
     """
     if app.config['WORKER_THREADS']:
         proc = workproc.WorkProc(app.instance_path, db)
         proc.start()
+    elif app.config['WORKER_PROCESS']:
+        workproc.launch(app.instance_path)
 
 
 def notify_workers(jobname):
