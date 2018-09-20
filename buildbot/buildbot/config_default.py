@@ -8,8 +8,9 @@ SEASHELL_COMPILER = 'seac'
 HLS_COMMAND_PREFIX = []
 
 # Spawn threads inside the server process for the workers (instead of
-# using a separate worker process).
-WORKER_THREADS = True
+# using a separate worker process). The default (None) means True in the
+# development environment and False in production.
+WORKER_THREADS = None
 
 # Filename extensions to send as plain text for job file viewing.
 TEXT_EXTENSIONS = [

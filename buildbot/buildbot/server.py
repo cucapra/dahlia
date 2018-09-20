@@ -15,6 +15,10 @@ app = flask.Flask(__name__, instance_relative_config=True)
 app.config.from_object('buildbot.config_default')
 app.config.from_pyfile('buildbot.cfg', silent=True)
 
+# Use worker threads by default in development.
+if app.config['WORKER_THREADS'] is None:
+    app.config['WORKER_THREADS'] = (app.env == 'development')
+
 # Connect to our database.
 db = JobDB(app.instance_path)
 
