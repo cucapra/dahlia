@@ -59,35 +59,8 @@ $$
 (s_0 + |0..k_0|*d_0)*\sigma_1*\sigma_2 + (s_1 + |0..k_1|*d_1)*\sigma_2 + (s_2 + |0..k_2|*d_2)*1
 $$
 
-Array banking strategies with 3-D example
------------------------------------------
-
-We are interested in the indices being used to access $\text{a}_f$, so we can restrict the banks that a Seashell programmer can access. However, which banks the programmer accesses is influenced by the array banking strategy. Here are a few ways we could bank $\text{a}_f$.
-
-#### Bank Interleaving
-We could interleave the elements of $\text{a}_f$ among its banks, like this (each rectangle represents a bank):
-
-| 0 5 10 15 20 25 | 1 6 11 16 21 26 | 2 7 12 17 22 27 | 3 8 13 18 23 28 | 4 9 14 19 24 29 |
-| --- | --- | --- | --- | --- |
-
-Then, given an index $i_f$ into $\text{a}_f$, we could determine the bank being accessed with $i \bmod b$. The index offset into the bank would be $i / b$.
-
-#### Bank Chunking
-We could simply divide $a_f$ into banks, like this:
-
-| 0 1 2 3 4 5 | 6 7 8 9 10 11 | 12 13 14 15 16 17 | 18 19 20 21 22 23 | 24 25 26 27 28 29 |
-| --- | --- | --- | --- | --- |
-
-Then, we could use $i / b$ to find the relevant bank, and $i \bmod b$ to find the index within the bank.
-
-Both have use cases, but we won't go into those here.
-
-##### Example 3
-Consider the array $a$ defined in example 1. Assume interleaving. If we index into $a_f$ with $i_f=29$, the bank accessed would be $29 \bmod 5 = 4$, and the index into this bank would be $29 / 5 = 5$. In other words, we would access the 5th element in the 4th bank.
-
 2-D array examples to visualize multi-dimensional access
 --------------------------------------------------------
-
 
 ##### Example 1
 Consider a two-dimensional array $\text{a}$ defined like this:
@@ -156,34 +129,10 @@ where $$ \sigma_1 = 2 $$
 
 For a pair of $\langle d_0,d_1 \rangle = \langle 0,1 \rangle$:
 
-  - $(0+4*0)*2 + (0+1*1)=1$
-  - $(1+4*0)*2 + (0+1*1)=3$
-  - $(2+4*0)*2 + (0+1*1)=5$
-  - $(3+4*0)*2 + (0+1*1)=7$
-
-
-Array Banking Strategies with 2-D example
------------------------------------------
-
-We are interested in the computing the indices being used to access flattened arrays,, so we can restrict the banks that a Seashell programmer can access. However, which banks the programmer accesses is influenced by the array banking strategy. This section will outine a couple of banking strategies. We'll show what it looks like to bank $\text{a}_f$, based on array $\text{a}$ from the example in the previous section.
-
-#### Bank Interleaving/Cyclic Banking.
-We could interleave the elements of $\text{a}_f$ among its banks, like this (each rectangle represents a bank):
-
-| 0 4 | 1 5 | 2 6 | 3 7 |
-| --- | --- | --- | --- |
-
-Then, given an index $i_f$ into $\text{a}_f$, we could determine the bank being accessed with $i_f \bmod b$. The index offset into the bank would be $i_f / b$.
-
-#### Bank Chunking/Block Banking
-We could simply divide $a_f$ into banks, like this:
-
-| 0 1 | 2 3 | 4 5 | 6 7 |
-| --- | --- | --- | --- |
-
-Then, we could use $i_f / b$ to find the relevant bank, and $i_f \bmod b$ to find the index within the bank.
-
-Both have use cases, but we won't go into those here. For the remainder of this document we'll assume we're using bank interleaving, but we could have similar results with chunking.
+- $(0+4*0)*2 + (0+1*1)=1$
+- $(1+4*0)*2 + (0+1*1)=3$
+- $(2+4*0)*2 + (0+1*1)=5$
+- $(3+4*0)*2 + (0+1*1)=7$
 
 Modulus proof
 -------------
