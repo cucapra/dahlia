@@ -1,6 +1,6 @@
------
+---
 title: Appendix
------
+---
 
 3-D array examples to visualize multi-dimensional access
 --------------------------------------------------------
