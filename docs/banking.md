@@ -44,6 +44,27 @@ $$\tag{1}
 \sum_{j=1}^n \left ( (i_j \bmod b_j) \times \prod_{k=i+1}^n b_k \right )
 $$
 
+We also define the following function to simplify our proofs:
+
+$$\tag{2}
+\mathcal{B}_t(i_1, \ldots, i_n) = (i_1 \bmod b_1, \ldots, i_n \bmod b_n)
+$$
+
+and define the following lemma:
+
+::: todo
+@Sachille, you mentioned the following lemma in a meeting. Can you add your proof
+here.
+:::
+
+::: formula
+**Lemma.**
+$$
+\forall x,y : \mathcal{B}_t(x) \neq \mathcal{B}_t(y) \iff
+              \mathcal{B}(x) \neq \mathcal{B}(y)
+$$
+:::
+
 ## Block based banking
 Block based banking puts logically consecutive elements in an array into the
 same bank. An intuitive way of thinking about this is choping up an array in
