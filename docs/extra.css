@@ -23,6 +23,12 @@ div.todo > p:last-child {
     margin-bottom: 0;
 }
 
+/* Put lemmas, theorems, etc. in a box */
+
+div.formula {
+  padding-left: 1em;
+}
+
 .formula {
   border: 1px solid black;
   border-radius: 11px;
