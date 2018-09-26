@@ -1,6 +1,9 @@
 ---
 title: Appendix
 ---
+::: todo
+These examples use the old banking notation. Update these or remove these.
+:::
 
 3-D array examples to visualize multi-dimensional access
 --------------------------------------------------------
