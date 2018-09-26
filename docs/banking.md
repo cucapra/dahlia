@@ -32,6 +32,18 @@ factor $b$, we have the following:
 - bank number: $i \bmod b$
 - index in the bank: $\lfloor i \div b \rfloor$
 
+### Generalization to $n$ dimensions
+
+Since seashell allows banking in mutliple dimensions, we need a function that
+maps a banking structure and indices to a specific bank. So, given an array
+$a[\sigma_1\text{ bank }(b_1)]\ldots[\sigma_n\text{ bank }(b_n)]$, we define the
+function $\mathcal{B}$ as
+
+$$\tag{1}
+\mathcal{B}(i_1, \ldots, i_n) =
+\sum_{j=1}^n \left ( (i_j \bmod b_j) \times \prod_{k=i+1}^n b_k \right )
+$$
+
 ## Block based banking
 Block based banking puts logically consecutive elements in an array into the
 same bank. An intuitive way of thinking about this is choping up an array in
