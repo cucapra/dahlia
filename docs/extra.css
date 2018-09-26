@@ -22,3 +22,8 @@ div.todo > p:first-child {
 div.todo > p:last-child {
     margin-bottom: 0;
 }
+
+.formula {
+  border: 1px solid black;
+  border-radius: 11px;
+}
