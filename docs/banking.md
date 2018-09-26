@@ -59,7 +59,7 @@ here.
 
 ::: formula
 **Lemma.**
-$$
+$$\tag{3}
 \forall x,y : \mathcal{B}_t(x) \neq \mathcal{B}_t(y) \iff
               \mathcal{B}(x) \neq \mathcal{B}(y)
 $$

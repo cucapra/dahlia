@@ -140,11 +140,19 @@ Finally, we show that $0$ and $n-1$ form the lower and upper bounds. Since $s$,
 $k$, and $d$ are positive, the $\min(S) = 0 + k \times \frac{l}{k} = l$ and
 $\max(S) = k + k \times \frac{h - k}{k} = h$. Therefore, $S = l..h$.
 
-**Iteration space for multidimensional arrays**. This reasoning can be easily extended to
+**Iteration space for multidimensional arrays**. This reasoning can be easily
+*extended to
 multiple dimensions. The expression $s + k \times d$ repeats for each
-dimension's configuration.  The elements of $S$ can be represented as an
+dimension's configuration. The elements of $S$ can be represented as an
 n-tuple. Since each dimension has a separate and independent component in the
 tuple, the reasoning above can be applied to each element.
+
+Therefore, we have the following theorem:
+
+::: formula
+**Value space theorem.** The values represented by an index type $idx\langle
+*l_s..h_s, d_s..h_s \rangle$ are all distinct.
+:::
 
 Operations
 ----------
