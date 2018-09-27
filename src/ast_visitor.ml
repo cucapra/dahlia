@@ -20,14 +20,19 @@ class ['s] ast_mapper = object(self)
     | TArray (t, is)  -> self#tarray (t, is) st
     | TIndex (s, d) -> self#tindex (s, d) st
     | TFunc ts -> self#tfunc ts st
+    | TLin t -> self#tlin t st
 
   method private tbool st = TBool, st
   method private tfloat st = TFloat, st
   method private talias id st = TAlias id, st
   method private tmux (t1, t2) st = TMux (t1, t2), st
-  method private tarray (t1, t2) st = TArray (t1, t2), st
+  method private tarray (t1, t2) st =
+    let t1', st1 = self#type_node t1 st in TArray (t1', t2), st1
   method private tindex (t1, t2) st = TIndex (t1, t2), st
-  method private tfunc ts st = TFunc ts, st
+  method private tfunc ts st =
+    let ts', st' = self#list_visit self#type_node ts st in TFunc ts', st'
+  method private tlin t st =
+    let t', st' = self#type_node t st in TLin t', st'
 
   method binop op st = op, st
 
@@ -58,8 +63,10 @@ class ['s] ast_mapper = object(self)
     let e2', st2 = self#expr e2 st1 in
     EBankedAA (id, e1', e2'), st2
 
+  method private capability cap st = cap, st
+
   method command (cmd : command) (st : 's) : command * 's = match cmd with
-    | CWrite (i, e) -> self#cwrite (i, e) st
+    | CCap (cap, e, id) -> self#ccap (cap, e, id) st
     | CAssign (id, e) -> self#cassign (id, e) st
     | CFor (id, e1, e2, i, c) -> self#cfor (id, e1, e2, i, c) st
     | CReassign (e1, e2) -> self#creassign (e1, e2) st
@@ -71,9 +78,10 @@ class ['s] ast_mapper = object(self)
     | CApp (id, es) -> self#capp (id, es) st
     | CExpr e -> self#cexpr e st
 
-  method private cwrite (e, id) st =
-    let e', st' = self#expr e st in
-    CWrite (e', id), st'
+  method private ccap (cap, e, id) st =
+    let cap', st1 = self#capability cap st in
+    let e', st2 = self#expr e st1 in
+    CCap (cap', e', id), st2
   method private cassign (id, e) st =
     let e', st' = self#expr e st in
     CAssign (id, e'), st'
