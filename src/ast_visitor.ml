@@ -43,7 +43,7 @@ class ['s] ast_mapper = object(self)
     | EBool b -> self#ebool b st
     | EBinop (op, e1, e2) -> self#ebinop (op, e1, e2) st
     | EAA (id, es) -> self#eaa (id, es) st
-    | EBankedAA (id, e1, e2) -> self#ebaa (id, e1, e2) st
+    | EBankedAA (id, e1, e2) -> self#ebankedaa (id, e1, e2) st
 
   method private eint i st = EInt i, st
   method private ebool i st = EBool i, st
@@ -58,7 +58,7 @@ class ['s] ast_mapper = object(self)
   method private eaa (id, es) st =
     let es', st' = self#elist_visit es st in
     EAA (id, es'), st'
-  method private ebaa (id, e1, e2) st =
+  method private ebankedaa (id, e1, e2) st =
     let e1', st1 = self#expr e1 st in
     let e2', st2 = self#expr e2 st1 in
     EBankedAA (id, e1', e2'), st2
@@ -78,6 +78,7 @@ class ['s] ast_mapper = object(self)
     | CApp (id, es) -> self#capp (id, es) st
     | CExpr e -> self#cexpr e st
 
+  method private clist_visit cs st = self#list_visit self#command cs st
   method private ccap (cap, e, id) st =
     let cap', st1 = self#capability cap st in
     let e', st2 = self#expr e st1 in
@@ -99,7 +100,7 @@ class ['s] ast_mapper = object(self)
     let c', st2 = self#command c st1 in
     CIf (e', c'), st2
   method private cseq cs st =
-    let cs', st' = self#list_visit self#command cs st in
+    let cs', st' = self#clist_visit cs st in
     CSeq cs', st'
   method private cfuncdef (id, g, c) st =
     let f (i, t) st =
