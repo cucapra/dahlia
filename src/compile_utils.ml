@@ -32,9 +32,15 @@ let emit_code ast ctx =
 
 let compile_string prog print_ast : unit =
   Printexc.record_backtrace false;
-  let ast = parse_with_error prog |> show_ast print_ast "Parsed AST" in
-  let rast = Resolve_alias.remove_aliases ast |> show_ast print_ast "Resolved AST" in
-  let iast = Infer_cap.infer_cap rast |> fst |> show_ast print_ast "With capabilities" in
-  let fast = Flatten_seq.flatten_seq iast |> show_ast print_ast "Flattened" in
-  let ctx = typecheck_with_error fast in
-  emit_code fast ctx
+  let ast_and_cap_ctx = parse_with_error prog
+    |> show_ast print_ast "Parsed AST"
+    |> Resolve_alias.remove_aliases
+    |> show_ast print_ast "Resolved AST"
+    |> Infer_cap.infer_cap
+  in let ast = fst @@ ast_and_cap_ctx
+    |> show_ast print_ast "Inferred capabilities"
+    |> Flatten_seq.flatten_seq
+    |> show_ast print_ast "Flattened"
+  in let type_ctx = typecheck_with_error ast
+  in let emit_ast = Infer_cap.readd_cap ast (snd ast_and_cap_ctx)
+  in emit_code emit_ast type_ctx

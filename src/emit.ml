@@ -54,20 +54,15 @@ let rec emit_expr = function
 and emit_binop (b, e1, e2) =
   concat [ (emit_expr e1); (string_of_binop b); (emit_expr e2) ]
 
-and determine_bf id =
-  match !type_map id with
-  | TArray (_, d) -> compute_bf d
-  | _ ->
-    failwith "Typechecker failed to determine that mux is illegally wrapped around array"
-
 and emit_aa_phys (id, b, i) =
   match !type_map id with
   | TArray (_, d) ->
     let bf = compute_bf d in
+    if bf != 1 then
     concat [ id; "["; (emit_expr b); " + "; (string_of_int bf); "*("; (emit_expr i); ")]" ]
-  | TMux (a_id, _) ->
-    let bf = determine_bf a_id in
-    concat [ id; "["; (emit_expr b); " + "; (string_of_int bf); "*("; (emit_expr i); ")]" ]
+    else
+    concat [ id; "["; (emit_expr b); " + "; (emit_expr i); ]
+  | TMux _ -> failwith "Muxes not implemented"
   | _ -> failwith "Tried to index into non-array"
 
 (* FIXME: optimize?
@@ -112,7 +107,7 @@ and emit_app (id, args) i =
 
 let rec emit_cmd i cmd =
   match cmd with
-  | CCap _                     -> ""
+  | CCap (cap, e, id)          -> emit_cap (cap, e, id) i
   | CAssign (id, e)            -> emit_assign (id, e) i
   | CReassign (target, e)      -> emit_reassign (target, e) i
   | CFor (id, r1, r2, u, body) -> emit_for (id, r1, r2, body, u) i
@@ -123,7 +118,11 @@ let rec emit_cmd i cmd =
   | CTypeDef _                 -> raise @@ Failure "CTypeDef should not occur in AST"
   | CMuxDef (_, mid, s)        -> emit_mux mid s i
   | CExpr e                    -> emit_expr e
-  | CEmpty                     -> ""
+  | CEmpty                     -> ";"
+
+and emit_cap (cap, e, _) i = (match cap with
+  | Read -> "/* cap read: " ^ (emit_expr e) ^ " */"
+  | Write -> "/* cap write: " ^ (emit_expr e) ^ " */") |> indent i
 
 and emit_mux mem_id size i =
   concat ["/* Mux "; show_id mem_id; ": "; string_of_int size; "/*"]
