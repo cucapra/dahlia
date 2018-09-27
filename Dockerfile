@@ -4,9 +4,12 @@ MAINTAINER Adrian Sampson <asampson@cs.cornell.edu>
 # Add pipenv for buildbot.
 RUN pip install pipenv
 
-# Add OCaml and enough dependencies to build OCaml packages. And Node/Yarn for
-# the buildbot "live" frontend.
-RUN apk add --no-cache opam ocaml-compiler-libs bash m4 build-base git yarn
+# Add OCaml and some native dependencies. And Node/Yarn for the buildbot
+# "live" frontend.
+RUN apk add --no-cache ocaml-compiler-libs bash m4 build-base git yarn curl
+
+# Install the latest opam.
+RUN sh <(curl -sL https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh)
 RUN opam init -y
 
 # Our OCaml dependencies. We already have ocamlbuild, so we have a workaround:
@@ -24,7 +27,7 @@ EXPOSE 8000
 ENV PIPENV_PIPFILE=buildbot/Pipfile
 CMD ["pipenv", "run", \
      "gunicorn", "--bind", "0.0.0.0:8000", "--chdir", "buildbot", \
-     "buildbot:app"]
+     "buildbot.server:app"]
 
 # Add Seashell source.
 ADD . seashell
