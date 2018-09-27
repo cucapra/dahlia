@@ -9,7 +9,10 @@ RUN pip install pipenv
 RUN apk add --no-cache ocaml-compiler-libs bash m4 build-base git yarn curl
 
 # Install the latest opam.
-RUN sh <(curl -sL https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh)
+ENV OPAM_VERSION 2.0.0-rc4
+ENV OPAM_URL https://github.com/ocaml/opam/releases/download/${OPAM_VERSION}/opam-${OPAM_VERSION}-x86_64-linux
+RUN curl -sLo /bin/opam ${OPAM_URL}
+RUN chmod a+x /bin/opam
 RUN opam init -y
 
 # Our OCaml dependencies. We already have ocamlbuild, so we have a workaround:
