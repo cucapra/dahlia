@@ -71,19 +71,6 @@ class infer_write_capabilities = object
   method! private ccap (cap, e, id) st =
     CCap (cap, e, id) , ((e, id) :: st)
 
-  (*method! private eaa (name, es) st =
-    let es', st' = super#elist_visit es st in (** recur before matching *)
-    match List.assoc_opt (EAA (name, es')) st' with
-      | Some id -> EVar id, st'
-      | None -> failwith "Dont know what do here?"
-
-  method! private ebankedaa (name, e1, e2) st =
-    let e1', st1 = super#expr e1 st in
-    let e2', st2 = super#expr e2 st1 in
-    match List.assoc_opt (EBankedAA (name, e1', e2')) st2 with
-      | Some id -> EVar id, st2
-      | None -> failwith "Dont know what do here?"*)
-
   method! private creassign (e1, e2) st = match (List.assoc_opt e1 st, e1) with
     | Some id, _ -> super#creassign (EVar id, e2) st
     | None, EAA (id, _) | None, EBankedAA (id, _, _) ->

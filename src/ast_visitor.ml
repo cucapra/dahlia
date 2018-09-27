@@ -77,6 +77,7 @@ class ['s] ast_mapper = object(self)
     | CMuxDef (i1, i2, i) -> self#cmuxdef (i1, i2, i) st
     | CApp (id, es) -> self#capp (id, es) st
     | CExpr e -> self#cexpr e st
+    | CEmpty -> self#cempty st
 
   method private clist_visit cs st = self#list_visit self#command cs st
   method private ccap (cap, e, id) st =
@@ -118,4 +119,5 @@ class ['s] ast_mapper = object(self)
   method private cexpr e st =
     let e', s' = self#expr e st in
     CExpr e', s'
+  method private cempty st = CEmpty, st
 end

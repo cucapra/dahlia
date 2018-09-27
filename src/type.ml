@@ -114,10 +114,11 @@ let rec check_cmd cmd ctx : gamma =
   | CReassign (target, exp)        -> check_reassign target exp ctx
   | CFuncDef (id, args, body)      -> check_funcdef id args body ctx
   | CApp (id, args)                -> check_app id args ctx
-  | CTypeDef _                     -> ctx
+  | CTypeDef _                     -> raise @@ Failure "Impossible: Found CTypeDef in AST"
   | CMuxDef (mux_id, mem_id, size) -> check_muxdef mux_id mem_id size ctx
   | CExpr expr                     -> snd @@ check_expr expr ctx
   | CCap (cap, expr, id)           -> check_cap cap expr id ctx
+  | CEmpty                         -> ctx
 
 and check_seq clist ctx =
   let f c cmd = check_cmd cmd c in

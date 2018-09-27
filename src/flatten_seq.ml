@@ -8,6 +8,7 @@ class flatten_seq_visitor = object
     let cs', _ = super#clist_visit cs st in
     let extract = function
       | CSeq cs -> cs
+      | CEmpty -> []
       | c -> [c]
     in CSeq (List.flatten @@ List.map extract cs'), ()
 end

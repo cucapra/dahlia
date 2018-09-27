@@ -19,9 +19,9 @@ class type_alias_resolver = object
   (** Resolve binding using context *)
   method! private talias id st = get_alias_binding id st, st
 
-  (** Add binding for type *)
+  (** Add binding for type and remove CTypeDef *)
   method! private ctypedef bind st =
-    CTypeDef (fst @@ bind, snd @@ bind), add_alias_binding bind st
+    CEmpty, add_alias_binding bind st
 
   (** Don't visit expressions *)
   method! private expr e st = e, st
