@@ -1,4 +1,7 @@
 open Ast
+open Ast_visitor
+
+type context = (expr * id) list
 
 (** Generate unique names of capability commands *)
 module type Gen_name = sig
@@ -7,52 +10,95 @@ end
 
 module Make () : Gen_name = struct
   module ST = Core.String.Table
-
   let map = ST.create ()
-
   let fresh id = match ST.find map id with
     | Some v -> ST.incr map id; id ^ string_of_int (v + 1)
     | None -> ST.add map id 0; id ^ "0"
 end
 
-type context = (expr * capability) list
 
-let infer_seq infer_f seq ctx =
-  List.fold_left (fun acc x -> acc @ x) [] @@
-  List.map (fun e -> infer_f e ctx) seq
+module GN = Make ()
 
-let rec infer_expr e ctx : context = match e with
-  | EInt _ | EFloat _ | EVar _ | EBool _ -> ctx
-  | EBinop (_, e1, e2) -> (infer_expr e1 ctx) @ (infer_expr e2 ctx)
-  | EBankedAA (_, e1, e2) ->
-      (e, Read) :: (infer_expr e1 ctx) @ (infer_expr e2 ctx)
-  | EAA (_, es) ->
-      List.fold_left (fun acc x -> acc @ x) [(e, Read)] @@
-        List.map (fun e -> infer_expr e ctx) es
+class infer_read_capabilities = object (self)
+  inherit [context] ast_mapper as super
 
-let rec infer_cmd cmd ctx = match cmd with
-  | CMuxDef _ | CTypeDef _ | CCap _ -> ctx
-  | CAssign (_, e) -> infer_expr e ctx
-  | CFor (_, e1, e2, _, c) ->
-      (infer_expr e1 ctx) @ (infer_expr e2 ctx) @ (infer_cmd c ctx)
-  | CReassign (EAA _ as e, e1) | CReassign (EBankedAA _ as e, e1) ->
-      (e, Write) :: (infer_expr e1 ctx)
-  | CReassign (e1, e2) -> (infer_expr e1 ctx) @ (infer_expr e2 ctx)
-  | CIf (e, c) -> (infer_expr e ctx) @ (infer_cmd c ctx)
-  | CSeq es -> infer_seq infer_cmd es ctx
-  | CFuncDef (_, _, c) -> infer_cmd c ctx
-  | CApp (_, es) -> infer_seq infer_expr es ctx
-  | CExpr e -> infer_expr e ctx
+  (** For an array access, first recur into the access expressions and generate
+   * the context. Next bind this array access to a capability name. *)
+  method! private eaa (name, es) st =
+    let es', st1 = self#elist_visit es st in
+    let exp = EAA (name, es') in
+    match List.assoc_opt exp st1 with
+      | Some id -> EVar id, st1
+      | None ->
+          let id = GN.fresh name in
+          EVar id, (exp, id) :: st1
 
-let generate_cap_map cmd : (id * expr * capability) list =
-  let ctx = infer_cmd cmd [] in
-  let module GN = Make () in
-  let generate_name (e, cap) = match e with
-    | EBankedAA (id, _, _) | EAA (id, _) -> (GN.fresh id, e, cap)
-    | _ -> failwith
-      ("Impossible: Capabilities list should not contain" ^ show_expr e)
-  in
-  List.map generate_name ctx
+  method! private ebankedaa (name, e1, e2) st =
+    let e1', st1 = self#expr e1 st in
+    let e2', st2 = self#expr e2 st1 in
+    let exp = EBankedAA (name, e1', e2') in
+    match List.assoc_opt exp st2 with
+      | Some id -> EVar id, st2
+      | None ->
+          let id = GN.fresh name in
+          EVar id, (exp, id) :: st2
 
-let generate_cap_seq seq : command =
-  CSeq (List.map (fun (id, exp, cap) -> CCap (cap, exp, id)) seq)
+  (** Don't recur into CCap *)
+  method! private ccap (cap, e, id) st =
+    CCap (cap, e, id) , ((e, id) :: st)
+  (** Ignore LVal in reassign *)
+  method! private creassign (e1, e2) st =
+    let e2', st' = self#expr e2 st in
+    CReassign (e1, e2'), st'
+
+  (** For each command, we first computer the expressions * capability name.
+   * Then, we add the capability statements before the command. *)
+  method! command c st =
+    let to_cap (e, id) = CCap (Read, e, id) in
+    let c', st' = super#command c st in   (** Start with the empty context *)
+    let caps = List.map to_cap st' in     (** Generate read capabilities. *)
+    CSeq (List.rev @@ c' :: caps), st     (** Reverse to account for bottom-up. *)
+
+  (** Don't recur into type_nodes *)
+  method! type_node t st = t, st
+
+end
+
+class infer_write_capabilities = object
+  inherit [context] ast_mapper as super
+
+  (** Don't recur into the expression because we don't want to modify it. *)
+  method! private ccap (cap, e, id) st =
+    CCap (cap, e, id) , ((e, id) :: st)
+
+  (*method! private eaa (name, es) st =
+    let es', st' = super#elist_visit es st in (** recur before matching *)
+    match List.assoc_opt (EAA (name, es')) st' with
+      | Some id -> EVar id, st'
+      | None -> failwith "Dont know what do here?"
+
+  method! private ebankedaa (name, e1, e2) st =
+    let e1', st1 = super#expr e1 st in
+    let e2', st2 = super#expr e2 st1 in
+    match List.assoc_opt (EBankedAA (name, e1', e2')) st2 with
+      | Some id -> EVar id, st2
+      | None -> failwith "Dont know what do here?"*)
+
+  method! private creassign (e1, e2) st = match (List.assoc_opt e1 st, e1) with
+    | Some id, _ -> super#creassign (EVar id, e2) st
+    | None, EAA (id, _) | None, EBankedAA (id, _, _) ->
+        let id1 = GN.fresh id in
+        let cap = CCap (Write, e1, id1) in
+        super#cseq [cap; CReassign (EVar id1, e2)] @@ (e1, id1) :: st
+    | None, _ -> super#creassign (e1, e2) st
+
+  (** Don't recur into type_nodes *)
+  method! type_node t st = t, st
+
+  (** Don't recur into expressions *)
+  method! expr e st = e, st
+end
+
+let infer_cap cmd =
+  let cmd1, ctx = (new infer_read_capabilities)#command cmd [] in
+  (new infer_write_capabilities)#command cmd1 ctx
