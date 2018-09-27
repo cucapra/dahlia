@@ -22,3 +22,30 @@ div.todo > p:first-child {
 div.todo > p:last-child {
     margin-bottom: 0;
 }
+
+/* Put lemmas, theorems, etc. in a box */
+
+div.formula {
+  padding-left: 1em;
+}
+
+.formula {
+  border: 1px solid black;
+  border-radius: 11px;
+}
+
+hr {
+  border: 0;
+  height: 1px;
+  background: #aaa;
+}
+
+h1 {
+  margin-top: 1em;
+}
+
+.nav {
+  padding: 5px;
+  border: 1px solid black;
+  border-radius: 10px;
+}

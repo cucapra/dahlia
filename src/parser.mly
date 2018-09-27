@@ -62,7 +62,7 @@ acmd:
     LBRACK cmd RBRACK                                       { CFor ($4, $6, $8, $11, $13) }
   | FOR LPAREN LET ID EQUAL expr RANGE_DOTS expr RPAREN
     LBRACK cmd RBRACK                                       { CFor ($4, $6, $8, 1, $11) }
-  | expr                                                    { CExpr $1 }
+  | expr SEMICOLON                                          { CExpr $1 }
 
 expr:
   | ID access                                   { EAA ($1, $2) }
@@ -94,12 +94,15 @@ access:
   | LSQUARE expr RSQUARE          { [$2] }
   | LSQUARE expr RSQUARE access   { $2 :: $4 }
 
-type_annotation:
+basic_type:
   | BOOL_ANNOTATION             { TBool }
   | INT_ANNOTATION              { TIndex ((0, 1), (min_int, max_int)) }
   | FLOAT_ANNOTATION            { TFloat }
-  | type_annotation array_def   { TArray ($1, $2) }
   | ID                          { TAlias $1 }
+
+type_annotation:
+  | basic_type             { $1 }
+  | basic_type array_def   { TArray ($1, $2) }
 
 %inline binop:
   | NEQ     { BopNeq }

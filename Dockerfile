@@ -31,6 +31,7 @@ ADD . seashell
 WORKDIR seashell
 
 # Build Seashell.
+RUN opam install .
 RUN eval `opam config env` ; dune build
 RUN eval `opam config env` ; dune install
 

@@ -11,13 +11,17 @@ KATEX_URL := https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0-beta/
 all: $(HTML)
 
 clean:
-	rm *.html style.css
+	rm -f $(HTML) style.css
 
 # Build HTML.
 PANDOC_ARGS := -f markdown -t html -s --katex=$(KATEX_URL) \
 	-c style.css -c extra.css
-%.html: %.md style.css
+# Specific rule for index to exclude header.
+index.html: index.md style.css
 	pandoc $(PANDOC_ARGS) $< -o $@
+
+%.html: %.md style.css header.html footer.html
+	pandoc $(PANDOC_ARGS) $< -o $@ -B header.html -A footer.html
 
 style.css:
 	curl -o $@ $(CSS_URL)
