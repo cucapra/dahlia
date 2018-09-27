@@ -16,10 +16,16 @@ let get_alias_binding id d =
 class type_alias_resolver = object
   inherit [delta] ast_mapper
 
+  (** Resolve binding using context *)
   method! private talias id st = get_alias_binding id st, st
 
+  (** Add binding for type *)
   method! private ctypedef bind st =
     CTypeDef (fst @@ bind, snd @@ bind), add_alias_binding bind st
+
+  (** Don't visit expressions *)
+  method! private expr e st = e, st
+
 end
 
 let remove_aliases cmd =
