@@ -120,9 +120,10 @@ let rec emit_cmd i cmd =
   | CSeq clist                 -> emit_seq clist i
   | CFuncDef (id, args, body)  -> emit_fun (id, args, body) i
   | CApp (id, args)            -> emit_app (id, args) i
-  | CTypeDef _                 -> "" (** Not needed since aliases are resolved in original code. *)
+  | CTypeDef _                 -> raise @@ Failure "CTypeDef should not occur in AST"
   | CMuxDef (_, mid, s)        -> emit_mux mid s i
   | CExpr e                    -> emit_expr e
+  | CEmpty                     -> ""
 
 and emit_mux mem_id size i =
   concat ["/* Mux "; show_id mem_id; ": "; string_of_int size; "/*"]

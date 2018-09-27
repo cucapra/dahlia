@@ -119,6 +119,7 @@ type command =
   | CMuxDef of id * id * int
   | CApp of id * expr list
   | CExpr of expr
+  | CEmpty
   [@@deriving show]
 
 let string_of_command (cmd : command) : string = show_command cmd
