@@ -19,6 +19,8 @@ end
 
 module GN = Make ()
 
+(** This visitor renames all array accesses in read positions with a capability
+ * and adds the capability statements. *)
 class infer_read_capabilities = object (self)
   inherit [context] ast_mapper as super
 
@@ -64,6 +66,8 @@ class infer_read_capabilities = object (self)
 
 end
 
+(** This visitor renames all array accesses in write positions with a capability
+ * and adds the capability statements. *)
 class infer_write_capabilities = object
   inherit [context] ast_mapper as super
 
@@ -86,6 +90,22 @@ class infer_write_capabilities = object
   method! expr e st = e, st
 end
 
+type inv_context = (id * expr) list
+
+(** This class is the inverse of the infer_* classes. It replaces the capability
+ * names with the respective array access. *)
+class readd_capabilities = object
+  inherit [inv_context] ast_mapper
+
+  method! evar id st = match List.assoc_opt id st with
+    | Some e -> e, st
+    | None -> EVar id, st
+
+end
+
 let infer_cap cmd =
   let cmd1, ctx = (new infer_read_capabilities)#command cmd [] in
   (new infer_write_capabilities)#command cmd1 ctx
+
+let readd_cap cmd (ctx : context) =
+  List.map (fun (a, b) -> b, a) ctx |> (new readd_capabilities)#command cmd |> fst
