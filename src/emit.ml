@@ -1,5 +1,10 @@
 open Ast
 
+let cleanup_output s =
+  String.split_on_char '\n' s
+  |> List.filter (fun s -> String.length s != 0)
+  |> List.fold_left (fun acc s -> acc ^ "\n" ^ s) ""
+
 let type_map = ref (fun _ -> failwith "TypeMap has not been set")
 
 let compute_bf d =
@@ -10,7 +15,7 @@ let set_type_map t =
 
 let rec indent' n s acc =
   if n=0 then acc ^ s
-  else indent' (n-1) s (acc ^ "\t")
+  else indent' (n-1) s (acc ^ "  ")
 
 let indent n s = indent' n s ""
 
@@ -196,4 +201,4 @@ and emit_fun (id, args, body) i =
   |> indent i
 
 and generate_c cmd =
-  emit_cmd 0 cmd
+  emit_cmd 0 cmd |> cleanup_output

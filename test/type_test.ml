@@ -33,42 +33,33 @@ let%expect_test "Reassign arrays" =
   compile_string "func foo(a: int[10], b: int[10]) { a[0] := b[0]; }";
   [%expect {|
     void foo(int a[10], int b[10]) {
-
-
-
-    	/* cap read: b[1*(0)] */
-    	/* cap write: a[1*(0)] */
-    	a[1*(0)] = b[1*(0)];
+      /* cap read: b[1*(0)] */
+      /* cap write: a[1*(0)] */
+      a[1*(0)] = b[1*(0)];
     } |}]
 
 let%expect_test "Read from array twice" =
   compile_string "func foo(a: int[10]) { let x = a[1]; let y = a[1];}";
   [%expect {|
     void foo(int a[10]) {
-
-
-    	/* cap read: a[1*(1)] */
-    	int x = a[1*(1)];
-    	int y = a[1*(1)];
+      /* cap read: a[1*(1)] */
+      int x = a[1*(1)];
+      int y = a[1*(1)];
     } |}]
 
 let%expect_test "Read from array twice with explicit capability" =
   compile_string "func foo(a: int[10]) { read a[1] as a1; let x = a1; let y = a1;}";
   [%expect {|
     void foo(int a[10]) {
-
-
-    	/* cap read: a[1*(1)] */
-    	int x = a[1*(1)];
-    	int y = a[1*(1)];
+      /* cap read: a[1*(1)] */
+      int x = a[1*(1)];
+      int y = a[1*(1)];
     } |}]
 
 let%expect_test "Write to an array with explicit capability" =
   compile_string "func foo(a: int[10]) { write a[1] as a1; a1 := 1;}";
   [%expect {|
     void foo(int a[10]) {
-
-
-    	/* cap write: a[1*(1)] */
-    	a[1*(1)] = 1;
+      /* cap write: a[1*(1)] */
+      a[1*(1)] = 1;
     } |}]
