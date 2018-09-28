@@ -15,11 +15,11 @@ RUN apk add --no-cache perl opam ocaml-compiler-libs bash m4 \
 # https://github.com/ocaml/ocamlbuild/issues/109
 ENV CHECK_IF_PREINSTALLED=false
 RUN opam init -y
-RUN opam install opam-devel
+RUN opam install depext
+RUN opam config exec -- opam depext --install opam-devel
 RUN cp `opam config var "opam-devel:lib"`/opam /bin/opam
 
 # Install some of our OCaml dependencies carefully.
-RUN opam install depext
 RUN opam config exec -- opam depext --install dune menhir core.v0.10.0
 
 # Add opam bin directory to our $PATH so we can run seac.
