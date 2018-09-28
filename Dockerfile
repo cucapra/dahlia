@@ -6,7 +6,7 @@ RUN pip install pipenv
 
 # Add OCaml and some native dependencies. And Node/Yarn for the buildbot
 # "live" frontend.
-RUN apk add --no-cache perl opam ocaml-compiler-libs bash m4 \
+RUN apk add --no-cache perl opam ocaml-compiler-libs bash m4 bubblewrap \
     build-base git yarn
 
 # Install the latest opam. (opam2 is not available from Alpine yet.)
@@ -17,10 +17,11 @@ ENV CHECK_IF_PREINSTALLED=false
 RUN opam init -y
 RUN opam install depext
 RUN opam config exec -- opam depext --install opam-devel
-RUN cp `opam config var "opam-devel:lib"`/opam /bin/opam
+RUN cp `opam config var "opam-devel:lib"`/opam /usr/bin/opam
+RUN opam init --reinit -y || true
 
 # Install some of our OCaml dependencies carefully.
-RUN opam config exec -- opam depext --install dune menhir core.v0.10.0
+RUN opam config exec -- opam depext --install -y dune menhir core.v0.10.0
 
 # Add opam bin directory to our $PATH so we can run seac.
 ENV PATH /root/.opam/system/bin:${PATH}
