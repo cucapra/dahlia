@@ -6,18 +6,19 @@ RUN pip install pipenv
 
 # Add OCaml and some native dependencies. And Node/Yarn for the buildbot
 # "live" frontend.
-RUN apk add --no-cache ocaml-compiler-libs bash m4 build-base git yarn curl
+RUN apk add --no-cache perl opam ocaml-compiler-libs bash m4 \
+    build-base git yarn
 
-# Install the latest opam.
-ENV OPAM_VERSION 2.0.0-rc4
-ENV OPAM_URL https://github.com/ocaml/opam/releases/download/${OPAM_VERSION}/opam-${OPAM_VERSION}-x86_64-linux
-RUN curl -sLo /bin/opam ${OPAM_URL}
-RUN chmod a+x /bin/opam
-RUN opam init -y
-
-# Our OCaml dependencies. We already have ocamlbuild, so we have a workaround:
+# Install the latest opam. (opam2 is not available from Alpine yet.)
+# The CHECK_IF_PREINSTALLED variable works around a problem by using the
+# ocamlbuild we already have:
 # https://github.com/ocaml/ocamlbuild/issues/109
 ENV CHECK_IF_PREINSTALLED=false
+RUN opam init -y
+RUN opam install opam-devel
+RUN cp `opam config var "opam-devel:lib"`/opam /bin/opam
+
+# Install some of our OCaml dependencies carefully.
 RUN opam install depext
 RUN opam config exec -- opam depext --install dune menhir core.v0.10.0
 
