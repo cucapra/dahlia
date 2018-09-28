@@ -151,7 +151,8 @@ and emit_assign (id, e) i =
   | TBool         -> emit_assign_int (id, e)         |> indent i
   | TArray (_, d) -> emit_assign_arr (id, e, d) i    |> indent i
   | TFloat        -> emit_assign_float (id, e)       |> indent i
-  | _ -> failwith "Fail me!"
+  | TAlias _      -> failwith "Impossible: TAlias while emitting"
+  | t             -> failwith @@ "NYI: emit_assign with " ^ show_type_node t
 
 and emit_reassign (target, e) i =
   concat [ (emit_expr target); " = "; (emit_expr e); ";" ] |> indent i

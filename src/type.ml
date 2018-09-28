@@ -166,8 +166,10 @@ and check_reassign target expr ctx =
   | EVar id ->
       let (typ, c1) = check_expr expr ctx in
       (match get_binding id ctx with
-      | TLin t when (types_eq t typ) -> Context.consume_aa id 0 ctx
-      | t when t = typ -> c1
+      | TLin t when (types_eq t typ) ->
+          begin try Context.consume_aa id 0 ctx
+          with AlreadyConsumed i -> raise @@ TypeError (illegal_bank i id) end
+      | t when (types_eq t typ) -> c1
       | _ -> raise @@ TypeError (reassign_type_mismatch (get_binding id ctx) typ))
   | EBankedAA (id, _, _) | EAA (id, _) -> raise @@ TypeError (invalid_array_write id)
   | _ -> raise (TypeError "Used reassign operator on illegal types")

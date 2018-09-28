@@ -1,9 +1,11 @@
 open Ast
 open Ast_visitor
 
-type context = (expr * id) list
+type context = (expr * id) list [@@deriving show]
 
 (** Generate unique names of capability commands *)
+(** TODO(rachit): This implementation is wrong because it can cause conflicts
+ * with pre-existing id`s. Use a Trie implementation to fix conflicts. *)
 module type Gen_name = sig
   val fresh : id -> id
 end
@@ -22,32 +24,37 @@ module GN = Make ()
 (** This visitor renames all array accesses in read positions with a capability
  * and adds the capability statements. *)
 class infer_read_capabilities = object (self)
-  inherit [context] ast_mapper as super
+  (** We carry two context list for each command. The second context represents
+   * all the capability that haven't been inserted into the code while the first
+   * context contains alls the bindings. *)
+  inherit [(context * context)] ast_mapper as super
 
   (** For an array access, first recur into the access expressions and generate
    * the context. Next bind this array access to a capability name. *)
   method! private eaa (name, es) st =
     let es', st1 = self#elist_visit es st in
     let exp = EAA (name, es') in
-    match List.assoc_opt exp st1 with
+    match List.assoc_opt exp (fst st1) with
       | Some id -> EVar id, st1
       | None ->
           let id = GN.fresh name in
-          EVar id, (exp, id) :: st1
+          EVar id, (fst st1, (exp, id) :: (snd st1))
 
   method! private ebankedaa (name, e1, e2) st =
     let e1', st1 = self#expr e1 st in
     let e2', st2 = self#expr e2 st1 in
     let exp = EBankedAA (name, e1', e2') in
-    match List.assoc_opt exp st2 with
+    match List.assoc_opt exp (fst st2) with
       | Some id -> EVar id, st2
       | None ->
           let id = GN.fresh name in
-          EVar id, (exp, id) :: st2
+          EVar id, (fst st2, (exp, id) :: (snd st2))
 
   (** Don't recur into CCap *)
-  method! private ccap (cap, e, id) st =
-    CCap (cap, e, id) , ((e, id) :: st)
+  method! private ccap (cap, e, id) st = match cap with
+    | Read -> CCap (cap, e, id) , ((e, id) :: (fst st), snd st)
+    | Write -> CCap (cap, e, id) , st
+
   (** Ignore LVal in reassign *)
   method! private creassign (e1, e2) st =
     let e2', st' = self#expr e2 st in
@@ -57,9 +64,9 @@ class infer_read_capabilities = object (self)
    * Then, we add the capability statements before the command. *)
   method! command c st =
     let to_cap (e, id) = CCap (Read, e, id) in
-    let c', st' = super#command c st in   (** Start with the empty context *)
-    let caps = List.map to_cap st' in     (** Generate read capabilities. *)
-    CSeq (List.rev @@ c' :: caps), st     (** Reverse to account for bottom-up. *)
+    let c', st' = super#command c st in
+    let caps = List.map to_cap (snd st') in     (** Generate read capabilities. *)
+    CSeq (List.rev @@ c' :: caps), (snd st' @ fst st', []) (** Reverse to account for bottom-up. *)
 
   (** Don't recur into type_nodes *)
   method! type_node t st = t, st
@@ -72,15 +79,17 @@ class infer_write_capabilities = object
   inherit [context] ast_mapper as super
 
   (** Don't recur into the expression because we don't want to modify it. *)
-  method! private ccap (cap, e, id) st =
-    CCap (cap, e, id) , ((e, id) :: st)
+  method! private ccap (cap, e, id) st = match cap with
+    | Write -> CCap (cap, e, id) , ((e, id) :: st)
+    | Read -> CCap (cap, e, id) , st
 
   method! private creassign (e1, e2) st = match (List.assoc_opt e1 st, e1) with
     | Some id, _ -> super#creassign (EVar id, e2) st
     | None, EAA (id, _) | None, EBankedAA (id, _, _) ->
         let id1 = GN.fresh id in
         let cap = CCap (Write, e1, id1) in
-        super#cseq [cap; CReassign (EVar id1, e2)] @@ (e1, id1) :: st
+        let e2', st' = super#expr e2 st in
+        CSeq [cap; CReassign (EVar id1, e2')], ((e1, id1) :: st')
     | None, _ -> super#creassign (e1, e2) st
 
   (** Don't recur into type_nodes *)
@@ -104,8 +113,9 @@ class readd_capabilities = object
 end
 
 let infer_cap cmd =
-  let cmd1, ctx = (new infer_read_capabilities)#command cmd [] in
-  (new infer_write_capabilities)#command cmd1 ctx
+  let cmd1, (ctx1, _) = (new infer_read_capabilities)#command cmd ([], []) in
+  let cmd2, ctx2 = (new infer_write_capabilities)#command cmd1 [] in
+  cmd2, ctx2 @ ctx1
 
 let readd_cap cmd (ctx : context) =
   List.map (fun (a, b) -> b, a) ctx |> (new readd_capabilities)#command cmd |> fst
