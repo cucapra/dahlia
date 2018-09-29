@@ -30,6 +30,7 @@ type type_node =
   | TFloat
   | TAlias of id
   | TMux of id * int
+  | TLin of type_node
   | TArray of type_node * (int * int) list
   | TIndex of (int * int) * (int * int)
   | TFunc of type_node list
@@ -90,6 +91,8 @@ type expr =
   | EBankedAA of id * expr * expr
   [@@deriving show]
 
+type capability = Read | Write [@@deriving show]
+
 (* A [command] is one of the following:
  *   - [CAssign (i, e)]: a representation of assignment of
  *     expr [e] to id [i]
@@ -105,7 +108,7 @@ type expr =
  *   - [CFuncDef, CTypeDef, CMuxDef, CApp]: TODO *)
 (** TODO(rachit): Add CEmpty *)
 type command =
-  | CWrite of expr * id
+  | CCap of capability * expr * id
   | CAssign of id * expr
   | CFor of id * expr * expr * int * command
   | CReassign of expr * expr
@@ -116,6 +119,7 @@ type command =
   | CMuxDef of id * id * int
   | CApp of id * expr list
   | CExpr of expr
+  | CEmpty
   [@@deriving show]
 
 let string_of_command (cmd : command) : string = show_command cmd

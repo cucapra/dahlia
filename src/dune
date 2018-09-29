@@ -10,4 +10,4 @@
 
 (env
   (default
-    (flags (:standard -short-paths -w +a-4 -warn-error +a-4))))
+    (flags (:standard -short-paths -w +a-4-6-10 -warn-error +a-4-6-10))))
