@@ -21,7 +21,7 @@ let indent n s = indent' n s ""
 
 let newline = "\n"
 
-let concat = List.fold_left (fun acc e -> acc ^ e) ""
+let concat = String.concat ""
 
 let s_pragma_unroll u i =
   if u = "1" then ""

@@ -1,6 +1,8 @@
 open Ast
 open Printf
 
+exception TypeError of string
+
 let rec string_of_type = function
   | TBool -> "bool"
   | TArray (t, _) -> (string_of_type t) ^ " array"
@@ -13,6 +15,9 @@ let rec string_of_type = function
   | TFunc _ -> "func"
   | TLin t -> (string_of_type t) ^ " lin"
   | TMux _ -> "mux"
+
+let id_already_bound id =
+  sprintf "`%s' already bound in this context. Cannot shadow variables." id
 
 let illegal_bank i id =
   sprintf "[Type error] Bank %d already consumed for memory `%s'" i id
@@ -34,29 +39,25 @@ let range_static_error t1 t2 =
     (string_of_type t2)
 
 let unexpected_type id actual expected =
-  "[Type error] " ^ id ^
-  " was of type " ^ (string_of_type actual) ^
-  " but type " ^ (string_of_type expected) ^ " was expected"
+  sprintf "[Type Error] `%s' was of type %s but type %s was expected."
+    id
+    (string_of_type actual)
+    (string_of_type expected)
 
 let illegal_accessor_type t id =
-  "[Type error] can't access array " ^ id ^ " with type " ^ (string_of_type t)
+  sprintf "[Type error] can't access array `%s' with type %s." id (string_of_type t)
 
 let not_an_array id =
-  Printf.sprintf "[Type error] `%s' is not an array." id
+  sprintf "[Type error] `%s' is not an array." id
 
 let illegal_op binop t1 t2 =
-  "[Type error] can't apply operator '" ^
-  (string_of_binop binop) ^
-  "' to " ^
-  (string_of_type t1) ^
-  " and " ^
+  sprintf "[Type error] can't apply operator %s to %s and %s."
+  (string_of_binop binop)
+  (string_of_type t1)
   (string_of_type t2)
 
-let small_mux =
-  "[Type error] illegal access operation: mux is smaller than array banking factor"
-
 let illegal_app id =
-  "[Type error] " ^ id ^ " is not a function and cannot be applied"
+  sprintf "[Type error] `%s' is not a function and cannot be applied." id
 
 let illegal_mux =
   "[Type error] can't use multiplexer to access non-array"
@@ -71,10 +72,9 @@ let cap_non_array =
   "[Type Error] Only array expressions are allowed in capability statements."
 
 let reassign_type_mismatch t_lval t_rval =
-  "[Type Error] cannot assign value of type `" ^
-  (string_of_type t_rval) ^
-  "' to L-value of type `" ^
-  (string_of_type t_lval) ^ "'"
+  sprintf "[Type Error] cannot assign value of type `%s' to L-value of type `%s'."
+  (string_of_type t_rval)
+  (string_of_type t_lval)
 
 let incorrect_aa_dims aname expected actual =
   let e_dim_end = if expected = 1 then "" else "s" in
@@ -84,4 +84,4 @@ let incorrect_aa_dims aname expected actual =
   (string_of_int actual) ^ " dimension" ^ a_dim_end
 
 let invalid_array_write id =
-  Printf.sprintf "Cannot write into array `%s' without write capability." id
+  sprintf "Cannot write into array `%s' without write capability." id

@@ -10,7 +10,7 @@ let compile filename =
 let redirect_error f =
   begin
     try f (); failwith "[[This test should have failed!]]" with
-      | Failure msg | Type.TypeError msg -> print_endline msg
+      | Failure msg | Error_msg.TypeError msg -> print_endline msg
       | e -> raise e
   end
 

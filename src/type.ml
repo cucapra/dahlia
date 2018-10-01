@@ -2,8 +2,6 @@ open Ast
 open Context
 open Error_msg
 
-exception TypeError of string
-
 (** [compute_bf dims] is a banking factor [b], computed from [dims], where
  * [d] specifies the banking structure of some [TArray (t, dims)].
  * This relies on the assumption that our ideas about banking across

@@ -24,7 +24,7 @@ let typecheck_with_error (ast : Ast.command) =
   try
     Type.typecheck ast
   with
-    Type.TypeError s -> failwith s
+    Error_msg.TypeError s -> failwith s
 
 let emit_code ast ctx =
   Emit.set_type_map (fun id -> Context.get_binding id ctx);

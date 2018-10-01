@@ -1,4 +1,5 @@
 open Ast
+open Error_msg
 
 exception AlreadyConsumed of int
 exception NoBinding of id
@@ -28,18 +29,21 @@ let compute_bf b =
   List.fold_left (fun acc (_, b) -> b * acc) 1 b
 
 let add_binding id t g =
-  let type_map' = StringMap.add id t g.type_map in
-  let indices = match t with
-  | TArray (_, banking) ->
-      StringMap.add id (create_set (compute_bf banking)) g.indices_available
-  | TLin _ ->
-      StringMap.add id (create_set 1) g.indices_available
-  | _ -> g.indices_available
-  in
-    {
-      type_map = type_map' ;
-      indices_available = indices
-    }
+  if StringMap.mem id g.type_map then
+    raise @@ TypeError (id_already_bound id)
+  else
+    let type_map' = StringMap.add id t g.type_map in
+    let indices = match t with
+    | TArray (_, banking) ->
+        StringMap.add id (create_set (compute_bf banking)) g.indices_available
+    | TLin _ ->
+        StringMap.add id (create_set 1) g.indices_available
+    | _ -> g.indices_available
+    in
+      {
+        type_map = type_map' ;
+        indices_available = indices
+      }
 
 let get_binding id g =
   try StringMap.find id g.type_map
