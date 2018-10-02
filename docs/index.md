@@ -15,6 +15,10 @@ Read some notes about aspects of Seashell's design:
 * [Logical memory access.](logicalmemoryaccess.html)
   Seashell supports *logical access* to multidimensional arrays implemented as banked hardware memories. We discuss the relationship between this logical view and the physical layout in banks.
 
+* [Proposal: Bank access using capabilities](capabilities.html)
+  This is a proposal to treat banks accesses using explicit capabilities instead
+  of index types.
+
 * [Appendix](appendix.html)
 
 Tutorial on hardware programming with Seashell
