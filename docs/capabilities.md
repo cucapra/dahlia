@@ -19,8 +19,8 @@ works with. In seashell core, each array access is associated with a capability.
 For example, to read an array value, the following is needed:
 
 ```
-read a[i] as a1;
-let x = a[i];
+read a[i] as a1; // array access consumes linear capability from array
+let x = a1; // Use the named capability to get the value in a[i]
 ```
 
 (Since it is tedious to write these, seashell also infers these capabilities
