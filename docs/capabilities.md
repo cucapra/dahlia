@@ -108,6 +108,19 @@ A typing judgement for language is of the form $\Gamma, \kappa, e \vdash \Gamma'
 where $\Gamma$ is the typing context and $\kappa$ is the capability context.
 
 ::: formula
-**Note**(rachit). I am fairly new to capabilities. If something doesn't sound
-right about my characterization, please point it out.
+**Unresolved concerns**.
+Adrian - a desugaring step (from explicit `unroll`s to nested loops) would
+certainly be correct, but it could make higher-level reasoning about the
+logical/source program a bit harder. In particular, it make make error
+messages harder to generate and (in particular) polymorphic loop unrolling
+factors hard to generate constraints for.
+
+Rachit - Are index types orthogonal to using capability contexts?
+
+Rachit - A soft way of addressing Adrian's concerns about over reliance on
+SMT solvers is to write down our decidable typing judgements and show that they
+are "reasonable" while having our implementation rely on the solver. In essence,
+this is like saying that it is possible to write down the typechecker without a
+solver, but we will use a solver because it is less work (or has other tangible
+benefits).
 :::
