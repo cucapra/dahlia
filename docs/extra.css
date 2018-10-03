@@ -56,4 +56,6 @@ h1 {
 pre {
   background: rgb(246, 248, 250);
   padding: 1em;
+  border-radius: 3px;
+  overflow: auto;
 }
