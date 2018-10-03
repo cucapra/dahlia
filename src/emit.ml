@@ -1,27 +1,26 @@
 open Ast
 
+(** Used to generate the types for identifiers. *)
+let type_map = ref (fun _ -> failwith "TypeMap has not been set")
+let set_type_map t =
+  type_map := t
+
 let cleanup_output s =
   String.split_on_char '\n' s
   |> List.filter (fun s -> String.length s != 0)
   |> List.fold_left (fun acc s -> acc ^ "\n" ^ s) ""
 
-let type_map = ref (fun _ -> failwith "TypeMap has not been set")
-
 let compute_bf d =
   List.fold_left (fun acc (_, d) -> d * acc) 1 d
 
-let set_type_map t =
-  type_map := t
-
-let rec indent' n s acc =
-  if n=0 then acc ^ s
-  else indent' (n-1) s (acc ^ "  ")
-
-let indent n s = indent' n s ""
+let indent n s =
+  List.init n (fun _ -> ()) |> List.fold_left (fun acc _ -> "  " ^ acc) s
 
 let newline = "\n"
 
 let concat = String.concat ""
+
+let comment s = Printf.sprintf "/* %s */" s
 
 let s_pragma_unroll u i =
   if u = "1" then ""
@@ -38,14 +37,10 @@ let s_pragma_bank id bf i =
 let compute_array_size dims =
   List.fold_left (fun acc (s, _) -> s * acc) 1 dims
 
-let rec type_str = function
+let type_str = function
   | TBool | TIndex _ -> "int"
   | TFloat -> "float"
-  | TLin t -> Printf.sprintf "/* Linear %s */" (type_str t)
-  | TAlias _ -> failwith "Should be impossible: Final AST contains TAlias"
-  | TArray _ -> failwith "Implement array type stringified version"
-  | TMux _ -> failwith "Implement muxes me!"
-  | TFunc _ -> failwith "Cannot emit function type."
+  | t -> failwith (Printf.sprintf "Cannot emit type %s." (show_type_node t))
 
 let rec emit_expr = function
   | EInt i               -> string_of_int i
@@ -120,18 +115,16 @@ let rec emit_cmd i cmd =
   | CSeq clist                 -> emit_seq clist i
   | CFuncDef (id, args, body)  -> emit_fun (id, args, body) i
   | CApp (id, args)            -> emit_app (id, args) i
-  | CTypeDef _                 -> raise @@ Failure "CTypeDef should not occur in AST"
+  | CTypeDef _                 -> failwith "CTypeDef should not occur in AST"
   | CMuxDef (_, mid, s)        -> emit_mux mid s i
   | CExpr e                    -> emit_expr e
   | CEmpty                     -> ";"
 
-and emit_cap (cap, e, _) i = (match cap with
-  | Read -> "/* cap read: " ^ (emit_expr e) ^ " */"
-  | Write -> "/* cap write: " ^ (emit_expr e) ^ " */") |> indent i
+and emit_cap (cap, e, _) i = match cap with
+  | Read -> comment ("cap read: " ^ emit_expr e) |> indent i
+  | Write -> comment ("cap write: " ^ emit_expr e) |> indent i
 
-and emit_mux mem_id size i =
-  concat ["/* Mux "; show_id mem_id; ": "; string_of_int size; "/*"]
-  |> indent i
+and emit_mux _ = failwith "Muxes not implemented"
 
 and emit_assign_int (id, e) =
   concat [ "int "; id; " = "; (emit_expr e); ";" ]
