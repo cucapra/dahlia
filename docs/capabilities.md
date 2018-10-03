@@ -23,8 +23,20 @@ read a[i] as a1; // array access consumes linear capability from array
 let x = a1; // Use the named capability to get the value in a[i]
 ```
 
-(Since it is tedious to write these, seashell also infers these capabilities
-automatically. In this document, we explicitly write capabilities.)
+Similarly, for an array write, we use
+
+```
+write a[i] as a1;
+a1 := 10
+```
+
+Unlike read capabilities, write capabilities are affine, i.e., they can be used
+at most once which helps us enforce the invariant that writes to physical
+wires can only occur once in a clock cycle.
+
+(Since it is tedious to write capabilities explicitly, seashell also infers
+these capabilities automatically. In this document, we explicitly write
+capabilities.)
 
 ### Banks as a capabilities
 
@@ -61,6 +73,39 @@ Once we define a sequential composition operator for seashell, we'll have to
 change the current implementation of the read/write capability inference to
 full blown capability inference. If we choose to switch to explicit capabilities,
 we can use this already needed extension to implement those.
+
+### Typing rules
+
+Our core language has the following forms:
+
+```
+v ::= n | true | false
+e ::= v
+    | op2 e e
+    | if e e e
+    | let x = e
+    | c e as x
+    | for (let x = e) e
+    | func id (x ...) e
+    | id(e ...)
+```
+
+where $x$ is metavariable representing identifiers and $\text{n} \in \mathbb{N}$.
+We also define the typing forms:
+
+```
+t ::= bit<n> | bool | t -> t
+```
+
+Finally, we define the capability forms
+
+```
+c ::= read n
+    | write n
+```
+
+A typing judgement for language is of the form $\Gamma, \kappa, e \vdash \Gamma', \kappa', t$
+where $\Gamma$ is the typing context and $\kappa$ is the capability context.
 
 ::: formula
 **Note**(rachit). I am fairly new to capabilities. If something doesn't sound
