@@ -6,19 +6,26 @@ RUN pip install pipenv
 
 # Add OCaml and some native dependencies. And Node/Yarn for the buildbot
 # "live" frontend.
-RUN apk add --no-cache perl opam ocaml-compiler-libs bash m4 bubblewrap \
+RUN apk add --no-cache perl opam ocaml-compiler-libs bash m4 \
     build-base git yarn
 
 # Install the latest opam. (opam2 is not available from Alpine yet.)
 # The CHECK_IF_PREINSTALLED variable works around a problem by using the
 # ocamlbuild we already have:
 # https://github.com/ocaml/ocamlbuild/issues/109
+# Also, we apparently need to disable opam2's new sandboxing feature (using
+# wrap-*-commands). The sandboxing tool (bwrap) does not appear to work inside
+# Docker without privileging the container.
+# http://opam.ocaml.org/doc/FAQ.html#Why-does-opam-require-bwrap
 ENV CHECK_IF_PREINSTALLED=false
 RUN opam init -y
 RUN opam install depext
 RUN opam config exec -- opam depext --install opam-devel
 RUN cp `opam config var "opam-devel:lib"`/opam /usr/bin/opam
 RUN opam init --reinit -y || true
+RUN echo $'wrap-build-commands: []\n\
+wrap-install-commands: []\n\
+wrap-remove-commands: []' >> ~/.opamrc
 
 # Install some of our OCaml dependencies carefully.
 RUN opam config exec -- opam depext --install -y dune menhir core.v0.10.0
