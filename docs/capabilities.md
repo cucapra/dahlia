@@ -94,7 +94,7 @@ where $x$ is metavariable representing identifiers and $\text{n} \in \mathbb{N}$
 We also define the typing forms:
 
 ```
-t ::= bit<n> | bool | t -> t
+t ::= bit<n> | bool | t -> t | t array
 ```
 
 Finally, we define the capability forms
@@ -104,11 +104,45 @@ c ::= read n
     | write n
 ```
 
-A typing judgement for language is of the form $\Gamma, \kappa, e \vdash \Gamma', \kappa', t$
-where $\Gamma$ is the typing context and $\kappa$ is the capability context.
+A typing judgement for language is of the form $\Gamma, \kappa, e \vdash
+\Gamma', \kappa', t$ where $\Gamma$ is the typing context and $\kappa$ is the
+capability context. A typing judgement states that if the capabilities required
+by $\mathcal{C}(e) \leq \kappa$ and the type environment shows that $e$ has
+$t$, then the antecedent can step to new environments $\Gamma'$ and $\kappa'$
+and show $e$ has type $t$.
+
+The right hand side of the rules have updated environments because type-checking
+an expression might consume affine bindings. Another thing to note is that
+we haven't yet defined the $\leq$ relationship over capabilities. There are
+several possible axioms and we need to carefully think which ones make sense for
+seashell.
+
+Typing rule for array access:
+
+$
+\begin{aligned}
+\frac{
+\kappa = \kappa' \oplus \{b\};~~ \Gamma, \kappa', a \vdash \Gamma', \kappa'', t \text{ array};~ ~ \Gamma', \kappa'', i \vdash \Gamma'', \kappa''', \text{int}
+}{
+\Gamma, \kappa, a\{b\}[i] ~\vdash~ \Gamma'', \kappa''', t
+}
+\end{aligned}
+$
+
+The rule has three antecedents, of which, the last two are straigforward array typing
+rules. The first antecendent simply requires that the initial capabilities environment
+$\kappa$ can be decomposed into some new environment $\kappa'$ and the capability
+required by $b$.
+
+::: todo
+This rule requires some clarification. We need a way function that computes
+the capabilities required by an expression $b$. Right now, $\{b\}$ is used
+to say "the set of capabilities required by $b$". -- Rachit.
+:::
 
 ::: formula
 **Unresolved concerns**.
+
 Adrian - a desugaring step (from explicit `unroll`s to nested loops) would
 certainly be correct, but it could make higher-level reasoning about the
 logical/source program a bit harder. In particular, it make make error
