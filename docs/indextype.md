@@ -151,7 +151,7 @@ Therefore, we have the following theorem:
 
 ::: formula
 **Value space theorem.** The values represented by an index type $idx\langle
-*l_s..h_s, d_s..h_s \rangle$ are all distinct.
+l_s..h_s, d_s..h_s \rangle$ are all distinct.
 :::
 
 Operations

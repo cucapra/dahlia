@@ -34,6 +34,8 @@ div.formula {
   border-radius: 11px;
 }
 
+/* --- */
+
 hr {
   border: 0;
   height: 1px;
@@ -48,4 +50,12 @@ h1 {
   padding: 5px;
   border: 1px solid black;
   border-radius: 10px;
+}
+
+/* Github style code background */
+pre {
+  background: rgb(246, 248, 250);
+  padding: 1em;
+  border-radius: 3px;
+  overflow: auto;
 }

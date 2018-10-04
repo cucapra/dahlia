@@ -1,47 +1,63 @@
 open Ast
+open Printf
+
+exception TypeError of string
 
 let rec string_of_type = function
   | TBool -> "bool"
   | TArray (t, _) -> (string_of_type t) ^ " array"
   | TIndex (s, d) ->
     let (ls, hs), (ld, hd) = s, d in
-    "idx<" ^ (string_of_int ls) ^ " .. " ^ (string_of_int hs) ^
-    ", " ^ (string_of_int ld) ^ " .. " ^ (string_of_int hd) ^ ">"
+    sprintf "idx<%s..%s, %s..%s>"
+      (string_of_int ls) (string_of_int hs) (string_of_int ld) (string_of_int hd)
   | TAlias id -> id
   | TFloat -> "float"
   | TFunc _ -> "func"
-  | _ -> failwith "Implement me!"
+  | TLin t -> (string_of_type t) ^ " lin"
+  | TMux _ -> "mux"
+
+let id_already_bound id =
+  sprintf "`%s' already bound in this context. Cannot shadow variables." id
 
 let illegal_bank i id =
-  "[Type error] Bank " ^ (string_of_int i) ^ " already consumed for memory `" ^ id ^ "'"
+  sprintf "[Type error] Bank %d already consumed for memory `%s'" i id
 
-let range_error =
-  "[Type error] range start/end must be integers"
+let access_without_index_type typ =
+  sprintf "[Type error] Cannot index into array with %s; expected an index type."
+    (string_of_type typ)
+
+let range_error t1 t2 =
+  sprintf
+    "[Type error] Expected range start and end to be integers, received start: %s, end %s."
+    (string_of_type t1)
+    (string_of_type t2)
+
+let range_static_error t1 t2 =
+  sprintf
+    "[Type Error] Expected range start and end to be static integers, received start:%s, end:%s."
+    (string_of_type t1)
+    (string_of_type t2)
 
 let unexpected_type id actual expected =
-  "[Type error] " ^ id ^
-  " was of type " ^ (string_of_type actual) ^
-  " but type " ^ (string_of_type expected) ^ " was expected"
+  sprintf "[Type Error] `%s' was of type %s but type %s was expected."
+    id
+    (string_of_type actual)
+    (string_of_type expected)
 
 let illegal_accessor_type t id =
-  "[Type error] can't access array " ^ id ^ " with type " ^ (string_of_type t)
+  sprintf "[Type error] can't access array `%s' with type %s." id (string_of_type t)
 
-let illegal_access id =
-  "[Type error] can't index into non-array " ^ id
+let not_an_array id =
+  sprintf "[Type error] `%s' is not an array." id
 
 let illegal_op binop t1 t2 =
-  "[Type error] can't apply operator '" ^
-  (string_of_binop binop) ^
-  "' to " ^
-  (string_of_type t1) ^
-  " and " ^
+  sprintf "[Type error] can't apply operator %s to %s and %s."
+  (string_of_binop binop)
+  (string_of_type t1)
   (string_of_type t2)
 
-let small_mux =
-  "[Type error] illegal access operation: mux is smaller than array banking factor"
-
 let illegal_app id =
-  "[Type error] " ^ id ^ " is not a function and cannot be applied"
+  sprintf "[Type error] `%s' is not a function and cannot be applied." id
 
 let illegal_mux =
   "[Type error] can't use multiplexer to access non-array"
@@ -52,14 +68,13 @@ let static_bank_error =
 let improper_unroll =
   "[Type Error] unroll factor must be a multiple of banking factor"
 
-let range_static_error =
-  "[Type Error] range start/end must be static"
+let cap_non_array =
+  "[Type Error] Only array expressions are allowed in capability statements."
 
 let reassign_type_mismatch t_lval t_rval =
-  "[Type Error] cannot assign value of type `" ^
-  (string_of_type t_rval) ^
-  "' to L-value of type `" ^
-  (string_of_type t_lval) ^ "'"
+  sprintf "[Type Error] cannot assign value of type `%s' to L-value of type `%s'."
+  (string_of_type t_rval)
+  (string_of_type t_lval)
 
 let incorrect_aa_dims aname expected actual =
   let e_dim_end = if expected = 1 then "" else "s" in
@@ -67,3 +82,6 @@ let incorrect_aa_dims aname expected actual =
   "[Type Error] array `" ^ aname ^ "' has " ^ (string_of_int expected) ^
   " dimension" ^ e_dim_end ^ "; attempted array access implies " ^
   (string_of_int actual) ^ " dimension" ^ a_dim_end
+
+let invalid_array_write id =
+  sprintf "Cannot write into array `%s' without write capability." id
