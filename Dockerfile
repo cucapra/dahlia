@@ -4,6 +4,9 @@ MAINTAINER Adrian Sampson <asampson@cs.cornell.edu>
 # Add Python, pipenv, and node for buildbot.
 RUN sudo apt-get install -y software-properties-common && \
     sudo add-apt-repository ppa:deadsnakes/ppa && \
+    curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add - && \
+    sudo apt-add-repository \
+        'deb https://dl.yarnpkg.com/debian/ stable main' && \
     sudo apt-get update
 RUN sudo apt-get install -y python3.7 nodejs yarn
 RUN curl https://bootstrap.pypa.io/get-pip.py | sudo -H python3.7
