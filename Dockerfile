@@ -25,7 +25,7 @@ CMD ["pipenv", "run", \
      "buildbot.server:app"]
 
 # Add Seashell source.
-ADD . seashell
+ADD --chown=opam . seashell
 WORKDIR seashell
 
 # Build Seashell.
