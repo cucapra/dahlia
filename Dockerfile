@@ -25,7 +25,8 @@ RUN cp `opam config var "opam-devel:lib"`/opam /usr/bin/opam
 RUN opam init --reinit -y || true
 RUN echo $'wrap-build-commands: []\n\
 wrap-install-commands: []\n\
-wrap-remove-commands: []' >> ~/.opamrc
+wrap-remove-commands: []\n\
+required-tools: []' >> ~/.opamrc
 
 # Install some of our OCaml dependencies carefully.
 RUN opam config exec -- opam depext --install -y dune menhir core.v0.10.0
