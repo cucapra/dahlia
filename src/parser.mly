@@ -12,7 +12,7 @@ let parse_sequence c1 c2 =
 
 %token EOF
 
-%token <int> INT
+%token <int * int> INT
 %token <string> ID
 %token <float> FLOAT
 
@@ -52,7 +52,7 @@ cmd:
 acmd:
   | WRITE expr AS ID SEMICOLON                              { CCap(Write, $2, $4)}
   | READ expr AS ID SEMICOLON                               { CCap(Read, $2, $4)}
-  | MUX INT ID LPAREN ID RPAREN SEMICOLON                   { CMuxDef ($3, $5, $2) }
+  | MUX INT ID LPAREN ID RPAREN SEMICOLON                   { CMuxDef ($3, $5, fst $2) }
   | ID LPAREN args RPAREN SEMICOLON                         { CApp ($1, $3) }
   | TYPE ID EQUAL type_annotation SEMICOLON                 { CTypeDef ($2, $4) }
   | FUNC ID LPAREN annotated_args RPAREN LBRACK cmd RBRACK  { CFuncDef ($2, $4, $7) }
@@ -60,7 +60,7 @@ acmd:
   | IF LPAREN expr RPAREN LBRACK cmd RBRACK                 { CIf ($3, $6) }
   | expr REASSIGN expr SEMICOLON                            { CReassign ($1, $3) }
   | FOR LPAREN LET ID EQUAL expr RANGE_DOTS expr RPAREN UNROLL INT
-    LBRACK cmd RBRACK                                       { CFor ($4, $6, $8, $11, $13) }
+    LBRACK cmd RBRACK                                       { CFor ($4, $6, $8, fst $11, $13) }
   | FOR LPAREN LET ID EQUAL expr RANGE_DOTS expr RPAREN
     LBRACK cmd RBRACK                                       { CFor ($4, $6, $8, 1, $11) }
   | expr SEMICOLON                                          { CExpr $1 }
@@ -70,7 +70,7 @@ expr:
   | ID LBRACK expr RBRACK LSQUARE expr RSQUARE  { EBankedAA ($1, $3, $6) }
   | LPAREN expr RPAREN                          { $2 }
   | expr binop expr                             { EBinop ($2, $1, $3) }
-  | INT                                         { EInt $1 }
+  | INT                                         { EInt (fst $1, snd $1) } (* OCaml... :( *)
   | FLOAT                                       { EFloat $1 }
   | TRUE                                        { EBool true }
   | FALSE                                       { EBool false }
@@ -86,10 +86,10 @@ args:
   | separated_list(COMMA, expr) { $1 }
 
 array_def:
-  | LSQUARE INT BANK LPAREN INT RPAREN RSQUARE array_def  { ($2, $5) :: $8 }
-  | LSQUARE INT RSQUARE array_def                         { ($2, 1) :: $4 }
-  | LSQUARE INT BANK LPAREN INT RPAREN RSQUARE            { [($2, $5)] }
-  | LSQUARE INT RSQUARE                                   { [($2, 1)] }
+  | LSQUARE INT BANK LPAREN INT RPAREN RSQUARE array_def  { (fst $2, fst $5) :: $8 }
+  | LSQUARE INT RSQUARE array_def                         { (fst $2, 1) :: $4 }
+  | LSQUARE INT BANK LPAREN INT RPAREN RSQUARE            { [(fst $2, fst $5)] }
+  | LSQUARE INT RSQUARE                                   { [(fst $2, 1)] }
 
 access:
   | LSQUARE expr RSQUARE          { [$2] }

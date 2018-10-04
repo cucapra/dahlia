@@ -26,7 +26,7 @@ let rec check_expr exp ctx : type_node * gamma =
   match exp with
   | EFloat _                   -> TFloat, ctx
   | EBool _                    -> TBool, ctx
-  | EInt i                     -> TIndex ((i, i+1), (0, 1)), ctx
+  | EInt (i, _)                -> TIndex ((i, i+1), (0, 1)), ctx (*(Ted): reln btwn static ints and bit sizes?*)
   | EVar x                     -> Context.get_binding x ctx, ctx
   | EBinop (binop, e1, e2)     -> check_binop binop e1 e2 ctx
   | EBankedAA _ | EAA _        ->
