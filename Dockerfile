@@ -11,7 +11,7 @@ ENV PATH ${HOME}/.local/bin:${PATH}
 RUN pip install --user pipenv
 
 # Install some of our OCaml dependencies.
-RUN opam config exec -- opam depext --install -y dune menhir core.v0.10.0
+RUN opam config exec -- opam depext --install -y dune menhir core
 
 # Add opam bin directory to our $PATH so we can run seac.
 ENV PATH /root/.opam/system/bin:${PATH}
