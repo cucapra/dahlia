@@ -1,22 +1,24 @@
-FROM python:3.7-alpine
+FROM ocaml/opam2:ubuntu-18.04
 MAINTAINER Adrian Sampson <asampson@cs.cornell.edu>
 
-# Add pipenv for buildbot.
-RUN pip install pipenv
+# Add Python, pipenv, and node for buildbot.
+RUN sudo apt-get install -y software-properties-common && \
+    sudo add-apt-repository ppa:deadsnakes/ppa && \
+    curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add - && \
+    sudo apt-add-repository \
+        'deb https://dl.yarnpkg.com/debian/ stable main' && \
+    sudo apt-get update
+RUN sudo apt-get install -y python3.7 nodejs yarn
+RUN curl https://bootstrap.pypa.io/get-pip.py | sudo -H python3.7
+ENV PATH ${HOME}/.local/bin:${PATH}
+RUN pip install --user pipenv
 
-# Add OCaml and enough dependencies to build OCaml packages. And Node/Yarn for
-# the buildbot "live" frontend.
-RUN apk add --no-cache opam ocaml-compiler-libs bash m4 build-base git yarn
-RUN opam init -y
-
-# Our OCaml dependencies. We already have ocamlbuild, so we have a workaround:
-# https://github.com/ocaml/ocamlbuild/issues/109
-ENV CHECK_IF_PREINSTALLED=false
-RUN opam install depext
-RUN opam config exec -- opam depext --install dune menhir core.v0.10.0
+# Install some of our OCaml dependencies.
+RUN opam config exec -- opam depext --install -y \
+    dune menhir core ppx_deriving ppx_expect cmdliner
 
 # Add opam bin directory to our $PATH so we can run seac.
-ENV PATH /root/.opam/system/bin:${PATH}
+ENV PATH ${HOME}/.opam/system/bin:${PATH}
 
 # Volume, port, and command for buildbot.
 VOLUME seashell/buildbot/instance
@@ -24,13 +26,14 @@ EXPOSE 8000
 ENV PIPENV_PIPFILE=buildbot/Pipfile
 CMD ["pipenv", "run", \
      "gunicorn", "--bind", "0.0.0.0:8000", "--chdir", "buildbot", \
-     "buildbot:app"]
+     "buildbot.server:app"]
 
 # Add Seashell source.
-ADD . seashell
+ADD --chown=opam . seashell
 WORKDIR seashell
 
 # Build Seashell.
+RUN opam install .
 RUN eval `opam config env` ; dune build
 RUN eval `opam config env` ; dune install
 

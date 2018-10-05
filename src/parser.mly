@@ -1,5 +1,13 @@
 %{
 open Ast
+
+let parse_sequence c1 c2 =
+  match c1, c2 with
+  | CSeq cmds1, CSeq cmds2 -> CSeq (cmds1 @ cmds2)
+  | c, CSeq cmds           -> CSeq (c :: cmds)
+  | CSeq cmds, c           -> CSeq (cmds @ [c])
+  | c1, c2                 -> CSeq ([c1; c2])
+
 %}
 
 %token EOF
@@ -11,7 +19,7 @@ open Ast
 (* Keywords *)
 %token LET IF FOR TRUE FALSE INT_ANNOTATION
        BOOL_ANNOTATION FLOAT_ANNOTATION
-       MUX UNROLL BANK FUNC TYPE
+       MUX UNROLL BANK FUNC TYPE WRITE READ AS
 
 (* Parentheses, brackets, etc *)
 %token LPAREN RPAREN LBRACK RBRACK LSQUARE RSQUARE
@@ -35,98 +43,78 @@ open Ast
 %%
 
 prog:
-  | c = cmd; EOF
-    { c } ;
+  | cmd EOF { $1 }
 
 cmd:
-  | MUX s = INT; mid = ID; LPAREN; aid = ID; RPAREN; SEMICOLON
-    { CMuxDef (mid, aid, s) }
-  | f = ID LPAREN a = args RPAREN SEMICOLON
-    { CApp (f, a) }
-  | TYPE tname = ID EQUAL tval = type_annotation SEMICOLON
-    { CTypeDef (tname, tval) }
-  | FUNC f = ID LPAREN a = annotated_args RPAREN
-    LBRACK body = cmd RBRACK
-    { CFuncDef (f, a, body) }
-  | LET x = ID EQUAL e1 = expr SEMICOLON
-    { CAssign (x, e1) }
-  | IF LPAREN b = expr RPAREN LBRACK body = cmd RBRACK
-    { CIf (b, body) }
-  | e1 = expr; REASSIGN; e2 = expr; SEMICOLON
-    { CReassign (e1, e2) }
-  | FOR LPAREN LET x = ID EQUAL x1 = expr RANGE_DOTS x2 = expr RPAREN UNROLL u = INT
-    LBRACK c = cmd RBRACK
-    { CFor (x, x1, x2, u, c) }
-  | FOR LPAREN LET x = ID EQUAL x1 = expr RANGE_DOTS x2 = expr RPAREN
-    LBRACK c = cmd RBRACK
-    { CFor (x, x1, x2, 1, c) } ;
-  | c1 = cmd c2 = cmd
-    { CSeq (c1, c2) }
+  | acmd      { $1 }
+  | acmd cmd  { parse_sequence $1 $2 }
+
+acmd:
+  | WRITE expr AS ID SEMICOLON                              { CCap(Write, $2, $4)}
+  | READ expr AS ID SEMICOLON                               { CCap(Read, $2, $4)}
+  | MUX INT ID LPAREN ID RPAREN SEMICOLON                   { CMuxDef ($3, $5, $2) }
+  | ID LPAREN args RPAREN SEMICOLON                         { CApp ($1, $3) }
+  | TYPE ID EQUAL type_annotation SEMICOLON                 { CTypeDef ($2, $4) }
+  | FUNC ID LPAREN annotated_args RPAREN LBRACK cmd RBRACK  { CFuncDef ($2, $4, $7) }
+  | LET ID EQUAL expr SEMICOLON                             { CAssign ($2, $4) }
+  | IF LPAREN expr RPAREN LBRACK cmd RBRACK                 { CIf ($3, $6) }
+  | expr REASSIGN expr SEMICOLON                            { CReassign ($1, $3) }
+  | FOR LPAREN LET ID EQUAL expr RANGE_DOTS expr RPAREN UNROLL INT
+    LBRACK cmd RBRACK                                       { CFor ($4, $6, $8, $11, $13) }
+  | FOR LPAREN LET ID EQUAL expr RANGE_DOTS expr RPAREN
+    LBRACK cmd RBRACK                                       { CFor ($4, $6, $8, 1, $11) }
+  | expr SEMICOLON                                          { CExpr $1 }
 
 expr:
-  | x = ID; a = access;
-    { EAA (x, a) }
-  | x = ID; LBRACK; idx1 = expr; RBRACK; LSQUARE; idx2 = expr; RSQUARE
-    { EBankedAA (x, idx1, idx2) }
-  | LPAREN e = expr RPAREN
-    { e }
-  | e1 = expr; bop = binop; e2 = expr
-    { EBinop (bop, e1, e2) } ;
-  | x = INT
-    { EInt (x, true) }
-  | f = FLOAT
-    { EFloat f }
-  | TRUE
-    { EBool true }
-  | FALSE
-    { EBool false }
-  | x = ID
-    { EVar x }
+  | ID access                                   { EAA ($1, $2) }
+  | ID LBRACK expr RBRACK LSQUARE expr RSQUARE  { EBankedAA ($1, $3, $6) }
+  | LPAREN expr RPAREN                          { $2 }
+  | expr binop expr                             { EBinop ($2, $1, $3) }
+  | INT                                         { EInt $1 }
+  | FLOAT                                       { EFloat $1 }
+  | TRUE                                        { EBool true }
+  | FALSE                                       { EBool false }
+  | ID                                          { EVar $1 }
 
 annotated_id:
-  | x = ID COLON t = type_annotation
-    { (x, t) }
+  | ID COLON type_annotation { ($1, $3) }
 
 annotated_args:
-  | a = separated_list(COMMA, annotated_id ) { a }
+  | separated_list(COMMA, annotated_id ) { $1 }
 
 args:
-  | a = separated_list(COMMA, expr) { a }
+  | separated_list(COMMA, expr) { $1 }
 
 array_def:
-  | LSQUARE; s = INT; BANK; LPAREN; bf = INT; RPAREN; RSQUARE; t = array_def
-    { (s, bf) :: t }
-  | LSQUARE; s = INT; RSQUARE; t = array_def
-    { (s, 1) :: t }
-  | LSQUARE; s = INT; BANK; LPAREN; bf = INT; RPAREN; RSQUARE
-    { [(s, bf)] }
-  | LSQUARE; s = INT; RSQUARE
-    { [(s, 1)] }
+  | LSQUARE INT BANK LPAREN INT RPAREN RSQUARE array_def  { ($2, $5) :: $8 }
+  | LSQUARE INT RSQUARE array_def                         { ($2, 1) :: $4 }
+  | LSQUARE INT BANK LPAREN INT RPAREN RSQUARE            { [($2, $5)] }
+  | LSQUARE INT RSQUARE                                   { [($2, 1)] }
 
 access:
-  | LSQUARE; idx = expr; RSQUARE
-    { [idx] }
-  | LSQUARE; idx = expr; RSQUARE; a = access
-    { idx :: a }
+  | LSQUARE expr RSQUARE          { [$2] }
+  | LSQUARE expr RSQUARE access   { $2 :: $4 }
+
+basic_type:
+  | BOOL_ANNOTATION             { TBool }
+  | INT_ANNOTATION              { TIndex ((0, 1), (min_int, max_int)) }
+  | FLOAT_ANNOTATION            { TFloat }
+  | ID                          { TAlias $1 }
 
 type_annotation:
-  | BOOL_ANNOTATION { TBool }
-  | INT_ANNOTATION { TIndex ((0, 1), (min_int, max_int)) }
-  | FLOAT_ANNOTATION { TFloat }
-  | t = type_annotation a = array_def
-    { TArray (t, a) }
-  | x = ID { TAlias x }
+  | basic_type             { $1 }
+  | basic_type array_def   { TArray ($1, $2) }
 
 %inline binop:
-  | NEQ { BopNeq }
-  | GEQ { BopGeq }
-  | LEQ { BopLeq }
-  | LT  { BopLt }
-  | GT  { BopGt }
-  | EQ  { BopEq }
-  | PLUS { BopPlus }
-  | MINUS { BopMinus }
-  | TIMES { BopTimes }
-  | AND { BopAnd }
-  | OR { BopOr } ;
+  | NEQ     { BopNeq }
+  | GEQ     { BopGeq }
+  | LEQ     { BopLeq }
+  | LT      { BopLt }
+  | GT      { BopGt }
+  | EQ      { BopEq }
+  | PLUS    { BopPlus }
+  | MINUS   { BopMinus }
+  | TIMES   { BopTimes }
+  | AND     { BopAnd }
+  | OR      { BopOr }
 
