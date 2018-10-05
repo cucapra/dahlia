@@ -1,10 +1,7 @@
 (* Definitions for various ast and type nodes. *)
 
-(* TODO(rachit): Create ast.mli. Make sure the deriving show functions are
- * exposed correctly. *)
-
 (* Type for identifiers. *)
-type id = string [@@deriving show]
+type id = string
 
 (* A [type_node] is one of the following:
  *   - [TBool]: a boolean type
@@ -25,7 +22,7 @@ type id = string [@@deriving show]
  *   - [TFloat]: a float type
  *   - [TMux (id, s) a mux type that encapsulates a memory with id [id] and
  *     this mux (not memory) is of size [s] *)
-type type_node =
+and type_node =
   | TBool
   | TFloat
   | TAlias of id
@@ -34,9 +31,8 @@ type type_node =
   | TArray of type_node * (int * int) list
   | TIndex of (int * int) * (int * int)
   | TFunc of type_node list
-  [@@deriving show]
 
-type binop =
+and binop =
   | BopEq
   | BopNeq
   | BopGeq
@@ -48,20 +44,6 @@ type binop =
   | BopAnd
   | BopTimes
   | BopOr
-  [@@deriving show]
-
-let string_of_binop = function
-  | BopEq -> "="
-  | BopNeq -> "!="
-  | BopGeq -> ">="
-  | BopLeq -> "<="
-  | BopLt -> "<"
-  | BopGt -> ">"
-  | BopPlus -> "+"
-  | BopMinus -> "-"
-  | BopTimes -> "*"
-  | BopAnd -> "&&"
-  | BopOr -> "||"
 
 (* An [expr] is one of the following:
  *   - [EInt (i, s)]: an integer expr with value [i];
@@ -81,7 +63,7 @@ let string_of_binop = function
  *     for a program with such an access to typecheck.
  * exprs carry information necessary for the compiler to
  * generate C code. *)
-type expr =
+and expr =
   | EInt of int
   | EFloat of float
   | EVar of id
@@ -89,9 +71,8 @@ type expr =
   | EBinop of binop * expr * expr
   | EAA of id * expr list
   | EBankedAA of id * expr * expr
-  [@@deriving show]
 
-type capability = Read | Write [@@deriving show]
+and capability = Read | Write
 
 (* A [command] is one of the following:
  *   - [CAssign (i, e)]: a representation of assignment of
@@ -107,7 +88,7 @@ type capability = Read | Write [@@deriving show]
  *     followed by [c2]
  *   - [CFuncDef, CTypeDef, CMuxDef, CApp]: TODO *)
 (** TODO(rachit): Add CEmpty *)
-type command =
+and command =
   | CCap of capability * expr * id
   | CAssign of id * expr
   | CFor of id * expr * expr * int * command
@@ -120,6 +101,17 @@ type command =
   | CApp of id * expr list
   | CExpr of expr
   | CEmpty
-  [@@deriving show]
+  [@@deriving show {with_path = false}]
 
-let string_of_command (cmd : command) : string = show_command cmd
+let string_of_binop = function
+  | BopEq -> "="
+  | BopNeq -> "!="
+  | BopGeq -> ">="
+  | BopLeq -> "<="
+  | BopLt -> "<"
+  | BopGt -> ">"
+  | BopPlus -> "+"
+  | BopMinus -> "-"
+  | BopTimes -> "*"
+  | BopAnd -> "&&"
+  | BopOr -> "||"

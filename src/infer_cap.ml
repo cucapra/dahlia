@@ -29,26 +29,25 @@ class infer_read_capabilities = object (self)
    * context contains alls the bindings. *)
   inherit [(context * context)] ast_mapper as super
 
+  method private array_access_helper name exp st =
+    match List.assoc_opt exp (fst st) with
+      | Some id -> EVar id, st
+      | None ->
+          let id = GN.fresh name in
+          EVar id, (fst st, (exp, id) :: (snd st))
+
   (** For an array access, first recur into the access expressions and generate
    * the context. Next bind this array access to a capability name. *)
   method! private eaa (name, es) st =
     let es', st1 = self#elist_visit es st in
     let exp = EAA (name, es') in
-    match List.assoc_opt exp (fst st1) with
-      | Some id -> EVar id, st1
-      | None ->
-          let id = GN.fresh name in
-          EVar id, (fst st1, (exp, id) :: (snd st1))
+    self#array_access_helper name exp st1
 
   method! private ebankedaa (name, e1, e2) st =
     let e1', st1 = self#expr e1 st in
     let e2', st2 = self#expr e2 st1 in
     let exp = EBankedAA (name, e1', e2') in
-    match List.assoc_opt exp (fst st2) with
-      | Some id -> EVar id, st2
-      | None ->
-          let id = GN.fresh name in
-          EVar id, (fst st2, (exp, id) :: (snd st2))
+    self#array_access_helper name exp st2
 
   (** Don't recur into CCap *)
   method! private ccap (cap, e, id) st = match cap with
@@ -65,8 +64,11 @@ class infer_read_capabilities = object (self)
   method! command c st =
     let to_cap (e, id) = CCap (Read, e, id) in
     let c', st' = super#command c st in
-    let caps = List.map to_cap (snd st') in     (** Generate read capabilities. *)
-    CSeq (List.rev @@ c' :: caps), (snd st' @ fst st', []) (** Reverse to account for bottom-up. *)
+    if List.length (snd st') > 0 then (** Don't add CSeq if there are no capabilities to add. *)
+      let caps = List.map to_cap (snd st') in     (** Generate read capabilities. *)
+      CSeq (List.rev @@ c' :: caps), (snd st' @ fst st', []) (** Reverse to account for bottom-up. *)
+    else
+      c', st'
 
   (** Don't recur into type_nodes *)
   method! type_node t st = t, st
