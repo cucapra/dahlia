@@ -39,3 +39,4 @@ RSYNCARGS := --compress --recursive --checksum --itemize-changes \
 DEST := courses:coursewww/capra.cs.cornell.edu/htdocs/seashell/docs
 deploy: $(HTML)
 	rsync $(RSYNCARGS) ./ $(DEST)
+	rsync $(RSYNCARGS) ./demo $(DEST)/demo
