@@ -38,4 +38,5 @@ RSYNCARGS := --compress --recursive --checksum --itemize-changes \
 	--exclude .DS_Store --exclude Makefile
 DEST := courses:coursewww/capra.cs.cornell.edu/htdocs/seashell/docs
 deploy: $(HTML)
+	$(MAKE) -C ../ demo
 	rsync $(RSYNCARGS) ./ $(DEST)
