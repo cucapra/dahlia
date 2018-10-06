@@ -12,6 +12,7 @@ all: $(HTML)
 
 clean:
 	rm -f $(HTML) style.css
+	cd demo && yarn build
 
 # Build HTML.
 PANDOC_ARGS := -f markdown -t html -s --katex=$(KATEX_URL) \

@@ -30,6 +30,4 @@ function compileSS() {
   result.clearSelection();
 }
 
-window.result=result
-
 window.compileSS = compileSS;
