@@ -4,6 +4,19 @@ require('brace/mode/ocaml')
 require('brace/mode/c_cpp')
 require('brace/theme/monokai');
 
+function compileSS() {
+  const prog = editor.getValue();
+  let out;
+  try {
+    out = seashell.compile(prog);
+  } catch (e) {
+    out = e.toString().split(',').slice(4).join(", ");
+  }
+  result.setValue(out);
+  result.clearSelection();
+}
+window.compileSS = compileSS;
+
 const editor = ace.edit("editor");
 editor.session.setMode("ace/mode/ocaml");
 editor.session.setUseWrapMode("ace/mode/c_cpp");
@@ -17,17 +30,3 @@ result.setOptions({
   highlightActiveLine: false,
   highlightGutterLine: false
 });
-
-function compileSS() {
-  const prog = editor.getValue();
-  let out;
-  try {
-    out = seashell.compile(prog);
-  } catch (e) {
-    out = e.toString().split(',').slice(4).join(", ");
-  }
-  result.setValue(out);
-  result.clearSelection();
-}
-
-window.compileSS = compileSS;
