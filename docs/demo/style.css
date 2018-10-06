@@ -1,0 +1,54 @@
+.container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 50px 300px 50px;
+  grid-gap: 2em 1em;
+  grid-template-areas:
+  "header header"
+  "input output"
+  "buttons buttons"
+}
+
+.color {
+  background-color: #1EAAFC;
+  background-image: linear-gradient(130deg, #6C52D9 0%, #1EAAFC 85%, #3EDFD7 100%);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+  color: #fff;
+  border-radius: 4px;
+  border: 6px solid #171717;
+}
+
+.header {
+  display: table;
+  text-align: center;
+  grid-area: header;
+  border: solid 1px;
+  border-radius: 10px;
+}
+
+.output {
+  grid-area: output;
+  border: solid 1px;
+  border-radius: 10px;
+}
+
+.input {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  grid-area: input;
+  border: solid 1px;
+  border-radius: 10px;
+}
+
+.buttons {
+  grid-area: buttons;
+}
+
+.button {
+  border: solid 1px;
+  border-radius: 5px;
+  text-align: center;
+  padding: 5px;
+}

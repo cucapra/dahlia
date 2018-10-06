@@ -31,8 +31,6 @@ function compileSS() {
   result.clearSelection();
 }
 
-window.result=result
-
 window.compileSS = compileSS;
 
 },{"./seashell":8,"brace":2,"brace/mode/c_cpp":3,"brace/mode/ocaml":4,"brace/theme/monokai":5}],2:[function(require,module,exports){

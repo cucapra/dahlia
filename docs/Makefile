@@ -9,10 +9,10 @@ CSS_URL := https://gist.githubusercontent.com/killercup/5917178/raw/40840de53520
 KATEX_URL := https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0-beta/
 
 all: $(HTML)
+	cd demo && yarn build
 
 clean:
 	rm -f $(HTML) style.css
-	cd demo && yarn build
 
 # Build HTML.
 PANDOC_ARGS := -f markdown -t html -s --katex=$(KATEX_URL) \
@@ -39,4 +39,3 @@ RSYNCARGS := --compress --recursive --checksum --itemize-changes \
 DEST := courses:coursewww/capra.cs.cornell.edu/htdocs/seashell/docs
 deploy: $(HTML)
 	rsync $(RSYNCARGS) ./ $(DEST)
-	rsync $(RSYNCARGS) ./demo $(DEST)/demo
