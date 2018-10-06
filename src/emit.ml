@@ -7,9 +7,9 @@ let set_type_map t =
 
 let cleanup_output s =
   String.split_on_char '\n' s
-  |> Core.List.drop_while ~f:(fun x -> x = "")
   |> List.filter (fun s -> String.length s != 0)
-  |> Core.List.reduce_exn ~f:(fun acc s -> acc ^ "\n" ^ s)
+  |> Core.List.reduce ~f:(fun acc s -> acc ^ "\n" ^ s)
+  |> Core.Option.value ~default:""
 
 let compute_bf d =
   List.fold_left (fun acc (_, d) -> d * acc) 1 d
