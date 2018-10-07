@@ -1,12 +1,40 @@
 .container {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 50px 300px 50px;
-  grid-gap: 2em 1em;
+  grid-template-columns: 2fr 5fr 5fr 2fr;
+  grid-template-rows: 50px 300px 50px 50px;
+  grid-gap: 1em;
   grid-template-areas:
-  "header header"
-  "input output"
-  "buttons buttons"
+  "empty header header"
+  "empty input output"
+  "empty buttons buttons"
+  "empty footer footer"
+}
+
+@media (max-width: 500px) {
+  .container {
+    grid-template-columns: 1fr;
+    grid-template-rows: 30px 30px 200px 200px 50px 50px;
+    grid-gap: 1em;
+    grid-template-areas:
+    "header"
+    "empty"
+    "input"
+    "output"
+    "buttons"
+    "footer"
+  }
+  .button {
+    border: solid 1px;
+    border-radius: 5px;
+    text-align: center;
+    padding: 5px;
+    width: 150px;
+    height: 40px;
+  }
+}
+
+h2 {
+  margin: 0.3em;
 }
 
 .color {
@@ -33,10 +61,6 @@
 }
 
 .input {
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
   grid-area: input;
   border: solid 1px;
   border-radius: 10px;
@@ -44,6 +68,8 @@
 
 .buttons {
   grid-area: buttons;
+  justify-self: center;
+  align-self: center;
 }
 
 .button {
@@ -51,4 +77,18 @@
   border-radius: 5px;
   text-align: center;
   padding: 5px;
+  width: 150px;
+  height: 40px;
+}
+
+.footer {
+  grid-area: footer;
+  font-size: 75%;
+  justify-self: center;
+}
+
+hr {
+  border: 0;
+  height: 1px;
+  background: #aaa;
 }

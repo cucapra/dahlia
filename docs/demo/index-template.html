@@ -21,10 +21,22 @@
 }</div>
     <!-- Output area -->
     <div id="result" class="output"></div>
+    <!-- Compile button -->
     <div class="buttons">
       <button class="button" onclick="compileSS()">
         Compile
       </button>
+    </div>
+    <!-- Footer -->
+    <div class="footer">
+      <hr/>
+      <footer>
+        Built on commit
+          <a href="https://github.com/cucapra/seashell/commit/%%COMMIT%%">
+          %%COMMIT_SHORT%%
+          </a>
+        at %%TIME%%.
+      </footer>
     </div>
     <!-- Scripts to load -->
     <script src="./bundle.js"></script>
