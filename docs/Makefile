@@ -38,5 +38,5 @@ RSYNCARGS := --compress --recursive --checksum --itemize-changes \
 	--exclude .DS_Store --exclude Makefile
 DEST := courses:coursewww/capra.cs.cornell.edu/htdocs/seashell/docs
 deploy: $(HTML)
-	cd demo/ && yarn install && yarn build
+	cd demo/ && /home/rachit/identify-machine && yarn build
 	rsync $(RSYNCARGS) ./ $(DEST)
