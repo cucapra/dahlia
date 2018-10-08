@@ -28,15 +28,15 @@ This route automatically starts the necessary worker threads in the same process
 
 There are two differences in deployment: you'll want to use a proper server, and the buildbot will want to spawn a separate process just for the worker threads.
 
+Use this command to start the workers:
+
+    $ pipenv run python -m buildbot.workproc
+
 For the server, [Gunicorn][] is a good choice (and included in the dependencies). Here's how you might invoke it:
 
     $ pipenv run gunicorn buildbot.server:app
 
 The `make serve` target does that.
-The server process will automatically spawn the worker subprocess by default.
-If you would rather manage it independently, disable the `WORKER_PROCESS` configuration and use this command to launch the workers:
-
-    $ pipenv run python -m buildbot.workproc
 
 The two processes communicate through a Unix domain socket in the instance directory.
 You can provide a custom instance directory path to the workproc invocation as an argument.

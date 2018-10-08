@@ -12,11 +12,6 @@ HLS_COMMAND_PREFIX = []
 # development environment and False in production.
 WORKER_THREADS = None
 
-# Try to automatically launch a worker process if one is not already
-# running. We detect a running worker process using the presence of the
-# Unix domain socket. (This has no effect if WORKER_THREADS is True.)
-WORKER_PROCESS = True
-
 # Filename extensions to send as plain text for job file viewing.
 TEXT_EXTENSIONS = [
     'ss',

@@ -61,15 +61,12 @@ def start_workers():
     processes or threads, which will all start different copies of the
     worker threads!
 
-    Otherwise, in WORKER_PROCESS mode, try starting the workproc if it
-    does not already seem to be running (as evidenced by the presence of
-    its Unix domain socket).
+    Otherwise, the worker process needs to be run separately. We do not
+    try to launch it ourselves.
     """
     if app.config['WORKER_THREADS']:
         proc = workproc.WorkProc(app.instance_path, db)
         proc.start()
-    elif app.config['WORKER_PROCESS']:
-        workproc.launch(app.instance_path)
 
 
 def notify_workers(jobname):

@@ -4,7 +4,6 @@ from . import worker
 from .db import JobDB
 from flask.config import Config
 import sys
-import subprocess
 
 
 INSTANCE_DIR = 'instance'
@@ -80,17 +79,6 @@ async def _notify(basedir, jobname):
     sock = await curio.open_unix_connection(sockpath)
     await sock.makefile('wb').write(line)
     await sock.close()
-
-
-def launch(basedir, force=False):
-    """Spawn a new worker process. Unless `force` is set, do nothing if
-    the socket already exists (which is evidence that a worker is
-    already running).
-    """
-    sockpath = os.path.join(basedir, SOCKNAME)
-    if os.path.exists(sockpath) and not force:
-        return
-    subprocess.Popen([sys.executable, '-m', __name__, basedir])
 
 
 if __name__ == '__main__':
