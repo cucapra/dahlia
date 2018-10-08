@@ -37,6 +37,11 @@ RUN opam install --deps-only .
 RUN eval `opam config env` ; dune build
 RUN eval `opam config env` ; dune install
 
+# Avoids a bug in a recent version of pip:
+# https://github.com/pypa/pipenv/issues/2924
+RUN sudo pip install pip==18.0
+RUN cd buildbot ; PIPENV_PIPFILE= pipenv run pip install pip==18.0
+
 # Set up buildbot.
 RUN cd buildbot ; PIPENV_PIPFILE= pipenv install
 RUN cd buildbot ; yarn
