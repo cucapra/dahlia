@@ -58,6 +58,8 @@ class WorkProc:
         messages. Run indefinitely (until the server is interrupted).
         """
         sockpath = os.path.join(self.basedir, SOCKNAME)
+        if os.path.exists(sockpath):
+            os.unlink(sockpath)
         try:
             curio.run(curio.unix_server, sockpath, self.handle)
         except KeyboardInterrupt:
