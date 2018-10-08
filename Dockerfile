@@ -21,7 +21,7 @@ RUN opam config exec -- opam depext --install -y \
 ENV PATH ${HOME}/.opam/system/bin:${PATH}
 
 # Volume, port, and command for buildbot.
-VOLUME seashell/buildbot/instance
+VOLUME ${HOME}/seashell/buildbot/instance
 EXPOSE 8000
 ENV PIPENV_PIPFILE=buildbot/Pipfile
 CMD ["pipenv", "run", \
@@ -29,6 +29,7 @@ CMD ["pipenv", "run", \
      "buildbot.server:app"]
 
 # Add Seashell source.
+WORKDIR ${HOME}
 ADD --chown=opam . seashell
 WORKDIR seashell
 
