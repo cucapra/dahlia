@@ -33,7 +33,7 @@ ADD --chown=opam . seashell
 WORKDIR seashell
 
 # Build Seashell.
-RUN opam install .
+RUN opam install --deps-only .
 RUN eval `opam config env` ; dune build
 RUN eval `opam config env` ; dune install
 
