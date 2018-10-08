@@ -43,15 +43,14 @@ class WorkProc:
     async def handle(self, client, addr):
         """Handle an incoming socket connection.
         """
-        while True:
-            async for line in client.makefile('rb'):
-                # Each line is a job name.
-                job_name = line.decode('utf8').strip()
-                print(job_name)
+        async for line in client.makefile('rb'):
+            # Each line is a job name.
+            job_name = line.decode('utf8').strip()
+            print(job_name)
 
-                # Just notify the database that something changed.
-                with self.db.cv:
-                    self.db.cv.notify_all()
+            # Just notify the database that something changed.
+            with self.db.cv:
+                self.db.cv.notify_all()
 
     def serve(self):
         """Start listening on a Unix domain socket for incoming
