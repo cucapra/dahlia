@@ -25,3 +25,8 @@ TEXT_EXTENSIONS = [
     'd',
     'dat',
 ]
+
+# Configuration options allowed during job creation.
+CONFIG_OPTIONS = [
+    'skipseashell',
+]

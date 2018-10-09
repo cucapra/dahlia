@@ -79,8 +79,20 @@ def notify_workers(jobname):
         workproc.notify(app.instance_path, jobname)
 
 
+def get_config(values):
+    """Get the job configuration options specified by data in the given
+    form values.
+    """
+    config = {}
+    for key in app.config['CONFIG_OPTIONS']:
+        config[key] = bool(values.get(key))
+    return config
+
+
 @app.route('/jobs', methods=['POST'])
 def add_job():
+    config = get_config(request.values)
+
     # Get the code either from an archive or a parameter.
     if 'file' in request.files:
         file = request.files['file']
@@ -91,7 +103,7 @@ def add_job():
             return 'invalid extension {}'.format(ext), 400
 
         # Create the job and save the archive file.
-        with db.create('uploaded') as name:
+        with db.create('uploaded', config) as name:
             file.save(ARCHIVE_NAME + ext)
         notify_workers(name)
 
@@ -99,7 +111,7 @@ def add_job():
         code = request.values['code']
 
         # Create a job and save the code to a file.
-        with db.create('unpacked') as name:
+        with db.create('unpacked', config) as name:
             os.mkdir(CODE_DIR)
             with open(os.path.join(CODE_DIR, 'main.ss'), 'w') as f:
                 f.write(code)
