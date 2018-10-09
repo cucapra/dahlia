@@ -174,6 +174,23 @@ def stage_seashell(db, config):
     """
     compiler = config["SEASHELL_COMPILER"]
     with work(db, 'unpacked', 'seashelling', 'seashelled') as job:
+        if job['config'].get('skipseashell'):
+            # Skip the Seashell stage. Instead, just try to guess which
+            # file contains the hardware function. For now, this
+            # guessing is very unintelligent: it just looks for some
+            # *.cpp file not named "main".
+            for name in os.listdir(CODE_DIR):
+                base, ext = os.path.splitext(name)
+                if ext == C_EXT and base != 'main':
+                    c_name = name
+                    break
+            else:
+                raise WorkError('no C source file found')
+
+            log(job, 'skipping Seashell compilation stage')
+            job['hw_basename'] = base
+            return
+
         # Look for the Seashell source code.
         for name in os.listdir(CODE_DIR):
             _, ext = os.path.splitext(name)
