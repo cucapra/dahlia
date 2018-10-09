@@ -1,5 +1,8 @@
 #!/bin/sh
 
+set -x
+set -e
+
 DEST=courses:coursewww/capra.cs.cornell.edu/htdocs/seashell
 
 rsync --compress --recursive --checksum --itemize-changes \
