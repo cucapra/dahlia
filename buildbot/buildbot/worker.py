@@ -259,6 +259,38 @@ def stage_hls(db, config):
         )
 
 
+def stage_areesh(db, config):
+    """Work stage: Upload bitstream to FPGA controller and output the result gathered.
+    """
+#    prefix = config["HLS_COMMAND_PREFIX"]
+    with work(db, 'hlsed', 'areeshing', 'areeshed') as job:
+#        hw_basename, hw_c, hw_o = _hw_filenames(job)
+
+        # Upload bit stream to FPGA
+        runl(
+            job,
+            ['scp', '-r', 'sd_card/*', 'zb1:/mnt'],
+            timeout=1200,
+#            cwd=CODE_DIR
+        )
+
+        # Restart the FPGA
+        runl(
+            job,
+            ['ssh', 'zb1', 'sbin/reboot'],
+            timeout=1200,
+#            cwd=CODE_DIR
+        )
+
+        # Run the FPGA program and collect results
+        runl(
+            job,
+            ['ssh', 'zb1', '/mnt/sdsoc', '>>', 'output.txt'],
+            timeout=120,
+#            cwd=CODE_DIR
+        )
+
+
 def work_threads(db, config):
     """Get a list of (unstarted) Thread objects for processing tasks.
     """
