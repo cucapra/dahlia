@@ -2,7 +2,7 @@ open Ast
 
 exception IllegalOperation
 
-let min_int32 = Core.Int.pow (-2) 31
+let min_int32 = -(Core.Int.pow 2 31)
 
 let max_int32 = (Core.Int.pow 2 31) - 1
 
@@ -20,7 +20,7 @@ let resolve_index_op t1 t2 =
     if
       hs1 - ls1 = 1 (* t1 represents one int *) &&
       hs2 - ls2 = 1 (* t2 represents one int *)
-    then TIndex ((ls1, hs1), (min_int, max_int))
+    then TIndex ((ls1, hs1), (min_int32, max_int32))
     else raise IllegalOperation
 
 let op_map a b op =

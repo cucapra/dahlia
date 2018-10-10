@@ -18,6 +18,13 @@ let is_static = function
   | TIndex ((ls, hs), (ld, hd)) -> (hs - ls = 1) && (hd - ld = 1)
   | _ -> false
 
+(* [gen_idx i b] is an index type [t] representing integer [i] using
+ * [b] bits. *)
+let gen_idx i b =
+  let lower = -(Core.Int.pow 2 (b-1)) in
+  let upper = (Core.Int.pow 2 (b-1)) - 1 in
+  TIndex ((i, i+1), (lower, upper))
+
 (** [check_expr exp (ctx, delta)] is [t, (ctx', delta')], where [t] is the
  * type of [exp] under context (ctx, delta) and (ctx', delta') is an updated
  * context resulting from type-checking [exp]. Raises [TypeError s] if there
@@ -26,7 +33,7 @@ let rec check_expr exp ctx : type_node * gamma =
   match exp with
   | EFloat _                   -> TFloat, ctx
   | EBool _                    -> TBool, ctx
-  | EInt (i, _)                -> TIndex ((i, i+1), (0, 1)), ctx (*(Ted): reln btwn static ints and bit sizes?*)
+  | EInt (i, b)                -> (gen_idx i b), ctx
   | EVar x                     -> Context.get_binding x ctx, ctx
   | EBinop (binop, e1, e2)     -> check_binop binop e1 e2 ctx
   | EBankedAA _ | EAA _        ->

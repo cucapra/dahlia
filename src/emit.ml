@@ -51,7 +51,7 @@ let emit_int_t d1 d2 =
     d2 = Op_util.max_int32
   then "int"
   else
-    let bits = Core.Int.floor_log2 (Core.Int.pow (d2+1) 2) in
+    let bits = Core.Int.floor_log2 ((d2+1) * 2) in
     "int" ^ (string_of_int bits)
 
 let type_str = function
@@ -140,8 +140,11 @@ and emit_cap (cap, e, _) i = match cap with
 
 and emit_mux _ = failwith "Muxes not implemented"
 
-and emit_assign_int (id, e) =
-  concat [ "int "; id; " = "; (emit_expr e); ";" ]
+and emit_assign_int (id, e, d1, d2) =
+  concat [ (emit_int_t d1 d2); " "; id; " = "; (emit_expr e); ";" ]
+
+and emit_assign_bool (id, e) =
+  concat [ "int "; " "; id; " = "; (emit_expr e); ";" ]
 
 and emit_assign_arr (id, _, d) i =
   let bf = compute_bf d in
@@ -159,12 +162,12 @@ and emit_assign_float (id, e) =
 
 and emit_assign (id, e) i =
   match !type_map id with
-  | TIndex _      -> emit_assign_int (id, e)         |> indent i
-  | TBool         -> emit_assign_int (id, e)         |> indent i
-  | TArray (_, d) -> emit_assign_arr (id, e, d) i    |> indent i
-  | TFloat        -> emit_assign_float (id, e)       |> indent i
-  | TAlias _      -> failwith "Impossible: TAlias while emitting"
-  | t             -> failwith @@ "NYI: emit_assign with " ^ show_type_node t
+  | TIndex (_, (d1, d2)) -> emit_assign_int (id, e, d1, d2) |> indent i
+  | TBool                -> emit_assign_bool (id, e)         |> indent i
+  | TArray (_, d)        -> emit_assign_arr (id, e, d) i    |> indent i
+  | TFloat               -> emit_assign_float (id, e)       |> indent i
+  | TAlias _             -> failwith "Impossible: TAlias while emitting"
+  | t                    -> failwith @@ "NYI: emit_assign with " ^ show_type_node t
 
 and emit_reassign (target, e) i =
   concat [ (emit_expr target); " = "; (emit_expr e); ";" ] |> indent i

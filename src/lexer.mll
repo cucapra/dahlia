@@ -23,7 +23,7 @@ let parse_sint s =
 }
 
 let num = '-'? ['0'-'9'] ['0'-'9']*
-let sized_int = num '<' num 'b' ['0'-'9'] ['0'-'9']* '>'
+let sized_int = num '<' ['0'-'9'] ['0'-'9']* 'b' '>'
 let frac = '.' ['0'-'9']+
 let fl = '-'? ['0'-'9'] frac?
 let id = ['a'-'z' 'A'-'Z' '_'] ['a'-'z' 'A'-'Z' '_' '0'-'9']*
