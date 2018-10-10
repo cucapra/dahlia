@@ -70,7 +70,7 @@ expr:
   | ID LBRACK expr RBRACK LSQUARE expr RSQUARE  { EBankedAA ($1, $3, $6) }
   | LPAREN expr RPAREN                          { $2 }
   | expr binop expr                             { EBinop ($2, $1, $3) }
-  | INT                                         { EInt (fst $1, snd $1) } (* OCaml... :( *)
+  | INT                                         { EInt (fst $1, snd $1, true) } (* OCaml... :( *)
   | FLOAT                                       { EFloat $1 }
   | TRUE                                        { EBool true }
   | FALSE                                       { EBool false }

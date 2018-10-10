@@ -64,7 +64,8 @@ let string_of_binop = function
   | BopOr -> "||"
 
 (* An [expr] is one of the following:
- *   - [EInt (i, b)]: an integer expr with value [i], represented with [b] bits
+ *   - [EInt (i, b, s)]: an integer expr with value [i], represented with [b] bits;
+ *     static if [s] is true, non-static otherwise.
  *   - [EFloat f]: a float with value [f]
  *   - [EVar i]: a variable with id [i]
  *   - [EBool b]: a boolean with truth value [b]
@@ -80,7 +81,7 @@ let string_of_binop = function
  * exprs carry information necessary for the compiler to
  * generate C code. *)
 type expr =
-  | EInt of int * int
+  | EInt of int * int * bool
   | EFloat of float
   | EVar of id
   | EBool of bool

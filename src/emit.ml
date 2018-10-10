@@ -34,7 +34,7 @@ let s_pragma_bank id bf i =
       " factor="; (string_of_int bf)
     ] |> indent i
 
-let s_pragma_apint = {|#include "ap_cint.h"|}
+let include_apint = {|#include "ap_cint.h"|}
 
 let compute_array_size dims =
   List.fold_left (fun acc (s, _) -> s * acc) 1 dims
@@ -61,7 +61,7 @@ let type_str = function
   | t -> failwith (Printf.sprintf "Cannot emit type %s." (show_type_node t))
 
 let rec emit_expr = function
-  | EInt (i, _)          -> string_of_int i
+  | EInt (i, _, _)          -> string_of_int i
   | EFloat f             -> string_of_float f
   | EBool b              -> if b then "1" else "0"
   | EVar id              -> id
@@ -211,4 +211,4 @@ and emit_fun (id, args, body) i =
   |> indent i
 
 and generate_c cmd =
-  s_pragma_apint ^ newline ^ (emit_cmd 0 cmd |> cleanup_output)
+  include_apint ^ newline ^ (emit_cmd 0 cmd |> cleanup_output)
