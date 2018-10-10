@@ -1,0 +1,94 @@
+.container {
+  display: grid;
+  grid-template-columns: 2fr 5fr 5fr 2fr;
+  grid-template-rows: 50px 300px 50px 50px;
+  grid-gap: 1em;
+  grid-template-areas:
+  "empty header header"
+  "empty input output"
+  "empty buttons buttons"
+  "empty footer footer"
+}
+
+@media (max-width: 500px) {
+  .container {
+    grid-template-columns: 1fr;
+    grid-template-rows: 30px 30px 200px 200px 50px 50px;
+    grid-gap: 1em;
+    grid-template-areas:
+    "header"
+    "empty"
+    "input"
+    "output"
+    "buttons"
+    "footer"
+  }
+  .button {
+    border: solid 1px;
+    border-radius: 5px;
+    text-align: center;
+    padding: 5px;
+    width: 150px;
+    height: 40px;
+  }
+}
+
+h2 {
+  margin: 0.3em;
+}
+
+.color {
+  background-color: #1EAAFC;
+  background-image: linear-gradient(130deg, #6C52D9 0%, #1EAAFC 85%, #3EDFD7 100%);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+  color: #fff;
+  border-radius: 4px;
+  border: 6px solid #171717;
+}
+
+.header {
+  display: table;
+  text-align: center;
+  grid-area: header;
+  border: solid 1px;
+  border-radius: 10px;
+}
+
+.output {
+  grid-area: output;
+  border: solid 1px;
+  border-radius: 10px;
+}
+
+.input {
+  grid-area: input;
+  border: solid 1px;
+  border-radius: 10px;
+}
+
+.buttons {
+  grid-area: buttons;
+  justify-self: center;
+  align-self: center;
+}
+
+.button {
+  border: solid 1px;
+  border-radius: 5px;
+  text-align: center;
+  padding: 5px;
+  width: 150px;
+  height: 40px;
+}
+
+.footer {
+  grid-area: footer;
+  font-size: 75%;
+  justify-self: center;
+}
+
+hr {
+  border: 0;
+  height: 1px;
+  background: #aaa;
+}

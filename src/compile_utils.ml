@@ -28,9 +28,9 @@ let typecheck_with_error (ast : Ast.command) =
 
 let emit_code ast ctx =
   Emit.set_type_map (fun id -> Context.get_binding id ctx);
-  print_endline (Emit.generate_c ast)
+  Emit.generate_c ast
 
-let compile_string prog print_ast : unit =
+let compile_string_without_print prog print_ast : string =
   Printexc.record_backtrace false;
   let ast_and_cap_ctx = parse_with_error prog
     |> show_ast print_ast "Parsed AST"
@@ -44,3 +44,5 @@ let compile_string prog print_ast : unit =
   in let type_ctx = typecheck_with_error ast
   in let emit_ast = Infer_cap.readd_cap ast (snd ast_and_cap_ctx)
   in emit_code emit_ast type_ctx
+
+let compile_string prog print_ast = print_endline @@ compile_string_without_print prog print_ast

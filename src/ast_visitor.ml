@@ -1,4 +1,3 @@
-(*open Core*)
 open Ast
 
 class ['s] ast_mapper = object(self)

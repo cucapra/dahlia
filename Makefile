@@ -1,4 +1,4 @@
-.PHONY: build test watch
+.PHONY: build test watch demo website
 
 SRCS:=src bin test
 
@@ -10,3 +10,13 @@ test:
 
 watch:
 	dune runtest -w
+
+demo:
+	dune build js/seac_js.bc.js
+	cp ./_build/default/js/seac_js.bc.js ./docs/demo/seashell.js
+
+# Rsync the docs and the website
+website:
+	git clean -fd # Remove untracked files
+	- cd website && yarn deploy
+	$(MAKE) -C docs deploy

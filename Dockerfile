@@ -21,7 +21,7 @@ RUN opam config exec -- opam depext --install -y \
 ENV PATH ${HOME}/.opam/system/bin:${PATH}
 
 # Volume, port, and command for buildbot.
-VOLUME seashell/buildbot/instance
+VOLUME ${HOME}/seashell/buildbot/instance
 EXPOSE 8000
 ENV PIPENV_PIPFILE=buildbot/Pipfile
 CMD ["pipenv", "run", \
@@ -29,13 +29,19 @@ CMD ["pipenv", "run", \
      "buildbot.server:app"]
 
 # Add Seashell source.
+WORKDIR ${HOME}
 ADD --chown=opam . seashell
 WORKDIR seashell
 
 # Build Seashell.
-RUN opam install .
+RUN opam install --deps-only .
 RUN eval `opam config env` ; dune build
 RUN eval `opam config env` ; dune install
+
+# Avoids a bug in a recent version of pip:
+# https://github.com/pypa/pipenv/issues/2924
+RUN sudo pip install pip==18.0
+RUN cd buildbot ; PIPENV_PIPFILE= pipenv run pip install pip==18.0
 
 # Set up buildbot.
 RUN cd buildbot ; PIPENV_PIPFILE= pipenv install

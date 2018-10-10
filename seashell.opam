@@ -16,4 +16,6 @@ depends: [
   "ppx_deriving"
   "ppx_expect"
   "cmdliner"
+  "js_of_ocaml"
+  "js_of_ocaml-ppx"
 ]

@@ -12,7 +12,7 @@ Seashell provides a type system that makes programming FPGAs easier. To learn ab
 
 ### Requirements
 The following are required to build the seashell compiler.
-  - [Opam](https://opam.ocaml.org/blog/opam-2-0-0-rc4/).
+  - [Opam](https://opam.ocaml.org/blog/opam-2-0-0-rc4/) >= 2.0.0.
   - [Dune](https://github.com/ocaml/dune). Run `opam install dune`.
   - Menhir. Run `opam install menhir`.
 

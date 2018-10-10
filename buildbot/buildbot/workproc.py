@@ -4,7 +4,6 @@ from . import worker
 from .db import JobDB
 from flask.config import Config
 import sys
-import subprocess
 
 
 INSTANCE_DIR = 'instance'
@@ -44,21 +43,22 @@ class WorkProc:
     async def handle(self, client, addr):
         """Handle an incoming socket connection.
         """
-        while True:
-            async for line in client.makefile('rb'):
-                # Each line is a job name.
-                job_name = line.decode('utf8').strip()
-                print(job_name)
+        async for line in client.makefile('rb'):
+            # Each line is a job name.
+            job_name = line.decode('utf8').strip()
+            print(job_name)
 
-                # Just notify the database that something changed.
-                with self.db.cv:
-                    self.db.cv.notify_all()
+            # Just notify the database that something changed.
+            with self.db.cv:
+                self.db.cv.notify_all()
 
     def serve(self):
         """Start listening on a Unix domain socket for incoming
         messages. Run indefinitely (until the server is interrupted).
         """
         sockpath = os.path.join(self.basedir, SOCKNAME)
+        if os.path.exists(sockpath):
+            os.unlink(sockpath)
         try:
             curio.run(curio.unix_server, sockpath, self.handle)
         except KeyboardInterrupt:
@@ -80,17 +80,6 @@ async def _notify(basedir, jobname):
     sock = await curio.open_unix_connection(sockpath)
     await sock.makefile('wb').write(line)
     await sock.close()
-
-
-def launch(basedir, force=False):
-    """Spawn a new worker process. Unless `force` is set, do nothing if
-    the socket already exists (which is evidence that a worker is
-    already running).
-    """
-    sockpath = os.path.join(basedir, SOCKNAME)
-    if os.path.exists(sockpath) and not force:
-        return
-    subprocess.Popen([sys.executable, '-m', __name__, basedir])
 
 
 if __name__ == '__main__':

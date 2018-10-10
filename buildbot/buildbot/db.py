@@ -97,7 +97,7 @@ class JobDB:
 
         return job
 
-    def _init(self, name, state):
+    def _init(self, name, state, config):
         """Given the name of a job *whose directory already exists*,
         initialize with a database entry. In other words, create the job
         for existing on-disk job-related files. Return the new job.
@@ -106,6 +106,7 @@ class JobDB:
             'name': name,
             'started': time.time(),
             'state': state,
+            'config': config,
             'log': [],
         }
         self._write(job)
@@ -116,22 +117,22 @@ class JobDB:
         """
         return secrets.token_urlsafe(8)
 
-    def _add(self, state):
+    def _add(self, state, config):
         name = self._gen_name()
         os.mkdir(self.job_dir(name))
-        job = self._init(name, state)
+        job = self._init(name, state, config)
         return job
 
-    def add(self, state):
+    def add(self, state, config={}):
         """Add a new job and return it.
         """
         with self.cv:
-            job = self._add(state)
+            job = self._add(state, config)
             self.cv.notify_all()
         return job
 
     @contextmanager
-    def create(self, state):
+    def create(self, state, config={}):
         """A context manager for creating a new job. A directory is
         created for the job, and the working directory is temporarily
         changed there, and *then* the job is initialized in the given
@@ -143,7 +144,7 @@ class JobDB:
         with chdir(job_dir):
             yield name
         with self.cv:
-            self._init(name, state)
+            self._init(name, state, config)
             self.cv.notify_all()
 
     def set_state(self, job, state):
