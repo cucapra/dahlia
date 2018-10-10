@@ -81,7 +81,7 @@ let string_of_binop = function
  * exprs carry information necessary for the compiler to
  * generate C code. *)
 type expr =
-  | EInt of int * int * bool
+  | EInt of int * int
   | EFloat of float
   | EVar of id
   | EBool of bool

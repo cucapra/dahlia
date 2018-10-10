@@ -61,7 +61,7 @@ let type_str = function
   | t -> failwith (Printf.sprintf "Cannot emit type %s." (show_type_node t))
 
 let rec emit_expr = function
-  | EInt (i, _, _)       -> string_of_int i
+  | EInt (i, _)       -> string_of_int i
   | EFloat f             -> string_of_float f
   | EBool b              -> if b then "1" else "0"
   | EVar id              -> id
