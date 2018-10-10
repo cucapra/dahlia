@@ -3,7 +3,7 @@ title: Notes About Seashell
 ---
 Try out seashell demo:
 
-* [Online REPL](demo/index.html)
+* [Online REPL](../)
 
 Read some notes about aspects of Seashell's design:
 
