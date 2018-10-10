@@ -23,7 +23,11 @@ let is_static = function
 let gen_idx i b =
   let lower = -(Core.Int.pow 2 (b-1)) in
   let upper = (Core.Int.pow 2 (b-1)) - 1 in
-  TIndex ((i, i+1), (lower, upper))
+  if i >= lower && i <= upper then
+    TIndex ((i, i+1), (lower, upper))
+  else raise (TypeError
+                ("Cannot represent integer " ^ (string_of_int i) ^
+                 " with " ^ (string_of_int b) ^ " bits."))
 
 (** [check_expr exp (ctx, delta)] is [t, (ctx', delta')], where [t] is the
  * type of [exp] under context (ctx, delta) and (ctx', delta') is an updated
