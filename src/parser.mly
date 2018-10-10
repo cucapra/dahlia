@@ -97,7 +97,11 @@ access:
 
 basic_type:
   | BOOL_ANNOTATION             { TBool }
-  | INT_ANNOTATION              { TIndex ((0, 1), (min_int, max_int)) }
+  | INT_ANNOTATION
+    {
+      let open Op_util in
+      TIndex ((0, 1), (min_int32, max_int32))
+    }
   | FLOAT_ANNOTATION            { TFloat }
   | ID                          { TAlias $1 }
 

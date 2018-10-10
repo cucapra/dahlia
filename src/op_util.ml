@@ -2,6 +2,10 @@ open Ast
 
 exception IllegalOperation
 
+let min_int32 = Core.Int.pow (-2) 31
+
+let max_int32 = (Core.Int.pow 2 31) - 1
+
 (* Index types generalize integers. We have not completely figured
    out operations between index types; but we'd like to allow normal
    integer operations between integers. [resolve_index_op t1 t2]

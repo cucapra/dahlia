@@ -38,7 +38,7 @@ rule token =
   | newline        { next_line lexbuf; token lexbuf}
 
   | sized_int as s { INT (parse_sint s) }
-  | num as n       { INT ((int_of_string n), 32) }
+  | num as n       { INT ((int_of_string n), Op_util.max_int32) }
   | fl as f        { FLOAT (float_of_string f) }
 
   | ".."           { RANGE_DOTS }
