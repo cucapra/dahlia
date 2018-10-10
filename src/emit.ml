@@ -61,7 +61,7 @@ let type_str = function
   | t -> failwith (Printf.sprintf "Cannot emit type %s." (show_type_node t))
 
 let rec emit_expr = function
-  | EInt (i, _, _)          -> string_of_int i
+  | EInt (i, _, _)       -> string_of_int i
   | EFloat f             -> string_of_float f
   | EBool b              -> if b then "1" else "0"
   | EVar id              -> id
@@ -144,7 +144,7 @@ and emit_assign_int (id, e, d1, d2) =
   concat [ (emit_int_t d1 d2); " "; id; " = "; (emit_expr e); ";" ]
 
 and emit_assign_bool (id, e) =
-  concat [ "int "; " "; id; " = "; (emit_expr e); ";" ]
+  concat [ "int "; id; " = "; (emit_expr e); ";" ]
 
 and emit_assign_arr (id, _, d) i =
   let bf = compute_bf d in
