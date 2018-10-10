@@ -15,13 +15,13 @@ let max_int32 = (Core.Int.pow 2 31) - 1
    type idx<0..1, min_int..max_int>. This lets us add dynamic integers,
    static integers, etc., but disallows operations between sets of values. *)
 let resolve_index_op t1 t2 =
-  match t1, t2 with
-  | ((ls1, hs1), _), ((ls2, hs2), _) ->
-    if
-      hs1 - ls1 = 1 (* t1 represents one int *) &&
-      hs2 - ls2 = 1 (* t2 represents one int *)
-    then TIndex ((ls1, hs1), (min_int32, max_int32))
+  let ((ls1, hs1), (ld1, hd1)),
+      ((ls2, hs2), (ld2, hd2)) = t1, t2 in
+  if hs1 - ls1 = 1 && hs2 - ls2 = 1 then
+    if ld1 <= ld2 && hd1 >= hd2 then TIndex ((ls1, hs1), (ld1, hd1))
+    else if ld2 <= ld1 && hd2 >= hd1 then TIndex ((ls1, hs1), (ld2, hd2))
     else raise IllegalOperation
+  else raise IllegalOperation
 
 let op_map a b op =
   match a, b, op with

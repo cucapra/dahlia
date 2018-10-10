@@ -7,6 +7,7 @@ func madd(a: int, b: int) {
 
   let x = a + b; // Normal 32 bit int.
   let y = 10<5b>; // Integer with value 10, represented with 5 bits.
+  let z = x + y;
   // let y = 10;  Static int, represented with minimum possible bits.
 
 }
