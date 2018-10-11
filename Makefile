@@ -2,6 +2,9 @@
 
 SRCS:=src bin test
 
+install:
+	opam install . --deps-only
+
 build:
 	dune build && dune install
 
@@ -18,5 +21,7 @@ demo:
 # Rsync the docs and the website
 website:
 	git clean -fd # Remove untracked files
-	- cd website && yarn deploy
+	$(MAKE) install
+	$(MAKE) demo
+	cd website && yarn deploy
 	$(MAKE) -C docs deploy
