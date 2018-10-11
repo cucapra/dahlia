@@ -3,6 +3,7 @@
 SRCS:=src bin test
 
 install:
+	opam install dune menhir
 	opam install . --deps-only -y
 
 build:
