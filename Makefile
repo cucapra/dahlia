@@ -3,7 +3,7 @@
 SRCS:=src bin test
 
 install:
-	opam install . --deps-only
+	opam install . --deps-only -y
 
 build:
 	dune build && dune install
