@@ -243,15 +243,12 @@ def stage_hls(db, config):
     prefix = config["HLS_COMMAND_PREFIX"]
     with work(db, 'seashelled', 'hlsing', 'hlsed') as job:
         hw_basename, hw_c, hw_o = _hw_filenames(job)
-        if job['config'].get('estimate'):
-            xflags = '-perf-est-hw-only'
-        else:
-            xflags = ''
+        xflags = ''
 
         # Run Xilinx SDSoC compiler for hardware functions.
         runl(
             job,
-            _sds_cmd(prefix, hw_basename, hw_c) + [
+            _sds_cmd(prefix, hw_basename, hw_c, xflags) + [
                 '-c', '-MMD', '-MP', '-MF"vsadd.d"', hw_c,
                 '-o', hw_o,
             ],
@@ -262,13 +259,16 @@ def stage_hls(db, config):
         # Run the Xilinx SDSoC compiler for host function.
         runl(
             job,
-            _sds_cmd(prefix, hw_basename, hw_c) + [
+            _sds_cmd(prefix, hw_basename, hw_c, xflags) + [
                 '-c', '-MMD', '-MP', '-MF"main.d"', C_MAIN,
                 '-o', HOST_O,
             ],
             cwd=CODE_DIR
         )
 
+        if job['config'].get('estimate'):
+            xflags = '-perf-est-hw-only'
+        
         # Run Xilinx SDSoC compiler for created objects.
         runl(
             job,
