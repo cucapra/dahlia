@@ -1,1 +1,1 @@
-deploy: onbuild sudo make website
+deploy: onbuild make website

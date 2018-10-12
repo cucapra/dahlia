@@ -1,31 +1,19 @@
-.PHONY: build test watch demo website
+.PHONY: build website install
 
 SRCS:=src bin test
-
-install:
-	set -x
-	opam install dune menhir -y
-	opam install . --deps-only -y
-	eval $$(opam env)
-	which dune
 
 build:
 	dune build && dune install
 
-test:
-	$(MAKE) && dune runtest
-
-watch:
-	dune runtest -w
-
-demo:
-	dune build js/seac_js.bc.js
-	cp ./_build/default/js/seac_js.bc.js ./docs/demo/seashell.js
+install:
+	opam install dune menhir -y
+	opam install . --deps-only -y
 
 # Rsync the docs and the website
-website:
-	git clean -fd # Remove untracked files
-	$(MAKE) install
-	$(MAKE) demo
+website: install
+	eval `opam env`; 	 \
+		$(MAKE) install; \
+		dune build js/seac_js.bc.js
+	cp ./_build/default/js/seac_js.bc.js ./website/seashell.js
 	cd website && yarn deploy
 	$(MAKE) -C docs deploy
