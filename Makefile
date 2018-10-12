@@ -6,7 +6,7 @@ install:
 	set -x
 	opam install dune menhir -y
 	opam install . --deps-only -y
-	eval $(opam env)
+	eval $$(opam env)
 	which dune
 
 build:
