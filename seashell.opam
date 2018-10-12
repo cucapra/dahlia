@@ -1,5 +1,4 @@
 opam-version: "2.0"
-available: [ ocaml-version >= "4.06.0" ]
 name: "seashell"
 version: "0.0.1"
 maintainer: "Rachit Nigam <rachit.nigam12@gmail.com>"
