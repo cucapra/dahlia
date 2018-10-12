@@ -3,9 +3,10 @@
 SRCS:=src bin test
 
 install:
+	set -x
 	opam install dune menhir -y
 	opam install . --deps-only -y
-	- opam --version && opam env && which dune
+	- which dune
 	eval `opam env`
 
 build:
