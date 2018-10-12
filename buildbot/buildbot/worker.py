@@ -314,4 +314,4 @@ def work_threads(db, config):
     out = []
     for stage in (stage_unpack, stage_seashell, stage_hls, stage_areesh):
         out.append(WorkThread(db, config, stage))
-    return outA
+    return out
