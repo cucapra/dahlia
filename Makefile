@@ -9,6 +9,11 @@ install:
 	opam install dune menhir -y
 	opam install . --deps-only -y
 
+local-website:
+	eval `opam env` && dune build js/seac_js.bc.js
+	cp ./_build/default/js/seac_js.bc.js ./website/seashell.js
+	cd website && yarn build
+
 # Rsync the docs and the website
 website: install
 	eval `opam env` && dune build js/seac_js.bc.js
