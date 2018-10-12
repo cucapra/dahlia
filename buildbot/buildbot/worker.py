@@ -215,7 +215,7 @@ def stage_seashell(db, config):
             f.write(hls_code)
 
 
-def _sds_cmd(prefix, func_hw, c_hw):
+def _sds_cmd(prefix, func_hw, c_hw, xflags):
     """Make a sds++ command with all our standard arguments.
     """
     return prefix + [
@@ -224,7 +224,7 @@ def _sds_cmd(prefix, func_hw, c_hw):
         '-sds-hw', func_hw, c_hw, '-sds-end',
         '-clkid', '3',
         '-poll-mode', '1',
-        '-verbose', '-Wall', '-O3',
+        '-verbose', '-Wall', '-O3', xflags,
     ]
 
 
@@ -243,6 +243,10 @@ def stage_hls(db, config):
     prefix = config["HLS_COMMAND_PREFIX"]
     with work(db, 'seashelled', 'hlsing', 'hlsed') as job:
         hw_basename, hw_c, hw_o = _hw_filenames(job)
+        if job['config'].get('estimate'):
+            xflags = '-perf-est-hw-only'
+        else:
+            xflags = ''
 
         # Run Xilinx SDSoC compiler for hardware functions.
         runl(
@@ -268,7 +272,7 @@ def stage_hls(db, config):
         # Run Xilinx SDSoC compiler for created objects.
         runl(
             job,
-            _sds_cmd(prefix, hw_basename, hw_c) + [
+            _sds_cmd(prefix, hw_basename, hw_c, xflags) + [
                 hw_o, HOST_O, '-o', EXECUTABLE,
             ],
             timeout=1800,
@@ -279,32 +283,28 @@ def stage_hls(db, config):
 def stage_areesh(db, config):
     """Work stage: Upload bitstream to FPGA controller and output the result gathered.
     """
-#    prefix = config["HLS_COMMAND_PREFIX"]
     with work(db, 'hlsed', 'areeshing', 'areeshed') as job:
 #        hw_basename, hw_c, hw_o = _hw_filenames(job)
 
         # Upload bit stream to FPGA
         runl(
             job,
-            ['scp', '-r', 'sd_card/*', 'zb1:/mnt'],
-            timeout=1200,
-#            cwd=CODE_DIR
+            ['sshpass', '-P', 'root', 'scp', '-r', 'sd_card/*', 'zb1:/mnt'],
+            timeout=1200
         )
 
         # Restart the FPGA
         runl(
             job,
-            ['ssh', 'zb1', 'sbin/reboot'],
-            timeout=1200,
-#            cwd=CODE_DIR
+            ['sshpass', '-P', 'root', 'ssh', 'zb1', 'sbin/reboot'],
+            timeout=1200
         )
 
         # Run the FPGA program and collect results
         runl(
             job,
-            ['ssh', 'zb1', '/mnt/sdsoc', '>>', 'output.txt'],
-            timeout=120,
-#            cwd=CODE_DIR
+            ['sshpass', '-P', 'root', 'ssh', 'zb1', '/mnt/sdsoc', '>>', 'output.txt'],
+            timeout=120
         )
 
 
@@ -312,6 +312,6 @@ def work_threads(db, config):
     """Get a list of (unstarted) Thread objects for processing tasks.
     """
     out = []
-    for stage in (stage_unpack, stage_seashell, stage_hls):
+    for stage in (stage_unpack, stage_seashell, stage_hls, stage_areesh):
         out.append(WorkThread(db, config, stage))
-    return out
+    return outOA
