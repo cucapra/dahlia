@@ -16,6 +16,9 @@ RUN pip install --user pipenv
 # Install some of our OCaml dependencies.
 RUN opam config exec -- opam depext --install -y \
     dune menhir core ppx_deriving ppx_expect cmdliner
+    
+# Install sshpass
+RUN sudo apt-get install sshpass
 
 # Add opam bin directory to our $PATH so we can run seac.
 ENV PATH ${HOME}/.opam/system/bin:${PATH}
