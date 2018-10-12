@@ -7,17 +7,39 @@ This is a server for building and running Seashell programs on our infrastructur
 Running the Buildbot
 --------------------
 
-To run your own server, get [pipenv][], then type `pipenv install`.
-Then, to run a local server:
+To set things up, get [pipenv][], and then type `pipenv install`.
 
-    $ FLASK_APP=buildbot pipenv run flask run
-
-You can also use `make dev` as a shortcut (with debugging enabled).
-Also, `make serve` runs a production server using [Gunicorn][].
+To use the "live" browser interface, you will also need to get [Yarn][] (or [npm][]) and type `yarn` then `yarn build` to set up the necessary JavaScript.
 
 The server keeps the data, including the database and the file trees for each job, in an `instance` directory here.
 
-To use the "live" browser interface, you will also need to get [Yarn][] (or [npm][]) and type `yarn` then `yarn build` to set up the necessary JavaScript.
+We have different recommendations depending on whether you're running the buildbot locally (for development) or on a proper server.
+
+### Development
+
+Then, run this command to get a development server:
+
+    $ FLASK_APP=buildbot.server FLASK_ENV=development pipenv run flask run
+
+You can also use `make dev` as a shortcut.
+This route automatically starts the necessary worker threads in the same process as the development server.
+
+### Deployment
+
+There are two differences in deployment: you'll want to use a proper server, and the buildbot will want to spawn a separate process just for the worker threads.
+
+Use this command to start the workers:
+
+    $ pipenv run python -m buildbot.workproc
+
+For the server, [Gunicorn][] is a good choice (and included in the dependencies). Here's how you might invoke it:
+
+    $ pipenv run gunicorn buildbot.server:app
+
+The `make serve` target does that.
+
+The two processes communicate through a Unix domain socket in the instance directory.
+You can provide a custom instance directory path to the workproc invocation as an argument.
 
 [gunicorn]: http://gunicorn.org
 [pipenv]: http://pipenv.org
@@ -41,6 +63,7 @@ For example, you can zip up a directory and submit it like this:
     $ zip -r - . | curl -F file='@-;filename=code.zip' $BUILDBOT/jobs
 
 It's also possible to provide Seashell code as an ordinary POST string instead of as a file attachment using the `code` parameter.
+You can also specify configuration options as further parameters; the only current configuration option is `skipseashell`, which lets you supply plain HLS C code as input.
 
 To see a list of the current jobs, get `/jobs.csv`:
 

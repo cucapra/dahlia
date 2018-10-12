@@ -155,7 +155,6 @@ def stage_unpack(db, config):
     """
     with work(db, 'uploaded', 'unpacking', 'unpacked') as job:
         # Unzip the archive into the code directory.
-        print("Starting to unzip")
         runl(job, ["unzip", "-d", CODE_DIR, "{}.zip".format(ARCHIVE_NAME)])
 
         # Check for single-directory zip files: if the code directory
@@ -164,7 +163,6 @@ def stage_unpack(db, config):
         if len(code_contents) == 1:
             path = os.path.join(CODE_DIR, code_contents[0])
             if os.path.isdir(path):
-                print(path, os.listdir(path))
                 for fn in os.listdir(path):
                     os.rename(os.path.join(path, fn),
                               os.path.join(CODE_DIR, fn))
@@ -176,9 +174,25 @@ def stage_seashell(db, config):
     """
     compiler = config["SEASHELL_COMPILER"]
     with work(db, 'unpacked', 'seashelling', 'seashelled') as job:
+        if job['config'].get('skipseashell'):
+            # Skip the Seashell stage. Instead, just try to guess which
+            # file contains the hardware function. For now, this
+            # guessing is very unintelligent: it just looks for some
+            # *.cpp file not named "main".
+            for name in os.listdir(CODE_DIR):
+                base, ext = os.path.splitext(name)
+                if ext == C_EXT and base != 'main':
+                    c_name = name
+                    break
+            else:
+                raise WorkError('no C source file found')
+
+            log(job, 'skipping Seashell compilation stage')
+            job['hw_basename'] = base
+            return
+
         # Look for the Seashell source code.
-        code_dir = os.path.join(db.job_dir(job['name']), CODE_DIR)
-        for name in os.listdir(code_dir):
+        for name in os.listdir(CODE_DIR):
             _, ext = os.path.splitext(name)
             if ext == SEASHELL_EXT:
                 source_name = name
@@ -187,12 +201,9 @@ def stage_seashell(db, config):
             raise WorkError('no source file found')
         job['seashell_main'] = name
 
-        # Read the source code.
-        with open(os.path.join(code_dir, source_name), 'rb') as f:
-            code = f.read()
-
         # Run the Seashell compiler.
-        hls_code = runl(job, [compiler], log_stdout=False, input=code).stdout
+        source_path = os.path.join(CODE_DIR, source_name)
+        hls_code = runl(job, [compiler, source_path], log_stdout=False).stdout
 
         # A filename for the translated C code.
         base, _ = os.path.splitext(source_name)
@@ -200,11 +211,11 @@ def stage_seashell(db, config):
         job['hw_basename'] = base
 
         # Write the C code.
-        with open(os.path.join(code_dir, c_name), 'wb') as f:
+        with open(os.path.join(CODE_DIR, c_name), 'wb') as f:
             f.write(hls_code)
 
 
-def _sds_cmd(prefix, func_hw, c_hw):
+def _sds_cmd(prefix, func_hw, c_hw, xflags):
     """Make a sds++ command with all our standard arguments.
     """
     return prefix + [
@@ -213,7 +224,7 @@ def _sds_cmd(prefix, func_hw, c_hw):
         '-sds-hw', func_hw, c_hw, '-sds-end',
         '-clkid', '3',
         '-poll-mode', '1',
-        '-verbose', '-Wall', '-O3',
+        '-verbose', '-Wall', '-O3', xflags,
     ]
 
 
@@ -232,6 +243,10 @@ def stage_hls(db, config):
     prefix = config["HLS_COMMAND_PREFIX"]
     with work(db, 'seashelled', 'hlsing', 'hlsed') as job:
         hw_basename, hw_c, hw_o = _hw_filenames(job)
+        if job['config'].get('estimate'):
+            xflags = '-perf-est-hw-only'
+        else:
+            xflags = ''
 
         # Run Xilinx SDSoC compiler for hardware functions.
         runl(
@@ -257,7 +272,7 @@ def stage_hls(db, config):
         # Run Xilinx SDSoC compiler for created objects.
         runl(
             job,
-            _sds_cmd(prefix, hw_basename, hw_c) + [
+            _sds_cmd(prefix, hw_basename, hw_c, xflags) + [
                 hw_o, HOST_O, '-o', EXECUTABLE,
             ],
             timeout=1800,
@@ -265,10 +280,38 @@ def stage_hls(db, config):
         )
 
 
+def stage_areesh(db, config):
+    """Work stage: Upload bitstream to FPGA controller and output the result gathered.
+    """
+    with work(db, 'hlsed', 'areeshing', 'areeshed') as job:
+#        hw_basename, hw_c, hw_o = _hw_filenames(job)
+
+        # Upload bit stream to FPGA
+        runl(
+            job,
+            ['sshpass', '-P', 'root', 'scp', '-r', 'sd_card/*', 'zb1:/mnt'],
+            timeout=1200
+        )
+
+        # Restart the FPGA
+        runl(
+            job,
+            ['sshpass', '-P', 'root', 'ssh', 'zb1', 'sbin/reboot'],
+            timeout=1200
+        )
+
+        # Run the FPGA program and collect results
+        runl(
+            job,
+            ['sshpass', '-P', 'root', 'ssh', 'zb1', '/mnt/sdsoc', '>>', 'output.txt'],
+            timeout=120
+        )
+
+
 def work_threads(db, config):
     """Get a list of (unstarted) Thread objects for processing tasks.
     """
     out = []
-    for stage in (stage_unpack, stage_seashell, stage_hls):
+    for stage in (stage_unpack, stage_seashell, stage_hls, stage_areesh):
         out.append(WorkThread(db, config, stage))
-    return out
+    return outOA

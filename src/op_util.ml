@@ -35,12 +35,4 @@ let op_map a b op =
   | TIndex (s1, d1), TIndex (s2, d2), _ -> resolve_index_op (s1, d1) (s2, d2)
   | _                                   -> raise IllegalOperation
 
-let rec determine_type t d =
-  match t with
-  | TAlias id -> determine_type (Context.get_alias_binding id d) d
-  | t -> t
-
-let type_of_op a b d op =
-  let a_type = determine_type a d in
-  let b_type = determine_type b d in
-  op_map a_type b_type op
+let type_of_op a b op = op_map a b op

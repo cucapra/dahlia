@@ -11,3 +11,7 @@ Requires [pandoc](https://pandoc.org/).
 	$ make clean  # remove generated HTML files
 
 There is also a configuration for [modd](https://github.com/cortesi/modd), which can automatically rebuild the HTML when you make changes.
+
+## Serving the website
+
+The built directory is served using the `make deploy`. Make changes to it as needed.

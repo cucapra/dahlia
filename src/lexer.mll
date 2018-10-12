@@ -46,6 +46,10 @@ rule token =
   | "&&"         { AND }
   | "||"         { OR }
 
+  | "write"      { WRITE }
+  | "read"       { READ }
+  | "as"         { AS }
+
   | "mux"        { MUX }
   | "bank"       { BANK }
   | "unroll"     { UNROLL }

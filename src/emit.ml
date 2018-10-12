@@ -1,30 +1,31 @@
 open Ast
 
+(** Used to generate the types for identifiers. *)
 let type_map = ref (fun _ -> failwith "TypeMap has not been set")
-let delta_map = ref (fun _ -> failwith "DeltaMap has not been set")
+let set_type_map t =
+  type_map := t
+
+let cleanup_output s =
+  String.split_on_char '\n' s
+  |> List.filter (fun s -> String.length s != 0)
+  |> Core.List.reduce ~f:(fun acc s -> acc ^ "\n" ^ s)
+  |> Core.Option.value ~default:""
 
 let compute_bf d =
   List.fold_left (fun acc (_, d) -> d * acc) 1 d
 
-let set_type_map t =
-  type_map := t
-
-let set_delta_map t =
-  delta_map := t
-
-let rec indent' n s acc =
-  if n=0 then acc ^ s
-  else indent' (n-1) s (acc ^ "\t")
-
-let indent n s = indent' n s ""
+let indent n s =
+  List.init n (fun _ -> ()) |> List.fold_left (fun acc _ -> "  " ^ acc) s
 
 let newline = "\n"
 
-let concat = List.fold_left (fun acc e -> acc ^ e) ""
+let concat = String.concat ""
+
+let comment s = Printf.sprintf "/* %s */" s
 
 let s_pragma_unroll u i =
-  concat [ "#pragma HLS UNROLL factor="; u ]
-  |> indent i
+  if u = "1" then ""
+  else concat [ "#pragma HLS UNROLL factor="; u ] |> indent i
 
 let s_pragma_bank id bf i =
   if bf=1 then ""
@@ -37,29 +38,13 @@ let s_pragma_bank id bf i =
 let compute_array_size dims =
   List.fold_left (fun acc (s, _) -> s * acc) 1 dims
 
-let rec type_str = function
-  | TBool
-  | TFloat        -> "float"
-  | TIndex _      -> "int"
-  | TArray _ -> failwith "Implement array type stringified version"
-  | TAlias id -> type_str (!delta_map id)
-  | _ -> failwith "Implement me!"
-
-let bop_str = function
-  | BopEq -> "="
-  | BopNeq -> "!="
-  | BopGeq -> ">="
-  | BopLeq -> "<="
-  | BopLt -> "<"
-  | BopGt -> ">"
-  | BopPlus -> "+"
-  | BopMinus -> "-"
-  | BopTimes -> "*"
-  | BopAnd -> "&&"
-  | BopOr -> "||"
+let type_str = function
+  | TBool | TIndex _ -> "int"
+  | TFloat -> "float"
+  | t -> failwith (Printf.sprintf "Cannot emit type %s." (show_type_node t))
 
 let rec emit_expr = function
-  | EInt (i, _)          -> string_of_int i
+  | EInt i               -> string_of_int i
   | EFloat f             -> string_of_float f
   | EBool b              -> if b then "1" else "0"
   | EVar id              -> id
@@ -68,22 +53,17 @@ let rec emit_expr = function
   | EAA (id, i)          -> emit_aa_logl (id, i)
 
 and emit_binop (b, e1, e2) =
-  concat [ (emit_expr e1); (bop_str b); (emit_expr e2) ]
-
-and determine_bf id =
-  match !type_map id with
-  | TArray (_, d) -> compute_bf d
-  | _ ->
-    failwith "Typechecker failed to determine that mux is illegally wrapped around array"
+  concat [ (emit_expr e1); (string_of_binop b); (emit_expr e2) ]
 
 and emit_aa_phys (id, b, i) =
   match !type_map id with
   | TArray (_, d) ->
     let bf = compute_bf d in
+    if bf != 1 then
     concat [ id; "["; (emit_expr b); " + "; (string_of_int bf); "*("; (emit_expr i); ")]" ]
-  | TMux (a_id, _) ->
-    let bf = determine_bf a_id in
-    concat [ id; "["; (emit_expr b); " + "; (string_of_int bf); "*("; (emit_expr i); ")]" ]
+    else
+    concat [ id; "["; (emit_expr b); " + "; (emit_expr i); ]
+  | TMux _ -> failwith "Muxes not implemented"
   | _ -> failwith "Tried to index into non-array"
 
 (* FIXME: optimize?
@@ -107,13 +87,13 @@ and emit_aa_logl (id, idx_exprs) =
   | _ -> failwith "Tried to index into non-array"
 
 and argvals =
-  List.map ((fun (id, t) ->
+  List.map (fun (id, t) ->
     match t with
       | TArray (t, d) ->
         let s = List.fold_left (fun acc (s, _) -> s * acc) 1 d in
         concat [ (type_str t); " "; id; "["; (string_of_int s); "]" ]
       | t -> concat [ (type_str t); " "; id  ]
-  ))
+  )
 
 and emit_args args =
   (fun acc e -> concat [ acc; ", "; e ]) |> fun f ->
@@ -128,15 +108,24 @@ and emit_app (id, args) i =
 
 let rec emit_cmd i cmd =
   match cmd with
-  | CAssign (id, e)                -> emit_assign (id, e) i
-  | CReassign (target, e)          -> emit_reassign (target, e) i
+  | CCap (cap, e, id)          -> emit_cap (cap, e, id) i
+  | CAssign (id, e)            -> emit_assign (id, e) i
+  | CReassign (target, e)      -> emit_reassign (target, e) i
   | CFor (id, r1, r2, u, body) -> emit_for (id, r1, r2, body, u) i
-  | CIf (cond, body)               -> emit_if (cond, body) i
-  | CSeq (c1, c2)                  -> emit_seq (c1, c2) i
-  | CFuncDef (id, args, body)      -> emit_fun (id, args, body) i
-  | CApp (id, args)                -> emit_app (id, args) i
-  | CTypeDef (id, t)               -> emit_typedef (id, t) i
-  | CMuxDef _                      -> ""
+  | CIf (cond, body)           -> emit_if (cond, body) i
+  | CSeq clist                 -> emit_seq clist i
+  | CFuncDef (id, args, body)  -> emit_fun (id, args, body) i
+  | CApp (id, args)            -> emit_app (id, args) i
+  | CTypeDef _                 -> failwith "CTypeDef should not occur in AST"
+  | CMuxDef (_, mid, s)        -> emit_mux mid s i
+  | CExpr e                    -> emit_expr e
+  | CEmpty                     -> ";"
+
+and emit_cap (cap, e, _) i = match cap with
+  | Read -> comment ("cap read: " ^ emit_expr e) |> indent i
+  | Write -> comment ("cap write: " ^ emit_expr e) |> indent i
+
+and emit_mux _ = failwith "Muxes not implemented"
 
 and emit_assign_int (id, e) =
   concat [ "int "; id; " = "; (emit_expr e); ";" ]
@@ -161,7 +150,8 @@ and emit_assign (id, e) i =
   | TBool         -> emit_assign_int (id, e)         |> indent i
   | TArray (_, d) -> emit_assign_arr (id, e, d) i    |> indent i
   | TFloat        -> emit_assign_float (id, e)       |> indent i
-  | _ -> failwith "Fail me!"
+  | TAlias _      -> failwith "Impossible: TAlias while emitting"
+  | t             -> failwith @@ "NYI: emit_assign with " ^ show_type_node t
 
 and emit_reassign (target, e) i =
   concat [ (emit_expr target); " = "; (emit_expr e); ";" ] |> indent i
@@ -184,8 +174,9 @@ and emit_if (cond, body) i =
   ]
   |> indent i
 
-and emit_seq (c1, c2) i =
-  concat [ (emit_cmd i c1); newline; (emit_cmd i c2); ]
+and emit_seq clist i =
+  let f acc cmd = concat [ acc; newline; (emit_cmd i cmd) ] in
+  List.fold_left f "" clist
 
 and emit_pragmas lst i =
   let f acc elem = match elem with
@@ -203,9 +194,5 @@ and emit_fun (id, args, body) i =
   ]
   |> indent i
 
-and emit_typedef (id, t) i =
-  concat [ "typedef "; (type_str t); " "; id; ";" ]
-  |> indent i
-
 and generate_c cmd =
-  emit_cmd 0 cmd
+  emit_cmd 0 cmd |> cleanup_output

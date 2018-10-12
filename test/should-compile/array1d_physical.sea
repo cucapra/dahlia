@@ -1,0 +1,15 @@
+/////////////////////////////////////////////
+// 1d array physical access
+// - This application uses a banked array as input
+// with regular banking, accessed physically with
+// different banks explicitly mentioned.
+////////////////////////////////////////////
+
+func madd(a: float[1024 bank(32)], b: float, c: float) {
+
+  for (let i = 0..31) {
+    b := a{0}[i];
+    c := a{1}[i];
+  }
+
+}

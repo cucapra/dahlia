@@ -1,1 +1,1 @@
-deploy: onbuild make -C docs deploy
+deploy: onbuild make website

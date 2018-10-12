@@ -3,7 +3,7 @@ from flask import request
 import os
 from io import StringIO
 import csv
-from . import worker
+from . import workproc
 from .db import JobDB, ARCHIVE_NAME, CODE_DIR, NotFoundError
 from datetime import datetime
 import re
@@ -14,6 +14,10 @@ app = flask.Flask(__name__, instance_relative_config=True)
 # Configuration. We include some defaults and allow overrides.
 app.config.from_object('buildbot.config_default')
 app.config.from_pyfile('buildbot.cfg', silent=True)
+
+# Use worker threads by default in development.
+if app.config['WORKER_THREADS'] is None:
+    app.config['WORKER_THREADS'] = (app.env == 'development')
 
 # Connect to our database.
 db = JobDB(app.instance_path)
@@ -49,17 +53,46 @@ def _datetime_filter(value, withtime=True):
 
 
 @app.before_first_request
-def start_work_threads():
-    """Create and start our worker threads.
+def start_workers():
+    """Start the workers, if necessary.
+
+    In WORKER_THREADS mode, start a bunch of threads *in this process*
+    to do the work. This is *not safe* if there might be multiple server
+    processes or threads, which will all start different copies of the
+    worker threads!
+
+    Otherwise, the worker process needs to be run separately. We do not
+    try to launch it ourselves.
     """
-    work_threads = worker.work_threads(db, app.config)
-    for thread in work_threads:
-        if not thread.is_alive():
-            thread.start()
+    if app.config['WORKER_THREADS']:
+        proc = workproc.WorkProc(app.instance_path, db)
+        proc.start()
+
+
+def notify_workers(jobname):
+    """Notify the workers that a new job has been created.
+
+    Unless we're in WORKER_THREADS mode, we send a message to the
+    (already-running) workproc.
+    """
+    if not app.config['WORKER_THREADS']:
+        workproc.notify(app.instance_path, jobname)
+
+
+def get_config(values):
+    """Get the job configuration options specified by data in the given
+    form values.
+    """
+    config = {}
+    for key in app.config['CONFIG_OPTIONS']:
+        config[key] = bool(values.get(key))
+    return config
 
 
 @app.route('/jobs', methods=['POST'])
 def add_job():
+    config = get_config(request.values)
+
     # Get the code either from an archive or a parameter.
     if 'file' in request.files:
         file = request.files['file']
@@ -70,19 +103,19 @@ def add_job():
             return 'invalid extension {}'.format(ext), 400
 
         # Create the job and save the archive file.
-        with db.create('uploading', 'uploaded') as job:
+        with db.create('uploaded', config) as name:
             file.save(ARCHIVE_NAME + ext)
-            name = job['name']
+        notify_workers(name)
 
     elif 'code' in request.values:
         code = request.values['code']
 
         # Create a job and save the code to a file.
-        with db.create('uploading', 'unpacked') as job:
+        with db.create('unpacked', config) as name:
             os.mkdir(CODE_DIR)
             with open(os.path.join(CODE_DIR, 'main.ss'), 'w') as f:
                 f.write(code)
-            name = job['name']
+        notify_workers(name)
 
     else:
         return 'missing code or file', 400

@@ -57,10 +57,10 @@ $$
 \end{aligned}
 $$
 
-For Loops
+Index types for loop iterators
 ---------
 
-Seashell's syntax for unrolled `for` loops looks roughly like this:
+Seashell's syntax for unrolled `for` loops looks like this:
 
     for i in l..h unroll k:
         <body>
@@ -74,9 +74,6 @@ $\text{idx}\langle 0 .. k, \frac{l}{k} .. \frac{h}{k} \rangle$.
 **Constraints.**
 These fractions imply that we must
 constrain $k$ to be a factor of $l$, $h$, and, as a consequence, $|l..h|$.
-(Intuitively, $l$ and $h$ must be "$k$-aligned.")
-That is,
-unless we eventually want to deal with partially unrolled iterations, which can get messy.
 
 **Special cases.**
 It's worth considering two special cases: no unrolling, where $k=1$, and full
@@ -89,13 +86,9 @@ $l..(l+k)$.
 **Iteration space.**
 Consider the value space of $i$, which is:
 
-::: todo
-I suggest using a symbol which means the value space of i, maybe span(I)? $S_u$ is a little misleading as it alludes to somethign to do with unrolling, but here we just refer to all the i's.
---S
-:::
 $$
 \begin{aligned}
-S_u &= \{ s + |l_s..h_s| \times d \mid s \in l_s..h_s, d \in l_d..h_d\} \\
+S &= \{ s + |l_s..h_s| \times d \mid s \in l_s..h_s, d \in l_d..h_d\} \\
     &= \left\{ s + k \times d \mid s \in 0..k, d \in \frac{l}{k}..\frac{h}{k}\right\}
 \end{aligned}
 $$
@@ -113,21 +106,21 @@ and changing the $\frac{l}{k}..\frac{h}{k}$ to $0..m$ to make the proof cleaner.
 
 which is equal to $l..h$.
 
-**Proof.** We want to show that $S_u = l..h$ to ensures that
+**Proof.** We want to show that $S = l..h$ to ensures that
 index types refer to exactly the elements that the original loop did. The
 proof shows that there are exactly $n = |l..h|$ distinct natural numbers in
-$S_u$ with $l$ and $h$ being the lower and upper bounds. Since there are only
-$n-1$ natural numbers in $l..h$, this implies that $S_u = l..h$.
+$S$ with $l$ and $h$ being the lower and upper bounds. Since there are only
+$n-1$ natural numbers in $l..h$, this implies that $S = l..h$.
 
 $$
 \begin{aligned}
-S_u &= \left\{ s + k \times d \mid s \in 0..k, d \in \frac{l}{k}..\frac{h}{k}\right\} \\
+S &= \left\{ s + k \times d \mid s \in 0..k, d \in \frac{l}{k}..\frac{h}{k}\right\} \\
     &= \bigcup_{d \in \frac{l}{k}..\frac{h}{k}}\{ s + k \times d \mid s \in 0..k \}
 \end{aligned}
 $$
 
 Let each of the smaller subsets be $S_i$ where $i$ is equal to the value of
-$d$.  Therefore, we have $S_u = \cup S_i$. Next, we show that each $S_i$ has
+$d$.  Therefore, we have $S = \cup S_i$. Next, we show that each $S_i$ has
 exactly $k$ elements and that $\max(S_i) \leq min(S_{i+1})$. The first
 assertion is trivially true since $s$ ranges from $0$ to $k-1$. For the second
 assertion, we have
@@ -144,27 +137,21 @@ Therefore, the union of $S_i$ has $(\frac{h}{k} - \frac{l}{k}) \times k =
 |l..h|$ elements. (This also implies that each set is disjoint.)
 
 Finally, we show that $0$ and $n-1$ form the lower and upper bounds. Since $s$,
-$k$, and $d$ are positive, the $\min(S_u) = 0 + k \times \frac{l}{k} = l$ and
-$\max(S_u) = k + k \times \frac{h - k}{k} = h$. Therefore, $S_u = l..h$.
+$k$, and $d$ are positive, the $\min(S) = 0 + k \times \frac{l}{k} = l$ and
+$\max(S) = k + k \times \frac{h - k}{k} = h$. Therefore, $S = l..h$.
 
-::: todo
-The property of sets being disjoint seems useful for our access proofs. Maybe we can use it there.
---S
-:::
-
-**Iteration space for multidimensional arrays**. This reasoning can be easily extended to
+**Iteration space for multidimensional arrays**. This reasoning can be easily
+*extended to
 multiple dimensions. The expression $s + k \times d$ repeats for each
-dimension's configuration.  The elements of $S_u$ can be represented as an
+dimension's configuration. The elements of $S$ can be represented as an
 n-tuple. Since each dimension has a separate and independent component in the
 tuple, the reasoning above can be applied to each element.
 
-::: todo
-Altered the title a little, as our attempt is to introduce index types in this document and introduce what it means to access with an index type in the logical memory access document. I buy this, but the difficulty with multi-d comes with translating it to a single dimension hardware array. Maybe we can make this notion of independence between dimensions to manifest itself once we move to the 1-d representation?
---S
-:::
+Therefore, we have the following theorem:
 
-::: todo
-Yes, that proof will go into the other document. -R
+::: formula
+**Value space theorem.** The values represented by an index type $idx\langle
+l_s..h_s, d_s..h_s \rangle$ are all distinct.
 :::
 
 Operations
