@@ -215,7 +215,7 @@ def stage_seashell(db, config):
             f.write(hls_code)
 
 
-def _sds_cmd(prefix, func_hw, c_hw, xflags):
+def _sds_cmd(prefix, func_hw, c_hw):
     """Make a sds++ command with all our standard arguments.
     """
     return prefix + [
@@ -224,7 +224,7 @@ def _sds_cmd(prefix, func_hw, c_hw, xflags):
         '-sds-hw', func_hw, c_hw, '-sds-end',
         '-clkid', '3',
         '-poll-mode', '1',
-        '-verbose', '-Wall', '-O3', xflags,
+        '-verbose', '-Wall', '-O3',
     ]
 
 
@@ -248,7 +248,7 @@ def stage_hls(db, config):
         # Run Xilinx SDSoC compiler for hardware functions.
         runl(
             job,
-            _sds_cmd(prefix, hw_basename, hw_c, xflags) + [
+            _sds_cmd(prefix, hw_basename, hw_c) + [
                 '-c', '-MMD', '-MP', '-MF"vsadd.d"', hw_c,
                 '-o', hw_o,
             ],
@@ -259,7 +259,7 @@ def stage_hls(db, config):
         # Run the Xilinx SDSoC compiler for host function.
         runl(
             job,
-            _sds_cmd(prefix, hw_basename, hw_c, xflags) + [
+            _sds_cmd(prefix, hw_basename, hw_c) + [
                 '-c', '-MMD', '-MP', '-MF"main.d"', C_MAIN,
                 '-o', HOST_O,
             ],
@@ -272,8 +272,8 @@ def stage_hls(db, config):
         # Run Xilinx SDSoC compiler for created objects.
         runl(
             job,
-            _sds_cmd(prefix, hw_basename, hw_c, xflags) + [
-                hw_o, HOST_O, '-o', EXECUTABLE,
+            _sds_cmd(prefix, hw_basename, hw_c) + [
+                xflags, hw_o, HOST_O, '-o', EXECUTABLE,
             ],
             timeout=1800,
             cwd=CODE_DIR,
