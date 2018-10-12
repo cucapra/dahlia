@@ -289,21 +289,21 @@ def stage_areesh(db, config):
         # Upload bit stream to FPGA
         runl(
             job,
-            ['sshpass', '-P', 'root', 'scp', '-r', 'sd_card/*', 'zb1:/mnt'],
+            ['sshpass', '-p', 'root', 'scp', '-r', 'sd_card/*', 'zb1:/mnt'],
             timeout=1200
         )
 
         # Restart the FPGA
         runl(
             job,
-            ['sshpass', '-P', 'root', 'ssh', 'zb1', 'sbin/reboot'],
+            ['sshpass', '-p', 'root', 'ssh', 'zb1', 'sbin/reboot'],
             timeout=1200
         )
 
         # Run the FPGA program and collect results
         runl(
             job,
-            ['sshpass', '-P', 'root', 'ssh', 'zb1', '/mnt/sdsoc', '>>', 'output.txt'],
+            ['sshpass', '-p', 'root', 'ssh', 'zb1', '/mnt/sdsoc', '>>', 'output.txt'],
             timeout=120
         )
 
