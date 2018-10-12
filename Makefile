@@ -11,9 +11,7 @@ install:
 
 # Rsync the docs and the website
 website: install
-	eval `opam env`; 	 \
-		$(MAKE) install; \
-		dune build js/seac_js.bc.js
+	eval `opam env` && dune build js/seac_js.bc.js
 	cp ./_build/default/js/seac_js.bc.js ./website/seashell.js
 	cd website && yarn deploy
 	$(MAKE) -C docs deploy
