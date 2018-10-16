@@ -55,6 +55,7 @@ rule token =
   | "unroll"     { UNROLL }
   | "func"       { FUNC }
   | "type"       { TYPE }
+  | "bit"        { BIT }
 
   | "int"        { INT_ANNOTATION }
   | "bool"       { BOOL_ANNOTATION }
