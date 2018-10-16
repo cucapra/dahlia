@@ -324,6 +324,13 @@ def stage_areesh(db, config):
         runl(
             job,
             ['sshpass', '-p', 'root', 'ssh', 'zb1', '/sbin/reboot'],
+            timeout=120
+        )
+
+        # Wait for restart
+        runl(
+            job,
+            ['sleep', '500'],
             timeout=1200
         )
 
