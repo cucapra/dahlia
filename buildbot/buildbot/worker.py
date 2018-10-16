@@ -1,10 +1,12 @@
 import threading
 import subprocess
-import os
+import os, os.path
 from .db import ARCHIVE_NAME, CODE_DIR, log, chdir
 from contextlib import contextmanager
 import traceback
 import shlex
+import glob
+import shutil
 
 SEASHELL_EXT = '.sea'
 C_EXT = '.cpp'
@@ -279,31 +281,37 @@ def stage_hls(db, config):
             cwd=CODE_DIR,
         )
 
+def _copy_file(path):
+    runl(
+        job,
+        ['sshpass', '-p', 'root', 'scp', '-r', path, 'zb1:/mnt'],
+        timeout=1200
+    )
+
+def _copy_directory(path):
+    for i in glob.glob(os.path.join(path, '*')):
+        _copy_file(i)
+
 
 def stage_areesh(db, config):
     """Work stage: Upload bitstream to FPGA controller and output the result gathered.
     """
     with work(db, 'hlsed', 'areeshing', 'areeshed') as job:
-#        hw_basename, hw_c, hw_o = _hw_filenames(job)
 
         # Upload bit stream to FPGA
-        runl(
-            job,
-            ['sshpass', '-p', 'root', 'scp', '-r', sd_card/*, 'zb1:/mnt'],
-            timeout=1200
-        )
+        _copy_directory('sd_card')
 
         # Restart the FPGA
         runl(
             job,
-            ['sshpass', '-p', 'root', 'ssh', 'zb1', sbin/reboot],
+            ['sshpass', '-p', 'root', 'ssh', 'zb1', 'sbin/reboot'],
             timeout=1200
         )
 
         # Run the FPGA program and collect results
         runl(
             job,
-            ['sshpass', '-p', 'root', 'ssh', 'zb1', /mnt/sdsoc, '>>', 'output.txt'],
+            ['sshpass', '-p', 'root', 'ssh', 'zb1', '/mnt/sdsoc', '>>', 'output.txt'],
             timeout=120
         )
 

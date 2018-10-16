@@ -20,7 +20,7 @@ RUN opam config exec -- opam depext --install -y \
 # Install sshpass
 RUN sudo apt-get install sshpass
 RUN sudo chown opam:opam ~/.ssh
-RUN sudo chown opam:opam ~/.ssh/*
+#RUN sudo chown opam:opam ~/.ssh/*
 
 # Add opam bin directory to our $PATH so we can run seac.
 ENV PATH ${HOME}/.opam/system/bin:${PATH}
