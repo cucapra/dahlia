@@ -20,7 +20,7 @@ let%expect_test "Cannot access non-existent bank" =
 let%expect_test "Cannot assign incorrect type to array" =
   compile_string_with_failure "func foo(a: bit<32>[10], x: bool) { a[1] := x; }";
   [%expect {|
-    [Type Error] cannot assign value of type `bool' to L-value of type `idx<0..1, 0..4294967296> lin'. |}]
+    [Type Error] cannot assign value of type `bool' to L-value of type `unsigned bit<32> lin'. |}]
 
 let%expect_test "Cannot reassign to different type" =
   compile_string_with_failure "let x = 2.5; x := 1;";

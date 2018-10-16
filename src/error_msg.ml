@@ -7,7 +7,7 @@ exception TypeError of string
  *  - [true] if [d] is (0, 2^n) for some n
     - [false] otherwise *)
 let is_ubit (ld, hd) =
-  ld=0 && hd <> 0 && (hd land hd-1) = 0
+  ld=0 && hd <> 0 && hd land (hd-1) = 0
 
 (* [pprint_idx s d] is a string representation of the index type
  * [TIndex (s, d)), which is:
