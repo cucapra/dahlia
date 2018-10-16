@@ -297,7 +297,7 @@ def _copy_directory(job, path, mode):
         _copy_file(job, i, mode)
 
 
-def stage_cheating(db, config):
+def stage_cheat(db, config):
     """Work stage: Skip hls stage to test Areesh.
     """
     with work(db, 'seashelled', 'cheating', 'hlsed') as job:
@@ -311,7 +311,7 @@ def stage_cheating(db, config):
 def stage_areesh(db, config):
     """Work stage: Upload bitstream to FPGA controller and output the result gathered.
     """
-    with work(db, 'hlsed', 'areeshing', 'areeshed') as job:
+    with work(db, 'hlsed', 'areeshing', 'done') as job:
         if job['config'].get('estimate'):
             # Skip the Areesh stage. Bit files not generated in estimation stage.
             log(job, 'skipping run on FPGA stage')
@@ -330,14 +330,14 @@ def stage_areesh(db, config):
         # Wait for restart
         runl(
             job,
-            ['sleep', '500'],
+            ['sleep', '120'],
             timeout=1200
         )
 
         # Run the FPGA program and collect results
         runl(
             job,
-            ['sshpass', '-p', 'root', 'ssh', 'zb1', '/mnt/sdsoc', '>>', 'output.txt'],
+            ['sshpass', '-p', 'root', 'ssh', 'zb1', '/mnt/sdsoc'],
             timeout=120
         )
 
@@ -346,6 +346,6 @@ def work_threads(db, config):
     """Get a list of (unstarted) Thread objects for processing tasks.
     """
     out = []
-    for stage in (stage_unpack, stage_seashell, stage_cheating, stage_areesh):
+    for stage in (stage_unpack, stage_seashell, stage_hls, stage_areesh):
         out.append(WorkThread(db, config, stage))
     return out
