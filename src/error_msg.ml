@@ -47,6 +47,12 @@ let unexpected_type id actual expected =
 let illegal_accessor_type t id =
   sprintf "[Type error] can't access array `%s' with type %s." id (string_of_type t)
 
+let illegal_banked_aa t b id =
+  sprintf "[Type error] can't access bank %s of array `%s' with type %s."
+    (string_of_int b)
+    id
+    (string_of_type t)
+
 let not_an_array id =
   sprintf "[Type error] `%s' is not an array." id
 

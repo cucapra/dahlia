@@ -14,6 +14,8 @@ let types_eq t1 t2 = match t1, t2 with
   | TIndex _, TIndex _ -> true
   | _ -> t1 = t2
 
+let is_svalue (l, h) = h - l = 1
+
 let is_static = function
   | TIndex ((ls, hs), (ld, hd)) -> (hs - ls = 1) && (hd - ld = 1)
   | _ -> false
@@ -53,12 +55,14 @@ and check_banked_aa id idx1 idx2 c : type_node * gamma =
   let idx1_t, c1 = check_expr idx1 c in
   let idx2_t, c2 = check_expr idx2 c1 in
   match idx1_t, idx2_t, Context.get_binding id c2 with
-  | TIndex ((ls_1, _), _) as t1, TIndex (_, _), TArray (a_t, _) ->
-    if is_static t1 then
-      try a_t, Context.consume_aa id ls_1 c2
-      with AlreadyConsumed i -> raise @@ TypeError (illegal_bank i id)
+  | TIndex ((ls_1, _), _) as t1, (TIndex (t2s, _) as t2), TArray (a_t, _) ->
+    if not (is_svalue t2s) then raise @@ TypeError (illegal_banked_aa t2 ls_1 id)
     else
-      raise (TypeError static_bank_error)
+      if is_static t1 then
+        try a_t, Context.consume_aa id ls_1 c2
+        with AlreadyConsumed i -> raise @@ TypeError (illegal_bank i id)
+      else
+        raise (TypeError static_bank_error)
   | t1, _, _ -> raise @@ TypeError (illegal_accessor_type t1 id)
 
 (** [compute_unrollf idx_exprs (c, d)] is the unroll factor [u] implied by
