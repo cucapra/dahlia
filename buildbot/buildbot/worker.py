@@ -281,7 +281,7 @@ def stage_hls(db, config):
             cwd=CODE_DIR,
         )
 
-def _copy_file(path):
+def _copy_file(job, path):
     runl(
         job,
         ['sshpass', '-p', 'root', 'scp', '-r', path, 'zb1:/mnt'],
@@ -297,14 +297,18 @@ def stage_areesh(db, config):
     """Work stage: Upload bitstream to FPGA controller and output the result gathered.
     """
     with work(db, 'hlsed', 'areeshing', 'areeshed') as job:
+        if job['config'].get('estimate'):
+            # Skip the Areesh stage. Bit files not generated in estimation stage.
+            log(job, 'skipping run on FPGA stage')
+            return
 
         # Upload bit stream to FPGA
-        _copy_directory('sd_card')
+        _copy_directory(job, 'sd_card')
 
         # Restart the FPGA
         runl(
             job,
-            ['sshpass', '-p', 'root', 'ssh', 'zb1', 'sbin/reboot'],
+            ['sshpass', '-p', 'root', 'ssh', 'zb1', '/sbin/reboot'],
             timeout=1200
         )
 
