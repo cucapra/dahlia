@@ -29,4 +29,5 @@ TEXT_EXTENSIONS = [
 # Configuration options allowed during job creation.
 CONFIG_OPTIONS = [
     'skipseashell',
+    'estimate',
 ]
