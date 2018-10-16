@@ -20,7 +20,7 @@ let%expect_test "boolean" =
     int y = 0; |}]
 
 let%expect_test "type aliases get erased" =
-  compile_string "type b = bool; type i = int; type x = i;";
+  compile_string "type b = bool; type i = bit<32>; type x = i;";
   [%expect {| |}]
 
 let%expect_test "Reassign variables" =
@@ -30,7 +30,7 @@ let%expect_test "Reassign variables" =
     x = 0; |}]
 
 let%expect_test "Reassign arrays" =
-  compile_string "func foo(a: int[10], b: int[10]) { a[0] := b[0]; }";
+  compile_string "func foo(a: bit<32>[10], b: bit<32>[10]) { a[0] := b[0]; }";
   [%expect {|
     void foo(int a[10], int b[10]) {
       /* cap read: b[1*(0)] */
@@ -39,7 +39,7 @@ let%expect_test "Reassign arrays" =
     } |}]
 
 let%expect_test "Read from array twice" =
-  compile_string "func foo(a: int[10]) { let x = a[1]; let y = a[1];}";
+  compile_string "func foo(a: bit<32>[10]) { let x = a[1]; let y = a[1];}";
   [%expect {|
     void foo(int a[10]) {
       /* cap read: a[1*(1)] */
@@ -48,7 +48,7 @@ let%expect_test "Read from array twice" =
     } |}]
 
 let%expect_test "Read from array twice with explicit capability" =
-  compile_string "func foo(a: int[10]) { read a[1] as a1; let x = a1; let y = a1;}";
+  compile_string "func foo(a: bit<32>[10]) { read a[1] as a1; let x = a1; let y = a1;}";
   [%expect {|
     void foo(int a[10]) {
       /* cap read: a[1*(1)] */
@@ -57,7 +57,7 @@ let%expect_test "Read from array twice with explicit capability" =
     } |}]
 
 let%expect_test "Write to an array with explicit capability" =
-  compile_string "func foo(a: int[10]) { write a[1] as a1; a1 := 1;}";
+  compile_string "func foo(a: bit<32>[10]) { write a[1] as a1; a1 := 1;}";
   [%expect {|
     void foo(int a[10]) {
       /* cap write: a[1*(1)] */
