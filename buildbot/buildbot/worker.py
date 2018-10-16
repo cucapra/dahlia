@@ -281,16 +281,31 @@ def stage_hls(db, config):
             cwd=CODE_DIR,
         )
 
-def _copy_file(job, path):
-    runl(
-        job,
-        ['sshpass', '-p', 'root', 'scp', '-r', path, 'zb1:/mnt'],
-        timeout=1200
-    )
 
-def _copy_directory(path):
+def _copy_file(job, path, mode):
+    if mode.get('scp'):
+        runl(
+            job,
+            ['sshpass', '-p', 'root', 'scp', '-r', path, 'zb1:/mnt'],
+            timeout=1200
+        )
+    else:
+        runl(job, ['cp', '-r', path, 'sd_card/'])
+
+def _copy_directory(job, path, mode):
     for i in glob.glob(os.path.join(path, '*')):
-        _copy_file(i)
+        _copy_file(job, i, mode)
+
+
+def stage_cheating(db, config):
+    """Work stage: Skip hls stage to test Areesh.
+    """
+    with work(db, 'seashelled', 'cheating', 'hlsed') as job:
+        # Make sd card directory
+        runl(job, ['mkdir', 'sd_card'])
+
+        # Copy folder to current directory
+        _copy_directory(job, '/home/opam/seashell/buildbot/instance/jobs/n3EOVfKLock/code/sd_card', copy)
 
 
 def stage_areesh(db, config):
@@ -303,7 +318,7 @@ def stage_areesh(db, config):
             return
 
         # Upload bit stream to FPGA
-        _copy_directory(job, 'sd_card')
+        _copy_directory(job, 'sd_card', scp)
 
         # Restart the FPGA
         runl(
@@ -324,6 +339,6 @@ def work_threads(db, config):
     """Get a list of (unstarted) Thread objects for processing tasks.
     """
     out = []
-    for stage in (stage_unpack, stage_seashell, stage_hls, stage_areesh):
+    for stage in (stage_unpack, stage_seashell, stage_cheating, stage_areesh):
         out.append(WorkThread(db, config, stage))
     return out
