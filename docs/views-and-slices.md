@@ -2,7 +2,7 @@
 title: Views and Slices
 ---
 
-::: todo
+::: formula
 This document is a proposal. The contents haven't been implemented yet, or
 completely formalized.
 :::
@@ -55,7 +55,11 @@ For example, consider the following array $a$ of length 8 and banking factor 2.
 By default, we assume interleaving banking for elements, which means alternative
 elements exist in separate banks.
 
-![alt text](./img/row-slice.png)
+::: formula
+This doesn't work since b & c don't access mututally exclusive bank sets.
+:::
+
+![](./img/row-slice.png)
 
 Next, we define a static slice of $a$ using the following syntax:
 
@@ -74,7 +78,7 @@ slice them into smaller arrays still.
 The current syntax, however, does not allow us to create slices of the following
 form:
 
-![alt text](./img/row-slice-stride.png)
+![](./img/row-slice-stride.png)
 
 In order to allow programmers to slice arrays in this form, we extend the
 slice syntax as follows:
@@ -90,7 +94,7 @@ are `int[4 bank (1)]`.
 
 Furthermore, this syntax can also easily infer when a given slicing is invalid:
 
-![alt text](./img/row-slice-invalid.png)
+![](./img/row-slice-invalid.png)
 
 ```
 let (b, c) = slice[w=3, s=3] a
@@ -99,14 +103,14 @@ let (b, c) = slice[w=3, s=3] a
 Since this array doesn't have a simple banking structure that can be inferred
 from the original array `a`, Seashell will fail to typecheck it.
 
-::: todo
+::: formula
 I think there a simple linear relation b/w (w, s) and the size and banking
 factor of the original array dimension.
 :::
 
 Finally, this syntax can naturally be extended to multiple dimensions:
 
-![alt text](./img/two-dim-slice.png)
+![](./img/two-dim-slice.png)
 
 ```
 int[4 bank(2)][4 bank(2)] a;
@@ -117,6 +121,78 @@ where, `b` and `c` are `int[2][4 bank(2)]`.
 
 ## Views in Seashell
 
-While _slices_ provide a way to divide arrays into mutally exclusive segments,
-we still need a way of accessing the elements of a _slice_ in a safe and parallel
-manner. _Views_ provide a mechanism to do exactly this.
+While _slices_ provide a way to divide arrays into mutally exclusive
+sdifferent egments, we still need a way of accessing the elements of a _slice_ in a
+safe and parallel manner. _Views_ provide a mechanism to do exactly this.
+Instead of asking for a mutually exclusive slice, a _view_ asks Seashell if a
+given set of accesses are hardware-safe i.e., they all correspond to
+distinct banks. Notice that this constraint is different from _slices_ since
+Seashell doesn't require a slice to only consist elements stored in different
+banks.
+
+
+The _view_ syntax is very similar to the _slice_ syntax:
+
+```
+let v_a = view[w=2, s=1, o=0] a
+```
+
+which results in a view as follows:
+
+![](./img/row-view.png)
+
+In a similar fashion to the _slice_ syntax, `w` dictates the width of the view,
+`s` is the stride used to generate the view, and `o` is the offset at which
+the view starts. 
+
+::: formula
+There is no good reason why _slices_ don't have offsets. At this point, I think
+the only distinction between _slices_ and _views_ is that the latter needs to
+check that elements contained in it come from distinct banks.
+:::
+
+When we define an offset with a _view_, we have the following picture:
+
+![](./img/row-view-stride.png)
+
+However, as previously mentioned, a _view_ needs to ensure that all elements
+accessed in it are in distinct banks. Since this is not the case with this view,
+Seashell will reject it.
+
+### Views in loops
+
+Since parallel memory access are primarirly used in conjunction with loops, we
+can use _views_ with dynamic offsets:
+
+```
+for (let i = 1..10) {
+    let v_a = view[w=2, s=1, o=i] a;
+    let v_c = view[w=2, s=1, o=i] c;
+    v_c := v_a;
+}
+```
+
+Assignment b/w views corresponds to the intuitive parallel writes between two
+pieces of memory. To make sure that the expression `v_c := v_a` is safe, all
+Seashell need to do is make sure `v_c` and `v_a` have the same widths.
+
+### Desugaring loop unrolls to views
+
+This is intentionally blank...
+
+::: formula
+The current _view_ syntax is not powerful enough to allow us to desugar
+unrolled loops to views. However, it should certainly be the case that this is
+doable. We need to come up with modest extensions to the syntax that make this
+possible somehow. - Rachit
+:::
+
+::: formula
+Before writing this doc, I had thought that _slices_ and _views_ are sufficiently
+different that they should be different abstracts. I'm less confident that this
+true since they seems to almost be doing the same things at this point.
+
+Having _slices_ in the surface language still seems useful, but I think there
+a more core abstraction that can be written that can generalize both of these
+constructs and loop unrolling.
+:::
