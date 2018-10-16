@@ -96,12 +96,11 @@ access:
   | LSQUARE expr RSQUARE access   { $2 :: $4 }
 
 bit_annotation:
-  | BIT LT i = INT GT { i }
+  | BIT LT INT GT { $3 }
 
 basic_type:
-  | bit_annotation              { print_int $1; print_newline (); TIndex ((0, 1), (0, Core.Int.pow 2 $1)) }
+  | bit_annotation              { TIndex ((0, 1), (0, Core.Int.pow 2 $1)) }
   | BOOL_ANNOTATION             { TBool }
-  | INT_ANNOTATION              { TIndex ((0, 1), (min_int, max_int)) }
   | FLOAT_ANNOTATION            { TFloat }
   | ID                          { TAlias $1 }
 
