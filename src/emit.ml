@@ -34,34 +34,16 @@ let s_pragma_bank id bf i =
       " factor="; (string_of_int bf)
     ] |> indent i
 
-let include_apint = {|#include "ap_cint.h"|}
-
 let compute_array_size dims =
   List.fold_left (fun acc (s, _) -> s * acc) 1 dims
 
-(** [emit_int_t d1 d2] is [s], where [s] is a string with
- * an int type annotation followed by the number of bits in
- * the representation. [d1]..[d2] represent the
- * dynamic component of some index type. If [d1] and [d2]
- * imply a signed 32 bit integer, (i.e. they are min_32int and
- * max_32int), then [s] is simply "int". *)
-let emit_int_t d1 d2 =
-  if
-    d1 = Op_util.min_int32 &&
-    d2 = Op_util.max_int32
-  then "int"
-  else
-    let bits = Core.Int.floor_log2 ((d2+1) * 2) in
-    "int" ^ (string_of_int bits)
-
 let type_str = function
-  | TBool -> "int"
-  | TIndex (_, (d1, d2)) -> emit_int_t d1 d2
+  | TBool | TIndex _ -> "int"
   | TFloat -> "float"
   | t -> failwith (Printf.sprintf "Cannot emit type %s." (show_type_node t))
 
 let rec emit_expr = function
-  | EInt (i, _)       -> string_of_int i
+  | EInt i               -> string_of_int i
   | EFloat f             -> string_of_float f
   | EBool b              -> if b then "1" else "0"
   | EVar id              -> id
@@ -83,6 +65,10 @@ and emit_aa_phys (id, b, i) =
   | TMux _ -> failwith "Muxes not implemented"
   | _ -> failwith "Tried to index into non-array"
 
+(* FIXME: optimize?
+ * @tedbauer What kind of optimization were you thinking off? It's generally
+ * a good idea to document future optimizations that you don't want to immediately
+ * work on. If it's significant, open an issue and point to it. -- @rachitnigam *)
 and flatten_access dims idx_exprs =
     match dims, idx_exprs with
     | _::td, hi::ti ->
@@ -140,10 +126,7 @@ and emit_cap (cap, e, _) i = match cap with
 
 and emit_mux _ = failwith "Muxes not implemented"
 
-and emit_assign_int (id, e, d1, d2) =
-  concat [ (emit_int_t d1 d2); " "; id; " = "; (emit_expr e); ";" ]
-
-and emit_assign_bool (id, e) =
+and emit_assign_int (id, e) =
   concat [ "int "; id; " = "; (emit_expr e); ";" ]
 
 and emit_assign_arr (id, _, d) i =
@@ -162,12 +145,12 @@ and emit_assign_float (id, e) =
 
 and emit_assign (id, e) i =
   match !type_map id with
-  | TIndex (_, (d1, d2)) -> emit_assign_int (id, e, d1, d2) |> indent i
-  | TBool                -> emit_assign_bool (id, e)         |> indent i
-  | TArray (_, d)        -> emit_assign_arr (id, e, d) i    |> indent i
-  | TFloat               -> emit_assign_float (id, e)       |> indent i
-  | TAlias _             -> failwith "Impossible: TAlias while emitting"
-  | t                    -> failwith @@ "NYI: emit_assign with " ^ show_type_node t
+  | TIndex _      -> emit_assign_int (id, e)         |> indent i
+  | TBool         -> emit_assign_int (id, e)         |> indent i
+  | TArray (_, d) -> emit_assign_arr (id, e, d) i    |> indent i
+  | TFloat        -> emit_assign_float (id, e)       |> indent i
+  | TAlias _      -> failwith "Impossible: TAlias while emitting"
+  | t             -> failwith @@ "NYI: emit_assign with " ^ show_type_node t
 
 and emit_reassign (target, e) i =
   concat [ (emit_expr target); " = "; (emit_expr e); ";" ] |> indent i
@@ -211,4 +194,4 @@ and emit_fun (id, args, body) i =
   |> indent i
 
 and generate_c cmd =
-  include_apint ^ newline ^ (emit_cmd 0 cmd |> cleanup_output)
+  emit_cmd 0 cmd |> cleanup_output

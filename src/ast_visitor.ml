@@ -37,7 +37,7 @@ class ['s] ast_mapper = object(self)
   method binop op st = op, st
 
   method expr (e : expr) (st : 's) : expr * 's = match e with
-    | EInt (i, b) -> self#eint (i, b) st
+    | EInt i -> self#eint i st
     | EFloat f -> self#efloat f st
     | EVar v -> self#evar v st
     | EBool b -> self#ebool b st
@@ -45,7 +45,7 @@ class ['s] ast_mapper = object(self)
     | EAA (id, es) -> self#eaa (id, es) st
     | EBankedAA (id, e1, e2) -> self#ebankedaa (id, e1, e2) st
 
-  method private eint (i, b) st = EInt (i, b), st
+  method private eint i st = EInt i, st
   method private ebool i st = EBool i, st
   method private evar i st = EVar i, st
   method private efloat i st = EFloat i, st
