@@ -283,7 +283,7 @@ def stage_hls(db, config):
 
 
 def _copy_file(job, path, mode):
-    if mode.get('scp'):
+    if mode == 'scp':
         runl(
             job,
             ['sshpass', '-p', 'root', 'scp', '-r', path, 'zb1:/mnt'],
