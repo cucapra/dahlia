@@ -305,7 +305,7 @@ def stage_cheating(db, config):
         runl(job, ['mkdir', 'sd_card'])
 
         # Copy folder to current directory
-        _copy_directory(job, '/home/opam/seashell/buildbot/instance/jobs/n3EOVfKLock/code/sd_card', copy)
+        _copy_directory(job, '/home/opam/seashell/buildbot/instance/jobs/n3EOVfKLock/code/sd_card', 'copy')
 
 
 def stage_areesh(db, config):
@@ -318,7 +318,7 @@ def stage_areesh(db, config):
             return
 
         # Upload bit stream to FPGA
-        _copy_directory(job, 'sd_card', scp)
+        _copy_directory(job, 'sd_card', 'scp')
 
         # Restart the FPGA
         runl(
