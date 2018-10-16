@@ -64,6 +64,7 @@ For example, you can zip up a directory and submit it like this:
 
 It's also possible to provide Seashell code as an ordinary POST string instead of as a file attachment using the `code` parameter.
 You can also specify configuration options as further parameters; the only current configuration option is `skipseashell`, which lets you supply plain HLS C code as input.
+(With curl, use `-F skipseashell=1`.)
 
 To see a list of the current jobs, get `/jobs.csv`:
 
