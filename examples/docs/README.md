@@ -1,6 +1,6 @@
 # Seashell Examples
 
-This is a list of Seashell programs that showcase useful FPGA programming behavior.
+This is a list of Seashell programs that showcase useful FPGA programming behavior. The status is stale.
 
 ## Usage
 
