@@ -46,7 +46,7 @@ let type_str = function
     let bits_st =
       if hs=1 (* static number, don't annotate *) then ""
       else Core.Int.floor_log2 hs |> string_of_int
-    in concat [ "int"; bits_st ]
+    in concat [ "uint"; bits_st ]
   | TFloat -> "float"
   | t -> failwith (Printf.sprintf "Cannot emit type %s." (show_type_node t))
 
