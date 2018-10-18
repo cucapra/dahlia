@@ -1,12 +1,11 @@
 import threading
 import subprocess
-import os, os.path
+import os
 from .db import ARCHIVE_NAME, CODE_DIR, log, chdir
 from contextlib import contextmanager
 import traceback
 import shlex
 import glob
-import shutil
 
 SEASHELL_EXT = '.sea'
 C_EXT = '.cpp'
@@ -270,7 +269,7 @@ def stage_hls(db, config):
 
         if job['config'].get('estimate'):
             xflags = '-perf-est-hw-only'
-        
+
         # Run Xilinx SDSoC compiler for created objects.
         runl(
             job,
@@ -292,6 +291,7 @@ def _copy_file(job, path, mode):
     else:
         runl(job, ['cp', '-r', path, 'sd_card/'])
 
+
 def _copy_directory(job, path, mode):
     for i in glob.glob(os.path.join(path, '*')):
         _copy_file(job, i, mode)
@@ -305,15 +305,18 @@ def stage_cheat(db, config):
         runl(job, ['mkdir', 'sd_card'])
 
         # Copy folder to current directory
-        _copy_directory(job, '/home/opam/seashell/buildbot/instance/jobs/n3EOVfKLock/code/sd_card', 'copy')
+        _copy_directory(job, '/home/opam/seashell/buildbot/instance/'
+                             'jobs/n3EOVfKLock/code/sd_card', 'copy')
 
 
 def stage_areesh(db, config):
-    """Work stage: Upload bitstream to FPGA controller and output the result gathered.
+    """Work stage: upload bitstream to the FPGA controller, run the
+    program, and output the result gathered.
     """
     with work(db, 'hlsed', 'areeshing', 'done') as job:
         if job['config'].get('estimate'):
-            # Skip the Areesh stage. Bit files not generated in estimation stage.
+            # Skip the Areesh stage. Bit files not generated in
+            # estimation stage.
             log(job, 'skipping run on FPGA stage')
             return
 
