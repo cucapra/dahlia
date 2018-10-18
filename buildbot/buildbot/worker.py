@@ -1,7 +1,7 @@
 import threading
 import subprocess
 import os
-from .db import ARCHIVE_NAME, CODE_DIR, log, chdir
+from .db import ARCHIVE_NAME, CODE_DIR, log
 from contextlib import contextmanager
 import traceback
 import shlex
@@ -103,8 +103,7 @@ def work(db, old_state, temp_state, done_state):
     job = db.acquire(old_state, temp_state)
     task = JobTask(db, job)
     try:
-        with chdir(task.dir):
-            yield task
+        yield task
     except WorkError as exc:
         task.log(exc.message)
         task.set_state('failed')
@@ -136,8 +135,8 @@ def _cmd_str(cmd):
 
 
 def run(cmd, **kwargs):
-    """Run a command, like `subprocess.run`, while capturing output. Log an
-    appropriate error if the command fails.
+    """Run a command, like `subprocess.run`, while capturing output.
+    Raise an appropriate `WorkError` if the command fails.
 
     `cmd` must be a list of arguments.
     """
@@ -192,17 +191,17 @@ def stage_unpack(db, config):
     """
     with work(db, 'uploaded', 'unpacking', 'unpacked') as task:
         # Unzip the archive into the code directory.
-        task.run(["unzip", "-d", CODE_DIR, "{}.zip".format(ARCHIVE_NAME)])
+        task.run(["unzip", "-d", task.code_dir, "{}.zip".format(ARCHIVE_NAME)])
 
         # Check for single-directory zip files: if the code directory
         # only contains one subdirectory now, "collapse" it.
-        code_contents = os.listdir(CODE_DIR)
+        code_contents = os.listdir(task.code_dir)
         if len(code_contents) == 1:
-            path = os.path.join(CODE_DIR, code_contents[0])
+            path = os.path.join(task.code_dir, code_contents[0])
             if os.path.isdir(path):
                 for fn in os.listdir(path):
                     os.rename(os.path.join(path, fn),
-                              os.path.join(CODE_DIR, fn))
+                              os.path.join(task.code_dir, fn))
                 task.log('collapsed directory {}'.format(code_contents[0]))
 
 
@@ -216,7 +215,7 @@ def stage_seashell(db, config):
             # file contains the hardware function. For now, this
             # guessing is very unintelligent: it just looks for some
             # *.cpp file not named "main".
-            for name in os.listdir(CODE_DIR):
+            for name in os.listdir(task.code_dir):
                 base, ext = os.path.splitext(name)
                 if ext == C_EXT and base != 'main':
                     c_name = name
@@ -229,7 +228,7 @@ def stage_seashell(db, config):
             return
 
         # Look for the Seashell source code.
-        for name in os.listdir(CODE_DIR):
+        for name in os.listdir(task.code_dir):
             _, ext = os.path.splitext(name)
             if ext == SEASHELL_EXT:
                 source_name = name
@@ -239,7 +238,7 @@ def stage_seashell(db, config):
         task['seashell_main'] = name
 
         # Run the Seashell compiler.
-        source_path = os.path.join(CODE_DIR, source_name)
+        source_path = os.path.join(task.code_dir, source_name)
         hls_code = task.run([compiler, source_path], log_stdout=False).stdout
 
         # A filename for the translated C code.
@@ -248,7 +247,7 @@ def stage_seashell(db, config):
         task['hw_basename'] = base
 
         # Write the C code.
-        with open(os.path.join(CODE_DIR, c_name), 'wb') as f:
+        with open(os.path.join(task.code_dir, c_name), 'wb') as f:
             f.write(hls_code)
 
 
@@ -317,7 +316,8 @@ def stage_hls(db, config):
 def _copy_file(task, path, mode):
     if mode == 'scp':
         task.run(
-            ['sshpass', '-p', 'root', 'scp', '-r', path, 'zb1:/mnt'],
+            ['sshpass', '-p', 'root', 'scp', '-r',
+             os.path.join(task.dir, path), 'zb1:/mnt'],
             timeout=1200
         )
     else:
@@ -325,7 +325,7 @@ def _copy_file(task, path, mode):
 
 
 def _copy_directory(task, path, mode):
-    for i in glob.glob(os.path.join(path, '*')):
+    for i in glob.glob(os.path.join(os.path.join(task.dir, path), '*')):
         _copy_file(task, i, mode)
 
 
