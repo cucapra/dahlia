@@ -24,27 +24,95 @@ class WorkError(Exception):
         self.message = message
 
 
+class JobTask:
+    """A temporary acquisition of a job used to do a single unit of work
+    on its behalf. Also, a container for lots of convenience methods for
+    doing stuff with the job.
+
+    Subscripting a task accesses the underlying job dict.
+    """
+    def __init__(self, db, job):
+        self.db = db
+        self.job = job
+
+    def __getitem__(self, key):
+        return self.job[key]
+
+    def __setitem__(self, key, value):
+        self.job[key] = value
+
+    @property
+    def dir(self):
+        """The path the directory containing the job's files.
+        """
+        return self.db.job_dir(self.job['name'])
+
+    @property
+    def code_dir(self):
+        """The path the job's directory for code and compilation.
+        """
+        return os.path.join(self.dir, CODE_DIR)
+
+    def log(self, message):
+        """Add an entry to the job's log.
+        """
+        log(self.job, message)
+
+    def set_state(self, state):
+        """Set the job's state.
+        """
+        self.db.set_state(self.job, state)
+
+    def proc_log(self, cmd, proc, stdout=True, stderr=True):
+        """Log the output of a command run on behalf of a job.
+
+        Provide the command (a list of arguments), and the process
+        (e.g., returned from `run`. Specify whether to include the
+        stdout and stderr streams.
+        """
+        out = '$ ' + _cmd_str(cmd)
+        streams = []
+        if stdout:
+            streams.append(proc.stdout)
+        if stderr:
+            streams.append(proc.stderr)
+        out += _stream_text(*streams)
+        self.log(out)
+
+    def run(self, cmd, log_stdout=True, timeout=60, cwd='', **kwargs):
+        """Run a command and log its output.
+
+        Return an exited process object, with output captured (in `stdout`
+        and `stderr`). The `log_stdout` flag determines whether the stdout
+        stream is included in the log; set this to False if the point of
+        running the command is to collect data from stdout. Additional
+        arguments are forwarded to `subprocess.run`.
+        """
+        kwargs['timeout'] = timeout
+        kwargs['cwd'] = os.path.normpath(os.path.join(self.dir, cwd))
+        proc = run(cmd, **kwargs)
+        self.proc_log(cmd, proc, stdout=log_stdout)
+        return proc
+
+
 @contextmanager
 def work(db, old_state, temp_state, done_state):
     """A context manager for acquiring a job temporarily in an
-    exclusive way to work on it.
-
-    While inside the context, the working directory is changed to the
-    job's private work directory.
+    exclusive way to work on it. Produce a `JobTask`.
     """
     job = db.acquire(old_state, temp_state)
-    job_dir = db.job_dir(job['name'])
+    task = JobTask(db, job)
     try:
-        with chdir(job_dir):
-            yield job
+        with chdir(task.dir):
+            yield task
     except WorkError as exc:
-        log(job, exc.message)
-        db.set_state(job, 'failed')
+        task.log(exc.message)
+        task.set_state('failed')
     except Exception:
-        log(job, traceback.format_exc())
-        db.set_state(job, 'failed')
+        task.log(traceback.format_exc())
+        task.set_state('failed')
     else:
-        db.set_state(job, done_state)
+        task.set_state(done_state)
 
 
 def _stream_text(*args):
@@ -99,38 +167,6 @@ def run(cmd, **kwargs):
         ))
 
 
-def proc_log(job, cmd, proc, stdout=True, stderr=True):
-    """Log the output of a command run on behalf of a job.
-
-    Provide the job, the command (a list of arguments), and the process
-    (e.g., returned from `run`. Specify whether to include the stdout
-    and stderr streams.
-    """
-    out = '$ ' + _cmd_str(cmd)
-    streams = []
-    if stdout:
-        streams.append(proc.stdout)
-    if stderr:
-        streams.append(proc.stderr)
-    out += _stream_text(*streams)
-    log(job, out)
-
-
-def runl(job, cmd, log_stdout=True, timeout=60, **kwargs):
-    """Run a command and log its output.
-
-    Return an exited process object, with output captured (in `stdout`
-    and `stderr`). The `log_stdout` flag determines whether the stdout
-    stream is included in the log; set this to False if the point of
-    running the command is to collect data from stdout. Additional
-    arguments are forwarded to `subprocess.run`.
-    """
-    kwargs['timeout'] = timeout
-    proc = run(cmd, **kwargs)
-    proc_log(job, cmd, proc, stdout=log_stdout)
-    return proc
-
-
 class WorkThread(threading.Thread):
     """A base class for all our worker threads, which run indefinitely
     to process tasks in an appropriate state.
@@ -154,9 +190,9 @@ class WorkThread(threading.Thread):
 def stage_unpack(db, config):
     """Work stage: unpack source code.
     """
-    with work(db, 'uploaded', 'unpacking', 'unpacked') as job:
+    with work(db, 'uploaded', 'unpacking', 'unpacked') as task:
         # Unzip the archive into the code directory.
-        runl(job, ["unzip", "-d", CODE_DIR, "{}.zip".format(ARCHIVE_NAME)])
+        task.run(["unzip", "-d", CODE_DIR, "{}.zip".format(ARCHIVE_NAME)])
 
         # Check for single-directory zip files: if the code directory
         # only contains one subdirectory now, "collapse" it.
@@ -167,15 +203,15 @@ def stage_unpack(db, config):
                 for fn in os.listdir(path):
                     os.rename(os.path.join(path, fn),
                               os.path.join(CODE_DIR, fn))
-                log(job, 'collapsed directory {}'.format(code_contents[0]))
+                task.log('collapsed directory {}'.format(code_contents[0]))
 
 
 def stage_seashell(db, config):
     """Work stage: compile Seashell code to HLS C.
     """
     compiler = config["SEASHELL_COMPILER"]
-    with work(db, 'unpacked', 'seashelling', 'seashelled') as job:
-        if job['config'].get('skipseashell'):
+    with work(db, 'unpacked', 'seashelling', 'seashelled') as task:
+        if task['config'].get('skipseashell'):
             # Skip the Seashell stage. Instead, just try to guess which
             # file contains the hardware function. For now, this
             # guessing is very unintelligent: it just looks for some
@@ -188,8 +224,8 @@ def stage_seashell(db, config):
             else:
                 raise WorkError('no C source file found')
 
-            log(job, 'skipping Seashell compilation stage')
-            job['hw_basename'] = base
+            task.log('skipping Seashell compilation stage')
+            task['hw_basename'] = base
             return
 
         # Look for the Seashell source code.
@@ -200,16 +236,16 @@ def stage_seashell(db, config):
                 break
         else:
             raise WorkError('no source file found')
-        job['seashell_main'] = name
+        task['seashell_main'] = name
 
         # Run the Seashell compiler.
         source_path = os.path.join(CODE_DIR, source_name)
-        hls_code = runl(job, [compiler, source_path], log_stdout=False).stdout
+        hls_code = task.run([compiler, source_path], log_stdout=False).stdout
 
         # A filename for the translated C code.
         base, _ = os.path.splitext(source_name)
         c_name = base + C_EXT
-        job['hw_basename'] = base
+        task['hw_basename'] = base
 
         # Write the C code.
         with open(os.path.join(CODE_DIR, c_name), 'wb') as f:
@@ -229,11 +265,11 @@ def _sds_cmd(prefix, func_hw, c_hw):
     ]
 
 
-def _hw_filenames(job):
-    """For a given job, get its hardware source file's basename, C
+def _hw_filenames(task):
+    """For a given task, get its hardware source file's basename, C
     filename, and object filename.
     """
-    hw_basename = job['hw_basename']
+    hw_basename = task['hw_basename']
     return hw_basename, hw_basename + C_EXT, hw_basename + OBJ_EXT
 
 
@@ -242,37 +278,34 @@ def stage_hls(db, config):
     bitstream with HLS toolchain.
     """
     prefix = config["HLS_COMMAND_PREFIX"]
-    with work(db, 'seashelled', 'hlsing', 'hlsed') as job:
-        hw_basename, hw_c, hw_o = _hw_filenames(job)
+    with work(db, 'seashelled', 'hlsing', 'hlsed') as task:
+        hw_basename, hw_c, hw_o = _hw_filenames(task)
         xflags = ''
 
         # Run Xilinx SDSoC compiler for hardware functions.
-        runl(
-            job,
+        task.run(
             _sds_cmd(prefix, hw_basename, hw_c) + [
                 '-c', '-MMD', '-MP', '-MF"vsadd.d"', hw_c,
                 '-o', hw_o,
             ],
             timeout=120,
-            cwd=CODE_DIR
+            cwd=CODE_DIR,
         )
 
         # Run the Xilinx SDSoC compiler for host function.
-        runl(
-            job,
+        task.run(
             _sds_cmd(prefix, hw_basename, hw_c) + [
                 '-c', '-MMD', '-MP', '-MF"main.d"', C_MAIN,
                 '-o', HOST_O,
             ],
-            cwd=CODE_DIR
+            cwd=CODE_DIR,
         )
 
-        if job['config'].get('estimate'):
+        if task['config'].get('estimate'):
             xflags = '-perf-est-hw-only'
 
         # Run Xilinx SDSoC compiler for created objects.
-        runl(
-            job,
+        task.run(
             _sds_cmd(prefix, hw_basename, hw_c) + [
                 xflags, hw_o, HOST_O, '-o', EXECUTABLE,
             ],
@@ -281,65 +314,61 @@ def stage_hls(db, config):
         )
 
 
-def _copy_file(job, path, mode):
+def _copy_file(task, path, mode):
     if mode == 'scp':
-        runl(
-            job,
+        task.run(
             ['sshpass', '-p', 'root', 'scp', '-r', path, 'zb1:/mnt'],
             timeout=1200
         )
     else:
-        runl(job, ['cp', '-r', path, 'sd_card/'])
+        task.run(['cp', '-r', path, 'sd_card/'])
 
 
-def _copy_directory(job, path, mode):
+def _copy_directory(task, path, mode):
     for i in glob.glob(os.path.join(path, '*')):
-        _copy_file(job, i, mode)
+        _copy_file(task, i, mode)
 
 
 def stage_cheat(db, config):
     """Work stage: Skip hls stage to test Areesh.
     """
-    with work(db, 'seashelled', 'cheating', 'hlsed') as job:
+    with work(db, 'seashelled', 'cheating', 'hlsed') as task:
         # Make sd card directory
-        runl(job, ['mkdir', 'sd_card'])
+        task.run(['mkdir', 'sd_card'])
 
         # Copy folder to current directory
-        _copy_directory(job, '/home/opam/seashell/buildbot/instance/'
-                             'jobs/n3EOVfKLock/code/sd_card', 'copy')
+        _copy_directory(task, '/home/opam/seashell/buildbot/instance/'
+                              'jobs/n3EOVfKLock/code/sd_card', 'copy')
 
 
 def stage_areesh(db, config):
     """Work stage: upload bitstream to the FPGA controller, run the
     program, and output the result gathered.
     """
-    with work(db, 'hlsed', 'areeshing', 'done') as job:
-        if job['config'].get('estimate'):
+    with work(db, 'hlsed', 'areeshing', 'done') as task:
+        if task['config'].get('estimate'):
             # Skip the Areesh stage. Bit files not generated in
             # estimation stage.
-            log(job, 'skipping run on FPGA stage')
+            task.log('skipping run on FPGA stage')
             return
 
         # Upload bit stream to FPGA
-        _copy_directory(job, 'sd_card', 'scp')
+        _copy_directory(task, 'sd_card', 'scp')
 
         # Restart the FPGA
-        runl(
-            job,
+        task.run(
             ['sshpass', '-p', 'root', 'ssh', 'zb1', '/sbin/reboot'],
             timeout=120
         )
 
         # Wait for restart
-        runl(
-            job,
+        task.run(
             ['sleep', '120'],
             timeout=1200
         )
 
         # Run the FPGA program and collect results
-        runl(
-            job,
+        task.run(
             ['sshpass', '-p', 'root', 'ssh', 'zb1', '/mnt/sdsoc'],
             timeout=120
         )
