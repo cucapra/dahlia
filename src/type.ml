@@ -160,10 +160,6 @@ and check_assignment id exp ctx =
 and check_bitsizes t1 t2 =
   match t1, t2 with
   | TIndex (_, (ld1, hd1)), TIndex (_, (ld2, hd2)) ->
-    print_int (hd1-ld1);
-    print_newline ();
-    print_int (hd2-ld2);
-    print_newline ();
     if hd1-ld1 < hd2-ld2 then
       raise @@ TypeError (reassign_bit_violation t1 t2)
   | _ -> ()

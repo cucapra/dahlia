@@ -45,8 +45,11 @@ let type_str = function
   | TIndex (_, (_, hs)) ->
     let bits_st =
       if hs=1 (* static number, don't annotate *) then ""
-      else Core.Int.floor_log2 hs |> string_of_int
-    in concat [ "uint"; bits_st ]
+      else Core.Int.floor_log2 hs |> string_of_int in
+    let int_st =
+      if hs=1 then "int"
+      else "uint" in
+    concat [ int_st; bits_st ]
   | TFloat -> "float"
   | t -> failwith (Printf.sprintf "Cannot emit type %s." (show_type_node t))
 
