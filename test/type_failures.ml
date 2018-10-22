@@ -46,3 +46,9 @@ let%expect_test "Cannot shadow variables" =
   compile_string_with_failure "func foo(a: bit<32>[10]) { let a = 10; }";
   [%expect {|
     `a' already bound in this context. Cannot shadow variables. |}]
+
+let%expect_test "Cannot reassign int to something stored with more bits" =
+  compile_string_with_failure "func foo(a: bit<32>, b: bit<33>) { a := b; }";
+  [%expect {|
+    [Type Error] Cannot reassign value of type `unsigned bit<32>' to value of type `unsigned bit<33>';
+         `unsigned bit<32>' is represented with less bits than `unsigned bit<33>'.|}]

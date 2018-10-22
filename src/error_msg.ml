@@ -105,8 +105,8 @@ let invalid_array_write id =
 
 let reassign_bit_violation s_target s_val =
   sprintf
-    {| Can't reassign value of type `%s' to value of type `%s'; `%s' is\n
-       represented with less bits than `%s'. |}
+    "[Type Error] Cannot reassign value of type `%s' to value of type `%s';
+     `%s' is represented with less bits than `%s'."
   (string_of_type s_target)
   (string_of_type s_val)
   (string_of_type s_target)
