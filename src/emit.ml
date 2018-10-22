@@ -23,6 +23,8 @@ let concat = String.concat ""
 
 let comment s = Printf.sprintf "/* %s */" s
 
+let incl_apint = {|#include "apcint.h"|}
+
 let s_pragma_unroll u i =
   if u = "1" then ""
   else concat [ "#pragma HLS UNROLL factor="; u ] |> indent i
@@ -39,7 +41,15 @@ let compute_array_size dims =
   List.fold_left (fun acc (s, _) -> s * acc) 1 dims
 
 let type_str = function
-  | TBool | TIndex _ -> "int"
+  | TBool -> "int"
+  | TIndex (_, (_, hs)) ->
+    let bits_st =
+      if hs=1 (* static number, don't annotate *) then ""
+      else Core.Int.floor_log2 hs |> string_of_int in
+    let int_st =
+      if hs=1 then "int"
+      else "uint" in
+    concat [ int_st; bits_st ]
   | TFloat -> "float"
   | t -> failwith (Printf.sprintf "Cannot emit type %s." (show_type_node t))
 
@@ -127,8 +137,8 @@ and emit_cap (cap, e, _) i = match cap with
 
 and emit_mux _ = failwith "Muxes not implemented"
 
-and emit_assign_int (id, e) =
-  concat [ "int "; id; " = "; (emit_expr e); ";" ]
+and emit_assign_int (id, e, typ_s) =
+  concat [ typ_s; " "; id; " = "; (emit_expr e); ";" ]
 
 and emit_assign_arr (id, _, d) i =
   let bf = compute_bf d in
@@ -146,12 +156,12 @@ and emit_assign_float (id, e) =
 
 and emit_assign (id, e) i =
   match !type_map id with
-  | TIndex _      -> emit_assign_int (id, e)         |> indent i
-  | TBool         -> emit_assign_int (id, e)         |> indent i
-  | TArray (_, d) -> emit_assign_arr (id, e, d) i    |> indent i
-  | TFloat        -> emit_assign_float (id, e)       |> indent i
-  | TAlias _      -> failwith "Impossible: TAlias while emitting"
-  | t             -> failwith @@ "NYI: emit_assign with " ^ show_type_node t
+  | TIndex _ as idx -> emit_assign_int (id, e, (type_str idx)) |> indent i
+  | TBool           -> emit_assign_int (id, e, "int")          |> indent i
+  | TArray (_, d)   -> emit_assign_arr (id, e, d) i            |> indent i
+  | TFloat          -> emit_assign_float (id, e)               |> indent i
+  | TAlias _        -> failwith "Impossible: TAlias while emitting"
+  | t               -> failwith @@ "NYI: emit_assign with " ^ show_type_node t
 
 and emit_reassign (target, e) i =
   concat [ (emit_expr target); " = "; (emit_expr e); ";" ] |> indent i
@@ -195,4 +205,4 @@ and emit_fun (id, args, body) i =
   |> indent i
 
 and generate_c cmd =
-  emit_cmd 0 cmd |> cleanup_output
+  concat [ incl_apint; newline; (emit_cmd 0 cmd |> cleanup_output) ]

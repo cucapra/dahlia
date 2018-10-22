@@ -19,7 +19,7 @@ let parse_sequence c1 c2 =
 (* Keywords *)
 %token LET IF FOR TRUE FALSE INT_ANNOTATION
        BOOL_ANNOTATION FLOAT_ANNOTATION
-       MUX UNROLL BANK FUNC TYPE WRITE READ AS
+       MUX UNROLL BANK FUNC TYPE WRITE READ AS BIT
 
 (* Parentheses, brackets, etc *)
 %token LPAREN RPAREN LBRACK RBRACK LSQUARE RSQUARE
@@ -95,9 +95,12 @@ access:
   | LSQUARE expr RSQUARE          { [$2] }
   | LSQUARE expr RSQUARE access   { $2 :: $4 }
 
+bit_annotation:
+  | BIT LT INT GT { $3 }
+
 basic_type:
+  | bit_annotation              { TIndex ((0, 1), (0, Core.Int.pow 2 $1)) }
   | BOOL_ANNOTATION             { TBool }
-  | INT_ANNOTATION              { TIndex ((0, 1), (min_int, max_int)) }
   | FLOAT_ANNOTATION            { TFloat }
   | ID                          { TAlias $1 }
 

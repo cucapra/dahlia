@@ -1,4 +1,4 @@
-type number = int;
+type number = bit<32>;
 
 func add(a: number, b: number) {
 
