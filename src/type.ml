@@ -155,6 +155,19 @@ and check_assignment id exp ctx =
   let (t, c) = check_expr exp ctx in
   Context.add_binding id t c
 
+(** [check_bitsizes target v] is (). It raises [TypeError] if [target]
+ * is represented with less bits than [v]. *)
+and check_bitsizes t1 t2 =
+  match t1, t2 with
+  | TIndex (_, (ld1, hd1)), TIndex (_, (ld2, hd2)) ->
+    print_int (hd1-ld1);
+    print_newline ();
+    print_int (hd2-ld2);
+    print_newline ();
+    if hd1-ld1 < hd2-ld2 then
+      raise @@ TypeError (reassign_bit_violation t1 t2)
+  | _ -> ()
+
 (** [check_reassign target exp (c, d)] is an updated context [(c', d')],
  * resulting from type-checking [target] and [exp]. [target] could be:
  *   - an array access, banked or not
@@ -165,9 +178,11 @@ and check_reassign target expr ctx =
       let (typ, c1) = check_expr expr ctx in
       (match get_binding id ctx with
       | TLin t when (types_eq t typ) ->
+          check_bitsizes t typ;
           begin try Context.consume_aa id 0 ctx
           with AlreadyConsumed i -> raise @@ TypeError (illegal_bank i id) end
-      | t when (types_eq t typ) -> c1
+      | t when (types_eq t typ) ->
+        check_bitsizes t typ; c1
       | _ -> raise @@ TypeError (reassign_type_mismatch (get_binding id ctx) typ))
   | EBankedAA (id, _, _) | EAA (id, _) -> raise @@ TypeError (invalid_array_write id)
   | _ -> raise (TypeError "Used reassign operator on illegal types")

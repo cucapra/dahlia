@@ -102,3 +102,13 @@ let incorrect_aa_dims aname expected actual =
 
 let invalid_array_write id =
   sprintf "Cannot write into array `%s' without write capability." id
+
+let reassign_bit_violation s_target s_val =
+  sprintf
+    {| Can't reassign value of type `%s' to value of type `%s'; `%s' is\n
+       represented with less bits than `%s'. |}
+  (string_of_type s_target)
+  (string_of_type s_val)
+  (string_of_type s_target)
+  (string_of_type s_val)
+
