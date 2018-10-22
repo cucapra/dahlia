@@ -70,10 +70,10 @@ let%expect_test "should-compile/typedefs.sea" =
   compile "should-compile/typedefs.sea";
   [%expect {|
     #include "apcint.h"
-    void add(int32 a, int32 b) {
-      int32 x = a+b;
+    void add(uint32 a, uint32 b) {
+      uint32 x = a+b;
       int y = 5;
-      int32 z = a+b+x+y;
+      uint32 z = a+b+x+y;
     } |}]
 ;;
 
@@ -81,7 +81,7 @@ let%expect_test "should-compile/vsadd_nrl.sea" =
   compile "should-compile/vsadd_nrl.sea";
   [%expect {|
     #include "apcint.h"
-    void madd(int32 a[1024], int32 b, int32 c[1024]) {
+    void madd(uint32 a[1024], uint32 b, uint32 c[1024]) {
       #pragma HLS ARRAY_PARTITION variable=a factor=32
       #pragma HLS ARRAY_PARTITION variable=c factor=32
       for (int i = 0; i <= 31; i += 1) {
