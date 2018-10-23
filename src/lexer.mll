@@ -57,7 +57,6 @@ rule token =
   | "type"       { TYPE }
   | "bit"        { BIT }
 
-  | "int"        { INT_ANNOTATION }
   | "bool"       { BOOL_ANNOTATION }
   | "float"      { FLOAT_ANNOTATION }
 

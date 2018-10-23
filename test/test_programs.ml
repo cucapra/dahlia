@@ -113,6 +113,23 @@ let%expect_test "should-compile/vvadd.sea" =
     } |}]
 ;;
 
+let%expect_test "should-compile/vsadd_nrl_typedefs.sea" =
+  compile "should-compile/vvadd.sea";
+  [%expect {|
+    #include "apcint.h"
+    void madd(float a[1024], float b[1024], float c[1024]) {
+      #pragma HLS ARRAY_PARTITION variable=a factor=32
+      #pragma HLS ARRAY_PARTITION variable=b factor=32
+      #pragma HLS ARRAY_PARTITION variable=c factor=32
+      for (int i = 0; i <= 1023; i += 1) {
+        #pragma HLS UNROLL factor=32
+        /* cap read: a[1*(i)] */
+        /* cap read: b[1*(i)] */
+        /* cap write: c[1*(i)] */
+        c[1*(i)] = a[1*(i)]+b[1*(i)];
+      }
+    } |}]
+
 (** TODO(rachit): These tests need + on idx types to be implemented
 
 let%expect_test "should-compile/logical_access.sea" =
