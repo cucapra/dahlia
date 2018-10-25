@@ -9,6 +9,9 @@ CSS_URL := https://gist.githubusercontent.com/killercup/5917178/raw/40840de53520
 KATEX_URL := https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0-beta/
 
 all: $(HTML)
+	# Dumb logic to copy over CSS resources.
+	cp *.css old/
+	cp *.css tutorial/
 
 clean:
 	rm -f $(HTML) style.css
@@ -16,6 +19,7 @@ clean:
 # Build HTML.
 PANDOC_ARGS := -f markdown -t html -s --katex=$(KATEX_URL) \
 	-c style.css -c extra.css
+
 # Specific rule for index to exclude header.
 index.html: index.md style.css
 	pandoc $(PANDOC_ARGS) $< -o $@

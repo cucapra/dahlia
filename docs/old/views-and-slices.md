@@ -32,7 +32,7 @@ Rachit). Sometimes, it the programmer might want to access different slices
 of the array at the same time. If we allow unrestricted usage of views for
 this i.e., allow one array to have multiple views into it, we again face the
 problem of establishing mututal exlcusion between all the views in the array
-which may an undecidable problem. 
+which may an undecidable problem.
 
 Instead of allowing for unrestricted views, Seashell instead asks the programmer
 to _slice_ an array into mutually exclusive parts that the user wants to access
@@ -49,7 +49,7 @@ patterns.
 A _Slice_ in seashell is a way of logically separating an array into separate
 pieces that can be traversed in parallel. A _Slice_ only exists at the Seashell
 language level and is compiled away to normal array and bank accesses by the
-compiler. 
+compiler.
 
 For example, consider the following array $a$ of length 8 and banking factor 2.
 By default, we assume interleaving banking for elements, which means alternative
@@ -59,7 +59,7 @@ elements exist in separate banks.
 This doesn't work since b & c don't access mututally exclusive bank sets.
 :::
 
-![](./img/row-slice.png)
+![](../img/row-slice.png)
 
 Next, we define a static slice of $a$ using the following syntax:
 
@@ -78,13 +78,13 @@ slice them into smaller arrays still.
 The current syntax, however, does not allow us to create slices of the following
 form:
 
-![](./img/row-slice-stride.png)
+![](../img/row-slice-stride.png)
 
 In order to allow programmers to slice arrays in this form, we extend the
 slice syntax as follows:
 
 ```
-let (b, c) = slice[w=4, s=2] a 
+let (b, c) = slice[w=4, s=2] a
 ```
 
 This syntax allows us to specify a _stride_ length that describes how many
@@ -94,7 +94,7 @@ are `int[4 bank (1)]`.
 
 Furthermore, this syntax can also easily infer when a given slicing is invalid:
 
-![](./img/row-slice-invalid.png)
+![](../img/row-slice-invalid.png)
 
 ```
 let (b, c) = slice[w=3, s=3] a
@@ -110,7 +110,7 @@ factor of the original array dimension.
 
 Finally, this syntax can naturally be extended to multiple dimensions:
 
-![](./img/two-dim-slice.png)
+![](../img/two-dim-slice.png)
 
 ```
 int[4 bank(2)][4 bank(2)] a;
@@ -139,11 +139,11 @@ let v_a = view[w=2, s=1, o=0] a
 
 which results in a view as follows:
 
-![](./img/row-view.png)
+![](../img/row-view.png)
 
 In a similar fashion to the _slice_ syntax, `w` dictates the width of the view,
 `s` is the stride used to generate the view, and `o` is the offset at which
-the view starts. 
+the view starts.
 
 ::: formula
 There is no good reason why _slices_ don't have offsets. At this point, I think
@@ -153,7 +153,7 @@ check that elements contained in it come from distinct banks.
 
 When we define an offset with a _view_, we have the following picture:
 
-![](./img/row-view-stride.png)
+![](../img/row-view-stride.png)
 
 However, as previously mentioned, a _view_ needs to ensure that all elements
 accessed in it are in distinct banks. Since this is not the case with this view,
