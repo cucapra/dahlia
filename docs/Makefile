@@ -16,8 +16,7 @@ all: $(HTML) old/style.css tutorial/style.css
 	cp *.css $*/
 
 clean:
-	rm -f $(HTML) style.css
-	rm old/*.css tutorial/*.css
+	rm -f $(HTML) style.css old/*.css tutorial/*.css
 
 # Build HTML.
 PANDOC_ARGS := -f markdown -t html -s --katex=$(KATEX_URL) \
@@ -43,5 +42,5 @@ RSYNCARGS := --compress --recursive --checksum --itemize-changes \
 	--delete-excluded \
 	--exclude .DS_Store --exclude Makefile
 DEST := courses:coursewww/capra.cs.cornell.edu/htdocs/seashell/docs
-deploy: $(HTML)
+deploy: all
 	rsync $(RSYNCARGS) ./ $(DEST)
