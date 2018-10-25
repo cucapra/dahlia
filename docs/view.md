@@ -123,7 +123,7 @@ $$
 Note that we don't use the value of $o$ in the description of $b_v$ because of
 the aforementioned result.
 
-## Using views in unrolled views
+## Unrolled loops and views
 
 Since _views_ are just arrays, we can write:
 
@@ -132,5 +132,14 @@ int[8 bank(2)] a;
 v_a = view[w=2, off=0] a;
 for (j = 0..2) unroll 2 {
     v_a[j] := 1
+}
+```
+
+However, we also impose a restriction on the usage of creation of views using
+and unrolled iterator value. So, the following program is invalid:
+
+```
+for (i = 0..8) unroll 2 {
+    v_a = view[w=2, off=i]
 }
 ```
