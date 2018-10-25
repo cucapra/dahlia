@@ -75,4 +75,62 @@ which creates the following _view_:
 
 ![](./img/row-view-stride.png)
 
-When omitted, stride is set to $1$, which creates a block.
+When omitted, stride is set to $1$, which creates a block-like view.
+
+## Typing a view
+
+As mentioned before, _views_ are treated as simple arrays once they are created.
+An array is defined as follows:
+
+```
+v_a : t[s bank(b)]
+```
+
+where `s` is the size of the array and `b` is the banking factor. To typecheck
+a view, we first need to infer its type, or more specifically, the values for
+`s` and `b`.
+
+First, assume we have the following expression:
+
+```
+t[s_a bank(b_a)] a;
+v_a = view[w, s, off] a; // v : t_v[s_v bank (b_v)]
+```
+
+and the assumptions $s_a \geq b_a$, $s_v \geq b_v$ and, $w \leq s_a$.
+
+Inferring the first two components of the _view_ is straigtforward.
+
+$$
+t_v = t \\
+s_v = w \text{ if } (o + (w - 1) \times s - 1) \leq s_a
+$$
+
+Next, we need to infer $b_v$. To do so, we first write down $b_e$ which the
+the maximum possible banking factor that $v_a$ can have given the stride $s$.
+
+$$
+b_e = \frac{b_a}{\text{gcf}(s, b_a)}
+$$
+
+See [this proof](https://www.quora.com/What-is-the-general-order-of-an-element-of-a-cyclic-group-of-order-n)
+to understand how we get this. Using $b_e$, we can say:
+
+$$
+b_v = \min(w, b_e)
+$$
+
+Note that we don't use the value of $o$ in the description of $b_v$ because of
+the aforementioned result.
+
+## Using views in unrolled views
+
+Since _views_ are just arrays, we can write:
+
+```
+int[8 bank(2)] a;
+v_a = view[w=2, off=0] a;
+for (j = 0..2) unroll 2 {
+    v_a[j] := 1
+}
+```
