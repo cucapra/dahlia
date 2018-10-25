@@ -8,8 +8,10 @@ HTML := $(MD:%.md=%.html)
 CSS_URL := https://gist.githubusercontent.com/killercup/5917178/raw/40840de5352083adb2693dc742e9f75dbb18650f/pandoc.css
 KATEX_URL := https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0-beta/
 
-
 all: $(HTML) old/style.css tutorial/style.css
+
+images:
+	cd img && racket images.rkt
 
 %/style.css: style.css
 	# Dumb logic to copy over CSS resources.

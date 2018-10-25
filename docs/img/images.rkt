@@ -26,31 +26,36 @@
 
 (define (colored-grid n b locs mark)
   (scale
-    (for/fold ([column (blank s)])
-      ([c (in-range n)])
-      (vc-append
-        column
-        (for/fold ([row (blank s)])
-          ([r (in-range n)])
-          (hc-append
-            row
-            (cc-superimpose
-              (if (set-member? locs (list r c))
-                (mark rect)
-                rect)
-              (scale (text (number->string (bank r c b))) 0.6))))))
-    3.5))
+   (for/fold ([column (blank s)])
+             ([c (in-range n)])
+     (vc-append
+      column
+      (for/fold ([row (blank s)])
+                ([r (in-range n)])
+        (hc-append
+         row
+         (cc-superimpose
+          (if (set-member? locs (list r c))
+              (mark rect)
+              rect)
+          (scale (text (number->string (bank r c b))) 0.6))))))
+   3.5))
 
 (define (color-row n b locs mark)
-  (for/fold ([row (blank s)])
-    ([r (in-range n)])
+  (for/fold ([row (blank 0)])
+            ([r (in-range n)])
     (hc-append
-      row
-      (cc-superimpose
-        (if (set-member? locs r)
+     row
+     (cc-superimpose
+      (if (set-member? locs r)
           (mark rect)
           rect)
-        (scale (text (number->string (modulo r b))) 0.6)))))
+      (scale (text (number->string (modulo r b))) 0.6)))))
+
+(define (gen-seq f size bound)
+  (for/fold ([start (blank s)])
+            ([i (range 0 3)])
+    (vc-append 4 start (f (range i (+ i size))))))
 
 ;;-----------slices------------------
 ;; 8 row / 2 bank / 0 stride
@@ -64,9 +69,9 @@
 
 ;; 4x4 / 2x2 banks / 2x1 stride
 (save-pict
-  (colored-grid 4 2 (set '(0 0) '(2 0) '(2 1) '(0 1) '(2 2) '(0 2) '(2 3) '(0 3)) mark-slice)
-  "two-dim-slice.png"
-  'png)
+ (colored-grid 4 2 (set '(0 0) '(2 0) '(2 1) '(0 1) '(2 2) '(0 2) '(2 3) '(0 3)) mark-slice)
+ "two-dim-slice.png"
+ 'png)
 
 ;;-------------views--------------------
 
@@ -75,3 +80,6 @@
 
 ;; 8 row / 2 bank / 2 stride
 (save-pict (scale (color-row 8 2 (set 0 2) mark-view) 3) "row-view-stride.png" 'png)
+
+;; Sequence of views
+(save-pict (scale (gen-seq (λ (s) (color-row 8 2 s mark-view)) 2 3) 3) "row-view-seq.png" 'png)
