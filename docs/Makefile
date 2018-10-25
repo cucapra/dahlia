@@ -23,7 +23,7 @@ PANDOC_ARGS := -f markdown -t html -s --katex=$(KATEX_URL) \
 	-c style.css -c extra.css
 
 # Specific rule for index to exclude header.
-index.html: index.md style.css
+%index.html: %index.md style.css
 	pandoc $(PANDOC_ARGS) $< -o $@
 
 %.html: %.md style.css header.html footer.html
