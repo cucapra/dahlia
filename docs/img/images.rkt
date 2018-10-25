@@ -26,11 +26,11 @@
 
 (define (colored-grid n b locs mark)
   (scale
-   (for/fold ([column (blank s)])
+   (for/fold ([column (blank 0)])
              ([c (in-range n)])
      (vc-append
       column
-      (for/fold ([row (blank s)])
+      (for/fold ([row (blank 0)])
                 ([r (in-range n)])
         (hc-append
          row
@@ -53,7 +53,7 @@
       (scale (text (number->string (modulo r b))) 0.6)))))
 
 (define (gen-seq f size bound)
-  (for/fold ([start (blank s)])
+  (for/fold ([start (blank 0)])
             ([i (range 0 3)])
     (vc-append 4 start (f (range i (+ i size))))))
 
