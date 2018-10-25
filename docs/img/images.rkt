@@ -52,9 +52,14 @@
           rect)
       (scale (text (number->string (modulo r b))) 0.6)))))
 
+(define (img-seq f lst)
+  (for/fold ([start (blank 0)])
+            ([i lst])
+    (vc-append 4 start (f i))))
+
 (define (gen-seq f size bound)
   (for/fold ([start (blank 0)])
-            ([i (range 0 3)])
+            ([i (range 0 bound)])
     (vc-append 4 start (f (range i (+ i size))))))
 
 ;;-----------slices------------------
@@ -81,5 +86,13 @@
 ;; 8 row / 2 bank / 2 stride
 (save-pict (scale (color-row 8 2 (set 0 2) mark-view) 3) "row-view-stride.png" 'png)
 
+(define (seq-helper s) (color-row 8 2 s mark-view))
+
 ;; Sequence of views
-(save-pict (scale (gen-seq (λ (s) (color-row 8 2 s mark-view)) 2 3) 3) "row-view-seq.png" 'png)
+(save-pict (scale (gen-seq seq-helper 2 3) 3) "row-view-seq.png" 'png)
+
+(save-pict (scale (img-seq seq-helper (list (set 0 7) (set 0 6) (set 0 5))) 3) "row-imp-dyn-stride.png" 'png)
+
+(save-pict (scale (img-seq seq-helper (list (set 0 1) (set 2 3) (set 4 5))) 3) "row-imp-iterator-step.png" 'png)
+ 
+
