@@ -1,6 +1,6 @@
 .PHONY : all clean deploy
 
-MD   := $(wildcard *.md)
+MD   := $(wildcard *.md) $(wildcard old/*.md) $(wildcard tutorial/*.md)
 HTML := $(MD:%.md=%.html)
 
 # Some resources for building documents with Pandoc: a nice stylesheet someone

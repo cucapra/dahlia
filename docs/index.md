@@ -29,7 +29,10 @@ Read some notes about aspects of Seashell's design:
 
 * [Appendix](appendix.html)
 
-Tutorial on hardware programming with Seashell
----
+Tutorial on hardware programming with Seashell:
 
-* [An introduction to Seashell.](hwtute-intro.html)
+* [An introduction to Seashell.](tutorial/)
+
+Older discussions about Seashell design:
+
+* [Older discussions](old/)
