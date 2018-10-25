@@ -8,13 +8,16 @@ HTML := $(MD:%.md=%.html)
 CSS_URL := https://gist.githubusercontent.com/killercup/5917178/raw/40840de5352083adb2693dc742e9f75dbb18650f/pandoc.css
 KATEX_URL := https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0-beta/
 
-all: $(HTML)
+
+all: $(HTML) old/style.css tutorial/style.css
+
+%/style.css: style.css
 	# Dumb logic to copy over CSS resources.
-	cp *.css old/
-	cp *.css tutorial/
+	cp *.css $*/
 
 clean:
 	rm -f $(HTML) style.css
+	rm old/*.css tutorial/*.css
 
 # Build HTML.
 PANDOC_ARGS := -f markdown -t html -s --katex=$(KATEX_URL) \
