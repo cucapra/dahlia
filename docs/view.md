@@ -77,6 +77,15 @@ which creates the following _view_:
 
 When omitted, stride is set to $1$, which creates a block-like view.
 
+### Note on syntax
+
+This proposal uses a verbose syntax for view creation. The surface language
+instead uses the syntax:
+
+```
+v_a = view a[off:w:s]
+```
+
 ## Typing a view
 
 As mentioned before, _views_ are treated as simple arrays once they are created.
