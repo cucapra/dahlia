@@ -61,6 +61,7 @@ let rec emit_expr = function
   | EBinop (b, e1, e2)   -> emit_binop (b, e1, e2)
   | EBankedAA (id, b, i) -> emit_aa_phys (id, b, i)
   | EAA (id, i)          -> emit_aa_logl (id, i)
+  | EView _              -> ""
 
 and emit_binop (b, e1, e2) =
   concat [ (emit_expr e1); (string_of_binop b); (emit_expr e2) ]

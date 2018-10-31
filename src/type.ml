@@ -33,7 +33,7 @@ let rec check_expr exp ctx : type_node * gamma =
   | EBinop (binop, e1, e2)     -> check_binop binop e1 e2 ctx
   | EBankedAA _ | EAA _        ->
     raise (TypeError "Array access expression cannot occur outside capability commands")
-  | EView (id, w, s, off)      -> check_view id w s off ctx
+  | EView (id, w, s, _)      -> check_view id w s ctx
 
 (** [check_binop b e1 e2 (c, d)] is [(t, (c', d')], where [t] is the type of
  * the expression [EBinop (b, e1, e2)] and [(c', d')] is the updated context
@@ -44,10 +44,13 @@ and check_binop binop e1 e2 c : type_node * gamma =
   try (Op_util.type_of_op t1 t2 binop), c2
   with Op_util.IllegalOperation -> raise @@ TypeError (illegal_op binop t1 t2)
 
-and gcf a b = ignore a; ignore b; failwith "NYI"
+(* [gcf a b] is the greatest common factor of [a] and [b]. *)
+and gcf a b = if b = 0 then a else gcf b (a mod b)
 
-(* Remove array with id [id] from context and give this view the appropriate type. *)
-and check_view id w s off ctx =
+(* [check_view id w s ctx] is (t, ctx'), where t is an index type
+ * representing the view created from array [id], and ctx' is an updated
+ * context with the banks of array [id] consumed. *)
+and check_view id w s ctx =
   match Context.get_binding id ctx with
   | TArray (t, [(_, b_a)]) ->
     let s_v = w in
