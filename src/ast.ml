@@ -71,6 +71,7 @@ and expr =
   | EBinop of binop * expr * expr
   | EAA of id * expr list
   | EBankedAA of id * expr * expr
+  | EView of id * int * int * int
 
 and capability = Read | Write
 

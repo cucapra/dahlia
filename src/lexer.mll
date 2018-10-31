@@ -56,6 +56,7 @@ rule token =
   | "func"       { FUNC }
   | "type"       { TYPE }
   | "bit"        { BIT }
+  | "view"       { VIEW }
 
   | "bool"       { BOOL_ANNOTATION }
   | "float"      { FLOAT_ANNOTATION }

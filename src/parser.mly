@@ -19,7 +19,7 @@ let parse_sequence c1 c2 =
 (* Keywords *)
 %token LET IF FOR TRUE FALSE BOOL_ANNOTATION
        FLOAT_ANNOTATION MUX UNROLL BANK FUNC
-       TYPE WRITE READ AS BIT
+       TYPE WRITE READ AS BIT VIEW
 
 (* Parentheses, brackets, etc *)
 %token LPAREN RPAREN LBRACK RBRACK LSQUARE RSQUARE
@@ -66,15 +66,16 @@ acmd:
   | expr SEMICOLON                                          { CExpr $1 }
 
 expr:
-  | ID access                                   { EAA ($1, $2) }
-  | ID LBRACK expr RBRACK LSQUARE expr RSQUARE  { EBankedAA ($1, $3, $6) }
-  | LPAREN expr RPAREN                          { $2 }
-  | expr binop expr                             { EBinop ($2, $1, $3) }
-  | INT                                         { EInt $1 }
-  | FLOAT                                       { EFloat $1 }
-  | TRUE                                        { EBool true }
-  | FALSE                                       { EBool false }
-  | ID                                          { EVar $1 }
+  | VIEW ID LBRACK INT COLON INT COLON INT RBRACK { EView ($2, $4, $6, $8) }
+  | ID access                                     { EAA ($1, $2) }
+  | ID LBRACK expr RBRACK LSQUARE expr RSQUARE    { EBankedAA ($1, $3, $6) }
+  | LPAREN expr RPAREN                            { $2 }
+  | expr binop expr                               { EBinop ($2, $1, $3) }
+  | INT                                           { EInt $1 }
+  | FLOAT                                         { EFloat $1 }
+  | TRUE                                          { EBool true }
+  | FALSE                                         { EBool false }
+  | ID                                            { EVar $1 }
 
 annotated_id:
   | ID COLON type_annotation { ($1, $3) }
