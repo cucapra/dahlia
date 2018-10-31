@@ -118,3 +118,9 @@ let reassign_bit_violation s_target s_val =
   (string_of_type s_target)
   (string_of_type s_val)
 
+let view_requires_arr arr_id arr_t =
+  sprintf
+    "[Type Error] view must be created from existing array. `%s' was of
+     type `%s'"
+  arr_id
+  (string_of_type arr_t)

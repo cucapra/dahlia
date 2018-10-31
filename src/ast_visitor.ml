@@ -43,6 +43,7 @@ class ['s] ast_mapper = object(self)
     | EBinop (op, e1, e2) -> self#ebinop (op, e1, e2) st
     | EAA (id, es) -> self#eaa (id, es) st
     | EBankedAA (id, e1, e2) -> self#ebankedaa (id, e1, e2) st
+    | EView (id, w, s, off) -> self#eview (id, w, s, off) st
 
   method private eint i st = EInt i, st
   method private ebool i st = EBool i, st
@@ -61,6 +62,8 @@ class ['s] ast_mapper = object(self)
     let e1', st1 = self#expr e1 st in
     let e2', st2 = self#expr e2 st1 in
     EBankedAA (id, e1', e2'), st2
+  method private eview (id, w, s, off) st =
+    EView (id, w, s, off), st
 
   method private capability cap st = cap, st
 

@@ -32,7 +32,8 @@ let rec check_expr exp ctx : type_node * gamma =
   | EVar x                     -> Context.get_binding x ctx, ctx
   | EBinop (binop, e1, e2)     -> check_binop binop e1 e2 ctx
   | EBankedAA _ | EAA _        ->
-      raise (TypeError "Array access expression cannot occur outside capability commands")
+    raise (TypeError "Array access expression cannot occur outside capability commands")
+  | EView (id, w, s, off)      -> check_view id w s off ctx
 
 (** [check_binop b e1 e2 (c, d)] is [(t, (c', d')], where [t] is the type of
  * the expression [EBinop (b, e1, e2)] and [(c', d')] is the updated context
@@ -42,6 +43,20 @@ and check_binop binop e1 e2 c : type_node * gamma =
   let (t2, c2) = check_expr e2 c1 in
   try (Op_util.type_of_op t1 t2 binop), c2
   with Op_util.IllegalOperation -> raise @@ TypeError (illegal_op binop t1 t2)
+
+and gcf a b = ignore a; ignore b; failwith "NYI"
+
+(* Remove array with id [id] from context and give this view the appropriate type. *)
+and check_view id w s off ctx =
+  match Context.get_binding id ctx with
+  | TArray (t, [(_, b_a)]) ->
+    let s_v = w in
+    let b_e = b_a / gcf s b_a in
+    let b_v = min w b_e in
+    TArray (t, [(s_v, b_v)]),
+    Context.consume_aa_lst id (Core.List.range 0 b_a) ctx
+  | TArray (_, _) -> failwith "Multidimensional semantics NYI"
+  | typ -> raise @@ TypeError (view_requires_arr id typ)
 
 (* [check_banked_aa id idx1 idx2 (c, d)] represents a _banked
  * array access_, with a bank number specified by [idx1] and an index into this
