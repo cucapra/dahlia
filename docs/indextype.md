@@ -94,11 +94,6 @@ S &= \{ s + |l_s..h_s| \times d \mid s \in l_s..h_s, d \in l_d..h_d\} \\
 $$
 
 ::: todo
-Will it be useful to do this proof for the general case, starting from an arbitrary number $l_s$ (rather than limiting to 0 to k). I think the proof still holds without much change.
---S
-:::
-
-::: todo
 Proving for a property for $x \in 0..k$ is mathematically the same as $y \in l..h$
 where $x = y - l$ and $k = h - l$. I'd recommend going in the other direction
 and changing the $\frac{l}{k}..\frac{h}{k}$ to $0..m$ to make the proof cleaner. -R
@@ -134,11 +129,20 @@ $$
 
 Since $k$ and $i$ are both positive natural numbers, $\max(S_i) < \min(S_{i+1})$.
 Therefore, the union of $S_i$ has $(\frac{h}{k} - \frac{l}{k}) \times k =
-|l..h|$ elements. (This also implies that each set is disjoint.)
+|l..h|$ elements. This also implies that each set is disjoint.
+
+Therefore, we have the following theorem:
+
+::: formula
+**Value space theorem.** The values represented by an index type $idx\langle
+l_s..h_s, l_d..h_d \rangle$ are all distinct.
+:::
 
 Finally, we show that $0$ and $n-1$ form the lower and upper bounds. Since $s$,
 $k$, and $d$ are positive, the $\min(S) = 0 + k \times \frac{l}{k} = l$ and
-$\max(S) = k + k \times \frac{h - k}{k} = h$. Therefore, $S = l..h$.
+$\max(S) = k + k \times \frac{h - k}{k} = h$. Therefore, $S = l..h$, which proves $S$ 
+spans the range of the original loop index.
+
 
 **Iteration space for multidimensional arrays**. This reasoning can be easily
 *extended to
@@ -147,12 +151,6 @@ dimension's configuration. The elements of $S$ can be represented as an
 n-tuple. Since each dimension has a separate and independent component in the
 tuple, the reasoning above can be applied to each element.
 
-Therefore, we have the following theorem:
-
-::: formula
-**Value space theorem.** The values represented by an index type $idx\langle
-l_s..h_s, d_s..h_s \rangle$ are all distinct.
-:::
 
 Operations
 ----------
