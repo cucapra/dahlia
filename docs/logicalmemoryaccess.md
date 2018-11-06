@@ -49,61 +49,6 @@ Given an array access with index types, this set representation allows us to
 precisely identify which indices (and subsequently memory banks) are
 accessed.
 
-Mapping Multi-Dimensional Arrays to Hardware
-----------------------------------
-
-Hardware memories are inherently one dimensional---they map a linear range of
-addresses to values. You can loosely think of banked memories as two
-dimensional, where the first dimension is the bank number.
-
-However, high-level languages usually employ logically higher dimensional
-arrays to simplify programs. HLS compilers typically only support logically
-one-dimensional arrays corresponding to the physical memories, and higher
-dimensional arrays are manually rolled out to one dimension. In Seashell,
-however, we want to support logically multi-dimensional arrays and map them
-to banked memories.
-
-We'll write array declarations like this:
-
-$$
-\text{a} : t[\sigma_0][\sigma_1] \dots [\sigma_n]
-$$
-
-where $\text{a}$ is the name of the array, $t$ is the type of elements in
-$\text{a}$, and $\sigma_i$ is the size of the $i$th dimension.
-
-During compilation, this multi-dimensional array is translated to a
-one-dimensional array. The one dimensional array, which we'll call
-$\text{a}_f$, has a size equal to the product of our Seashell array's
-dimensions:
-
-$$
-\text{a}_f : t \left[
-    \prod_{i=0}^{n} \sigma_i
-\right]
-$$
-
-Consider a logical access to an element in our array:
-
-$$\text{a}[i_0][i_1] \dots [i_n]$$
-
-Here, each $i_j$ is a plain old integer, and not an index type.
-This logical access corresponds to a physical access in $\text{a}_f$ that we can write as $\text{a}_f[i_f]$, where $i_f$ is defined as:
-
-$$\tag{2}
-i_f = \sum_{j=0}^{n} \left[i_j \times \left(\prod_{j'=j+1}^{n} \sigma_{j'} \right) \right]
-$$
-
-**Example.**
-Consider a two-dimensional array $\text{a}$ defined like this:
-
-$$
-\text{a} : t[4][2]
-$$
-
-The flattened version, $\text{a}_f$, has size $8$. The logical access to
-$\text{a}[3][1]$ corresponds to a physical access $\text{a}_f[3 \times 2 +
-1]$ i.e., $\text{a}_f[7]$.
 
 Typing array accesses with Index types
 -------------------------------
@@ -227,3 +172,61 @@ $$
 $$
 
 where $S(a[i_1]\ldots[i_n])$ is the set of indices accessed.
+
+
+
+Mapping Multi-Dimensional Arrays to Hardware
+----------------------------------
+
+Hardware memories are inherently one dimensional---they map a linear range of
+addresses to values. You can loosely think of banked memories as two
+dimensional, where the first dimension is the bank number.
+
+However, high-level languages usually employ logically higher dimensional
+arrays to simplify programs. HLS compilers typically only support logically
+one-dimensional arrays corresponding to the physical memories, and higher
+dimensional arrays are manually rolled out to one dimension. In Seashell,
+however, we want to support logically multi-dimensional arrays and map them
+to banked memories.
+
+We'll write array declarations like this:
+
+$$
+\text{a} : t[\sigma_0][\sigma_1] \dots [\sigma_n]
+$$
+
+where $\text{a}$ is the name of the array, $t$ is the type of elements in
+$\text{a}$, and $\sigma_i$ is the size of the $i$th dimension.
+
+During compilation, this multi-dimensional array is translated to a
+one-dimensional array. The one dimensional array, which we'll call
+$\text{a}_f$, has a size equal to the product of our Seashell array's
+dimensions:
+
+$$
+\text{a}_f : t \left[
+    \prod_{i=0}^{n} \sigma_i
+\right]
+$$
+
+Consider a logical access to an element in our array:
+
+$$\text{a}[i_0][i_1] \dots [i_n]$$
+
+Here, each $i_j$ is a plain old integer, and not an index type.
+This logical access corresponds to a physical access in $\text{a}_f$ that we can write as $\text{a}_f[i_f]$, where $i_f$ is defined as:
+
+$$\tag{2}
+i_f = \sum_{j=0}^{n} \left[i_j \times \left(\prod_{j'=j+1}^{n} \sigma_{j'} \right) \right]
+$$
+
+**Example.**
+Consider a two-dimensional array $\text{a}$ defined like this:
+
+$$
+\text{a} : t[4][2]
+$$
+
+The flattened version, $\text{a}_f$, has size $8$. The logical access to
+$\text{a}[3][1]$ corresponds to a physical access $\text{a}_f[3 \times 2 +
+1]$ i.e., $\text{a}_f[7]$.
