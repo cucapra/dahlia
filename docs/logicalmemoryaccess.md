@@ -26,6 +26,7 @@ the Seashell type system:
 *safe*, i.e., they only access distinct memory banks.
 :::
 
+
 Index Types
 -----------
 
@@ -48,131 +49,6 @@ $$
 Given an array access with index types, this set representation allows us to
 precisely identify which indices (and subsequently memory banks) are
 accessed.
-
-
-Typing array accesses with Index types
--------------------------------
-
-We now give the semantics of logical accesses using Seashell's index types.
-We want to determine the *set* of elements accessed in an expression of the
-form $\text{a}[i_0] \dots [i_n]$ where each $i_j$ is of an index type
-$\text{idx}\langle l_{s_j} .. h_{s_j}, l_{d_j} .. h_{d_j} \rangle$.
-
-::: todo
-Do we need to make this simplifying assumption (that static ranges start at zero) yet? Maybe it doesn't hurt, but it does seem possible to do without it.
-If we *do* make the simplification immediately, I propose doing the simplification *first* to Equation 1, where $|0..k|$ can just become $k$.
---A
-:::
-
-::: todo
-We've attempted to do without the simplification right up to the type rule. Maybe even then it's not needed, but I'm struggling a little to comprehend what it means to have arbitrary boundaries for static and dynamic part.
---S
-:::
-
-We can get the set of physical locations for this access by combining
-Equation 1, which describes the meaning of index types, with Equation 2,
-which describes the logical-to-physical mapping. For a given set of dynamic
-values $d_j$ for each index type, we substitute each $i_k$ in Equation 2 with
-the indices given in Equation 1:
-
-$$\tag{3}
-I_f = \left\{
-    \sum_{j=0}^{n} \left[ (s_j + |l_{s_j}..h_{s_j}| \times d_j) * \left( \prod_{j'=j+1}^{n}{\sigma_{j'}} \right) \right]
-    \;\middle|\;
-    j \in 0..n, s_j \in l_{s_j} .. h_{s_j}
-\right\}
-$$
-
-**Example.** Consider this program:
-
-    for i in 0..4 unroll 2
-        for j in 0..2 unroll 2
-            access a[i][j]
-
-The types of $i$ and $j$ are:
-
-$$
-\begin{aligned}
-i &: \text{idx}\langle 0 .. 2, 0 .. 2 \rangle \\
-j &: \text{idx}\langle 0 .. 2, 0 .. 1 \rangle
-\end{aligned}
-$$
-
-The physical index set $I_f$ for a given
-$d_0 \in 0 .. 2$ and $d_1 \in 0 .. 1$ is:
-
-$$
-I_f = \{
-(s_0 + |0..2| \times d_0)*2 +
-(s_1 + |0..2|*d_1)
-\mid
-s_0 \in 0 .. 2, s_1 \in 0 .. 2
-\}
-$$
-
-For the loop iteration where $d_0=1$ and $d_1=0$, this set contains these indices:
-
-$$
-\begin{aligned}
-(0+2*1)*2 + (0+2*0) &= 4 \\
-(0+2*1)*2 + (1+2*0) &= 5 \\
-(1+2*1)*2 + (0+2*0) &= 6 \\
-(1+2*1)*2 + (1+2*0) &= 7 \\
-\end{aligned}
-$$
-
-A 3-D array example is also provided in the [appendix](https://capra.cs.cornell.edu/seashell/docs/appendix.html#d-array-examples-to-visualize-multi-dimensional-access).
-
-Safety of array accesses
-------------------------
-
-To represent the banking of an array $\text{a}$ with banking factor $b$,
-we'll extend our array notation:
-
-$$
-\text{a}: t[\sigma_0\text{ bank }(b_0)] \dots [\sigma_n\text{ bank }(b_n)]
-$$
-
-The notation naturally extends the original array notation to mean that the
-$i$th dimension is banked with a banking factor of $b_i$. When mapping
-thismapping this logical array to a physical one, we get the following
-single-dimensional array:
-
-$$
-\text{a}_f : t \left[
-    \prod_{i=0}^{n} \sigma_i \text{ bank } \left(
-        \prod_{i=0}^n b_i
-    \right)
-\right]
-$$
-
-To reiterate, we are trying to prove the following safety property for Seashell:
-
-::: formula
-**Theorem.** Given a seashell program that typechecks, all array accesses are
-*safe*, i.e., they only access distinct memory banks.
-:::
-
-**Proof.** Given an array with the structure $a[\sigma_1\text{ bank
-}(b_1)]\ldots[\sigma_n\text{ bank }(b_n)]$ and array indices $i_1\ldots i_n$,
-prove that $a[i_1]\ldots[i_n]$ is safe.
-
-First, assume that for all indices $i$, we have:
-
-$$
-    \Gamma \vdash i_j : \text{idx}\langle ls_j..hs_j, ld_j..hd_j \rangle
-$$
-
-For our proof, we're going to use [Lemma 3](banking.html) from the document
-on banking. Instead of using the complicated formula for $\mathcal{B}$, we
-can simply demonstrate:
-
-$$
-\forall i_1, i_2 \in S(a[i_1]\ldots[i_n]) : \mathcal{B}_t(i_1) \neq \mathcal{B}_t(i_2)
-$$
-
-where $S(a[i_1]\ldots[i_n])$ is the set of indices accessed.
-
 
 
 Mapping Multi-Dimensional Arrays to Hardware
@@ -230,3 +106,129 @@ $$
 The flattened version, $\text{a}_f$, has size $8$. The logical access to
 $\text{a}[3][1]$ corresponds to a physical access $\text{a}_f[3 \times 2 +
 1]$ i.e., $\text{a}_f[7]$.
+
+
+Typing array accesses with Index types
+-------------------------------
+
+We now give the semantics of logical accesses using Seashell's index types.
+We want to determine the *set* of elements accessed in an expression of the
+form $\text{a}[i_0] \dots [i_n]$ where each $i_j$ is of an index type
+$\text{idx}\langle l_{s_j} .. h_{s_j}, l_{d_j} .. h_{d_j} \rangle$.
+
+We can get the set of physical locations for this access by combining
+Equation 1, which describes the meaning of index types, with Equation 2,
+which describes the logical-to-physical mapping. For a given set of dynamic
+values $d_j$ for each index type, we substitute each $i_k$ in Equation 2 with
+the indices given in Equation 1:
+
+$$\tag{3}
+I_f = \left\{
+    \sum_{j=0}^{n} \left[ (s_j + |l_{s_j}..h_{s_j}| \times d_j) * \left( \prod_{j'=j+1}^{n}{\sigma_{j'}} \right) \right]
+    \;\middle|\;
+    j \in 0..n, s_j \in l_{s_j} .. h_{s_j}
+\right\}
+$$
+
+**Example.** Consider this program:
+
+    for i in 0..4 unroll 2
+        for j in 0..2 unroll 2
+            access a[i][j]
+
+The types of $i$ and $j$ are:
+
+$$
+\begin{aligned}
+i &: \text{idx}\langle 0 .. 2, 0 .. 2 \rangle \\
+j &: \text{idx}\langle 0 .. 2, 0 .. 1 \rangle
+\end{aligned}
+$$
+
+The physical index set $I_f$ for a given
+$d_0 \in 0 .. 2$ and $d_1 \in 0 .. 1$ is:
+
+$$
+I_f = \{
+(s_0 + |0..2| \times d_0)*2 +
+(s_1 + |0..2|*d_1)
+\mid
+s_0 \in 0 .. 2, s_1 \in 0 .. 2
+\}
+$$
+
+For the loop iteration where $d_0=1$ and $d_1=0$, this set contains these indices:
+
+$$
+\begin{aligned}
+(0+2*1)*2 + (0+2*0) &= 4 \\
+(0+2*1)*2 + (1+2*0) &= 5 \\
+(1+2*1)*2 + (0+2*0) &= 6 \\
+(1+2*1)*2 + (1+2*0) &= 7 \\
+\end{aligned}
+$$
+
+A 3-D array example is also provided in the [appendix](https://capra.cs.cornell.edu/seashell/docs/appendix.html#d-array-examples-to-visualize-multi-dimensional-access).
+
+
+Safety of array accesses
+------------------------
+
+To represent the banking of an array $\text{a}$ with banking factor $b$,
+we'll extend our array notation:
+
+$$
+\text{a}: t[\sigma_0\text{ bank }(b_0)] \dots [\sigma_n\text{ bank }(b_n)]
+$$
+
+The notation naturally extends the original array notation to mean that the
+$i$th dimension is banked with a banking factor of $b_i$. When mapping
+this logical array to a physical one, we get the following
+single-dimensional array:
+
+$$
+\text{a}_f : t \left[
+    \prod_{i=0}^{n} \sigma_i \text{ bank } \left(
+        \prod_{i=0}^n b_i
+    \right)
+\right]
+$$
+
+To reiterate, we are trying to prove the following safety property for Seashell:
+
+::: formula
+**Theorem.** Given a seashell program that typechecks, all array accesses are
+*safe*, i.e., they only access distinct memory banks.
+:::
+
+**Proof.** Given an array with the structure $a[\sigma_1\text{ bank
+}(b_1)]\ldots[\sigma_n\text{ bank }(b_n)]$ and array indices $i_1\ldots i_n$,
+prove that $a[i_1]\ldots[i_n]$ is safe.
+
+First, assume that for all indices $i$, we have:
+
+$$
+    \Gamma \vdash i_j : \text{idx}\langle ls_j..hs_j, ld_j..hd_j \rangle
+$$
+
+For our proof, we're going to use [Lemma 3](banking.html) from the document
+on banking. Instead of using the complicated formula for $\mathcal{B}$, we
+can simply demonstrate:
+
+$$
+\forall i_1, i_2 \in S(a[i_1]\ldots[i_n]) : \mathcal{B}_t(i_1) \neq \mathcal{B}_t(i_2)
+$$
+
+where $S(a[i_1]\ldots[i_n])$ is the set of indices accessed.
+
+**Notes.** We need to show given an index type and a bank factor, whether the access is safe or not. Therefore, we need the unroll divides bank factor proof. In order to extend it to multi-dimensions, first we need to show each dimension's index type accesses a distinct region to others. Then we need to extend the type rule so that all dimensions pass the rule (which is what lemma is used for maybe? as a tuple of indices in Bt would access a unique bank).
+
+And after the rule, maybe we need an expression to derive bank and index like we had for one-dimensional case. These we can assume to be,
+
+$$\tag{4}
+b_f = \sum_{j=0}^{n} \left[(i_j \bmod b_j) \times \left(\prod_{j'=j+1}^{n} b_j' \right) \right]
+$$
+
+$$\tag{5}
+d_f = \sum_{j=0}^{n} \left[(i_j \div b_j) \times \left(\prod_{j'=j+1}^{n} \sigma{j'} \div b_j' \right) \right]
+$$
