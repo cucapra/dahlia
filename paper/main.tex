@@ -90,6 +90,7 @@ and the scheduler. It has also been extended to be compiled to hardware [CITE].
 \rn{One question I want to answer here in particular is that most people are
 using accelerators for doing array based calculations, why not go the Halide
 way and build a language that has the right high level primitives for that?}
+\xxx[as]{Yep, this question---``why not use a DSL?''---is an important one to answer. The gist of my position is that DSLs represent a trade-off that is sometimes but not always appropriate: you specify things at a very high level, but you get less control over how the hardware actually works and you have to make do with the primitives that the DSL designers offer you. Even with a million DSLs out there, there will \emph{still} be tasks for which a general-purpose language is what you want---if nothing else, then at least for the ``glue'' between chunks of code implemented in DSLs.}
 
 \subsection{Spatial}
 Spatial [CITE] is a domain specific programming language embedded in Scala
@@ -98,6 +99,7 @@ parallelism out of accelerators. Seashell is not Spatial because \ldots
 
 \rn{Similar question. Why not build higher level primitives like
 spatial and leave the safety checking and compilation to the compiler?}
+\xxx[as]{And a similar answer: automation like represents an implicit trade-off. You get to not worry about the details, but then the details are hidden from you. So if you find you're getting back hardware out of Spatial, you don't see it manifest in the code and you have no recourse to fix it. Instead, we do the hard work to make all the details visible at the language level. This should be better for (a) experts who want exacting control over the hardware they generate, and (b) eventually building higher-level tools that enhance automation on top of this abstraction.}
 
 %% Acknowledgments
 \begin{acks}                            %% acks environment is optional
