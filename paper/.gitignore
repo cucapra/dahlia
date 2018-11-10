@@ -1,2 +1,6 @@
-*.pdf
-*.gz
+*.synctex.gz
+*.log
+*.out
+*.aux
+main.pdf
+revision.tex
