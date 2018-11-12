@@ -143,8 +143,4 @@ Average number of CPU cycles running mmultadd in software: 7223
 TEST PASSED
 ```
 
-::::todo
-Buildbot cannot run it as it will look for a sea file. Not sure if it's a good idea to change it, as we might provide host program too in a sea file.
-::::
-
-### How not to write this program
+You can run this on [Buildbot](http://gorgonzola.cs.cornell.edu:8000) using [`skipseashell` flag](https://github.com/cucapra/seashell/tree/master/buildbot#using-the-buildbot)
