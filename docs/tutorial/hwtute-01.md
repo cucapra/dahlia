@@ -1,7 +1,7 @@
 vector-vector add on host processor
 --------
 
-### Hardware apporach
+### Hardware approach
 
 Our first attempt will be to create a host program. A host program is essentially a control program is to manage a heterogeneous system. It so happens, most control programs are very sequential. Therefore, host program is a sequential program, written with a common (high-level) language and running on a general purpose processor. Since these programs are inherently sequential, parallel architectures cannot exploit them. And general purpose processors are specialized at running these programs fast. 
 
