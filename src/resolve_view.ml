@@ -26,6 +26,7 @@ let rec resolve_aa_expr e v ctx =
   | _ ->
     failwith "Impossible case; [resolve_aa_expr v ctx] only called on TViews."
 
+(* Views should be resolved after typechecking and before compiling. *)
 class view_resolver = object
   inherit [Context.gamma] ast_mapper
 

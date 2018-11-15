@@ -115,7 +115,13 @@ and compute_unroll_factor idx_exprs c =
  *  - an expression in [idx_exprs] is an illegal type (i.e. not TIndex _)
     - illegal banks are accessed (i.e. already consumed banks) *)
 and check_aa id idx_exprs c : type_node * gamma =
-  match Context.get_binding id c with
+  let arr_t = begin match Context.get_binding id c with
+    | TArray _ as t
+    | TView (t, _, _) -> t
+    | _ ->
+      failwith "Impossible. [check_aa] passed a type that wasn't an array or view"
+  end in
+  match arr_t with
   | TArray (t, dims) ->
     let num_dimensions = List.length dims in
     let access_dimensions = List.length idx_exprs in
