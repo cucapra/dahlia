@@ -1,5 +1,6 @@
 open Ast
 open Ast_visitor
+open Error_msg
 
 module StringMap =
   Map.Make(struct type t = id;; let compare = String.compare end)
@@ -11,7 +12,7 @@ let add_alias_binding (id, t) d =
 
 let get_alias_binding id d =
   try StringMap.find id d
-  with Not_found -> raise (Context.NoBinding id)
+  with Not_found -> raise (TypeError (nonex_type id))
 
 class type_alias_resolver = object
   inherit [delta] ast_mapper

@@ -118,3 +118,8 @@ let reassign_bit_violation s_target s_val =
   (string_of_type s_target)
   (string_of_type s_val)
 
+let nonex_type tname =
+  sprintf
+    "[Type Error] No type definition for `%s'.;"
+    tname
+

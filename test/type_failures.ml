@@ -52,3 +52,7 @@ let%expect_test "Cannot reassign int to something stored with more bits" =
   [%expect {|
     [Type Error] Cannot reassign value of type `unsigned bit<32>' to value of type `unsigned bit<33>';
          `unsigned bit<32>' is represented with less bits than `unsigned bit<33>'.|}]
+
+let%expect_test "Non-existent type" =
+  compile_string_with_failure "func foo(a: non_type[10]) { let x = 2; }";
+  [%expect {| [Type Error] No type definition for `non_type'.; |}]
