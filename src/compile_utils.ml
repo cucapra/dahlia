@@ -43,7 +43,6 @@ let compile_string_without_print prog print_ast : string =
     |> show_ast print_ast "Flattened"
   in let type_ctx = typecheck_with_error ast
   in let ast_caps = Infer_cap.readd_cap ast (snd ast_and_cap_ctx)
-  in let ast_noviews = Resolve_view.remove_views ast_caps type_ctx
-  in emit_code ast_noviews type_ctx
+  in emit_code ast_caps type_ctx
 
 let compile_string prog print_ast = print_endline @@ compile_string_without_print prog print_ast

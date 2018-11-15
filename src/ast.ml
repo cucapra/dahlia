@@ -69,6 +69,7 @@ and binop =
  *   - [EBankedAA (id, exp1, exp2)]: an array access where [exp1] is the bank,
  *     and [exp2] is an index into that bank. [exp1] should be a static int
  *     for a program with such an access to typecheck.
+ *   - [EView (id, off, w, s)] TODO:ted
  * exprs carry information necessary for the compiler to
  * generate C code. *)
 and expr =
