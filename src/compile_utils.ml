@@ -35,7 +35,7 @@ let compile_string_without_print prog print_ast : string =
   let ast_and_cap_ctx = parse_with_error prog
     |> show_ast print_ast "Parsed AST"
     |> Resolve_alias.remove_aliases
-    |> show_ast print_ast "Resolved AST"
+    |> show_ast print_ast "Alias-resolved AST"
     |> Infer_cap.infer_cap
   in let ast = fst @@ ast_and_cap_ctx
     |> show_ast print_ast "Inferred capabilities"
@@ -43,6 +43,9 @@ let compile_string_without_print prog print_ast : string =
     |> show_ast print_ast "Flattened"
   in let type_ctx = typecheck_with_error ast
   in let ast_caps = Infer_cap.readd_cap ast (snd ast_and_cap_ctx)
-  in emit_code ast_caps type_ctx
+  in let ast_noviews = ast_caps
+    |> show_ast print_ast "View-resolved AST"
+    |> fun ast -> Resolve_view.remove_views ast type_ctx
+  in emit_code ast_noviews type_ctx
 
 let compile_string prog print_ast = print_endline @@ compile_string_without_print prog print_ast

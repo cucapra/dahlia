@@ -26,15 +26,25 @@ let rec resolve_aa_expr e v ctx =
   | _ ->
     failwith "Impossible case; [resolve_aa_expr v ctx] only called on TViews."
 
+(*
+let rec resolve_view_type t ctx =
+  match t with
+  | TView (t, Base, _) -> t
+  | TView (t, View, _) -> resolve_view_type t ctx
+  | _ ->
+    failwith "Impossible case; [resolve_view_type v ctx] only called on TViews."
+   *)
+
 (* Views should be resolved after typechecking and before compiling. *)
-class view_resolver = object
+class view_resolver = object(self)
   inherit [Context.gamma] ast_mapper
 
   (* Remove declarations of views; the compiler doesn't want them. *)
   method! private cassign (id, e) ctx =
     match Context.get_binding id ctx with
     | TView _ -> CEmpty, ctx
-    | _ -> CAssign (id, e), ctx
+    | _ -> let e', st' = self#expr e ctx in
+      CAssign (id, e'), st'
 
   (* Transform array accesses on views into array accesses on
    * the original array. *)

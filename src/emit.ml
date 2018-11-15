@@ -126,7 +126,7 @@ let rec emit_cmd i cmd =
   | CTypeDef _                 -> failwith "CTypeDef should not occur in AST"
   | CMuxDef (_, mid, s)        -> emit_mux mid s i
   | CExpr e                    -> emit_expr e
-  | CEmpty                     -> ";"
+  | CEmpty                     -> ""
 
 and emit_cap (cap, e, _) i = match cap with
   | Read -> comment ("cap read: " ^ emit_expr e) |> indent i
