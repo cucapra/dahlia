@@ -125,3 +125,15 @@ let view_requires_arr arr_id arr_t =
      type `%s'"
   arr_id
   (string_of_type arr_t)
+
+let view_off_svalue =
+  sprintf
+    "[Type Error] view offset must be single value. Supplied value represents multiple."
+
+let view_w_svalue =
+  sprintf
+    "[Type Error] view width must be single value. Supplied value represents multiple."
+
+let view_s_svalue =
+  sprintf
+    "[Type Error] view stride must be single value. Supplied value represents multiple."

@@ -1,0 +1,9 @@
+type int = bit<10>;
+func test_view(a: int [8 bank(2)]) {
+	for (let i = 0..3) {
+		let v_a = view a[i:2:1];
+		for (let j = 0..2) {
+			v_a[j] := 1;
+		}
+	}
+}

@@ -8,7 +8,7 @@ and view =
   | View
 
 (* (off * w * s) *)
-and view_params = id * int * int * int
+and view_params = id * expr * int * int
 
 (* A [type_node] is one of the following:
  *   - [TBool]: a boolean type
@@ -80,7 +80,7 @@ and expr =
   | EBinop of binop * expr * expr
   | EAA of id * expr list
   | EBankedAA of id * expr * expr
-  | EView of id * int * int * int
+  | EView of id * expr * int * int
 
 and capability = Read | Write
 

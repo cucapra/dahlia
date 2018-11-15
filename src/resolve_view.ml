@@ -18,11 +18,11 @@ let rec resolve_aa_id v ctx =
 let rec resolve_aa_expr e v ctx =
   match v with
   | TView (_, Base, (_, off, _, s)) ->
-    EBinop (BopPlus, EInt (off), (EBinop (BopTimes, e, EInt s)))
+    EBinop (BopPlus, off, (EBinop (BopTimes, e, EInt s)))
   | TView (_, View, (id, off, _, s)) ->
     let v' = Context.get_binding id ctx in
     let descend = resolve_aa_expr e v' ctx in
-    EBinop (BopPlus, EInt (off), (EBinop (BopTimes, descend, EInt s)))
+    EBinop (BopPlus, off, (EBinop (BopTimes, descend, EInt s)))
   | _ ->
     failwith "Impossible case; [resolve_aa_expr v ctx] only called on TViews."
 

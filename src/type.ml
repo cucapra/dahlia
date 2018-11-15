@@ -16,6 +16,10 @@ let types_eq t1 t2 = match t1, t2 with
 
 let is_svalue (l, h) = h - l = 1
 
+let idx_is_svalue = function
+  | TIndex (s, _) -> is_svalue s
+  | _ -> failwith "[idx_is_svalue] expects TIndex"
+
 let is_static = function
   | TIndex ((ls, hs), (ld, hd)) -> (hs - ls = 1) && (hd - ld = 1)
   | _ -> false
@@ -52,6 +56,9 @@ and gcf a b = if b = 0 then a else gcf b (a mod b)
  * context with the banks of array [id] consumed.
  * TODO(ted): refactor/clean up this mess *)
 and check_view id off w s ctx =
+  let (t1, _) = check_expr off ctx in
+  if (not (idx_is_svalue t1)) then raise @@ TypeError view_off_svalue
+  else
   match Context.get_binding id ctx with
   | TArray (t, [(_, b_a)]) ->
     let s_v = w in
