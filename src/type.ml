@@ -66,8 +66,8 @@ and check_view id off w s ctx =
     let b_v = min w b_e in
     TView (TArray (t, [(s_v, b_v)]), Base, (id, off, w, s)),
     Context.consume_aa_lst id (Core.List.range 0 b_a) ctx
-  | TView (t, _, v_p) ->
-    begin match t with
+  | TView (t', _, v_p) ->
+    begin match t' with
       | TArray (t, [(_, b_a)]) ->
         let s_v = w in
         let b_e = b_a / gcf s b_a in
