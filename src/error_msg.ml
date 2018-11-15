@@ -32,6 +32,8 @@ let rec string_of_type = function
   | TFunc _ -> "func"
   | TLin t -> (string_of_type t) ^ " lin"
   | TMux _ -> "mux"
+  | TView _ ->
+    failwith "TView still in AST. Should've been transformed before compilation"
 
 let id_already_bound id =
   sprintf "`%s' already bound in this context. Cannot shadow variables." id

@@ -77,10 +77,6 @@ and emit_aa_phys (id, b, i) =
   | TMux _ -> failwith "Muxes not implemented"
   | _ -> failwith "Tried to index into non-array"
 
-(* FIXME: optimize?
- * @tedbauer What kind of optimization were you thinking off? It's generally
- * a good idea to document future optimizations that you don't want to immediately
- * work on. If it's significant, open an issue and point to it. -- @rachitnigam *)
 and flatten_access dims idx_exprs =
     match dims, idx_exprs with
     | _::td, hi::ti ->

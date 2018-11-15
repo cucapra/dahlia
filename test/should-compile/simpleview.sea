@@ -1,0 +1,6 @@
+func test_view(a : int[8 bank(2)]) {
+	let v_a = view a[0:2:1];
+	for (let j = 0..2) unroll 2 {
+		v_a[j] := 1;
+	}
+}

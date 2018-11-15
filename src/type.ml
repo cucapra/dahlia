@@ -33,7 +33,7 @@ let rec check_expr exp ctx : type_node * gamma =
   | EBinop (binop, e1, e2)     -> check_binop binop e1 e2 ctx
   | EBankedAA _ | EAA _        ->
     raise (TypeError "Array access expression cannot occur outside capability commands")
-  | EView (id, w, s, _)      -> check_view id w s ctx
+  | EView (id, w, s, off)        -> check_view id w s off ctx
 
 (** [check_binop b e1 e2 (c, d)] is [(t, (c', d')], where [t] is the type of
  * the expression [EBinop (b, e1, e2)] and [(c', d')] is the updated context
@@ -49,15 +49,27 @@ and gcf a b = if b = 0 then a else gcf b (a mod b)
 
 (* [check_view id w s ctx] is (t, ctx'), where t is an index type
  * representing the view created from array [id], and ctx' is an updated
- * context with the banks of array [id] consumed. *)
-and check_view id w s ctx =
+ * context with the banks of array [id] consumed.
+ * TODO(ted): refactor/clean up this mess *)
+and check_view id w s off ctx =
   match Context.get_binding id ctx with
   | TArray (t, [(_, b_a)]) ->
     let s_v = w in
     let b_e = b_a / gcf s b_a in
     let b_v = min w b_e in
-    TArray (t, [(s_v, b_v)]),
+    TView (TArray (t, [(s_v, b_v)]), Base, (id, off, w, s)),
     Context.consume_aa_lst id (Core.List.range 0 b_a) ctx
+  | TView (t, _, v_p) ->
+    begin match t with
+      | TArray (t, [(_, b_a)]) ->
+        let s_v = w in
+        let b_e = b_a / gcf s b_a in
+        let b_v = min w b_e in
+        TView ((TArray (t, [(s_v, b_v)]), View, v_p)),
+        Context.consume_aa_lst id (Core.List.range 0 b_a) ctx
+      | _ -> failwith "NYI"
+    end
+
   | TArray (_, _) -> failwith "Multidimensional semantics NYI"
   | typ -> raise @@ TypeError (view_requires_arr id typ)
 
