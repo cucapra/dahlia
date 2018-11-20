@@ -52,14 +52,11 @@ and check_binop binop e1 e2 c : type_node * gamma =
 and gcf a b = if b = 0 then a else gcf b (a mod b)
 
 and check_off params ctx =
-  match params with
-  | [] -> failwith "MD access error FIX THIS ERROR MSG"
-  | (off0, _, _) :: [] ->
-    let (t1, _) = check_expr off0 ctx in
+  let f (off, _, _) =
+    let (t1, _) = check_expr off ctx in
     if (not (idx_is_svalue t1)) then raise @@ TypeError view_off_svalue
     else ()
-  | (off0, _, _) :: t ->
-    ignore off0; ignore t; failwith "Do MD check"
+  in List.iter f params
 
 (* [check_view id w s ctx] is (t, ctx'), where t is an index type
  * representing the view created from array [id], and ctx' is an updated
