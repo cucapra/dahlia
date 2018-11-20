@@ -56,3 +56,9 @@ let%expect_test "Cannot reassign int to something stored with more bits" =
 let%expect_test "Non-existent type" =
   compile_string_with_failure "func foo(a: non_type[10]) { let x = 2; }";
   [%expect {| [Type Error] No type definition for `non_type'.; |}]
+
+let%expect_test "Oversized view" =
+  compile_string_with_failure "func foo(a: bit<32>[10]) { let v_a = view a[0:11:1]; }";
+  [%expect {|
+    [Type Error] Tried to create view larger than array. Array `a' had dimension width
+        `10' and view had dimension size `11'. |}]

@@ -144,8 +144,8 @@ let nonex_type tname =
 
 let view_size vsize vname asize =
   sprintf
-    "[Type Error] Tried to create view larger than array. View `%s' had dimension width
-    `%s' and array had dimension size `%s'."
-  (string_of_int vsize)
+    "[Type Error] Tried to create view larger than array. Array `%s' had dimension width
+    `%s' and view had dimension size `%s'."
   vname
   (string_of_int asize)
+  (string_of_int vsize)
