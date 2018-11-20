@@ -171,6 +171,20 @@ let%expect_test "should-compile/view3.sea" =
       }
     } |}]
 
+let%expect_test "should-compile/mdview.sea" =
+  compile "should-compile/mdview.sea";
+  [%expect {|
+    #include "apcint.h"
+    void test_view(uint10 a[48]) {
+      #pragma HLS ARRAY_PARTITION variable=a factor=6
+      for (int i = 0; i <= 2; i += 1) {
+        for (int j = 0; j <= 2; j += 1) {
+          /* cap write: a[6*(0+i*1)+1*(0+j*1)] */
+          a[6*(0+i*1)+1*(0+j*1)] = 1;
+        }
+      }
+    } |}]
+
 (** TODO(rachit): These tests need + on idx types to be implemented
 
 let%expect_test "should-compile/logical_access.sea" =
