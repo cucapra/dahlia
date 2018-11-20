@@ -1,7 +1,7 @@
 vector-vector add on host processor
 --------
 
-### Hardware apporach
+### Hardware approach
 
 Our first attempt will be to create a host program. A host program is essentially a control program is to manage a heterogeneous system. It so happens, most control programs are very sequential. Therefore, host program is a sequential program, written with a common (high-level) language and running on a general purpose processor. Since these programs are inherently sequential, parallel architectures cannot exploit them. And general purpose processors are specialized at running these programs fast. 
 
@@ -143,8 +143,4 @@ Average number of CPU cycles running mmultadd in software: 7223
 TEST PASSED
 ```
 
-::::todo
-Buildbot cannot run it as it will look for a sea file. Not sure if it's a good idea to change it, as we might provide host program too in a sea file.
-::::
-
-### How not to write this program
+You can run this on [Buildbot](http://gorgonzola.cs.cornell.edu:8000) using [`skipseashell` flag](https://github.com/cucapra/seashell/tree/master/buildbot#using-the-buildbot)

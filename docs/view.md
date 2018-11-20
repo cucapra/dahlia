@@ -12,6 +12,15 @@ pattern to the type system without having to pay the cost of creating a new memo
 bank. _Views_ are a _zero-cost abstraction_ because they only exist in Seashell
 and are compiled into simple array accesses.
 
+### Note on syntax
+
+This proposal uses a verbose syntax for view creation. The surface language
+instead uses the syntax:
+
+```
+v_a = view a[off:w:s]
+```
+
 ## Creating views
 
 A _view_, as it's name suggests, is a logical view over a pre-existing array.
@@ -76,15 +85,6 @@ which creates the following _view_:
 ![](./img/row-view-stride.png)
 
 When omitted, stride is set to $1$, which creates a block-like view.
-
-### Note on syntax
-
-This proposal uses a verbose syntax for view creation. The surface language
-instead uses the syntax:
-
-```
-v_a = view a[off:w:s]
-```
 
 ## Typing a view
 
@@ -184,7 +184,7 @@ defined using `a[i + j]`.
 * **Dynamic strides**. Iteration patters where the stride dynamically changes
   cannot be specified using the _view_ syntax. For example, the following iteration
   pattern is not expressible.
-  
+
     ![](./img/row-imp-dyn-stride.png)
 
 ### Inexpressible parallel operations

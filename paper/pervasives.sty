@@ -1,0 +1,176 @@
+\newif\ifdraft\drafttrue
+\newcount\draft\draft=1
+
+\ifdraft
+\overfullrule=1mm
+\fi
+
+\setcitestyle{numbers,sort&compress}
+
+\usepackage{booktabs}
+\usepackage{rotating}
+\usepackage{lscape}
+\usepackage{pdflscape}
+\usepackage{subcaption}
+\usepackage{cleveref}
+\usepackage{xspace}
+\usepackage{mathtools}
+\usepackage{listings}
+\usepackage{tikz}
+\usepackage{wrapfig}
+\usepackage{graphicx}
+\usetikzlibrary{arrows}
+\usetikzlibrary{shapes.geometric}
+\usetikzlibrary{shapes.multipart}
+\usepackage{balance}
+\usepackage{xxx}
+
+\usepackage{pifont}
+\newcommand{\cmark}{\ding{51}}
+\newcommand{\xmark}{\ding{55}}
+
+\def\UrlBreaks{\do\/\do-\do.}
+
+% Define colors for comments here
+\newcommand{\rn}[1]{{\color{blue}[#1 --Rachit]}}
+
+\usepackage{xspace}
+\newcommand{\system}{Stopify\xspace}
+\newcommand{\systemlst}{\lstinline{stopify}\xspace}
+
+
+%%%%
+%%% Data
+%%%
+
+\newcommand{\sysverb}{seashell}
+
+\crefname{section}{\S}{\S\S}
+\Crefname{section}{\S}{\S\S}
+\crefformat{section}{\S#2#1#3}
+\Crefname{figure}{Figure}{Figures}
+\crefformat{figure}{Figure #2#1#3}
+\Crefname{Figure}{Figure}{Figures}
+
+\newcommand{\Jumper}[1]{\ensuremath{\mathcal{K}}\llbracket #1 \rrbracket}
+\newcommand{\Apply}[1]{\ensuremath{\mathcal{A}}\llbracket #1 \rrbracket}
+\newcommand{\figsize}{\footnotesize}
+
+% JS Snippets
+\lstdefinelanguage{JavaScript}{
+sensitive=false,
+morekeywords={let,function,return,undefined,null,typeof,true,false,ref,deref,
+              var,new,break,while,try,catch,finally,throw,err,if,else,for,do,
+              with,delete,new,instanceof,this},
+keywordstyle=\ttfamily\bfseries,
+identifierstyle=\ttfamily,
+comment=[l]{//},
+commentstyle=\ttfamily,
+string=[d]{"},
+stringstyle=\ttfamily,
+mathescape=true,
+literate={control}{{\kwcontrol}}1,
+escapechar=\#,
+extendedchars=true,
+basicstyle=\footnotesize\ttfamily,
+showstringspaces=false,
+numbers=none,
+firstnumber=0,
+numberstyle=\tiny,
+stepnumber=5,
+numbersep=5pt,
+upquote=true,
+columns=fixed,
+flexiblecolumns=true,
+}
+
+\lstset{language=JavaScript}
+
+% Runtime Keywords
+
+\newcommand{\run}{\ensuremath{\mathtt{run}}\xspace}
+\newcommand{\topk}{\ensuremath{\mathtt{top}}\xspace}
+\newcommand{\suspend}{\ensuremath{\mathtt{suspend}}\xspace}
+\newcommand{\callcc}{\ensuremath{\mathtt{callcc}}\xspace}
+\newcommand{\jumper}{\ensuremath{\mathtt{J}}\xspace}
+\newcommand{\labels}{\ensuremath{\mathtt{labels}}\xspace}
+\newcommand{\capture}{\ensuremath{\mathbf{Capture}}\xspace}
+\newcommand{\restore}{\ensuremath{\mathbf{Restore}}\xspace}
+\newcommand{\target}{\ensuremath{\mathtt{target}}\xspace}
+
+% Stack Strategies
+\newcommand{\lazy}{\ensuremath{\mathbf{Lazy}}\xspace}
+\newcommand{\eager}{\ensuremath{\mathbf{Eager}}\xspace}
+\newcommand{\retval}{\ensuremath{\mathbf{Retval}}\xspace}
+\newcommand{\pushFrame}[4]{\begin{tabular}[t]{@{}l}
+  $#1$.$\mathbf{stack}.\mathbf{push}$(\{\\
+\,\,\,\,$\mathbf{f}$: $\mathbf{function}$ \{ $\mathbf{return}$ $#2_{#3}#4$ \},\\
+\,\,\,\,$\mathbf{locals}$: $\ottmv{locals}$,\\
+\,\,\,\,$\mathbf{index}$: $#3$\\
+  \})
+\end{tabular}}
+\newcommand{\pushEagerFrame}[3]{\pushFrame{\mathbf{global}}{#1}{#2}{#3}}
+\newcommand{\popEagerFrame}{\ensuremath{\mathbf{stack}.\mathbf{pop}()}}
+\newcommand{\pushRetvalFrame}[4]{\pushFrame{#1}{#2}{#3}{#4}}
+
+% JS Keywords
+\newcommand{\jskw}[1]{\text{\texttt{\textbf{#1}}}}
+\newcommand{\jsop}[1]{\text{\texttt{#1}}}
+
+\newcommand{\kwcontrol}{\ensuremath{\mathcal{C}}}
+\newcommand{\kwtry}{\ensuremath{\mathbf{try}}\xspace}
+\newcommand{\kwfinally}{\ensuremath{\mathbf{finally}}\xspace}
+\newcommand{\kwif}{\ensuremath{\mathbf{if}}\xspace}
+\newcommand{\kwwhile}{\ensuremath{\mathbf{while}}\xspace}
+\newcommand{\kwthrow}{\ensuremath{\mathbf{throw}}\xspace}
+\newcommand{\kwfunction}{\ensuremath{\mathbf{function}}\xspace}
+\newcommand{\kwreturn}{\ensuremath{\mathbf{return}}\xspace}
+\newcommand{\kwletbind}{\ensuremath{\mathbf{let}}\xspace}
+\newcommand{\kweval}{\ensuremath{\mathtt{eval}}\xspace}
+\newcommand{\kwthis}{\ensuremath{\mathtt{this}}\xspace}
+\newcommand{\kwtrue}{\ensuremath{\mathtt{true}}\xspace}
+\newcommand{\kwenext}{\ensuremath{\mathtt{next}}\xspace}
+\newcommand{\kwyield}{\ensuremath{\mathbf{yield}}\xspace}
+\newcommand{\kwyieldstar}{\ensuremath{\mathbf{yield*}}\xspace}
+\newcommand{\kwsetTimeout}{\ensuremath{\mathtt{setTimeout}}\xspace}
+
+% JS Grammar
+\newcommand{\ite}[3]{\ensuremath{\mathbf{if}~(#1)~\mathbf{then}~#2~\mathbf{else}~#3}}
+\newcommand{\while}[2]{\ensuremath{\mathbf{while}~(#1)~\{~#2~\}}}
+\newcommand{\try}[4]{\ensuremath{\mathbf{try}~\{~#1~\}~\mathbf{catch}~(#2)~\{~#3~\}~\mathbf{finally}~\{~#4~\}}}
+\newcommand{\assign}[2]{\ensuremath{#1~=~#2}}
+\newcommand{\update}[3]{\ensuremath{#1.#2~=~#3}}
+\newcommand{\apply}[2]{\ensuremath{#1(#2)}}
+\newcommand{\anfApply}[3]{\ensuremath{\assign{#1}{\apply{#2}{#3}}}}
+\newcommand{\throw}[1]{\ensuremath{\mathbf{throw}~#1}}
+\newcommand{\return}[1]{\ensuremath{\mathbf{return}~#1}}
+\newcommand{\function}[4]{\ensuremath{\mathbf{function}~#1(#2)~\{~\mathbf{let}~#3;~#4~\}}}
+
+% Symbols
+\newcommand{\defeq}{\ensuremath{\coloneqq}}
+
+\lstdefinestyle{figurestyle}{
+  basicstyle=\fontsize{6}{6}\ttfamily,
+  numbers=left,
+  numberstyle=\fontsize{5}{5}\rmfamily,
+  numbersep=0.4em,
+  stepnumber=1,
+  firstnumber=1,
+  xleftmargin=1em}
+
+\lstdefinestyle{normalstyle}{
+  basicstyle=\small\ttfamily,
+  numbers=none}
+
+\newtoggle{infig}
+\togglefalse{infig}
+\AtBeginEnvironment{figure}{\toggletrue{infig}}
+\AtEndEnvironment{figure}{\togglefalse{infig}}
+\AtBeginEnvironment{figure*}{\toggletrue{infig}}
+\AtEndEnvironment{figure*}{\togglefalse{infig}}
+
+\AtBeginEnvironment{lstlisting}{
+  \iftoggle{infig}{
+    \lstset{style=figurestyle}
+  }{
+    \lstset{style=normalstyle,numbers=none}}}

@@ -12,3 +12,13 @@ in this may be out of sync with the current version of seashell.
 * [Views and Slices](views-and-slices.html)
   An older formulation of views in Seashell.
 
+
+### Iterations of older design decisions
+
+* [matmul.md](matmul.html)
+
+* [multaccess.md](multaccess.html)
+
+* [vsadd.md](vsadd.html)
+
+* [vvadd.md](vvadd.html)

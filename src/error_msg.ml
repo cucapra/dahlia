@@ -136,3 +136,8 @@ let view_w_svalue =
 let view_s_svalue =
   sprintf
     "[Type Error] view stride must be single value. Supplied value represents multiple."
+
+let nonex_type tname =
+  sprintf
+    "[Type Error] No type definition for `%s'.;"
+    tname

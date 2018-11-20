@@ -20,11 +20,9 @@ let parse_with_error prog =
   | Parser.Error ->
     failwith ("Syntax error on " ^ pp_position lexbuf)
 
-let typecheck_with_error (ast : Ast.command) =
-  try
-    Type.typecheck ast
-  with
-    Error_msg.TypeError s -> failwith s
+let try_with_error f (ast : Ast.command) =
+  try f ast
+  with Error_msg.TypeError s -> failwith s
 
 let emit_code ast ctx =
   Emit.set_type_map (fun id -> Context.get_binding id ctx);
@@ -34,8 +32,8 @@ let compile_string_without_print prog print_ast : string =
   Printexc.record_backtrace false;
   let ast_and_cap_ctx = parse_with_error prog
     |> show_ast print_ast "Parsed AST"
-    |> Resolve_alias.remove_aliases
-    |> show_ast print_ast "Alias-resolved AST"
+    |> try_with_error Resolve_alias.remove_aliases
+    |> show_ast print_ast "Resolved AST"
     |> Infer_cap.infer_cap
   in let ast = fst @@ ast_and_cap_ctx
     |> show_ast print_ast "Inferred capabilities"

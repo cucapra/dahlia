@@ -26,6 +26,7 @@ the Seashell type system:
 *safe*, i.e., they only access distinct memory banks.
 :::
 
+
 Index Types
 -----------
 
@@ -48,6 +49,7 @@ $$
 Given an array access with index types, this set representation allows us to
 precisely identify which indices (and subsequently memory banks) are
 accessed.
+
 
 Mapping Multi-Dimensional Arrays to Hardware
 ----------------------------------
@@ -105,6 +107,7 @@ The flattened version, $\text{a}_f$, has size $8$. The logical access to
 $\text{a}[3][1]$ corresponds to a physical access $\text{a}_f[3 \times 2 +
 1]$ i.e., $\text{a}_f[7]$.
 
+
 Typing array accesses with Index types
 -------------------------------
 
@@ -112,17 +115,6 @@ We now give the semantics of logical accesses using Seashell's index types.
 We want to determine the *set* of elements accessed in an expression of the
 form $\text{a}[i_0] \dots [i_n]$ where each $i_j$ is of an index type
 $\text{idx}\langle l_{s_j} .. h_{s_j}, l_{d_j} .. h_{d_j} \rangle$.
-
-::: todo
-Do we need to make this simplifying assumption (that static ranges start at zero) yet? Maybe it doesn't hurt, but it does seem possible to do without it.
-If we *do* make the simplification immediately, I propose doing the simplification *first* to Equation 1, where $|0..k|$ can just become $k$.
---A
-:::
-
-::: todo
-We've attempted to do without the simplification right up to the type rule. Maybe even then it's not needed, but I'm struggling a little to comprehend what it means to have arbitrary boundaries for static and dynamic part.
---S
-:::
 
 We can get the set of physical locations for this access by combining
 Equation 1, which describes the meaning of index types, with Equation 2,
@@ -178,6 +170,7 @@ $$
 
 A 3-D array example is also provided in the [appendix](https://capra.cs.cornell.edu/seashell/docs/appendix.html#d-array-examples-to-visualize-multi-dimensional-access).
 
+
 Safety of array accesses
 ------------------------
 
@@ -190,7 +183,7 @@ $$
 
 The notation naturally extends the original array notation to mean that the
 $i$th dimension is banked with a banking factor of $b_i$. When mapping
-thismapping this logical array to a physical one, we get the following
+this logical array to a physical one, we get the following
 single-dimensional array:
 
 $$
@@ -227,3 +220,15 @@ $$
 $$
 
 where $S(a[i_1]\ldots[i_n])$ is the set of indices accessed.
+
+**Notes.** We need to show given an index type and a bank factor, whether the access is safe or not. Therefore, we need the unroll divides bank factor proof. In order to extend it to multi-dimensions, first we need to show each dimension's index type accesses a distinct region to others. Then we need to extend the type rule so that all dimensions pass the rule (which is what lemma is used for maybe? as a tuple of indices in Bt would access a unique bank).
+
+And after the rule, maybe we need an expression to derive bank and index like we had for one-dimensional case. These we can assume to be,
+
+$$\tag{4}
+b_f = \sum_{j=0}^{n} \left[(i_j \bmod b_j) \times \left(\prod_{j'=j+1}^{n} b_j' \right) \right]
+$$
+
+$$\tag{5}
+d_f = \sum_{j=0}^{n} \left[(i_j \div b_j) \times \left(\prod_{j'=j+1}^{n} \sigma{j'} \div b_j' \right) \right]
+$$
