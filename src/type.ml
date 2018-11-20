@@ -65,8 +65,7 @@ and check_vwidth vsize vname asize =
 
 (* [check_view id w s ctx] is (t, ctx'), where t is an index type
  * representing the view created from array [id], and ctx' is an updated
- * context with the banks of array [id] consumed.
- * TODO(ted): refactor/clean up this mess *)
+ * context with the banks of array [id] consumed. *)
 and check_view id params ctx =
   check_off params ctx;
   match Context.get_binding id ctx with
@@ -143,7 +142,6 @@ and check_aa id idx_exprs c : type_node * gamma =
       else
         raise (TypeError "TypeError: unroll factor must be factor of banking factor")
   | _ -> raise (TypeError "TypeError: tried to index into non-array")
-
 
 (** [check_cmd cmd (c, d)] is [(c', d')], an updated context resutling from
  * type-checking command [cmd], Raises [TypeError s]. *)
