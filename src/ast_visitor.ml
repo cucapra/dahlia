@@ -62,8 +62,13 @@ class ['s] ast_mapper = object(self)
     let e1', st1 = self#expr e1 st in
     let e2', st2 = self#expr e2 st1 in
     EBankedAA (id, e1', e2'), st2
+  method private param_visit params st =
+    let (off, w, s) = params in
+    let off', st' = self#expr off st in
+    (off', w, s), st'
   method private eview (id, params) st =
-    EView (id, params), st
+    let params', st' = self#list_visit self#param_visit params st in
+    EView (id, params'), st'
 
   method private capability cap st = cap, st
 
