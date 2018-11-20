@@ -58,6 +58,11 @@ and check_off params ctx =
     else ()
   in List.iter f params
 
+and check_vwidth vsize vname asize =
+  if vsize > asize then
+    raise @@ TypeError (view_size vsize vname asize)
+  else ()
+
 (* [check_view id w s ctx] is (t, ctx'), where t is an index type
  * representing the view created from array [id], and ctx' is an updated
  * context with the banks of array [id] consumed.
@@ -66,7 +71,8 @@ and check_view id params ctx =
   check_off params ctx;
   match Context.get_binding id ctx with
   | TArray (t, ids) ->
-    let f acc (_, b_a) (_, w, s) =
+    let f acc (s_a, b_a) (_, w, s) =
+      check_vwidth w id s_a;
       let s_v = w in
       let b_e = b_a / gcf s b_a in
       let b_v = min w b_e in

@@ -141,3 +141,11 @@ let nonex_type tname =
   sprintf
     "[Type Error] No type definition for `%s'.;"
     tname
+
+let view_size vsize vname asize =
+  sprintf
+    "[Type Error] Tried to create view larger than array. View `%s' had dimension width
+    `%s' and array had dimension size `%s'."
+  (string_of_int vsize)
+  vname
+  (string_of_int asize)
