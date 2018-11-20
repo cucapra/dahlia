@@ -7,7 +7,7 @@ module IdMap = Map.Make(struct
 end)
 
 (* Maps [id]s of views to [e], where [e] is the id's view
- * expression, containing [(id' off, w, s)]. ([id'] is what [id] is
+ * expression, containing [(id' (off, w, s) list)]. ([id'] is what [id] is
  * constructed from.) *)
 type view_map = expr IdMap.t
 
