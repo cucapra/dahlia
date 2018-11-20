@@ -3,13 +3,6 @@
 (* Type for identifiers. *)
 type id = string
 
-and view =
-  | Base
-  | View
-
-(* (off * w * s) *)
-and view_params = id * expr * int * int
-
 (* A [type_node] is one of the following:
  *   - [TBool]: a boolean type
  *   - [TArray (t, [(s1, bf1)..(sn, bfn)] is an array type with elements of
@@ -38,7 +31,6 @@ and type_node =
   | TArray of type_node * (int * int) list
   | TIndex of (int * int) * (int * int)
   | TFunc of type_node list
-  | TView of type_node * view * view_params
 
 and binop =
   | BopEq

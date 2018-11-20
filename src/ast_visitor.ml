@@ -20,7 +20,6 @@ class ['s] ast_mapper = object(self)
     | TIndex (s, d) -> self#tindex (s, d) st
     | TFunc ts -> self#tfunc ts st
     | TLin t -> self#tlin t st
-    | TView (t, v, v_p) -> self#tview (t, v, v_p) st
 
   method private tbool st = TBool, st
   method private tfloat st = TFloat, st
@@ -33,8 +32,6 @@ class ['s] ast_mapper = object(self)
     let ts', st' = self#list_visit self#type_node ts st in TFunc ts', st'
   method private tlin t st =
     let t', st' = self#type_node t st in TLin t', st'
-  method private tview (t, v, v_p) st =
-    let t', st1 = self#type_node t st in TView (t', v, v_p), st1
 
   method binop op st = op, st
 

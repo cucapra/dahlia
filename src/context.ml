@@ -34,8 +34,6 @@ let add_binding id t g =
   else
     let type_map' = StringMap.add id t g.type_map in
     let indices = match t with
-    | TView (TArray (_, banking), _, _) ->
-        StringMap.add id (create_set (compute_bf banking)) g.indices_available
     | TArray (_, banking) ->
         StringMap.add id (create_set (compute_bf banking)) g.indices_available
     | TLin _ ->

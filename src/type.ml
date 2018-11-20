@@ -35,9 +35,9 @@ let rec check_expr exp ctx : type_node * gamma =
   | EInt i                     -> TIndex ((i, i+1), (0, 1)), ctx
   | EVar x                     -> Context.get_binding x ctx, ctx
   | EBinop (binop, e1, e2)     -> check_binop binop e1 e2 ctx
+  | EView (id, off, w, s)      -> check_view id off w s ctx
   | EBankedAA _ | EAA _        ->
     raise (TypeError "Array access expression cannot occur outside capability commands")
-  | EView (id, off, w, s)        -> check_view id off w s ctx
 
 (** [check_binop b e1 e2 (c, d)] is [(t, (c', d')], where [t] is the type of
  * the expression [EBinop (b, e1, e2)] and [(c', d')] is the updated context
@@ -64,19 +64,7 @@ and check_view id off w s ctx =
     let s_v = w in
     let b_e = b_a / gcf s b_a in
     let b_v = min w b_e in
-    TView (TArray (t, [(s_v, b_v)]), Base, (id, off, w, s)),
-    Context.consume_aa_lst id (Core.List.range 0 b_a) ctx
-  | TView (t', _, v_p) ->
-    begin match t' with
-      | TArray (t, [(_, b_a)]) ->
-        let s_v = w in
-        let b_e = b_a / gcf s b_a in
-        let b_v = min w b_e in
-        TView ((TArray (t, [(s_v, b_v)]), View, v_p)),
-        Context.consume_aa_lst id (Core.List.range 0 b_a) ctx
-      | _ -> failwith "NYI"
-    end
-
+    TArray (t, [(s_v, b_v)]), Context.consume_aa_lst id (Core.List.range 0 b_a) ctx
   | TArray (_, _) -> failwith "Multidimensional semantics NYI"
   | typ -> raise @@ TypeError (view_requires_arr id typ)
 
@@ -122,13 +110,7 @@ and compute_unroll_factor idx_exprs c =
  *  - an expression in [idx_exprs] is an illegal type (i.e. not TIndex _)
     - illegal banks are accessed (i.e. already consumed banks) *)
 and check_aa id idx_exprs c : type_node * gamma =
-  let arr_t = begin match Context.get_binding id c with
-    | TArray _ as t
-    | TView (t, _, _) -> t
-    | _ ->
-      failwith "Impossible. [check_aa] passed a type that wasn't an array or view"
-  end in
-  match arr_t with
+  match Context.get_binding id c with
   | TArray (t, dims) ->
     let num_dimensions = List.length dims in
     let access_dimensions = List.length idx_exprs in
