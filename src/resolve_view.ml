@@ -6,7 +6,7 @@ module IdMap = Map.Make(struct
     let compare = String.compare
 end)
 
-(* Maps [id]s of views to [(e, id')], where [e] is the id's view
+(* Maps [id]s of views to [e], where [e] is the id's view
  * expression, containing [(id' off, w, s)]. ([id'] is what [id] is
  * constructed from.) *)
 type view_map = expr IdMap.t
