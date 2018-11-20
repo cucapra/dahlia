@@ -35,7 +35,7 @@ let rec check_expr exp ctx : type_node * gamma =
   | EInt i                     -> TIndex ((i, i+1), (0, 1)), ctx
   | EVar x                     -> Context.get_binding x ctx, ctx
   | EBinop (binop, e1, e2)     -> check_binop binop e1 e2 ctx
-  | EView (id, off, w, s)      -> check_view id off w s ctx
+  | EView (id, params)         -> check_view id params ctx
   | EBankedAA _ | EAA _        ->
     raise (TypeError "Array access expression cannot occur outside capability commands")
 
@@ -51,21 +51,33 @@ and check_binop binop e1 e2 c : type_node * gamma =
 (* [gcf a b] is the greatest common factor of [a] and [b]. *)
 and gcf a b = if b = 0 then a else gcf b (a mod b)
 
+and check_off params ctx =
+  match params with
+  | [] -> failwith "MD access error FIX THIS ERROR MSG"
+  | (off0, _, _) :: [] ->
+    let (t1, _) = check_expr off0 ctx in
+    if (not (idx_is_svalue t1)) then raise @@ TypeError view_off_svalue
+    else ()
+  | (off0, _, _) :: t ->
+    ignore off0; ignore t; failwith "Do MD check"
+
 (* [check_view id w s ctx] is (t, ctx'), where t is an index type
  * representing the view created from array [id], and ctx' is an updated
  * context with the banks of array [id] consumed.
  * TODO(ted): refactor/clean up this mess *)
-and check_view id off w s ctx =
-  let (t1, _) = check_expr off ctx in
-  if (not (idx_is_svalue t1)) then raise @@ TypeError view_off_svalue
-  else
+and check_view id params ctx =
+  check_off params ctx;
   match Context.get_binding id ctx with
-  | TArray (t, [(_, b_a)]) ->
-    let s_v = w in
-    let b_e = b_a / gcf s b_a in
-    let b_v = min w b_e in
-    TArray (t, [(s_v, b_v)]), Context.consume_aa_lst id (Core.List.range 0 b_a) ctx
-  | TArray (_, _) -> failwith "Multidimensional semantics NYI"
+  | TArray (t, ids) ->
+    let f acc (_, b_a) (_, w, s) =
+      let s_v = w in
+      let b_e = b_a / gcf s b_a in
+      let b_v = min w b_e in
+      acc @ [(s_v, b_v)] in
+    let ids'  = List.fold_left2 f [] ids params in
+    let banks = compute_bank_factor ids' in
+    TArray (t, ids'),
+    Context.consume_aa_lst id (Core.List.range 0 banks) ctx
   | typ -> raise @@ TypeError (view_requires_arr id typ)
 
 (* [check_banked_aa id idx1 idx2 (c, d)] represents a _banked

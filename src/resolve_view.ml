@@ -23,21 +23,23 @@ let rec resolve_aa_id id vmap =
   try
     let v_id =
       match IdMap.find id vmap with
-      | EView (id, _, _, _) -> id
+      | EView (id, _) -> id
       | _ ->
         failwith "Impossible; view resolving visitor found non-view in viewmap"
     in resolve_aa_id v_id vmap
   with Not_found -> id
 
-let rec resolve_aa_expr id e vmap ctx =
+let rec resolve_aa_exprs id idxs vmap ctx =
   try
     match IdMap.find id vmap with
-    | EView (id, off, _, s) ->
-      let e' = resolve_aa_expr id e vmap ctx in
-      EBinop (BopPlus, off, (EBinop (BopTimes, e', EInt s)))
+    | EView (id, params) ->
+      let idxs' = resolve_aa_exprs id idxs vmap ctx in
+      let f a idx (off, _, s) =
+        a @ [EBinop (BopPlus, off, (EBinop (BopTimes, idx, EInt s)))]
+      in List.fold_left2 f [] idxs' params
     | _ ->
       failwith "Impossible; view resolving visitor found non-view in viewmap"
-  with Not_found -> e
+  with Not_found -> idxs
 
 (* Views should be resolved after typechecking and before compiling. *)
 class view_resolver = object(self)
@@ -57,14 +59,11 @@ class view_resolver = object(self)
   (* Transform array accesses on views into array accesses on
    * the original array. *)
   method! private eaa (id, is) (ctx, view_map) =
-    let e = match is with
-    | [i1] -> i1
-    | _ -> failwith "NYI md views" in
     match Context.get_binding id ctx with
     | TArray _ ->
       let id' = resolve_aa_id id view_map in
-      let e'  = resolve_aa_expr id e view_map ctx in
-      EAA (id', [e']), (ctx, view_map)
+      let is' = resolve_aa_exprs id is view_map ctx in
+      EAA (id', is'), (ctx, view_map)
     | _ ->
       failwith "View resolving visitor detected array access on non-array."
 end
