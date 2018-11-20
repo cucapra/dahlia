@@ -39,7 +39,7 @@ let compile_string_without_print prog print_ast : string =
     |> show_ast print_ast "Inferred capabilities"
     |> Flatten_seq.flatten_seq
     |> show_ast print_ast "Flattened"
-  in let type_ctx = typecheck_with_error ast
+  in let type_ctx = try_with_error Type.typecheck ast
   in let ast_caps = Infer_cap.readd_cap ast (snd ast_and_cap_ctx)
   in let ast_noviews = ast_caps
     |> show_ast print_ast "View-resolved AST"
