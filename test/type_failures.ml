@@ -62,3 +62,9 @@ let%expect_test "Oversized view" =
   [%expect {|
     [Type Error] Tried to create view larger than array. Array `a' had dimension width
         `10' and view had dimension size `11'. |}]
+
+let%expect_test "View created from non-array" =
+  compile_string_with_failure "func bad_view(a: bit<32>) { let b_v = view a[0:2:1]; }";
+  [%expect {|
+    [Type Error] view must be created from existing array. `a' was of
+         type `unsigned bit<32>' |}]
