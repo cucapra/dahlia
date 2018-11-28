@@ -68,3 +68,7 @@ let%expect_test "View created from non-array" =
   [%expect {|
     [Type Error] view must be created from existing array. `a' was of
          type `unsigned bit<32>' |}]
+
+let%expect_test "View created with unrollled iterator" =
+  compile_string_with_failure "func unrolled_view(a: bit<32>[10]) { for (let i = 0..9) unroll 3 { let v_a = view a [i:2:1]; } }";
+  [%expect {| [Type Error] view offset must be single value. Supplied value represents multiple. |}]
