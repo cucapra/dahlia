@@ -89,19 +89,19 @@ Introduction goes here.
 \section{Related Works}
 
 \subsection{Halide}
-Halide [CITE] is a domain specific language (DSL) that provides high-level constructs for writing image processing
+Halide \cite{halide} is a domain specific language (DSL) that provides high-level constructs for writing image processing
 programs. It separates the high-level structure of an algorithm from the
 performance trade-offs such as caching, loop fusion, etc.\ and automatically to
 infer optimal schedules for them. \sys{} on the other provides lower-level constructs
 that expose the resource constraints imposed by the hardware. \sys{} can act as a
 compilation target for compiling DSLs like Halide to hardware.
 
-There have also been efforts to compile Halide to hardware [CITE] using ad-hoc
+There have also been efforts to compile Halide to hardware \cite{halide-hls} using ad-hoc
 restrictions on the language. \sys{} provides a more principled approach for
 exposing these ad-hoc constraints.
 
 \subsection{Spatial}
-Spatial [CITE] is a domain specific programming language embedded in Scala
+Spatial \cite{spatial} is a domain specific programming language embedded in Scala
 and compiles to Chisel. It introduces several new abstractions for extracting
 parallelism out of accelerators. \sys{} is not Spatial because \ldots
 
@@ -127,7 +127,7 @@ spatial and leave the safety checking and compilation to the compiler?}
 \end{acks}
 
 %% Bibliography
-%\bibliography{bibfile}
+\bibliography{./bib/venues,./bib/papers}
 
 %% Appendix
 \appendix
