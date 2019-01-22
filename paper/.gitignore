@@ -2,5 +2,5 @@
 *.log
 *.out
 *.aux
-main.pdf
+*.pdf
 revision.tex

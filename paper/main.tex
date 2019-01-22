@@ -13,13 +13,19 @@
 
 \begin{document}
 
-\title[]{Seashell: Safe High-level Synthesis}
+\title[]{\sys{}: Safe High-level Synthesis}
 
-\author{First1 Last1}
-\affiliation{\institution{Institution1}\country{Country1}}
-\email{first1.last1@inst1.edu}
-\author{First2 Last2}
-\affiliation{\institution{Institution2a}\country{Country2a} }
+\author{Rachit Nigam}
+\affiliation{\institution{Cornell University}\country{U.S.A.}}
+\email{rnigam@cs.cornell.edu}
+\author{Sachille Atapattu}
+\affiliation{\institution{Cornell University}\country{U.S.A.} }
+\email{first2.last2@inst2b.org}
+\author{Theodore Bauer}
+\affiliation{\institution{Cornell University}\country{U.S.A.} }
+\email{first2.last2@inst2b.org}
+\author{Adrian Sampson}
+\affiliation{\institution{Cornell University}\country{U.S.A.} }
 \email{first2.last2@inst2b.org}
 
 
@@ -35,13 +41,13 @@ too low level and (2) high-level synthesis (HLS) tools, which promise to
 raise the level of abstraction, provide ad hoc mechanisms on top of unsafe
 languages like C and C++ and repurpose wildly inefficient EDA flows. Towards
 the goal of creating a safe and expressive abstractions for hardware
-programming, we present Seashell, a programming language that exposes the
+programming, we present \sys{}, a programming language that exposes the
 unique resource constraints in hardware and guarantees hardware
 realizability. This is in contrast to contemporary HLS tools which try, and
 fail, at transparently compiling C/C++ programs to hardware. HLS tools often
 add inefficient hardware in order to compile these programs and make it
 significantly harder to understand the performance characteristics of the
-generated hardware. Instead of hiding hardware constraints, Seashell exposes
+generated hardware. Instead of hiding hardware constraints, \sys{} exposes
 them to the developer and simplifies reasoning about them.
 \end{abstract}
 
@@ -83,19 +89,21 @@ Introduction goes here.
 \section{Related Works}
 
 \subsection{Halide}
-Halide [CITE] is a domain specific language for writing image processing
-pipelines that allows programmers to separately specify the processing pipeline
-and the scheduler. It has also been extended to be compiled to hardware [CITE].
+Halide [CITE] is a domain specific language (DSL) that provides high-level constructs for writing image processing
+programs. It separates the high-level structure of an algorithm from the
+performance trade-offs such as caching, loop fusion, etc.\ and automatically to
+infer optimal schedules for them. \sys{} on the other provides lower-level constructs
+that expose the resource constraints imposed by the hardware. \sys{} can act as a
+compilation target for compiling DSLs like Halide to hardware.
 
-\rn{One question I want to answer here in particular is that most people are
-using accelerators for doing array based calculations, why not go the Halide
-way and build a language that has the right high level primitives for that?}
-\xxx[as]{Yep, this question---``why not use a DSL?''---is an important one to answer. The gist of my position is that DSLs represent a trade-off that is sometimes but not always appropriate: you specify things at a very high level, but you get less control over how the hardware actually works and you have to make do with the primitives that the DSL designers offer you. Even with a million DSLs out there, there will \emph{still} be tasks for which a general-purpose language is what you want---if nothing else, then at least for the ``glue'' between chunks of code implemented in DSLs.}
+There have also been efforts to compile Halide to hardware [CITE] using ad-hoc
+restrictions on the language. \sys{} provides a more principled approach for
+exposing these ad-hoc constraints.
 
 \subsection{Spatial}
 Spatial [CITE] is a domain specific programming language embedded in Scala
 and compiles to Chisel. It introduces several new abstractions for extracting
-parallelism out of accelerators. Seashell is not Spatial because \ldots
+parallelism out of accelerators. \sys{} is not Spatial because \ldots
 
 \rn{Similar question. Why not build higher level primitives like
 spatial and leave the safety checking and compilation to the compiler?}
