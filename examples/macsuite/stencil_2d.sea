@@ -1,0 +1,16 @@
+func stencil (orig: TYPE[row_size bank(f_size)][col_size bank(f_size)], sol: TYPE[row_size][col_size], filter: TYPE[f_size bank(f_size)][f_size bank(f_size)], temp: TYPE, mul: TYPE ) {
+
+    stencil_label1: for (let r = 0..row_size-f_size) {
+        stencil_label2: for (let c = 0..col_size-f_size) {
+            temp = (TYPE)0;
+            stencil_label3: for (let k1 = 0..f_size-1) unroll f_size {
+                stencil_label4: for (let k2 = 0..f_size-1) unroll f_size {
+                    mul = filter[k1][k2] * orig[r+k1][c+k2];
+                    temp += mul;
+                }
+            }
+            sol[r][c] = temp;
+        }
+    }
+
+}
