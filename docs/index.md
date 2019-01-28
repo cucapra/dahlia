@@ -25,6 +25,9 @@ Read some notes about aspects of Seashell's design:
 
 * [Appendix](appendix.html)
 
+* [Spatial Notes](spatial.html)
+  Some notes about spatial.
+
 Tutorial on hardware programming with Seashell:
 
 * [An introduction to Seashell.](tutorial/)
