@@ -96,6 +96,7 @@ and command =
   | CFuncDef of (id * (id * type_node) list * command)
   | CTypeDef of (id * type_node)
   | CApp of (id * expr list)
+  | CReduce of (expr * binop * id)
   | CExpr of expr
   | CEmpty
   [@@deriving show {with_path = false}]

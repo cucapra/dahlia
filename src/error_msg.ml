@@ -89,7 +89,7 @@ let static_bank_error =
   "[Type error] Bank accessor must be static"
 
 let improper_unroll =
-  "[Type Error] unroll factor must be a multiple of banking factor"
+  sprintf "[Type Error] Unroll constants != banking constant for memory `%s'"
 
 let cap_non_array =
   "[Type Error] Only array expressions are allowed in capability statements."

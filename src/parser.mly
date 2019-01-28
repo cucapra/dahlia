@@ -67,6 +67,7 @@ acmd:
   | FOR LPAREN LET ID EQUAL expr RANGE_DOTS expr RPAREN
     LBRACK cmd RBRACK                                       { CFor ($4, $6, $8, 1, $11, CEmpty) }
   | expr SEMICOLON                                          { CExpr $1 }
+  | expr binop EQUAL ID                                     { CReduce ($1, $2, $4) }
 
 expr:
   | ID access                                   { EAA ($1, $2) }

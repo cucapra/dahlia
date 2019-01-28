@@ -40,8 +40,8 @@ class ['s] ast_mapper = object(self)
     | EFloat f -> self#efloat f st
     | EVar v -> self#evar v st
     | EBool b -> self#ebool b st
-    | EBinop (op, e1, e2) -> self#ebinop (op, e1, e2) st
-    | EAA (id, es) -> self#eaa (id, es) st
+    | EBinop args -> self#ebinop args st
+    | EAA args -> self#eaa args st
 
   method private eint i st = EInt i, st
   method private ebool i st = EBool i, st
@@ -60,18 +60,23 @@ class ['s] ast_mapper = object(self)
   method private capability cap st = cap, st
 
   method command (cmd : command) (st : 's) : command * 's = match cmd with
-    | CCap (cap, e, id) -> self#ccap (cap, e, id) st
-    | CAssign (id, e) -> self#cassign (id, e) st
-    | CFor (id, e1, e2, i, c1, c2) -> self#cfor (id, e1, e2, i, c1, c2) st
-    | CReassign (e1, e2) -> self#creassign (e1, e2) st
-    | CIf (e, c) -> self#cif (e, c) st
+    | CCap args -> self#ccap args st
+    | CAssign args -> self#cassign args st
+    | CFor args -> self#cfor args st
+    | CReassign args -> self#creassign args st
+    | CIf args -> self#cif args st
     | CSeq cs -> self#cseq cs st
-    | CFuncDef (i, g, c) -> self#cfuncdef (i, g, c) st
-    | CTypeDef (i, t) -> self#ctypedef (i, t) st
-    | CApp (id, es) -> self#capp (id, es) st
+    | CFuncDef args -> self#cfuncdef args st
+    | CTypeDef args -> self#ctypedef args st
+    | CApp args -> self#capp args st
+    | CReduce args -> self#creduce args st
     | CExpr e -> self#cexpr e st
     | CEmpty -> self#cempty st
 
+  method private creduce (e, b, id) st =
+    let e', st1 = self#expr e st in
+    let b', st2 = self#binop b st1 in
+    CReduce (e', b', id), st2
   method private clist_visit cs st = self#list_visit self#command cs st
   method private ccap (cap, e, id) st =
     let cap', st1 = self#capability cap st in

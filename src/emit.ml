@@ -117,6 +117,7 @@ let rec emit_cmd i cmd =
   | CExpr e         -> emit_expr e
   | CEmpty          -> ";"
   | CTypeDef _      -> failwith "CTypeDef should not occur in AST"
+  | CReduce _       -> failwith "Reduce NYI"
 
 and emit_cap (cap, e, _) i = match cap with
   | Read -> comment ("cap read: " ^ emit_expr e) |> indent i

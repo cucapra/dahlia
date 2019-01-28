@@ -33,30 +33,6 @@ and check_binop binop e1 e2 c : type_node * gamma =
   try (Op_util.type_of_op t1 t2 binop), c2
   with Op_util.IllegalOperation -> raise @@ TypeError (illegal_op binop t1 t2)
 
-(* [check_banked_aa id idx1 idx2 (c, d)] represents a _banked
- * array access_, with a bank number specified by [idx1] and an index into this
- * bank specified by [idx2]. It is the value [t, (c', d')] where [t] is the
- * type of the elements of array [id], and (c', d') is an updated context
- * resulting from type-checking [idx1] and [idx2], and consuming the appopriate
- * indices of array [id]. Raises [TypeError s] if:
- *   - [idx1] or [idx2] are illegal types (non-index types)
- *   - illegal banks are accessed (i.e. already-consumed indices)
-and check_banked_aa id idx1 idx2 c : type_node * gamma =
-  let idx1_t, c1 = check_expr idx1 c in
-  let idx2_t, c2 = check_expr idx2 c1 in
-  match idx1_t, idx2_t, Context.get_binding id c2 with
-  | TIndex ((ls_1, _), _) as t1, (TIndex (t2s, _) as t2), TArray (a_t, _) ->
-    if not (is_svalue t2s) then raise @@ TypeError (illegal_banked_aa t2 ls_1 id)
-    else
-      if is_static t1 then
-        try a_t, Context.consume_binding id ls_1 c2
-        with AlreadyConsumed i -> raise @@ TypeError (illegal_bank i id)
-      else
-        raise (TypeError static_bank_error)
-  | t1, _, _ -> raise @@ TypeError (illegal_accessor_type t1 id)
-
-*)
-
 (** FIXME(rachit): Gamma needs to be correctly thread through in List.map *)
 and get_unroll_factors id idx_exprs c =
   let get_unroll_factor idx = match check_expr idx c with
@@ -88,7 +64,7 @@ and check_aa id idx_exprs c : type_node * gamma =
           t, (Context.consume_binding id c)
         with AlreadyConsumed -> raise @@ TypeError (illegal_bank id)
       else
-        raise (TypeError improper_unroll)
+        raise @@ TypeError (improper_unroll id)
   | _ -> raise @@ TypeError (not_an_array id)
 
 
@@ -106,7 +82,7 @@ let rec check_cmd cmd ctx : gamma =
   | CCap args      -> check_cap args ctx
   | CExpr expr     -> snd @@ check_expr expr ctx
   | CEmpty         -> ctx
-  | CTypeDef _     -> raise (Failure "Impossible: Found CTypeDef in AST")
+  | CTypeDef _ | CReduce _     -> raise (Failure "Impossible: Found CTypeDef in AST")
 
 and check_seq clist ctx =
   let f c cmd = check_cmd cmd c in
