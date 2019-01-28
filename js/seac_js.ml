@@ -1,6 +1,6 @@
 open Seashell
 open Compile_utils
-open Js
+open Js_of_ocaml.Js
 
 let _ =
   export "seashell"
