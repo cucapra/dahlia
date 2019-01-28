@@ -88,6 +88,9 @@ When omitted, stride is set to $1$, which creates a block-like view.
 
 ## Typing a view
 
+**TODO**: This section is stale. The new contrains come after shrink and flex
+being defined.
+
 As mentioned before, _views_ are treated as simple arrays once they are created.
 An array is defined as follows:
 
@@ -207,6 +210,41 @@ The final limitation is orthogonal to the concept of _views_.
 Let Rachit know if there are other limitations you can think of.
 
 :::
+
+## Constraint operations
+
+Different views need different amounts of hardware depending on their structure.
+We provide two operators `shrink` and `flex` to tell the compiler and the type
+checker what kind of hardware needs to be added to the in the underlying
+design.
+
+**Note(rachit)**: Mark mentioned that it might be useful to have a compiler
+mode where we automatically infer calls to `shrink` and `flex` and just warn
+the user. This definitely makes sense for the use case when someone is trying
+to get a simple design off the ground and build something.
+
+### Shrinking arrays
+
+The `shrink` operation has the following syntax:
+
+```
+s = shrink(arr, bank_num);
+```
+
+defines a new array `s` with the underlying array `arr` and banking factor
+`bank_num`. The constraint on `bank_num` is `b % bank_num = 0` where `b` is
+the banking factor for `arr`. While a call to `shrink` does not create a new
+memory, it does add new hardware (muxes) to "shrink" the array to the new
+factor. Specifically, `b / bank_num` muxes are added to the hardware design and
+all access to the `s` go through this additional hardware.
+
+### Flexible arrays
+
+The `flex` operation has the following syntax:
+
+```
+f = flex(arr, )
+```
 
 ---
 
