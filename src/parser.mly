@@ -19,7 +19,7 @@ let parse_sequence c1 c2 =
 (* Keywords *)
 %token LET IF FOR TRUE FALSE BOOL_ANNOTATION
        FLOAT_ANNOTATION MUX UNROLL BANK FUNC
-       TYPE WRITE READ AS BIT
+       TYPE WRITE READ AS BIT COLLECT
 
 (* Parentheses, brackets, etc *)
 %token LPAREN RPAREN LBRACK RBRACK LSQUARE RSQUARE
@@ -60,9 +60,13 @@ acmd:
   | IF LPAREN expr RPAREN LBRACK cmd RBRACK                 { CIf ($3, $6) }
   | expr REASSIGN expr SEMICOLON                            { CReassign ($1, $3) }
   | FOR LPAREN LET ID EQUAL expr RANGE_DOTS expr RPAREN UNROLL INT
-    LBRACK cmd RBRACK                                       { CFor ($4, $6, $8, $11, $13) }
+    LBRACK cmd COLLECT COLON cmd RBRACK                     { CFor ($4, $6, $8, $11, $13, $16) }
+  | FOR LPAREN LET ID EQUAL expr RANGE_DOTS expr RPAREN UNROLL INT
+    LBRACK cmd RBRACK                                       { CFor ($4, $6, $8, $11, $13, CEmpty) }
   | FOR LPAREN LET ID EQUAL expr RANGE_DOTS expr RPAREN
-    LBRACK cmd RBRACK                                       { CFor ($4, $6, $8, 1, $11) }
+    LBRACK cmd RBRACK COLLECT cmd COLON                     { CFor ($4, $6, $8, 1, $11, $14) }
+  | FOR LPAREN LET ID EQUAL expr RANGE_DOTS expr RPAREN
+    LBRACK cmd RBRACK                                       { CFor ($4, $6, $8, 1, $11, CEmpty) }
   | expr SEMICOLON                                          { CExpr $1 }
 
 expr:

@@ -62,6 +62,7 @@ rule token =
 
   | "if"         { IF }
   | "for"        { FOR }
+  | "collect"    { COLLECT }
   | "let"        { LET }
   | "true"       { TRUE }
   | "false"      { FALSE }

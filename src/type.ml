@@ -111,7 +111,7 @@ let rec check_cmd cmd ctx : gamma =
   match cmd with
   | CSeq clist                     -> check_seq clist ctx
   | CIf (cond, cmd)                -> check_if cond cmd ctx
-  | CFor (x, r1, r2, uo, body)     -> check_for x r1 r2 body uo ctx
+  | CFor (x, r1, r2, uo, body, col)-> check_for x r1 r2 body col uo ctx
   | CAssign (x, e1)                -> check_assignment x e1 ctx
   | CReassign (target, exp)        -> check_reassign target exp ctx
   | CFuncDef (id, args, body)      -> check_funcdef id args body ctx
@@ -140,7 +140,7 @@ and check_if cond cmd ctx =
  *   - [body], the body of the for loop
  * Additionally, unroll factor [u] influences the type bound to [id] (see Seashell
  * notes) *)
-and check_for id r1 r2 body u ctx =
+and check_for id r1 r2 body _ u ctx =
   let r1_type, ctx1 = check_expr r1 ctx in
   let r2_type, ctx2 = check_expr r2 ctx1 in
   match r1_type, r2_type with

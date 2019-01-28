@@ -77,8 +77,8 @@ and capability = Read | Write
 (* A [command] is one of the following:
  *   - [CAssign (i, e)]: a representation of assignment of
  *     expr [e] to id [i]
- *   - [CFor (i, x1, x2, u, b)]: a representation of an
- *     loop with counter variable [i], range [x1..x2], and body [b],
+ *   - [CFor (i, x1, x2, u, b, r)]: a representation of an
+ *     loop with counter variable [i], range [x1..x2], and body [b] with reducer [r],
        as well an unroll amount specified by [u].
  *   - [CReassign (t, e)]: a representation of a reassignment
  *     of target [t] to expr [e]
@@ -87,11 +87,10 @@ and capability = Read | Write
  *   - [CSeq (c1, c2)]: a representation of the command [c1]
  *     followed by [c2]
  *   - [CFuncDef, CTypeDef, CMuxDef, CApp]: TODO *)
-(** TODO(rachit): Add CEmpty *)
 and command =
   | CCap of capability * expr * id
   | CAssign of id * expr
-  | CFor of id * expr * expr * int * command
+  | CFor of id * expr * expr * int * command * command
   | CReassign of expr * expr
   | CIf of expr * command
   | CSeq of command list

@@ -121,7 +121,7 @@ let rec emit_cmd i cmd =
   | CCap (cap, e, id)          -> emit_cap (cap, e, id) i
   | CAssign (id, e)            -> emit_assign (id, e) i
   | CReassign (target, e)      -> emit_reassign (target, e) i
-  | CFor (id, r1, r2, u, body) -> emit_for (id, r1, r2, body, u) i
+  | CFor (id, r1, r2, u, body, collect) -> emit_for (id, r1, r2, body, collect, u) i
   | CIf (cond, body)           -> emit_if (cond, body) i
   | CSeq clist                 -> emit_seq clist i
   | CFuncDef (id, args, body)  -> emit_fun (id, args, body) i
@@ -166,7 +166,8 @@ and emit_assign (id, e) i =
 and emit_reassign (target, e) i =
   concat [ (emit_expr target); " = "; (emit_expr e); ";" ] |> indent i
 
-and emit_for (id, r1, r2, body, u) i =
+and emit_for (id, r1, r2, body, collect, u) i =
+  let full_body = CSeq [body; collect] in
   let unroll_pragma =
     concat [ newline; (s_pragma_unroll (string_of_int u) (i+1)) ] in
   concat [
@@ -174,7 +175,7 @@ and emit_for (id, r1, r2, body, u) i =
     " <= "; (emit_expr r2); "; "; id; " += 1) {";
     unroll_pragma; newline
     ]
-  |> fun s -> concat [ s; (emit_cmd (i+1) body); newline; (indent i "}") ]
+  |> fun s -> concat [ s; (emit_cmd (i+1) full_body); newline; (indent i "}") ]
   |> indent i
 
 and emit_if (cond, body) i =

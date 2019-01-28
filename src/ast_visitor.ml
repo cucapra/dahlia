@@ -67,7 +67,7 @@ class ['s] ast_mapper = object(self)
   method command (cmd : command) (st : 's) : command * 's = match cmd with
     | CCap (cap, e, id) -> self#ccap (cap, e, id) st
     | CAssign (id, e) -> self#cassign (id, e) st
-    | CFor (id, e1, e2, i, c) -> self#cfor (id, e1, e2, i, c) st
+    | CFor (id, e1, e2, i, c1, c2) -> self#cfor (id, e1, e2, i, c1, c2) st
     | CReassign (e1, e2) -> self#creassign (e1, e2) st
     | CIf (e, c) -> self#cif (e, c) st
     | CSeq cs -> self#cseq cs st
@@ -86,11 +86,12 @@ class ['s] ast_mapper = object(self)
   method private cassign (id, e) st =
     let e', st' = self#expr e st in
     CAssign (id, e'), st'
-  method private cfor (id, e1, e2, i, c) st =
+  method private cfor (id, e1, e2, i, c1, c2) st =
     let e1', st1 = self#expr e1 st in
     let e2', st2 = self#expr e2 st1 in
-    let c', st3 = self#command c st2 in
-    CFor (id, e1', e2', i, c'), st3
+    let c1', st3 = self#command c1 st2 in
+    let c2', st4 = self#command c2 st3 in
+    CFor (id, e1', e2', i, c1', c2'), st4
   method private creassign (e1, e2) st =
     let e1', st1 = self#expr e1 st in
     let e2', st2 = self#expr e2 st1 in
