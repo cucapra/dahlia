@@ -1,0 +1,14 @@
+func gemm( m1: float[32][32 bank(32)], m2: float[32 bank(32)][32], prod: float[32][32], mult: float, sum: float ){
+
+    for (let i = 0..31) unroll 1 {
+        for (let j = 0..31) unroll 1 {
+            sum := 0.0;
+            for( let k = 0..31) unroll 32 {
+                mult := m1[i][k] * m2[k][j];
+                sum := mult + sum;
+            }
+            prod[i][j]  := sum;
+        }
+    }
+
+}

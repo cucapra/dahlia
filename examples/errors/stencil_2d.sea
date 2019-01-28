@@ -1,0 +1,18 @@
+func stencil (orig: float[24 bank(3)][24 bank(3)], sol: float[24][24], filter: float[3 bank(3)][3 bank(3)], temp: float, mul: float ) {
+
+    for (let r = 0..21) {
+        for (let c = 0..21) {
+            temp := 0.0;
+            for (let k1 = 0..2) unroll 3 {
+                for (let k2 = 0..2) unroll 3 {
+                    let k3 = r + k1;
+                    let k4 = c + k2;
+                    mul := filter[k1][k2] * orig[k3][k4];
+                    temp := mul + temp;
+                }
+            }
+            sol[r][c] := temp;
+        }
+    }
+
+}
