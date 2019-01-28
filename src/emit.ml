@@ -59,22 +59,10 @@ let rec emit_expr = function
   | EBool b              -> if b then "1" else "0"
   | EVar id              -> id
   | EBinop (b, e1, e2)   -> emit_binop (b, e1, e2)
-  | EBankedAA (id, b, i) -> emit_aa_phys (id, b, i)
   | EAA (id, i)          -> emit_aa_logl (id, i)
 
 and emit_binop (b, e1, e2) =
   concat [ (emit_expr e1); (string_of_binop b); (emit_expr e2) ]
-
-and emit_aa_phys (id, b, i) =
-  match !type_map id with
-  | TArray (_, d) ->
-    let bf = compute_bf d in
-    if bf != 1 then
-    concat [ id; "["; (emit_expr b); " + "; (string_of_int bf); "*("; (emit_expr i); ")]" ]
-    else
-    concat [ id; "["; (emit_expr b); " + "; (emit_expr i); ]
-  | TMux _ -> failwith "Muxes not implemented"
-  | _ -> failwith "Tried to index into non-array"
 
 (* FIXME: optimize?
  * @tedbauer What kind of optimization were you thinking off? It's generally
@@ -118,24 +106,21 @@ and emit_app (id, args) i =
 
 let rec emit_cmd i cmd =
   match cmd with
-  | CCap (cap, e, id)          -> emit_cap (cap, e, id) i
-  | CAssign (id, e)            -> emit_assign (id, e) i
-  | CReassign (target, e)      -> emit_reassign (target, e) i
-  | CFor (id, r1, r2, u, body, collect) -> emit_for (id, r1, r2, body, collect, u) i
-  | CIf (cond, body)           -> emit_if (cond, body) i
-  | CSeq clist                 -> emit_seq clist i
-  | CFuncDef (id, args, body)  -> emit_fun (id, args, body) i
-  | CApp (id, args)            -> emit_app (id, args) i
-  | CTypeDef _                 -> failwith "CTypeDef should not occur in AST"
-  | CMuxDef (_, mid, s)        -> emit_mux mid s i
-  | CExpr e                    -> emit_expr e
-  | CEmpty                     -> ";"
+  | CCap args       -> emit_cap args i
+  | CAssign args    -> emit_assign args i
+  | CReassign args  -> emit_reassign args i
+  | CFor args       -> emit_for args i
+  | CIf args        -> emit_if args i
+  | CSeq clist      -> emit_seq clist i
+  | CFuncDef args   -> emit_fun args i
+  | CApp args       -> emit_app args i
+  | CExpr e         -> emit_expr e
+  | CEmpty          -> ";"
+  | CTypeDef _      -> failwith "CTypeDef should not occur in AST"
 
 and emit_cap (cap, e, _) i = match cap with
   | Read -> comment ("cap read: " ^ emit_expr e) |> indent i
   | Write -> comment ("cap write: " ^ emit_expr e) |> indent i
-
-and emit_mux _ = failwith "Muxes not implemented"
 
 and emit_assign_int (id, e, typ_s) =
   concat [ typ_s; " "; id; " = "; (emit_expr e); ";" ]
@@ -166,8 +151,8 @@ and emit_assign (id, e) i =
 and emit_reassign (target, e) i =
   concat [ (emit_expr target); " = "; (emit_expr e); ";" ] |> indent i
 
-and emit_for (id, r1, r2, body, collect, u) i =
-  let full_body = CSeq [body; collect] in
+and emit_for (id, r1, r2, u, body, collect) i =
+  let full_body = cseq (body, collect) in
   let unroll_pragma =
     concat [ newline; (s_pragma_unroll (string_of_int u) (i+1)) ] in
   concat [

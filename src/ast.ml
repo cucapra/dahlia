@@ -68,9 +68,8 @@ and expr =
   | EFloat of float
   | EVar of id
   | EBool of bool
-  | EBinop of binop * expr * expr
-  | EAA of id * expr list
-  | EBankedAA of id * expr * expr
+  | EBinop of (binop * expr * expr)
+  | EAA of (id * expr list)
 
 and capability = Read | Write
 
@@ -88,16 +87,15 @@ and capability = Read | Write
  *     followed by [c2]
  *   - [CFuncDef, CTypeDef, CMuxDef, CApp]: TODO *)
 and command =
-  | CCap of capability * expr * id
-  | CAssign of id * expr
-  | CFor of id * expr * expr * int * command * command
-  | CReassign of expr * expr
-  | CIf of expr * command
+  | CCap of (capability * expr * id)
+  | CAssign of (id * expr)
+  | CFor of (id * expr * expr * int * command * command)
+  | CReassign of (expr * expr)
+  | CIf of (expr * command)
   | CSeq of command list
-  | CFuncDef of id * (id * type_node) list * command
-  | CTypeDef of id * type_node
-  | CMuxDef of id * id * int
-  | CApp of id * expr list
+  | CFuncDef of (id * (id * type_node) list * command)
+  | CTypeDef of (id * type_node)
+  | CApp of (id * expr list)
   | CExpr of expr
   | CEmpty
   [@@deriving show {with_path = false}]
@@ -114,3 +112,9 @@ let string_of_binop = function
   | BopTimes -> "*"
   | BopAnd -> "&&"
   | BopOr -> "||"
+
+let cseq = function
+  | (c1, CEmpty) -> c1
+  | (CEmpty, c2) -> c2
+  | (CSeq c1, c2) ->  CSeq (c1 @ [c2])
+  | c1, c2 -> CSeq ([c1; c2])

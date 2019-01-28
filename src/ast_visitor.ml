@@ -42,7 +42,6 @@ class ['s] ast_mapper = object(self)
     | EBool b -> self#ebool b st
     | EBinop (op, e1, e2) -> self#ebinop (op, e1, e2) st
     | EAA (id, es) -> self#eaa (id, es) st
-    | EBankedAA (id, e1, e2) -> self#ebankedaa (id, e1, e2) st
 
   method private eint i st = EInt i, st
   method private ebool i st = EBool i, st
@@ -57,10 +56,6 @@ class ['s] ast_mapper = object(self)
   method private eaa (id, es) st =
     let es', st' = self#elist_visit es st in
     EAA (id, es'), st'
-  method private ebankedaa (id, e1, e2) st =
-    let e1', st1 = self#expr e1 st in
-    let e2', st2 = self#expr e2 st1 in
-    EBankedAA (id, e1', e2'), st2
 
   method private capability cap st = cap, st
 
@@ -73,7 +68,6 @@ class ['s] ast_mapper = object(self)
     | CSeq cs -> self#cseq cs st
     | CFuncDef (i, g, c) -> self#cfuncdef (i, g, c) st
     | CTypeDef (i, t) -> self#ctypedef (i, t) st
-    | CMuxDef (i1, i2, i) -> self#cmuxdef (i1, i2, i) st
     | CApp (id, es) -> self#capp (id, es) st
     | CExpr e -> self#cexpr e st
     | CEmpty -> self#cempty st
@@ -112,7 +106,6 @@ class ['s] ast_mapper = object(self)
   method private ctypedef (id, t) st =
     let t', s' = self#type_node t st in
     CTypeDef (id, t'), s'
-  method private cmuxdef (i1, i2, i) st = CMuxDef (i1, i2, i), st
   method private capp (i, es) st =
     let es', st' = self#elist_visit es st in
     CApp (i, es'), st'

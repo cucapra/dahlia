@@ -43,12 +43,6 @@ class infer_read_capabilities = object (self)
     let exp = EAA (name, es') in
     self#array_access_helper name exp st1
 
-  method! private ebankedaa (name, e1, e2) st =
-    let e1', st1 = self#expr e1 st in
-    let e2', st2 = self#expr e2 st1 in
-    let exp = EBankedAA (name, e1', e2') in
-    self#array_access_helper name exp st2
-
   (** Don't recur into CCap *)
   method! private ccap (cap, e, id) st = match cap with
     | Read -> CCap (cap, e, id) , ((e, id) :: (fst st), snd st)
@@ -87,7 +81,7 @@ class infer_write_capabilities = object
 
   method! private creassign (e1, e2) st = match (List.assoc_opt e1 st, e1) with
     | Some id, _ -> super#creassign (EVar id, e2) st
-    | None, EAA (id, _) | None, EBankedAA (id, _, _) ->
+    | None, EAA (id, _) ->
         let id1 = GN.fresh id in
         let cap = CCap (Write, e1, id1) in
         let e2', st' = super#expr e2 st in

@@ -18,7 +18,7 @@ let parse_sequence c1 c2 =
 
 (* Keywords *)
 %token LET IF FOR TRUE FALSE BOOL_ANNOTATION
-       FLOAT_ANNOTATION MUX UNROLL BANK FUNC
+       FLOAT_ANNOTATION UNROLL BANK FUNC
        TYPE WRITE READ AS BIT COLLECT
 
 (* Parentheses, brackets, etc *)
@@ -52,7 +52,6 @@ cmd:
 acmd:
   | WRITE expr AS ID SEMICOLON                              { CCap(Write, $2, $4)}
   | READ expr AS ID SEMICOLON                               { CCap(Read, $2, $4)}
-  | MUX INT ID LPAREN ID RPAREN SEMICOLON                   { CMuxDef ($3, $5, $2) }
   | ID LPAREN args RPAREN SEMICOLON                         { CApp ($1, $3) }
   | TYPE ID EQUAL type_annotation SEMICOLON                 { CTypeDef ($2, $4) }
   | FUNC ID LPAREN annotated_args RPAREN LBRACK cmd RBRACK  { CFuncDef ($2, $4, $7) }
@@ -64,14 +63,13 @@ acmd:
   | FOR LPAREN LET ID EQUAL expr RANGE_DOTS expr RPAREN UNROLL INT
     LBRACK cmd RBRACK                                       { CFor ($4, $6, $8, $11, $13, CEmpty) }
   | FOR LPAREN LET ID EQUAL expr RANGE_DOTS expr RPAREN
-    LBRACK cmd RBRACK COLLECT cmd COLON                     { CFor ($4, $6, $8, 1, $11, $14) }
+    LBRACK cmd COLLECT COLON cmd RBRACK                     { CFor ($4, $6, $8, 1, $11, $14) }
   | FOR LPAREN LET ID EQUAL expr RANGE_DOTS expr RPAREN
     LBRACK cmd RBRACK                                       { CFor ($4, $6, $8, 1, $11, CEmpty) }
   | expr SEMICOLON                                          { CExpr $1 }
 
 expr:
   | ID access                                   { EAA ($1, $2) }
-  | ID LBRACK expr RBRACK LSQUARE expr RSQUARE  { EBankedAA ($1, $3, $6) }
   | LPAREN expr RPAREN                          { $2 }
   | expr binop expr                             { EBinop ($2, $1, $3) }
   | INT                                         { EInt $1 }

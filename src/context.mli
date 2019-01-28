@@ -2,7 +2,7 @@ open Ast
 
 (* [(AlreadyConsumed i)] represents that an array access was performed
    using an index [i] that has already been consumed. *)
-exception AlreadyConsumed of int
+exception AlreadyConsumed
 
 (* [(NoBinding id)] represents that the binding for [id] is missing in gamma. *)
 exception NoBinding of id
@@ -22,9 +22,6 @@ val get_binding : id -> gamma -> type_node
 (* [consume_aa id n g] is [g'] where [g'] is a gamma with the
    index [n] of array with id [id] is consumed. Raises [AlreadyConsumed] if
    the [n] is already consumed. *)
-val consume_aa : id -> int -> gamma -> gamma
+val consume_binding : id -> gamma -> gamma
 
-(* [consume_aa_lst id [i..k] g] is [g'] where [g'] is a gamma with
-   the indices i..k of array [id] consumed. Raises [AlreadyConsumed] if
-   an element in [i..k] is already consumed. *)
-val consume_aa_lst : id -> int list -> gamma -> gamma
+val renew_all_bindings : gamma -> gamma

@@ -50,7 +50,6 @@ rule token =
   | "read"       { READ }
   | "as"         { AS }
 
-  | "mux"        { MUX }
   | "bank"       { BANK }
   | "unroll"     { UNROLL }
   | "func"       { FUNC }

@@ -36,8 +36,8 @@ let rec string_of_type = function
 let id_already_bound id =
   sprintf "`%s' already bound in this context. Cannot shadow variables." id
 
-let illegal_bank i id =
-  sprintf "[Type error] Bank %d already consumed for memory `%s'" i id
+let illegal_bank id =
+  sprintf "[Type error] Memory `%s' already consumed. " id
 
 let access_without_index_type typ =
   sprintf "[Type error] Cannot index into array with %s; expected an index type."

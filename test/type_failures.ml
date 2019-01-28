@@ -12,11 +12,6 @@ let%expect_test "Cannot access one dimensional array as multidimensional" =
   [%expect {|
     [Type Error] array `a' has 1 dimension; attempted array access implies 2 dimensions |}]
 
-let%expect_test "Cannot access non-existent bank" =
-  compile_string_with_failure "func foo(a: bit<32>[10], x: bit<32>) { a{1}[1]; }";
-  [%expect {|
-    [Type error] Bank 1 already consumed for memory `a' |}]
-
 let%expect_test "Cannot assign incorrect type to array" =
   compile_string_with_failure "func foo(a: bit<32>[10], x: bool) { a[1] := x; }";
   [%expect {|
@@ -30,17 +25,17 @@ let%expect_test "Cannot reassign to different type" =
 let%expect_test "Cannot write to array twice" =
   compile_string_with_failure "func foo(a: bit<32>[10]) { a[1] := 1; a[1] := 1; }";
   [%expect {|
-    [Type error] Bank 0 already consumed for memory `a5' |}]
+    [Type error] Memory `a5' already consumed. |}]
 
 let%expect_test "Cannot write to array twice with explicit cap" =
   compile_string_with_failure "func foo(a: bit<32>[10]) { write a[1] as a1; a1 := 1; a1 := 1; }";
   [%expect {|
-    [Type error] Bank 0 already consumed for memory `a1' |}]
+    [Type error] Memory `a1' already consumed. |}]
 
 let%expect_test "Cannot read and write with same array" =
   compile_string_with_failure "func foo(a: bit<32>[10]) { a[1] := 1; let x = a[1]; }";
   [%expect {|
-    [Type error] Bank 0 already consumed for memory `a' |}]
+    [Type error] Memory `a' already consumed. |}]
 
 let%expect_test "Cannot shadow variables" =
   compile_string_with_failure "func foo(a: bit<32>[10]) { let a = 10; }";
