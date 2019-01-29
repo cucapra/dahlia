@@ -165,7 +165,7 @@ and check_assignment id exp ctx =
 
 and fst_larger (r1:int*offset) (r2:int*offset) =
   match r1, r2 with
-  | (l1, Lin h1), (l2, Lin h2) -> h1-l1 < l2-h2
+  | (l1, Lin h1), (l2, Lin h2) -> h1-l1 < h2-l2
   | (_, Lin h1),  (_, Exp h2)  -> (Core.Int.floor_log2 h1)<h2
   | (_, Exp h1),  (_, Lin h2)  -> h1<(Core.Int.floor_log2 h2)
   | (_, Exp h1),  (_, Exp h2)  -> h1<h2
