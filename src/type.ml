@@ -163,19 +163,19 @@ and check_assignment id exp ctx =
   let (t, c) = check_expr exp ctx in
   Context.add_binding id t c
 
-and fst_larger (r1:int*offset) (r2:int*offset) =
+and fst_smaller (r1:int*offset) (r2:int*offset) =
   match r1, r2 with
   | (l1, Lin h1), (l2, Lin h2) -> h1-l1 < h2-l2
   | (_, Lin h1),  (_, Exp h2)  -> (Core.Int.floor_log2 h1)<h2
   | (_, Exp h1),  (_, Lin h2)  -> h1<(Core.Int.floor_log2 h2)
   | (_, Exp h1),  (_, Exp h2)  -> h1<h2
 
-(** [check_bitsizes target v] is (). It raises [TypeError] if [target]
- * is represented with less bits than [v]. *)
+(** [check_bitsizes t1 t2] is (). It raises [TypeError] if [t1]
+ * is represented with less bits than [t2]. *)
 and check_bitsizes t1 t2 =
   match t1, t2 with
   | TIndex (_, r1), TIndex (_, r2) ->
-    if fst_larger r1 r2 then
+    if fst_smaller r1 r2 then
       raise @@ TypeError (reassign_bit_violation t1 t2)
   | _ -> ()
 
