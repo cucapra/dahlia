@@ -42,13 +42,18 @@ let compute_array_size dims =
 
 let type_str = function
   | TBool -> "int"
-  | TIndex (_, (_, hs)) ->
+  | TIndex (_, (_, hd)) ->
     let bits_st =
-      if hs=1 (* static number, don't annotate *) then ""
-      else Core.Int.floor_log2 hs |> string_of_int in
+      match hd with
+      | Lin 1 -> (* static number, don't annotate *) ""
+      | Exp 0 -> (* static number, don't annotate *) ""
+      | Exp n -> string_of_int n
+      | Lin n -> Core.Int.floor_log2 n |> string_of_int in
     let int_st =
-      if hs=1 then "int"
-      else "uint" in
+      match hd with
+      | Lin 1 -> "int"
+      | Exp 0 -> "int"
+      | _     -> "uint" in
     concat [ int_st; bits_st ]
   | TFloat -> "float"
   | t -> failwith (Printf.sprintf "Cannot emit type %s." (show_type_node t))

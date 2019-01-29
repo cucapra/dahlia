@@ -99,7 +99,7 @@ bit_annotation:
   | BIT LT INT GT { $3 }
 
 basic_type:
-  | bit_annotation              { TIndex ((0, 1), (0, Core.Int.pow 2 $1)) }
+  | bit_annotation              { TIndex ((0, 1), (0, Exp $1)) }
   | BOOL_ANNOTATION             { TBool }
   | FLOAT_ANNOTATION            { TFloat }
   | ID                          { TAlias $1 }

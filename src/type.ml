@@ -17,7 +17,11 @@ let types_eq t1 t2 = match t1, t2 with
 let is_svalue (l, h) = h - l = 1
 
 let is_static = function
-  | TIndex ((ls, hs), (ld, hd)) -> (hs - ls = 1) && (hd - ld = 1)
+  | TIndex ((ls, hs), (ld, hd)) ->
+    begin match ld, hd with
+    | 0, Lin 1 -> hs - ls = 1
+    | _ -> false
+    end
   | _ -> false
 
 (** [check_expr exp (ctx, delta)] is [t, (ctx', delta')], where [t] is the
@@ -28,7 +32,7 @@ let rec check_expr exp ctx : type_node * gamma =
   match exp with
   | EFloat _                   -> TFloat, ctx
   | EBool _                    -> TBool, ctx
-  | EInt i                     -> TIndex ((i, i+1), (0, 1)), ctx
+  | EInt i                     -> TIndex ((i, i+1), (0, Lin 1)), ctx
   | EVar x                     -> Context.get_binding x ctx, ctx
   | EBinop (binop, e1, e2)     -> check_binop binop e1 e2 ctx
   | EBankedAA _ | EAA _        ->
@@ -147,7 +151,7 @@ and check_for id r1 r2 body u ctx =
   | TIndex ((ls_1, _), _) as t1, (TIndex ((ls_2, _), _) as t2) ->
     if is_static t1 && is_static t2 then
       let range_size = ls_2 - ls_1 + 1 in
-      let typ = TIndex ((0, u), (0, (range_size/u)))
+      let typ = TIndex ((0, u), (0, Lin (range_size/u)))
       in check_cmd body (Context.add_binding id typ ctx2)
     else raise @@ TypeError (range_static_error t1 t2)
   | t1, t2 -> raise @@ TypeError (range_error t1 t2)
@@ -159,12 +163,19 @@ and check_assignment id exp ctx =
   let (t, c) = check_expr exp ctx in
   Context.add_binding id t c
 
+and fst_larger (r1:int*offset) (r2:int*offset) =
+  match r1, r2 with
+  | (l1, Lin h1), (l2, Lin h2) -> h1-l1 < l2-h2
+  | (_, Lin h1),  (_, Exp h2)  -> (Core.Int.floor_log2 h1)<h2
+  | (_, Exp h1),  (_, Lin h2)  -> h1<(Core.Int.floor_log2 h2)
+  | (_, Exp h1),  (_, Exp h2)  -> h1<h2
+
 (** [check_bitsizes target v] is (). It raises [TypeError] if [target]
  * is represented with less bits than [v]. *)
 and check_bitsizes t1 t2 =
   match t1, t2 with
-  | TIndex (_, (ld1, hd1)), TIndex (_, (ld2, hd2)) ->
-    if hd1-ld1 < hd2-ld2 then
+  | TIndex (_, r1), TIndex (_, r2) ->
+    if fst_larger r1 r2 then
       raise @@ TypeError (reassign_bit_violation t1 t2)
   | _ -> ()
 

@@ -1,7 +1,9 @@
 (* Definitions for various ast and type nodes. *)
 
+type offset = Lin of int | Exp of int
+
 (* Type for identifiers. *)
-type id = string
+and id = string
 
 (* A [type_node] is one of the following:
  *   - [TBool]: a boolean type
@@ -29,7 +31,7 @@ and type_node =
   | TMux of id * int
   | TLin of type_node
   | TArray of type_node * (int * int) list
-  | TIndex of (int * int) * (int * int)
+  | TIndex of (int * int) * (int * offset)
   | TFunc of type_node list
 
 and binop =

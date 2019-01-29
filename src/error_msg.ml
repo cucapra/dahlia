@@ -7,21 +7,28 @@ exception TypeError of string
  *  - [true] if [d] is (0, 2^n) for some n
     - [false] otherwise *)
 let is_ubit (ld, hd) =
-  ld=0 && hd <> 0 && hd land (hd-1) = 0
+  match (ld, hd) with
+  | 0, Exp _ -> true
+  | _ -> false
+
+let string_of_offset = function
+  | Exp e -> string_of_int e
+  | Lin l -> string_of_int l
 
 (* [pprint_idx s d] is a string representation of the index type
  * [TIndex (s, d)), which is:
  *  - unsigned bit<n> if [s] is (0, 1), and [d] is (0..2^n)
  *  - idx<...> otherwise *)
-let pprint_idx s d =
+let pprint_idx (s:int*int) (d:int*offset) =
   let (ls, hs), (ld, hd) = s, d in
-    if (ls, hs) = (0, 1) && is_ubit d then
-      sprintf "unsigned bit<%s>" @@ string_of_int (Core.Int.floor_log2 hd)
-    else sprintf "idx<%s..%s, %s..%s>"
-      (string_of_int ls)
-      (string_of_int hs)
-      (string_of_int ld)
-      (string_of_int hd)
+    if (ls, hs) = (0, 1) && is_ubit (ld, hd) then
+      sprintf "unsigned bit<%s>" @@ string_of_offset hd
+    else
+      sprintf "idx<%s..%s, %s..%s>"
+        (string_of_int ls)
+        (string_of_int hs)
+        (string_of_int ld)
+        (string_of_offset hd)
 
 let rec string_of_type = function
   | TBool -> "bool"
