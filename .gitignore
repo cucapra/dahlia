@@ -1,7 +1,5 @@
-_build
-.merlin
-.DS_Store
-seashell.wiki/*
-seashell.install
-out/
-docs/*.pdf
+### Scala ###
+*.class
+*.log
+target/
+project/
