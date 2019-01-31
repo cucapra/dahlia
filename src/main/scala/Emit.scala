@@ -13,11 +13,6 @@ object Emit extends PrettyPrinter {
   private def scope(doc: Doc): Doc =
     lbrace <@> indent(doc) <@> rbrace
 
-  private implicit def op2ToDoc(op: Op2): Doc = op match {
-    case OpEq => "="
-    case OpAdd => "+"
-  }
-
   private implicit def typeToDoc(typ: Type): Doc = typ match {
     case TBool | TIndex(_, _) | TStaticInt(_) => "int"
     case TSizedInt(_) => value(typ)
@@ -28,7 +23,7 @@ object Emit extends PrettyPrinter {
     case EInt(i) => value (i)
     case EBool(b) => value(if(b) 1 else 0)
     case EVar(id) => value(id)
-    case EBinop(op, e1, e2) => e1 <+> op <+> e2
+    case EBinop(op, e1, e2) => e1 <+> op.toString <+> e2
     case EAA(id, idxs) => id <> hcat(idxs.map(idx => brackets(idx)))
   }
 

@@ -20,6 +20,9 @@ object TypeErrors {
   case class IncorrectAccessDims(id: Id, exp: Int, actual: Int) extends RuntimeException(
     s"Incorrect number of dimensions used to access $id. Expected: $exp, actual: $actual."
   )
+  case class NoJoin(t1: Type, t2: Type) extends RuntimeException(
+    s"$t1 and $t2 are incomparable. Cannot create a join."
+  )
 
 }
 

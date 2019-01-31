@@ -3,6 +3,7 @@ package fuselang
 object Syntax {
 
   import TypeErrors._
+  import scala.math.{max,log10,ceil}
 
   type Id = String
 
@@ -11,6 +12,18 @@ object Syntax {
       case (TStaticInt(_), TStaticInt(_)) => true
       case (TStaticInt(_), TSizedInt(_)) | (TSizedInt(_), TStaticInt(_)) => true
       case _ => this == that
+    }
+
+    def join(that: Type, op: (Int, Int) => Int): Type = (this, that) match {
+      case (TSizedInt(s1), TSizedInt(s2)) => TSizedInt(max(s1, s2))
+      case (TStaticInt(v1), TStaticInt(v2)) => TStaticInt(op(v1, v2))
+      case (TStaticInt(v), TSizedInt(s)) => {
+        TSizedInt(max(s, ceil(log10(v)/log10(2)).toInt))
+      }
+      case (TSizedInt(s), TStaticInt(v)) => {
+        TSizedInt(max(s, ceil(log10(v)/log10(2)).toInt))
+      }
+      case (t1, t2) => throw NoJoin(t1, t2)
     }
   }
   case object TBool extends Type {
@@ -25,9 +38,38 @@ object Syntax {
   case class TArray(typ: Type, dims: List[(Int, Int)]) extends Type
   case class TIndex(static: (Int, Int), dynamic: (Int, Int)) extends Type
 
-  sealed trait Op2
+  sealed trait Op2 {
+    override def toString = this match {
+      case OpEq => "=="
+      case OpNeq => "!="
+      case OpLt => "<"
+      case OpLte => "<="
+      case OpGt => ">"
+      case OpGte => ">="
+      case OpAdd => "+"
+      case OpSub => "-"
+      case OpTimes => "*"
+      case OpDiv => "/"
+    }
+
+    def toFun: (Int, Int) => Int = this match {
+      case OpAdd => _ + _
+      case OpTimes => _ * _
+      case OpDiv => _ / _
+      case OpSub => _ - _
+      case _ => throw MsgError(s"toFun not defined on $this")
+    }
+  }
   case object OpEq extends Op2
+  case object OpNeq extends Op2
   case object OpAdd extends Op2
+  case object OpSub extends Op2
+  case object OpTimes extends Op2
+  case object OpDiv extends Op2
+  case object OpLt extends Op2
+  case object OpLte extends Op2
+  case object OpGt extends Op2
+  case object OpGte extends Op2
 
   sealed trait Expr
   case class EInt(v: Int) extends Expr
