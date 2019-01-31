@@ -19,3 +19,9 @@ scalacOptions ++= Seq(
   "-Yno-adapted-args",
   "-Xfatal-warnings"
 )
+
+testOptions in Test += Tests.Argument("-oD")
+parallelExecution in Test := false
+
+assemblyJarName in assembly := "fuse.jar"
+test in assembly := {}
