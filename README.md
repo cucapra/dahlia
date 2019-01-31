@@ -10,7 +10,7 @@ information, read the [notes](https://capra.cs.cornell.edu/seashell/docs/index.h
 
 ### Requirements
 The following are required to build the Fuse compiler
-  - Oracle JDK 8
+  - Open JDK 8
   - [Sbt](https://scala-sbt.org)
 
 ### Installation
