@@ -29,7 +29,7 @@ object Emit extends PrettyPrinter {
 
   private implicit def cmdToDoc(c: Command)(implicit env: Env): Doc = c match {
     case CDecl(id, typ) => typ <+> id <> semi
-    case CSeq(c1, c2) => c1 <> semi <> line <> c2 <> semi
+    case CSeq(c1, c2) => c1 <> line <> c2
     case CLet(id, e) => env(id).typ <+> value(id) <+> equal <+> e <> semi
     case CIf(cond, cons) => "if" <> parens(cond) <> scope (cons)
     case CFor(iter, range, par, CReducer(reduce)) =>
