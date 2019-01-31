@@ -125,7 +125,7 @@ object TypeChecker {
       val (t, e1) = checkE(exp)
       e1 + (id -> Info(id, t))
     }
-    case CFor(iter, range, par) => {
+    case CFor(iter, range, par, _) => {
       checkC(par)(env + (iter -> Info(iter, range.idxType)))
     }
     case CExpr(e) => checkE(e)._2

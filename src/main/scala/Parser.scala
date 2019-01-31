@@ -56,10 +56,10 @@ private class FuseParser extends RegexParsers with PackratParsers {
     "{" ~ "}" ^^ { case _ ~ _ => CEmpty }
   lazy val cfor: P[Command] =
     "for" ~ "(" ~ "let" ~> iden ~ "=" ~ number ~ ".." ~ number ~ ")" ~ block ^^ {
-      case id ~ _ ~ s ~ _ ~ e ~ _ ~ par => CFor(id, CRange(s, e, 1), par)
+      case id ~ _ ~ s ~ _ ~ e ~ _ ~ par => CFor(id, CRange(s, e, 1), par, CReducer(CEmpty))
     } |
     "for" ~ "(" ~ "let" ~> iden ~ "=" ~ number ~ ".." ~ number ~ ")" ~ "unroll" ~ number ~ block ^^ {
-      case id ~ _ ~ s ~ _ ~ e ~ _ ~ _ ~ u ~ par => CFor(id, CRange(s, e, u), par)
+      case id ~ _ ~ s ~ _ ~ e ~ _ ~ _ ~ u ~ par => CFor(id, CRange(s, e, u), par, CReducer(CEmpty))
     }
   lazy val acmd: P[Command] =
     cfor |
