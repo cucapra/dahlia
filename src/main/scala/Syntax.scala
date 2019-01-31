@@ -6,8 +6,6 @@ object Syntax {
 
   type Id = String
 
-  case class Fuse(prog: List[Command])
-
   sealed trait Type {
     def :<(that: Type): Boolean = this == that
   }

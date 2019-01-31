@@ -1,21 +1,20 @@
 package fuselang
 
 object Main {
-  import Syntax._
-  import FuseLangDSL._
-  import TypeChecker.checkFuse
-  import CCodeGen.pretty
+  import FuseParser.parse
+  //import TypeChecker.checkFuse
+  //import Emit.emitC
 
   def main(args: Array[String]) = {
-    val prog =
-      Fuse {List(
-        "sum" := 10,
-        For ("i", 0 upto 10 unroll 5) {
-          EBinop(OpAdd, "sum", 10)
-        }
-      )}
-
-    val env = checkFuse(prog)
-    println(pretty(prog)(env))
+    val prog = """
+    let x = 1;
+    x := 1;
+    if (x == 1) {
+      x := 2;
+    };
+    for (let i = 0..10) unroll 3 {
+    }
+    """
+    println(parse(prog))
   }
 }

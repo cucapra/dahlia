@@ -54,9 +54,7 @@ object TypeEnv {
 object TypeChecker {
   import TypeEnv._
 
-  def checkFuse(f: Fuse) = f.prog.foldLeft(Map[Id, Info]())({
-    case (env, cmd) => checkC(cmd)(env)
-  })
+  def checkFuse(c: Command) = checkC(c)(Map[Id, Info]())
 
   private def checkB(t1: Type, t2: Type, b: Op2) = b match {
     case OpEq => {
