@@ -7,7 +7,7 @@ libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.0.0" % "test",
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.1",
   "org.bitbucket.inkytonik.kiama" %% "kiama" % "2.0.0",
-  "com.github.scopt" %% "scopt" % "3.5.0"
+  "com.github.scopt" %% "scopt" % "3.7.1"
 )
 
 scalacOptions ++= Seq(
