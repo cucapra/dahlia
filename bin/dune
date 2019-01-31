@@ -1,4 +1,0 @@
-(executable
- (name seac)
- (public_name seac)
- (libraries seashell))
