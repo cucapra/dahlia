@@ -50,6 +50,7 @@ object CCodeGen extends PrettyPrinter {
     case CEmpty => ""
   }
 
-  def pretty(f: Fuse)(implicit env: Env) = vsep(f.prog.map(cmdToDoc), semi)
+  def pretty(f: Fuse)(implicit env: Env)  =
+    super.pretty(vsep(f.prog.map(cmdToDoc), semi)).layout
 
 }
