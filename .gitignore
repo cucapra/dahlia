@@ -5,3 +5,6 @@ target/
 project/
 
 tags
+
+## Docs
+docs/*pdf
