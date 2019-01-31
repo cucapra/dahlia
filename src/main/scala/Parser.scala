@@ -26,9 +26,9 @@ private class FuseParser extends RegexParsers with PackratParsers {
 
   lazy val atom: P[Expr] =
     eaa |
-    iden ^^ { case id => EVar(id) } |
     number ^^ { case n => EInt(n) } |
-    boolean ^^ { case b => EBool(b) }
+    boolean ^^ { case b => EBool(b) } |
+    iden ^^ { case id => EVar(id) }
 
   lazy val binAdd: P[Expr] =
     atom ~ ("+" ~> binAdd) ^^ { case l ~ r => EBinop(OpAdd, l, r)} |
