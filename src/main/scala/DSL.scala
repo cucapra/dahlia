@@ -36,7 +36,7 @@ object FuseLangDSL {
   implicit def boolToExpr(b: Boolean) = EBool(b)
   implicit def idToExpr(id: Id) = EVar(id)
 
-  def For(iter: Id, range: CRange)(par: Command) = CFor(iter, range, par)
+  def For(iter: Id, range: CRange)(par: Command)(reduce: Command) = CFor(iter, range, par, CReducer(reduce))
 
   def If(cond: Expr)(cons: Command) = CIf(cond, cons)
 

@@ -46,11 +46,13 @@ object Syntax {
     }
   }
 
+  case class CReducer(seq: Command)
+
   sealed trait Command
   case class CSeq(c1: Command, c2: Command) extends Command
   case class CLet(id: Id, e: Expr) extends Command
   case class CIf(cond: Expr, cons: Command) extends Command
-  case class CFor(iter: Id, range: CRange, par: Command) extends Command
+  case class CFor(iter: Id, range: CRange, par: Command, seq: CReducer) extends Command
   case class CUpdate(lhs: Expr, rhs: Expr) extends Command
   case class CExpr(exp: Expr) extends Command
   case class CDecl(id: Id, typ: Type) extends Command

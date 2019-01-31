@@ -37,12 +37,12 @@ object Emit extends PrettyPrinter {
     case CSeq(c1, c2) => c1 <> semi <> line <> c2 <> semi
     case CLet(id, e) => env(id).typ <+> value(id) <+> equal <+> e <> semi
     case CIf(cond, cons) => "if" <> parens(cond) <> scope (cons)
-    case CFor(iter, range, par) =>
+    case CFor(iter, range, par, CReducer(reduce)) =>
       "for" <> parens {
         env(iter).typ <+> iter <+> "=" <+> value(range.s) <> semi <+>
         iter <+> "<" <+> value(range.e) <> semi <+>
         iter <+> "++"
-      } <+> scope(par)
+      } <+> scope(par <> line <> text("// reducer:") <> reduce)
     case CUpdate(lhs, rhs) => lhs <+> "=" <+> rhs <> semi
     case CExpr(e) => e <> semi
     case CEmpty => ""
