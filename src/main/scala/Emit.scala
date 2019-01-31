@@ -19,10 +19,9 @@ object Emit extends PrettyPrinter {
   }
 
   private implicit def typeToDoc(typ: Type): Doc = typ match {
-    case TBool => "int"
+    case TBool | TIndex(_, _) | TStaticInt(_) => "int"
     case TSizedInt(_) => value(typ)
     case TArray(typ, dims) => typ <> brackets(value(dims.map(_._1).foldLeft(1)(_ * _)))
-    case TIndex(_, _) => "int"
   }
 
   private implicit def exprToDoc(e: Expr): Doc = e match {
@@ -34,6 +33,7 @@ object Emit extends PrettyPrinter {
   }
 
   private implicit def cmdToDoc(c: Command)(implicit env: Env): Doc = c match {
+    case CDecl(id, typ) => typ <+> id <> semi
     case CSeq(c1, c2) => c1 <> semi <> line <> c2 <> semi
     case CLet(id, e) => env(id).typ <+> value(id) <+> equal <+> e <> semi
     case CIf(cond, cons) => "if" <> parens(cond) <> scope (cons)
@@ -46,6 +46,7 @@ object Emit extends PrettyPrinter {
     case CUpdate(lhs, rhs) => lhs <+> "=" <+> rhs <> semi
     case CExpr(e) => e <> semi
     case CEmpty => ""
+    case CRefreshBanks => "//---"
   }
 
   def emitC(c: Command, env: Env) =

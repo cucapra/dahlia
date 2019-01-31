@@ -7,11 +7,20 @@ object Syntax {
   type Id = String
 
   sealed trait Type {
-    def :<(that: Type): Boolean = this == that
+    def :<(that: Type): Boolean = (this, that) match {
+      case (TStaticInt(_), TStaticInt(_)) => true
+      case (TStaticInt(_), TSizedInt(_)) | (TSizedInt(_), TStaticInt(_)) => true
+      case _ => this == that
+    }
   }
-  case object TBool extends Type
+  case object TBool extends Type {
+    override def toString = "bool"
+  }
   case class TSizedInt(len: Int) extends Type {
-    override def toString = s"int$len"
+    override def toString = s"bit<$len>"
+  }
+  case class TStaticInt(v: Int) extends Type {
+    override def toString = s"s($v)"
   }
   case class TArray(typ: Type, dims: List[(Int, Int)]) extends Type
   case class TIndex(static: (Int, Int), dynamic: (Int, Int)) extends Type
@@ -44,5 +53,7 @@ object Syntax {
   case class CFor(iter: Id, range: CRange, par: Command) extends Command
   case class CUpdate(lhs: Expr, rhs: Expr) extends Command
   case class CExpr(exp: Expr) extends Command
+  case class CDecl(id: Id, typ: Type) extends Command
+  case object CRefreshBanks extends Command
   case object CEmpty extends Command
 }
