@@ -1,6 +1,0 @@
-(library
-  (name test)
-  (preprocess (pps ppx_expect ppxlib.runner))
-  (inline_tests
-    (deps (glob_files should-compile/*.sea)))
-  (libraries seashell core))

@@ -1,8 +1,0 @@
-(executable
- (name seac_js)
- (public_name seac_js)
- (preprocess (pps js_of_ocaml-ppx))
- (libraries seashell js_of_ocaml)
- (js_of_ocaml
-   (flags --source-map-inline --pretty)
-   (javascript_files shams.js)))

@@ -1,22 +1,11 @@
 .PHONY: build website install
 
-SRCS:=src bin test
-
 build:
 	dune build && dune install
 
 install:
-	opam install dune menhir -y
-	opam install . --deps-only -y
-
-local-website:
-	eval `opam env` && dune build js/seac_js.bc.js
-	cp ./_build/default/js/seac_js.bc.js ./website/seashell.js
-	cd website && yarn build
+	sbt compile
 
 # Rsync the docs and the website
-website: install
-	eval `opam env` && dune build js/seac_js.bc.js
-	cp ./_build/default/js/seac_js.bc.js ./website/seashell.js
-	cd website && yarn deploy
+website:
 	$(MAKE) -C docs deploy
