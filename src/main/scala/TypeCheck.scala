@@ -1,7 +1,5 @@
 package fuselang
 
-import scala.math.{max,log10,ceil}
-
 import Syntax._
 import TypeErrors._
 
@@ -60,26 +58,20 @@ object TypeChecker {
 
   def checkFuse(c: Command) = checkC(c)(Map[Id, Info]())
 
-  private def checkB(t1: Type, t2: Type, b: Op2) = b match {
-    case OpEq => {
+  private def checkB(t1: Type, t2: Type, op: Op2) = op match {
+    case OpEq | OpNeq => {
       if (t1 :< t2 || t2 :< t1) TBool
-      else throw UnexpectedSubtype("=", t1, t2)
+      else throw UnexpectedSubtype(op.toString, t1, t2)
     }
-    case OpAdd => (t1, t2) match {
-      case (TSizedInt(s1), TSizedInt(s2)) => TSizedInt(max(s1, s2))
-      case (TStaticInt(v1), TStaticInt(v2)) => TStaticInt(v1 + v2)
-      case (TStaticInt(v), TSizedInt(s)) => {
-        TSizedInt(max(s, ceil(log10(v)/log10(2)).toInt))
-      }
-      case (TSizedInt(s), TStaticInt(v)) => {
-        TSizedInt(max(s, ceil(log10(v)/log10(2)).toInt))
-      }
-      case (TSizedInt(_), _) => throw UnexpectedSubtype("+", t1, t2)
-      case (_, TSizedInt(_)) => throw UnexpectedSubtype("+", t2, t1)
-      case (TStaticInt(_), _) => throw UnexpectedSubtype("+", t1, t2)
-      case (_, TStaticInt(_)) => throw UnexpectedSubtype("+", t2, t1)
-      case (_, _) => throw UnexpectedSubtype("+", TSizedInt(64), t1)
+    case OpLt | OpLte | OpGt | OpGte => (t1, t2) match {
+      case ((TStaticInt(_) | TSizedInt(_)), (TStaticInt(_) | TSizedInt(_))) => TBool
+      case _ => throw MsgError(s"$op expected integers, received: $t1 and $t2")
     }
+    case OpAdd | OpTimes | OpSub | OpDiv => (t1, t2) match {
+      case ((TStaticInt(_) | TSizedInt(_)), (TStaticInt(_) | TSizedInt(_))) => t1.join(t2, op.toFun)
+      case _ => throw MsgError(s"$op expected integers, received: $t1 and $t2")
+    }
+
   }
 
   private def checkE(expr: Expr)(implicit env: Env): (Type, Env) = expr match {
