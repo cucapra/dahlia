@@ -2,7 +2,7 @@ package fuselang
 
 object Syntax {
 
-  import TypeErrors._
+  import Errors._
   import scala.math.{max,log10,ceil}
 
   type Id = String
