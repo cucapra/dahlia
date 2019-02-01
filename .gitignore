@@ -2,7 +2,7 @@
 *.class
 *.log
 target/
-project/
+project/{target/,project/}
 
 tags
 
