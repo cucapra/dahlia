@@ -93,7 +93,7 @@ object FuseParser {
 
   def parse(str: String) = parseAll(cmd, str) match {
     case Success(res, _) => res
-    case res => throw new RuntimeException(s"$res")
+    case res => throw Errors.ParserError(s"$res")
   }
 }
 

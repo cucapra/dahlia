@@ -1,7 +1,7 @@
 package fuselang
 
 import Syntax._
-import TypeErrors._
+import Errors._
 
 object TypeEnv {
   type Env = Map[Id, Info]
