@@ -1,5 +1,6 @@
-FROM ocaml/opam2:ubuntu-18.04
+FROM hseeberger/scala-sbt
 MAINTAINER Adrian Sampson <asampson@cs.cornell.edu>
+MAINTAINER Rachit Nigam <rnigam@cs.cornell.edu>
 
 # Add Python, pipenv, and node for buildbot.
 RUN sudo apt-get install -y software-properties-common && \
@@ -13,17 +14,10 @@ RUN curl https://bootstrap.pypa.io/get-pip.py | sudo -H python3.7
 ENV PATH ${HOME}/.local/bin:${PATH}
 RUN pip install --user pipenv
 
-# Install some of our OCaml dependencies.
-RUN opam config exec -- opam depext --install -y \
-    dune menhir core ppx_deriving ppx_expect cmdliner
-    
 # Install sshpass
 RUN sudo apt-get install sshpass
 RUN sudo chown opam:opam ~/.ssh
 #RUN sudo chown opam:opam ~/.ssh/*
-
-# Add opam bin directory to our $PATH so we can run seac.
-ENV PATH ${HOME}/.opam/system/bin:${PATH}
 
 # Volume, port, and command for buildbot.
 VOLUME ${HOME}/seashell/buildbot/instance
@@ -39,9 +33,8 @@ ADD --chown=opam . seashell
 WORKDIR seashell
 
 # Build Seashell.
-RUN opam install --deps-only .
-RUN eval `opam config env` ; dune build
-RUN eval `opam config env` ; dune install
+RUN sbt assembly
+ENV PATH ${PWD}
 
 # Avoids a bug in a recent version of pip:
 # https://github.com/pypa/pipenv/issues/2924

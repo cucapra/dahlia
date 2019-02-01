@@ -2,7 +2,7 @@
 UPLOAD_EXTENSIONS = ['zip']
 
 # The executable name for the Seashell compiler (seac).
-SEASHELL_COMPILER = 'seac'
+SEASHELL_COMPILER = 'fuse'
 
 # A prefix command to use *before* the invocations of Xilinx tools.
 HLS_COMMAND_PREFIX = []
