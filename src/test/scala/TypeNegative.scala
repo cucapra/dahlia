@@ -84,7 +84,9 @@ class FileTypeNegative extends FunSuite {
   for (file <- Files.newDirectoryStream(shouldCompile).asScala) {
     test(file.toString) {
       val prog = new String(Files.readAllBytes(file))
-      typeCheck(prog)
+      assertThrows[RuntimeException] {
+        typeCheck(prog)
+      }
     }
   }
 
