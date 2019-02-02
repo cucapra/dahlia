@@ -14,12 +14,30 @@ class SimpleTypePositive extends FunSuite {
     typeCheck("decl f: float; let y = 1.5; f + y")
   }
 
-  test("Reassign bound variable") {
+  // XXX(rachit): @adrian check Subtyping behavior
+  test("Subtyping for reassign") {
+    // Assignment to static ints loses information
     val e1 = typeCheck("let x = 1; x := 2;")
-    assert(e1("x").typ === TStaticInt(2))
+    assert(e1("x").typ === TSizedInt(32), "assiging static := static")
 
     val e2 = typeCheck("decl y: bit<64>; let x = 1; x := y;")
-    assert(e2("x").typ === TSizedInt(64))
+    assert(e2("x").typ === TSizedInt(64), "assigning static := dynamic")
+
+    val e3 = typeCheck("decl x: bit<32>; decl y: bit<16>; x := y")
+    assert(e3("x").typ === TSizedInt(32), "assigning dynamic := dynamic")
+    assert(e3("y").typ === TSizedInt(16), "assigning dynamic := dynamic")
+  }
+
+  // XXX(rachit): @adrian check Subtyping behavior
+  test("Binary operations") {
+    val e1 = typeCheck("let x = 1; let y = 2; let z = x + y;")
+    assert(e1("z").typ === TStaticInt(3))
+
+    val e2 = typeCheck("decl z: bit<32>; let x = 1; let y = 2; z := x + y;")
+    assert(e2("z").typ === TSizedInt(32))
+
+    val e3 = typeCheck("decl x: bit<32>; decl y: bit<16>; let z = x + y")
+    assert(e3("z").typ === TSizedInt(32))
   }
 
   test("Static index into array") {

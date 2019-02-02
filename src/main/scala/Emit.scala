@@ -2,7 +2,13 @@ package fuselang
 
 import org.bitbucket.inkytonik.kiama.output._
 
-object Emit extends PrettyPrinter {
+/**
+ * This class is aggressively using Scala's implicitConversions. Make sure
+ * that implicits classes never leak.
+ *
+ * Implicit classes: https://docs.scala-lang.org/tour/implicit-conversions.html
+ */
+private class Emit extends PrettyPrinter {
 
   import scala.language.implicitConversions
   import Syntax._
@@ -10,17 +16,17 @@ object Emit extends PrettyPrinter {
 
   override val defaultIndent = 2
 
-  private def scope(doc: Doc): Doc =
+  def scope(doc: Doc): Doc =
     lbrace <@> indent(doc) <@> rbrace
 
-  private implicit def typeToDoc(typ: Type): Doc = typ match {
+  implicit def typeToDoc(typ: Type): Doc = typ match {
     case TBool | TIndex(_, _) | TStaticInt(_) => "int"
     case TFloat => "float"
     case TSizedInt(_) => value(typ)
     case TArray(typ, dims) => typ <> brackets(value(dims.map(_._1).foldLeft(1)(_ * _)))
   }
 
-  private implicit def exprToDoc(e: Expr): Doc = e match {
+  implicit def exprToDoc(e: Expr): Doc = e match {
     case EInt(i) => value(i)
     case EFloat(f) => value(f)
     case EBool(b) => value(if(b) 1 else 0)
@@ -29,7 +35,7 @@ object Emit extends PrettyPrinter {
     case EAA(id, idxs) => id <> hcat(idxs.map(idx => brackets(idx)))
   }
 
-  private implicit def cmdToDoc(c: Command)(implicit env: Env): Doc = c match {
+  implicit def cmdToDoc(c: Command)(implicit env: Env): Doc = c match {
     case CDecl(id, typ) => typ <+> id <> semi
     case CSeq(c1, c2) => c1 <> line <> c2
     case CLet(id, e) => env(id).typ <+> value(id) <+> equal <+> e <> semi
@@ -49,4 +55,9 @@ object Emit extends PrettyPrinter {
   def emitC(c: Command, env: Env) =
     super.pretty(cmdToDoc(c)(env)).layout
 
+}
+
+object Emit {
+  private val emitter = new Emit()
+  def emitC = emitter.emitC _
 }

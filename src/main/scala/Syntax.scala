@@ -11,6 +11,7 @@ object Syntax {
     def :<(that: Type): Boolean = (this, that) match {
       case (TStaticInt(_), TStaticInt(_)) => true
       case (TStaticInt(_), TSizedInt(_)) | (TSizedInt(_), TStaticInt(_)) => true
+      case (TSizedInt(v1), TSizedInt(v2)) => v1 <= v2
       case _ => this == that
     }
 

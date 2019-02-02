@@ -2,7 +2,7 @@ package fuselang
 
 import Utils._
 
-class ParsingPositivea extends org.scalatest.FunSuite {
+class ParsingPositive extends org.scalatest.FunSuite {
   test("atoms parseAst") {
     parseAst("1")
     parseAst("1.25")
