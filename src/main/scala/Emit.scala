@@ -15,12 +15,14 @@ object Emit extends PrettyPrinter {
 
   private implicit def typeToDoc(typ: Type): Doc = typ match {
     case TBool | TIndex(_, _) | TStaticInt(_) => "int"
+    case TFloat => "float"
     case TSizedInt(_) => value(typ)
     case TArray(typ, dims) => typ <> brackets(value(dims.map(_._1).foldLeft(1)(_ * _)))
   }
 
   private implicit def exprToDoc(e: Expr): Doc = e match {
-    case EInt(i) => value (i)
+    case EInt(i) => value(i)
+    case EFloat(f) => value(f)
     case EBool(b) => value(if(b) 1 else 0)
     case EVar(id) => value(id)
     case EBinop(op, e1, e2) => e1 <+> op.toString <+> e2

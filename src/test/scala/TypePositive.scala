@@ -10,6 +10,10 @@ class SimpleTypePositive extends FunSuite {
     typeCheck("decl x: bit<64>; let y = 1; x + y;")
   }
 
+  test("Adding floats") {
+    typeCheck("decl f: float; let y = 1.5; f + y")
+  }
+
   test("Reassign bound variable") {
     val e1 = typeCheck("let x = 1; x := 2;")
     assert(e1("x").typ === TStaticInt(2))

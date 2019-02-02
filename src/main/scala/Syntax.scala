@@ -35,6 +35,9 @@ object Syntax {
   case class TStaticInt(v: Int) extends Type {
     override def toString = s"s($v)"
   }
+  case object TFloat extends Type {
+    override def toString = "float"
+  }
   case class TArray(typ: Type, dims: List[(Int, Int)]) extends Type
   case class TIndex(static: (Int, Int), dynamic: (Int, Int)) extends Type
 
@@ -73,6 +76,7 @@ object Syntax {
 
   sealed trait Expr
   case class EInt(v: Int) extends Expr
+  case class EFloat(f: Float) extends Expr
   case class EBool(v: Boolean) extends Expr
   case class EBinop(op: Op2, e1: Expr, e2: Expr) extends Expr
   case class EAA(id: Id, idxs: List[Expr]) extends Expr
