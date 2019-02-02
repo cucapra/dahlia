@@ -65,16 +65,19 @@ object TypeChecker {
     }
     case OpLt | OpLte | OpGt | OpGte => (t1, t2) match {
       case ((TStaticInt(_) | TSizedInt(_)), (TStaticInt(_) | TSizedInt(_))) => TBool
+      case (TFloat, TFloat) => TFloat
       case _ => throw MsgError(s"$op expected integers, received: $t1 and $t2")
     }
     case OpAdd | OpTimes | OpSub | OpDiv => (t1, t2) match {
       case ((TStaticInt(_) | TSizedInt(_)), (TStaticInt(_) | TSizedInt(_))) => t1.join(t2, op.toFun)
+      case (TFloat, TFloat) => TFloat
       case _ => throw MsgError(s"$op expected integers, received: $t1 and $t2")
     }
 
   }
 
   private def checkE(expr: Expr)(implicit env: Env): (Type, Env) = expr match {
+    case EFloat(_) => TFloat -> env
     case EInt(v) => TStaticInt(v) -> env
     case EBool(_) => TBool -> env
     case EVar(id) => env(id).typ -> env

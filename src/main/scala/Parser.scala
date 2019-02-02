@@ -21,11 +21,13 @@ private class FuseParser extends RegexParsers with PackratParsers {
   lazy val iden: P[String] = "" ~> "[a-z_][a-zA-Z0-9_]*".r
 
   // Atoms
-  lazy val number: P[Int] = "(-)?[0-9]+".r ^^ { n => Integer.parseInt(n) }
-  lazy val boolean: P[Boolean] = "true" ^^ { _ => true } | "false" ^^ { _ => false }
+  lazy val number = "(-)?[0-9]+".r ^^ { n => n.toInt }
+  lazy val float = "(-)?[0-9]+.[0-9]+".r ^^ { n => n.toFloat }
+  lazy val boolean = "true" ^^ { _ => true } | "false" ^^ { _ => false }
   lazy val eaa: P[Expr] = iden ~ rep1("[" ~> expr <~ "]") ^^ { case id ~ idxs => EAA(id, idxs) }
   lazy val atom: P[Expr] =
     eaa |
+    float ^^ { case f => EFloat(f) } |
     number ^^ { case n => EInt(n) } |
     boolean ^^ { case b => EBool(b) } |
     iden ^^ { case id => EVar(id) }
@@ -54,6 +56,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
     brackets(number ~ "bank" ~ number) ^^ { case n ~ _ ~ b => (n, b) } |
     brackets(number)^^ { n => (n, 1) }
   lazy val atyp: P[Type] =
+    "float" ^^ { _ => TFloat } |
     "bool" ^^ { _ => TBool } |
     "bit" ~> angular(number) ^^ { case s => TSizedInt(s) }
   lazy val typ: P[Type] =

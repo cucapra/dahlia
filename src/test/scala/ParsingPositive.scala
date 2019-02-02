@@ -5,6 +5,8 @@ import Utils._
 class ParsingPositivea extends org.scalatest.FunSuite {
   test("atoms parseAst") {
     parseAst("1")
+    parseAst("1.25")
+    parseAst("0.25")
     parseAst("true")
     parseAst("true;")
   }
@@ -12,6 +14,7 @@ class ParsingPositivea extends org.scalatest.FunSuite {
   test("binops") {
     parseAst("1 + 2")
     parseAst("1 + 2;")
+    parseAst("1 + 2.5;")
     parseAst("1 + 2 * 3;")
     parseAst("1 + 2 * 3 >= 10 - 5 / 7;")
     parseAst("true == false")
