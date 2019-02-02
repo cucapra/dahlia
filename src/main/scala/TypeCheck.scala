@@ -31,10 +31,20 @@ object TypeEnv {
       } else {
         throw MsgError(s"Bank $bank does not exist for dimension $dim of $id.")
       }
-      case false => throw MsgError(s"$id does not have dimension $dim. $this")
+      case false => throw UnknownDim(id, dim)
     }
-    def consumeBanks(dim: Int, bank: Seq[Int]): Info = {
-      bank.foldLeft(this)({ case (info, bank) => info.consumeBank(dim, bank) })
+    def consumeDim(dim: Int, unrollFactor: Int) = typ match {
+      case TArray(_, dims) => dims.lift(dim) match {
+        case Some((_, bank)) => {
+          if (unrollFactor != bank) {
+            throw BankUnrollInvalid(bank, unrollFactor)
+          }
+          val banks = 0.until(bank)
+          banks.foldLeft(this)({ case (info, bank) => info.consumeBank(dim, bank) })
+        }
+        case None => throw UnknownDim(id, dim)
+      }
+      case _ => ??? // Cannot happen
     }
   }
 
@@ -66,12 +76,12 @@ object TypeChecker {
     case OpLt | OpLte | OpGt | OpGte => (t1, t2) match {
       case ((TStaticInt(_) | TSizedInt(_)), (TStaticInt(_) | TSizedInt(_))) => TBool
       case (TFloat, TFloat) => TFloat
-      case _ => throw MsgError(s"$op expected integers, received: $t1 and $t2")
+      case _ => throw BinopError(op, t1, t2)
     }
     case OpAdd | OpTimes | OpSub | OpDiv => (t1, t2) match {
       case ((TStaticInt(_) | TSizedInt(_)), (TStaticInt(_) | TSizedInt(_))) => t1.join(t2, op.toFun)
       case (TFloat, TFloat) => TFloat
-      case _ => throw MsgError(s"$op expected integers, received: $t1 and $t2")
+      case _ => throw BinopError(op, t1, t2)
     }
 
   }
@@ -80,7 +90,10 @@ object TypeChecker {
     case EFloat(_) => TFloat -> env
     case EInt(v) => TStaticInt(v) -> env
     case EBool(_) => TBool -> env
-    case EVar(id) => env(id).typ -> env
+    case EVar(id) => env.get(id) match {
+      case Some(inf) => inf.typ -> env
+      case None => throw UnboundVar(id)
+    }
     case EBinop(op, e1, e2) => {
       val (t1, env1) = checkE(e1)
       val (t2, env2) = checkE(e2)(env1)
@@ -93,7 +106,7 @@ object TypeChecker {
         }
         typ -> idxs.zipWithIndex.foldLeft(env)({case (env1, (e, i)) =>
           checkE(e)(env1) match {
-            case (TIndex((s, e), _), env2) => env2 + (id -> env2(id).consumeBanks(i, s.until(e)))
+            case (TIndex((s, e), _), env2) => env2 + (id -> env2(id).consumeDim(i, e - s))
             case (TStaticInt(v), env2) => env2 + (id -> env(id).consumeBank(i, v % dims(i)._2))
             case (t, _) => throw InvalidIndex(id, t)
           }
@@ -110,8 +123,10 @@ object TypeChecker {
     case CUpdate(lhs, rhs) => {
       val (t1, e1) = checkE(lhs)
       val (t2, e2) = checkE(rhs)(e1)
-      if (t2 :< t1) lhs match {
-        case EVar(id) => e2 + (id -> Info(id, t2))
+      if (t2 :< t1) (t1, t2, lhs) match {
+        // Reassignment of static ints upcasts to bit<32>
+        case (TStaticInt(_), TStaticInt(_), EVar(id)) => e2 + (id -> Info(id, TSizedInt(32)))
+        case (TStaticInt(_), TSizedInt(_), EVar(id)) => e2 + (id -> Info(id, t2))
         case _ => e2
       }
       else throw UnexpectedSubtype("assignment", t1, t2)
