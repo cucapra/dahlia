@@ -19,6 +19,8 @@ private class Emit extends PrettyPrinter {
   def scope(doc: Doc): Doc =
     lbrace <@> indent(doc) <@> rbrace
 
+  implicit def IdToString(id: Id): Doc = value(id.v)
+
   implicit def typeToDoc(typ: Type): Doc = typ match {
     case TBool | TIndex(_, _) | TStaticInt(_) => "int"
     case TFloat => "float"
