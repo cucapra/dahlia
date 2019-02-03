@@ -32,6 +32,7 @@ object Errors {
   )
 
   case class UnboundVar(id: Id) extends RuntimeException(s"Variable $id not defined in context.")
+  case class AlreadyBound(id: Id) extends RuntimeException(s"Variable $id already bound in scope.")
 
   case class ParserError(msg: String) extends RuntimeException(msg)
 
