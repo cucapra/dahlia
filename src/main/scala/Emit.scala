@@ -22,8 +22,8 @@ private class Emit extends PrettyPrinter {
   implicit def IdToString(id: Id): Doc = value(id.v)
 
   implicit def typeToDoc(typ: Type): Doc = typ match {
-    case TBool | TIndex(_, _) | TStaticInt(_) => "int"
-    case TFloat => "float"
+    case _: TBool | TIndex(_, _) | TStaticInt(_) => "int"
+    case _: TFloat => "float"
     case TSizedInt(_) => value(typ)
     case TArray(typ, dims) => typ <> brackets(value(dims.map(_._1).foldLeft(1)(_ * _)))
   }
@@ -51,7 +51,7 @@ private class Emit extends PrettyPrinter {
     case CUpdate(lhs, rhs) => lhs <+> "=" <+> rhs <> semi
     case CExpr(e) => e <> semi
     case CEmpty => ""
-    case CRefreshBanks => "//---"
+    case CRefreshBanks() => "//---"
   }
 
   def emitC(c: Command, env: Env) =

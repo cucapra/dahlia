@@ -9,27 +9,27 @@ object TypeChecker {
   def checkFuse(c: Command) = checkC(c)(Map[Id, Info]())
 
   private def checkB(t1: Type, t2: Type, op: Op2) = op match {
-    case OpEq | OpNeq => {
-      if (t1 :< t2 || t2 :< t1) TBool
+    case OpEq() | OpNeq() => {
+      if (t1 :< t2 || t2 :< t1) TBool()
       else throw UnexpectedSubtype(op.toString, t1, t2)
     }
-    case OpLt | OpLte | OpGt | OpGte => (t1, t2) match {
-      case ((TStaticInt(_) | TSizedInt(_)), (TStaticInt(_) | TSizedInt(_))) => TBool
-      case (TFloat, TFloat) => TFloat
+    case OpLt() | OpLte() | OpGt() | OpGte() => (t1, t2) match {
+      case ((TStaticInt(_) | TSizedInt(_)), (TStaticInt(_) | TSizedInt(_))) => TBool()
+      case (_: TFloat, _: TFloat) => TFloat()
       case _ => throw BinopError(op, t1, t2)
     }
-    case OpAdd | OpTimes | OpSub | OpDiv => (t1, t2) match {
+    case OpAdd() | OpTimes() | OpSub() | OpDiv() => (t1, t2) match {
       case ((TStaticInt(_) | TSizedInt(_)), (TStaticInt(_) | TSizedInt(_))) => t1.join(t2, op.toFun)
-      case (TFloat, TFloat) => TFloat
+      case (_: TFloat, _: TFloat) => TFloat()
       case _ => throw BinopError(op, t1, t2)
     }
 
   }
 
   private def checkE(expr: Expr)(implicit env: Env): (Type, Env) = expr match {
-    case EFloat(_) => TFloat -> env
+    case EFloat(_) => TFloat() -> env
     case EInt(v) => TStaticInt(v) -> env
-    case EBool(_) => TBool -> env
+    case EBool(_) => TBool() -> env
     case EVar(id) => env.getBind(id).typ -> env
     case EBinop(op, e1, e2) => {
       val (t1, env1) = checkE(e1)
@@ -56,7 +56,7 @@ object TypeChecker {
   private def checkC(cmd: Command)(implicit env: Env): Env = cmd match {
     case CDecl(id, typ) => env.addBind(id -> Info(id, typ))
     case CSeq(c1, c2) => checkC(c2)(checkC(c1))
-    case CIf(cond, cons) => checkE(cond).typRun(TBool, "if condition", env => checkC(cons)(env))
+    case CIf(cond, cons) => checkE(cond).typRun(TBool(), "if condition", env => checkC(cons)(env))
     case CUpdate(lhs, rhs) => {
       val (t1, e1) = checkE(lhs)
       val (t2, e2) = checkE(rhs)(e1)
@@ -77,6 +77,6 @@ object TypeChecker {
     }
     case CExpr(e) => checkE(e)._2
     case CEmpty => env
-    case CRefreshBanks => env.refreshBanks
+    case CRefreshBanks() => env.refreshBanks
   }
 }
