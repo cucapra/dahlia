@@ -1,7 +1,6 @@
 package fuselang
 
 import Utils._
-//import Syntax._
 import Errors._
 import org.scalatest.FunSuite
 
@@ -10,6 +9,12 @@ class SimpleTypeNegative extends FunSuite {
   test("Cannot reference undeclared var") {
     assertThrows[UnboundVar] {
       typeCheck("x + 1")
+    }
+  }
+
+  test("shadowing variable names is not allowed") {
+    assertThrows[AlreadyBound] {
+      typeCheck("let x = 1; let x = 1;")
     }
   }
 
