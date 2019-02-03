@@ -7,7 +7,8 @@ object TypeEnv {
 
   type Env = Map[Id, Info]
 
-  implicit class RichMap(m: Env) {
+  // extends AnyValue creates a value class which reduces runtime overhead.
+  implicit class RichMap(val m: Env) extends AnyVal {
     def addBind(bind: (Id, Info)) = m.get(bind._1) match {
       case Some(_) => throw AlreadyBound(bind._1)
       case None => m + bind
@@ -19,7 +20,7 @@ object TypeEnv {
     def refreshBanks = m.map({ case (id, info) => id -> Info(id, info.typ) })
   }
 
-  implicit class RichCheck(checkRet: (Type, Env)) {
+  implicit class RichCheck(val checkRet: (Type, Env)) extends AnyVal {
     def typRun(typ: Type, construct: String, f: Env => Env) = {
       if (checkRet._1 != typ) {
         throw UnexpectedType(construct, typ, checkRet._1)
@@ -29,7 +30,11 @@ object TypeEnv {
     }
   }
 
-  case class Info(id: Id, typ: Type, avBanks: Map[Int, Set[Int]], conBanks: Map[Int, Set[Int]]) {
+  case class Info(
+    id: Id,
+    typ: Type,
+    avBanks: Map[Int, Set[Int]],
+    conBanks: Map[Int, Set[Int]]) {
     def consumeBank(dim: Int, bank: Int): Info = avBanks.contains(dim) match {
       case true => if (avBanks(dim).contains(bank)) {
         Info(
