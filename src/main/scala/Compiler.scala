@@ -10,7 +10,8 @@ object Compiler {
     Emit.emitC(ast, env)
   } match {
     case Success(out) => out
-    case Failure(f: RuntimeException) => s"$f"
+    case Failure(f: RuntimeException) =>
+      "[" + Console.RED + "Error" + Console.RESET + "] " + f.getMessage
     case Failure(f) => throw f
   }
 }

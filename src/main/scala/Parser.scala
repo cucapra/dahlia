@@ -1,6 +1,7 @@
 package fuselang
 
 import scala.util.parsing.combinator._
+//import scala.util.parsing.input.Positional
 
 import Syntax._
 
@@ -18,38 +19,57 @@ private class FuseParser extends RegexParsers with PackratParsers {
   def angular[T](parser: P[T]): P[T] = "<" ~> parser <~ ">"
 
   // General syntax components
-  lazy val iden: P[String] = "" ~> "[a-z_][a-zA-Z0-9_]*".r
+  lazy val iden: P[Id] = positioned {
+    "" ~> "[a-z_][a-zA-Z0-9_]*".r ^^ { v => Id(v) }
+  }
 
   // Atoms
   lazy val number = "(-)?[0-9]+".r ^^ { n => n.toInt }
   lazy val float = "(-)?[0-9]+.[0-9]+".r ^^ { n => n.toFloat }
   lazy val boolean = "true" ^^ { _ => true } | "false" ^^ { _ => false }
-  lazy val eaa: P[Expr] = iden ~ rep1("[" ~> expr <~ "]") ^^ { case id ~ idxs => EAA(id, idxs) }
-  lazy val atom: P[Expr] =
+  lazy val eaa: P[Expr] = positioned {
+    iden ~ rep1("[" ~> expr <~ "]") ^^ { case id ~ idxs => EAA(id, idxs) }
+  }
+  lazy val atom: P[Expr] = positioned {
     eaa |
     float ^^ { case f => EFloat(f) } |
     number ^^ { case n => EInt(n) } |
     boolean ^^ { case b => EBool(b) } |
     iden ^^ { case id => EVar(id) }
+  }
+
+  // Binops
+  lazy val mulOps: P[Op2] = positioned {
+    "/" ^^ { _ => OpDiv } |
+    "*" ^^ { _ => OpDiv }
+  }
+  lazy val addOps: P[Op2] = positioned {
+    "+" ^^ { _ => OpAdd } |
+    "-" ^^ { _ => OpSub }
+  }
+  lazy val eqOps: P[Op2] = positioned {
+    "==" ^^ { _ => OpEq } |
+    "!=" ^^ { _ => OpNeq } |
+    ">=" ^^ { _ => OpGte } |
+    "<=" ^^ { _ => OpLte } |
+    ">"  ^^ { _ => OpGt } |
+    "<"  ^^ { _ => OpLt }
+  }
 
   // Expressions
-  lazy val binMul: P[Expr] =
-    atom ~ ("/" ~> binMul) ^^ { case l ~ r => EBinop(OpDiv, l, r)} |
-    atom ~ ("*" ~> binMul) ^^ { case l ~ r => EBinop(OpTimes, l, r)} |
+  lazy val binMul: P[Expr] = positioned {
+    atom ~ mulOps ~ binMul ^^ { case l ~ op ~ r => EBinop(op, l, r)} |
     atom
-  lazy val binAdd: P[Expr] =
-    binMul ~ ("+" ~> binAdd) ^^ { case l ~ r => EBinop(OpAdd, l, r)} |
-    binMul ~ ("-" ~> binAdd) ^^ { case l ~ r => EBinop(OpSub, l, r)} |
+  }
+  lazy val binAdd: P[Expr] = positioned {
+    binMul ~ addOps ~ binAdd ^^ { case l ~ op ~ r => EBinop(op, l, r)} |
     binMul
-  lazy val binEq: P[Expr] =
-    binAdd ~ ("==" ~> binEq) ^^ { case l ~ r => EBinop(OpEq, l, r)} |
-    binAdd ~ ("!=" ~> binEq) ^^ { case l ~ r => EBinop(OpNeq, l, r)} |
-    binAdd ~ (">=" ~> binEq) ^^ { case l ~ r => EBinop(OpGte, l, r)} |
-    binAdd ~ ("<=" ~> binEq) ^^ { case l ~ r => EBinop(OpLte, l, r)} |
-    binAdd ~ (">" ~> binEq) ^^ { case l ~ r => EBinop(OpGt, l, r)} |
-    binAdd ~ ("<" ~> binEq) ^^ { case l ~ r => EBinop(OpLt, l, r)} |
+  }
+  lazy val binEq: P[Expr] = positioned {
+    binAdd ~ eqOps ~ binEq ^^ { case l ~ op ~ r => EBinop(op, l, r)} |
     binAdd
-  lazy val expr = binEq | parens(binEq)
+  }
+  lazy val expr = positioned (binEq | parens(binEq))
 
   // Types
   lazy val typIdx: P[(Int, Int)] =
@@ -67,26 +87,29 @@ private class FuseParser extends RegexParsers with PackratParsers {
   lazy val block: P[Command] =
     braces(cmd) |
     "{" ~ "}" ^^ { case _ ~ _ => CEmpty }
-  lazy val cfor: P[Command] =
+  lazy val cfor: P[Command] = positioned {
     "for" ~ "(" ~ "let" ~> iden ~ "=" ~ number ~ ".." ~ number ~ ")" ~ block ^^ {
       case id ~ _ ~ s ~ _ ~ e ~ _ ~ par => CFor(id, CRange(s, e, 1), par, CReducer(CEmpty))
     } |
     "for" ~ "(" ~ "let" ~> iden ~ "=" ~ number ~ ".." ~ number ~ ")" ~ "unroll" ~ number ~ block ^^ {
       case id ~ _ ~ s ~ _ ~ e ~ _ ~ _ ~ u ~ par => CFor(id, CRange(s, e, u), par, CReducer(CEmpty))
     }
-  lazy val acmd: P[Command] =
+  }
+  lazy val acmd: P[Command] = positioned {
     cfor |
     "decl" ~> iden ~ ":" ~ typ ^^ { case id ~ _ ~ typ => CDecl(id, typ)} |
     expr ~ ":=" ~ expr ^^ { case l ~ _ ~ r => CUpdate(l, r) } |
     "let" ~> iden ~ "=" ~ expr ^^ { case id ~ _ ~ exp => CLet(id, exp) } |
     "if" ~> parens(expr) ~ block ^^ { case cond ~ cons => CIf(cond, cons) } |
     expr ^^ { case e => CExpr(e) }
+  }
 
-  lazy val cmd: P[Command] =
+  lazy val cmd: P[Command] = positioned {
     acmd ~ ";" ~ cmd ^^ { case c1 ~ _ ~ c2 => CSeq(c1, c2) } |
     acmd ~ ";" ~ "---" ~ cmd ^^ { case c1 ~ _ ~ _ ~ c2 => CSeq(c1, CSeq(CRefreshBanks, c2)) } |
     acmd <~ ";" |
     acmd
+  }
 
 }
 

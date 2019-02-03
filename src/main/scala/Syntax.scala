@@ -1,13 +1,17 @@
 package fuselang
 
+import scala.util.parsing.input.Positional
+
 object Syntax {
 
   import Errors._
   import scala.math.{max,log10,ceil}
 
-  type Id = String
+  case class Id(v: String) extends Positional {
+    override def toString = s"`$v'"
+  }
 
-  sealed trait Type {
+  sealed trait Type extends Positional {
     def :<(that: Type): Boolean = (this, that) match {
       case (TStaticInt(_), TStaticInt(_)) => true
       case (TStaticInt(_), TSizedInt(_)) | (TSizedInt(_), TStaticInt(_)) => true
@@ -26,23 +30,25 @@ object Syntax {
       }
       case (t1, t2) => throw NoJoin(t1, t2)
     }
+
+    override def toString = this match {
+      case TBool => "bool"
+      case TFloat => "float"
+      case TSizedInt(l) => s"int$l"
+      case TStaticInt(s) => s"static($s)"
+      case TArray(t, dims) =>
+        s"$t" + dims.foldLeft("")({ case (acc, (d, b)) => s"$acc[$d bank $b]" })
+      case TIndex(s, d) => s"idx($s, $d)"
+    }
   }
-  case object TBool extends Type {
-    override def toString = "bool"
-  }
-  case class TSizedInt(len: Int) extends Type {
-    override def toString = s"bit<$len>"
-  }
-  case class TStaticInt(v: Int) extends Type {
-    override def toString = s"s($v)"
-  }
-  case object TFloat extends Type {
-    override def toString = "float"
-  }
+  case object TBool extends Type
+  case class TSizedInt(len: Int) extends Type
+  case class TStaticInt(v: Int) extends Type
+  case object TFloat extends Type
   case class TArray(typ: Type, dims: List[(Int, Int)]) extends Type
   case class TIndex(static: (Int, Int), dynamic: (Int, Int)) extends Type
 
-  sealed trait Op2 {
+  sealed trait Op2 extends Positional {
     override def toString = this match {
       case OpEq => "=="
       case OpNeq => "!="
@@ -75,7 +81,7 @@ object Syntax {
   case object OpGt extends Op2
   case object OpGte extends Op2
 
-  sealed trait Expr
+  sealed trait Expr extends Positional
   case class EInt(v: Int) extends Expr
   case class EFloat(f: Float) extends Expr
   case class EBool(v: Boolean) extends Expr
@@ -83,7 +89,7 @@ object Syntax {
   case class EAA(id: Id, idxs: List[Expr]) extends Expr
   case class EVar(id: Id) extends Expr
 
-  case class CRange(s: Int, e: Int, u: Int) {
+  case class CRange(s: Int, e: Int, u: Int) extends Positional {
     def idxType: TIndex = {
       if ((e - s) % u != 0) {
         throw UnrollRangeError(e - s, u)
@@ -93,9 +99,9 @@ object Syntax {
     }
   }
 
-  case class CReducer(seq: Command)
+  case class CReducer(seq: Command) extends Positional
 
-  sealed trait Command
+  sealed trait Command extends Positional
   case class CSeq(c1: Command, c2: Command) extends Command
   case class CLet(id: Id, e: Expr) extends Command
   case class CIf(cond: Expr, cons: Command) extends Command
