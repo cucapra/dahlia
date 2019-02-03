@@ -6,7 +6,7 @@ import Errors._
 object TypeChecker {
   import TypeEnv._
 
-  def checkFuse(c: Command) = checkC(c)(Map[Id, Info]())
+  def checkFuse(c: Command) = checkC(c)(emptyEnv)
 
   private def checkB(t1: Type, t2: Type, op: Op2) = op match {
     case OpEq() | OpNeq() => {
@@ -30,7 +30,7 @@ object TypeChecker {
     case EFloat(_) => TFloat() -> env
     case EInt(v) => TStaticInt(v) -> env
     case EBool(_) => TBool() -> env
-    case EVar(id) => env.getBind(id).typ -> env
+    case EVar(id) => env(id).typ -> env
     case EBinop(op, e1, e2) => {
       val (t1, env1) = checkE(e1)
       val (t2, env2) = checkE(e2)(env1)
@@ -43,8 +43,10 @@ object TypeChecker {
         }
         typ -> idxs.zipWithIndex.foldLeft(env)({case (env1, (e, i)) =>
           checkE(e)(env1) match {
-            case (TIndex((s, e), _), env2) => env2 + (id -> env2(id).consumeDim(i, e - s))
-            case (TStaticInt(v), env2) => env2 + (id -> env(id).consumeBank(i, v % dims(i)._2))
+            case (TIndex((s, e), _), env2) =>
+              env2.updateBind(id -> env2(id).consumeDim(i, e - s))
+            case (TStaticInt(v), env2) =>
+              env2.updateBind(id -> env(id).consumeBank(i, v % dims(i)._2))
             case (t, _) => throw InvalidIndex(id, t)
           }
         })
@@ -56,14 +58,23 @@ object TypeChecker {
   private def checkC(cmd: Command)(implicit env: Env): Env = cmd match {
     case CDecl(id, typ) => env.addBind(id -> Info(id, typ))
     case CSeq(c1, c2) => checkC(c2)(checkC(c1))
-    case CIf(cond, cons) => checkE(cond).typRun(TBool(), "if condition", env => checkC(cons)(env))
+    case CIf(cond, cons) => {
+      val (cTyp, e1) = checkE(cond)(env.addScope)
+      if (cTyp != TBool()) {
+        throw UnexpectedType("if condition", TBool(), cTyp)
+      } else {
+        checkC(cons)(e1).endScope
+      }
+    }
     case CUpdate(lhs, rhs) => {
       val (t1, e1) = checkE(lhs)
       val (t2, e2) = checkE(rhs)(e1)
       if (t2 :< t1) (t1, t2, lhs) match {
         // Reassignment of static ints upcasts to bit<32>
-        case (TStaticInt(_), TStaticInt(_), EVar(id)) => e2 + (id -> Info(id, TSizedInt(32)))
-        case (TStaticInt(_), TSizedInt(_), EVar(id)) => e2 + (id -> Info(id, t2))
+        case (TStaticInt(_), TStaticInt(_), EVar(id)) =>
+          e2.updateBind(id -> Info(id, TSizedInt(32)))
+        case (TStaticInt(_), TSizedInt(_), EVar(id)) =>
+          e2.updateBind(id -> Info(id, t2))
         case _ => e2
       }
       else throw UnexpectedSubtype("assignment", t1, t2)
@@ -73,7 +84,8 @@ object TypeChecker {
       e1.addBind(id -> Info(id, t))
     }
     case CFor(iter, range, par, _) => {
-      checkC(par)(env + (iter -> Info(iter, range.idxType)))
+      val e1 = env.addScope.addBind(iter -> Info(iter, range.idxType))
+      checkC(par)(e1).endScope
     }
     case CExpr(e) => checkE(e)._2
     case CEmpty => env
