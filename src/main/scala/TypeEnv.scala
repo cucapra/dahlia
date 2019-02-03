@@ -5,19 +5,41 @@ import Errors._
 
 object TypeEnv {
 
-  type Env = Map[Id, Info]
+  type Stack[T] = List[T]
+
+  val emptyEnv: Env = Env(List(Map[Id, Info]()))
 
   // extends AnyValue creates a value class which reduces runtime overhead.
-  implicit class RichMap(val m: Env) extends AnyVal {
-    def addBind(bind: (Id, Info)) = m.get(bind._1) match {
-      case Some(_) => throw AlreadyBound(bind._1)
-      case None => m + bind
-    }
-    def getBind(id: Id) = m.get(id) match {
+  case class Env(e: Stack[Map[Id, Info]]) extends AnyVal {
+    override def toString = e.foldLeft("")({ case (acc, m) => s"$acc :: $m"})
+    def addScope = Env(Map[Id, Info]() :: e)
+    def endScope = Env(e.tail)
+    def apply(id: Id): Info = findBind(e, id) match {
       case Some(info) => info
       case None => throw UnboundVar(id)
     }
-    def refreshBanks = m.map({ case (id, info) => id -> Info(id, info.typ) })
+
+    private def findBind(e: Stack[Map[Id, Info]], id: Id): Option[Info] =
+      e.find(m => m.get(id).isDefined) match {
+        case None => None
+        case Some(map) => Some(map(id))
+      }
+
+    def addBind(bind: (Id, Info)) = findBind(e, bind._1) match {
+      case Some(_) => throw AlreadyBound(bind._1)
+      case None => Env(e.head + bind :: e.tail)
+    }
+    def updateBind(bind: (Id, Info)) = findBind(e, bind._1) match {
+      case None => throw UnboundVar(bind._1)
+      case Some(_) => {
+        val scope = e.indexWhere(m => m.get(bind._1).isDefined)
+        Env(e.updated(scope, e(scope) + bind))
+      }
+    }
+
+    def refreshBanks = Env(e.map(m =>
+        m.map({ case (id, info) => id -> Info(id, info.typ) })))
+
   }
 
   implicit class RichCheck(val checkRet: (Type, Env)) extends AnyVal {
@@ -62,6 +84,7 @@ object TypeEnv {
       }
       case _ => ??? // Cannot happen
     }
+    override def toString = s"{$typ, $avBanks, $conBanks}"
   }
 
   object Info {

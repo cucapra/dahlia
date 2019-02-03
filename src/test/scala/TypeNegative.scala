@@ -16,6 +16,18 @@ class SimpleTypeNegative extends FunSuite {
     assertThrows[AlreadyBound] {
       typeCheck("let x = 1; let x = 1;")
     }
+    assertThrows[AlreadyBound] {
+      typeCheck("let x = 1; if(true) { let x = 1; }")
+    }
+  }
+
+  test("cannot use variables outside their scope") {
+    assertThrows[UnboundVar] {
+      typeCheck("if (true) {let x = 1;}; x + 2;")
+    }
+    assertThrows[UnboundVar] {
+      typeCheck("for (let i = 0..10){let x = 1;}; x + 2;")
+    }
   }
 
   test("cannot add int and float") {
