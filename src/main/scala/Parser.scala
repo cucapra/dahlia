@@ -40,20 +40,20 @@ private class FuseParser extends RegexParsers with PackratParsers {
 
   // Binops
   lazy val mulOps: P[Op2] = positioned {
-    "/" ^^ { _ => OpDiv } |
-    "*" ^^ { _ => OpDiv }
+    "/" ^^ { _ => OpDiv() } |
+    "*" ^^ { _ => OpTimes() }
   }
   lazy val addOps: P[Op2] = positioned {
-    "+" ^^ { _ => OpAdd } |
-    "-" ^^ { _ => OpSub }
+    "+" ^^ { _ => OpAdd() } |
+    "-" ^^ { _ => OpSub() }
   }
   lazy val eqOps: P[Op2] = positioned {
-    "==" ^^ { _ => OpEq } |
-    "!=" ^^ { _ => OpNeq } |
-    ">=" ^^ { _ => OpGte } |
-    "<=" ^^ { _ => OpLte } |
-    ">"  ^^ { _ => OpGt } |
-    "<"  ^^ { _ => OpLt }
+    "==" ^^ { _ => OpEq() } |
+    "!=" ^^ { _ => OpNeq() } |
+    ">=" ^^ { _ => OpGte() } |
+    "<=" ^^ { _ => OpLte() } |
+    ">"  ^^ { _ => OpGt() } |
+    "<"  ^^ { _ => OpLt() }
   }
 
   // Expressions
@@ -76,8 +76,8 @@ private class FuseParser extends RegexParsers with PackratParsers {
     brackets(number ~ "bank" ~ number) ^^ { case n ~ _ ~ b => (n, b) } |
     brackets(number)^^ { n => (n, 1) }
   lazy val atyp: P[Type] =
-    "float" ^^ { _ => TFloat } |
-    "bool" ^^ { _ => TBool } |
+    "float" ^^ { _ => TFloat() } |
+    "bool" ^^ { _ => TBool() } |
     "bit" ~> angular(number) ^^ { case s => TSizedInt(s) }
   lazy val typ: P[Type] =
     atyp ~ rep1(typIdx) ^^ { case t ~ dims => TArray(t, dims) } |
@@ -106,7 +106,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
 
   lazy val cmd: P[Command] = positioned {
     acmd ~ ";" ~ cmd ^^ { case c1 ~ _ ~ c2 => CSeq(c1, c2) } |
-    acmd ~ ";" ~ "---" ~ cmd ^^ { case c1 ~ _ ~ _ ~ c2 => CSeq(c1, CSeq(CRefreshBanks, c2)) } |
+    acmd ~ ";" ~ "---" ~ cmd ^^ { case c1 ~ _ ~ _ ~ c2 => CSeq(c1, CSeq(CRefreshBanks(), c2)) } |
     acmd <~ ";" |
     acmd
   }

@@ -32,8 +32,8 @@ object Syntax {
     }
 
     override def toString = this match {
-      case TBool => "bool"
-      case TFloat => "float"
+      case _: TBool => "bool"
+      case _: TFloat => "float"
       case TSizedInt(l) => s"int$l"
       case TStaticInt(s) => s"static($s)"
       case TArray(t, dims) =>
@@ -41,45 +41,46 @@ object Syntax {
       case TIndex(s, d) => s"idx($s, $d)"
     }
   }
-  case object TBool extends Type
+  // Use case class instead of case object to get unique positions
+  case class TBool() extends Type
+  case class TFloat() extends Type
   case class TSizedInt(len: Int) extends Type
   case class TStaticInt(v: Int) extends Type
-  case object TFloat extends Type
   case class TArray(typ: Type, dims: List[(Int, Int)]) extends Type
   case class TIndex(static: (Int, Int), dynamic: (Int, Int)) extends Type
 
   sealed trait Op2 extends Positional {
     override def toString = this match {
-      case OpEq => "=="
-      case OpNeq => "!="
-      case OpLt => "<"
-      case OpLte => "<="
-      case OpGt => ">"
-      case OpGte => ">="
-      case OpAdd => "+"
-      case OpSub => "-"
-      case OpTimes => "*"
-      case OpDiv => "/"
+      case _: OpEq => "=="
+      case _: OpNeq => "!="
+      case _: OpLt => "<"
+      case _: OpLte => "<="
+      case _: OpGt => ">"
+      case _: OpGte => ">="
+      case _: OpAdd => "+"
+      case _: OpSub => "-"
+      case _: OpTimes => "*"
+      case _: OpDiv => "/"
     }
 
     def toFun: (Int, Int) => Int = this match {
-      case OpAdd => _ + _
-      case OpTimes => _ * _
-      case OpDiv => _ / _
-      case OpSub => _ - _
+      case _: OpAdd => _ + _
+      case _: OpTimes => _ * _
+      case _: OpDiv => _ / _
+      case _: OpSub => _ - _
       case _ => throw MsgError(s"toFun not defined on $this")
     }
   }
-  case object OpEq extends Op2
-  case object OpNeq extends Op2
-  case object OpAdd extends Op2
-  case object OpSub extends Op2
-  case object OpTimes extends Op2
-  case object OpDiv extends Op2
-  case object OpLt extends Op2
-  case object OpLte extends Op2
-  case object OpGt extends Op2
-  case object OpGte extends Op2
+  case class OpEq() extends Op2
+  case class OpNeq() extends Op2
+  case class OpAdd() extends Op2
+  case class OpSub() extends Op2
+  case class OpTimes() extends Op2
+  case class OpDiv() extends Op2
+  case class OpLt() extends Op2
+  case class OpLte() extends Op2
+  case class OpGt() extends Op2
+  case class OpGte() extends Op2
 
   sealed trait Expr extends Positional
   case class EInt(v: Int) extends Expr
@@ -109,6 +110,6 @@ object Syntax {
   case class CUpdate(lhs: Expr, rhs: Expr) extends Command
   case class CExpr(exp: Expr) extends Command
   case class CDecl(id: Id, typ: Type) extends Command
-  case object CRefreshBanks extends Command
+  case class CRefreshBanks() extends Command
   case object CEmpty extends Command
 }
