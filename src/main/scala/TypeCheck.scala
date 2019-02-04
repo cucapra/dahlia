@@ -94,14 +94,19 @@ object TypeChecker {
           throw ReductionInvalidRHS(r.pos, rop, ta)
       }
     }
-    case CLet(id, exp) => {
+    case l@CLet(id, typ, exp) => {
       val (t, e1) = checkE(exp)
-      e1.addBind(id -> Info(id, t))
+      typ match {
+        case Some(t2) if t :< t2 => e1.addBind(id -> Info(id, t2))
+        case Some(t2) => throw UnexpectedType("let", t, t2)
+        case None => l.typ = Some(t); e1.addBind(id -> Info(id, t))
+      }
     }
     case CFor(range, par, combine) => {
       val iter = range.iter
       // Add binding for iterator in a separate scope.
       val e1 = env.addScope.addBind(iter -> Info(iter, range.idxType)).addScope
+      // Check for body and pop the scope.
       val (e2, binds) = checkC(par)(e1).endScope
       // Create scope where ids bound in the parallel scope map to fully banked arrays.
       val vecBinds = binds.map({ case (id, inf) =>

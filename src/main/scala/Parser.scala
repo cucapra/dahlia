@@ -108,7 +108,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
   lazy val acmd: P[Command] = positioned {
     cfor |
     "decl" ~> iden ~ ":" ~ typ ^^ { case id ~ _ ~ typ => CDecl(id, typ)} |
-    "let" ~> iden ~ "=" ~ expr ^^ { case id ~ _ ~ exp => CLet(id, exp) } |
+    "let" ~> iden ~ (":" ~> typ).? ~ ("=" ~> expr) ^^ { case id ~ t ~ exp => CLet(id, t, exp) } |
     "if" ~> parens(expr) ~ block  ^^ { case cond ~ cons => CIf(cond, cons) } |
     expr ~ ":=" ~ expr ^^ { case l ~ _ ~ r => CUpdate(l, r) } |
     expr ~ rop ~ expr ^^ { case l ~ rop ~ r => CReduce(rop, l, r) } |
