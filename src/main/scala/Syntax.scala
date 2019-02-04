@@ -90,7 +90,7 @@ object Syntax {
   case class EAA(id: Id, idxs: List[Expr]) extends Expr
   case class EVar(id: Id) extends Expr
 
-  case class CRange(s: Int, e: Int, u: Int) extends Positional {
+  case class CRange(iter: Id, s: Int, e: Int, u: Int) extends Positional {
     def idxType: TIndex = {
       if ((e - s) % u != 0) {
         throw UnrollRangeError(e - s, u)
@@ -100,14 +100,27 @@ object Syntax {
     }
   }
 
-  case class CReducer(seq: Command) extends Positional
+  sealed trait ROp extends Positional {
+    override def toString = this match {
+      case _: RAdd => "+="
+      case _: RMul => "*="
+      case _: RSub => "-="
+      case _: RDiv => "/="
+    }
+  }
+  case class RAdd() extends ROp
+  case class RMul() extends ROp
+  case class RSub() extends ROp
+  case class RDiv() extends ROp
 
+  // TODO(rachit): Create class for LValues and use them for lhs of update and reduce.
   sealed trait Command extends Positional
   case class CSeq(c1: Command, c2: Command) extends Command
   case class CLet(id: Id, e: Expr) extends Command
   case class CIf(cond: Expr, cons: Command) extends Command
-  case class CFor(iter: Id, range: CRange, par: Command, seq: CReducer) extends Command
+  case class CFor(range: CRange, par: Command, combine: Command) extends Command
   case class CUpdate(lhs: Expr, rhs: Expr) extends Command
+  case class CReduce(rop: ROp, lhs: Expr, rhs: Expr) extends Command
   case class CExpr(exp: Expr) extends Command
   case class CDecl(id: Id, typ: Type) extends Command
   case class CRefreshBanks() extends Command

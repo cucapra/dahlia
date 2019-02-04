@@ -42,13 +42,14 @@ private class Emit extends PrettyPrinter {
     case CSeq(c1, c2) => c1 <> line <> c2
     case CLet(id, e) => env(id).typ <+> value(id) <+> equal <+> e <> semi
     case CIf(cond, cons) => "if" <> parens(cond) <> scope (cons)
-    case CFor(iter, range, par, CReducer(reduce)) =>
+    case CFor(range, par, combine) =>
       "for" <> parens {
-        env(iter).typ <+> iter <+> "=" <+> value(range.s) <> semi <+>
-        iter <+> "<" <+> value(range.e) <> semi <+>
-        iter <+> "++"
-      } <+> scope(par <> line <> text("// reducer:") <> reduce)
+        env(range.iter).typ <+> range.iter <+> "=" <+> value(range.s) <> semi <+>
+        range.iter <+> "<" <+> value(range.e) <> semi <+>
+        range.iter <+> "++"
+      } <+> scope(par <> line <> text("// combiner:") <> combine)
     case CUpdate(lhs, rhs) => lhs <+> "=" <+> rhs <> semi
+    case CReduce(rop, lhs, rhs) => lhs <+> rop.toString <+> rhs <> semi
     case CExpr(e) => e <> semi
     case CEmpty => ""
     case CRefreshBanks() => "//---"

@@ -28,7 +28,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
   lazy val float = "(-)?[0-9]+.[0-9]+".r ^^ { n => n.toFloat }
   lazy val boolean = "true" ^^ { _ => true } | "false" ^^ { _ => false }
   lazy val eaa: P[Expr] = positioned {
-    iden ~ rep1("[" ~> expr <~ "]") ^^ { case id ~ idxs => EAA(id, idxs) }
+    iden ~ rep1(brackets(expr)) ^^ { case id ~ idxs => EAA(id, idxs) }
   }
   lazy val atom: P[Expr] = positioned {
     eaa |
@@ -83,24 +83,35 @@ private class FuseParser extends RegexParsers with PackratParsers {
     atyp ~ rep1(typIdx) ^^ { case t ~ dims => TArray(t, dims) } |
     atyp
 
-  // Commands
+  // For loops
   lazy val block: P[Command] =
-    braces(cmd) |
-    "{" ~ "}" ^^ { case _ ~ _ => CEmpty }
-  lazy val cfor: P[Command] = positioned {
-    "for" ~ "(" ~ "let" ~> iden ~ "=" ~ number ~ ".." ~ number ~ ")" ~ block ^^ {
-      case id ~ _ ~ s ~ _ ~ e ~ _ ~ par => CFor(id, CRange(s, e, 1), par, CReducer(CEmpty))
-    } |
-    "for" ~ "(" ~ "let" ~> iden ~ "=" ~ number ~ ".." ~ number ~ ")" ~ "unroll" ~ number ~ block ^^ {
-      case id ~ _ ~ s ~ _ ~ e ~ _ ~ _ ~ u ~ par => CFor(id, CRange(s, e, u), par, CReducer(CEmpty))
+    braces(cmd.?) ^^ { case c => c.getOrElse(CEmpty) }
+  lazy val crange: P[CRange] = positioned {
+    parens("let" ~> iden ~ "=" ~ number ~ ".." ~ number) ~ ("unroll" ~> number).? ^^ {
+      case id ~ _ ~ s ~ _ ~ e ~ u => CRange(id, s, e, u.getOrElse(1))
     }
   }
+  lazy val cfor: P[Command] = positioned {
+    "for" ~> crange ~ block ~ ("combine" ~> block).? ^^ {
+      case range ~ par ~ c => CFor(range, par, c.getOrElse(CEmpty))
+    }
+  }
+
+  lazy val rop: P[ROp] = positioned {
+    "+=" ^^ { _ => RAdd() } |
+    "*=" ^^ { _ => RAdd() } |
+    "-=" ^^ { _ => RAdd() } |
+    "/=" ^^ { _ => RAdd() }
+  }
+
+  // Other commands
   lazy val acmd: P[Command] = positioned {
     cfor |
     "decl" ~> iden ~ ":" ~ typ ^^ { case id ~ _ ~ typ => CDecl(id, typ)} |
-    expr ~ ":=" ~ expr ^^ { case l ~ _ ~ r => CUpdate(l, r) } |
     "let" ~> iden ~ "=" ~ expr ^^ { case id ~ _ ~ exp => CLet(id, exp) } |
-    "if" ~> parens(expr) ~ block ^^ { case cond ~ cons => CIf(cond, cons) } |
+    "if" ~> parens(expr) ~ block  ^^ { case cond ~ cons => CIf(cond, cons) } |
+    expr ~ ":=" ~ expr ^^ { case l ~ _ ~ r => CUpdate(l, r) } |
+    expr ~ rop ~ expr ^^ { case l ~ rop ~ r => CReduce(rop, l, r) } |
     expr ^^ { case e => CExpr(e) }
   }
 

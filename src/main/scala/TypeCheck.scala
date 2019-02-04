@@ -51,7 +51,7 @@ object TypeChecker {
           }
         })
       }
-      case t => throw UnexpectedType("array access", TArray(t, List()), t)
+      case t => throw UnexpectedTypeWithString("array access", s"$t[]", t)
     }
   }
 
@@ -63,7 +63,7 @@ object TypeChecker {
       if (cTyp != TBool()) {
         throw UnexpectedType("if condition", TBool(), cTyp)
       } else {
-        checkC(cons)(e1).endScope
+        checkC(cons)(e1).endScope._1
       }
     }
     case CUpdate(lhs, rhs) => {
@@ -79,13 +79,31 @@ object TypeChecker {
       }
       else throw UnexpectedSubtype("assignment", t1, t2)
     }
+    case CReduce(rop, l, r) => {
+      val (t1, e1) = checkE(l)
+      val (ta, e2) = checkE(r)(e1)
+      (t1, ta) match {
+        case (t1, TArray(t2, dims)) => if (t1 != t2) {
+          throw UnexpectedTypeWithString(s"reduction $rop", s"$t1[N bank N]", ta)
+        } else if (dims.length != 1) {
+          throw MsgError("Only allowed to use one dimensional arrays on the RHS of reductions.")
+        } else if (dims(1)._1 != dims(1)._2) {
+          throw MsgError("Only allowed to use one fully banked arrays on the RHS of reductions.")
+        } else {
+          e2
+        }
+        case (t1, t2) =>
+          throw UnexpectedTypeWithString(s"reduction $rop", s"$t1[N bank N]", t2)
+      }
+    }
     case CLet(id, exp) => {
       val (t, e1) = checkE(exp)
       e1.addBind(id -> Info(id, t))
     }
-    case CFor(iter, range, par, _) => {
+    case CFor(range, par, _) => {
+      val iter = range.iter
       val e1 = env.addScope.addBind(iter -> Info(iter, range.idxType))
-      checkC(par)(e1).endScope
+      checkC(par)(e1).endScope._1
     }
     case CExpr(e) => checkE(e)._2
     case CEmpty => env
