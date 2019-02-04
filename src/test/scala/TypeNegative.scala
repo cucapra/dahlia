@@ -71,6 +71,22 @@ class SimpleTypeNegative extends FunSuite {
     }
   }
 
+  test("RHS of reduction not an array") {
+    assertThrows[ReductionInvalidRHS] {
+      typeCheck("let x = 1; x += x;")
+    }
+  }
+  test("RHS of reduction not fully banked") {
+    assertThrows[ReductionInvalidRHS] {
+      typeCheck("decl a: bit<32>[8 bank 2]; let x = 0; x += a;")
+    }
+  }
+  test("RHS of reduction not 1 dimensional array") {
+    assertThrows[ReductionInvalidRHS] {
+      typeCheck("decl a: bit<32>[8 bank 8][10]; let x = 0; x += a;")
+    }
+  }
+
   test("Banking factor not equal to unrolling factor") {
     assertThrows[BankUnrollInvalid] {
       typeCheck("""

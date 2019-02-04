@@ -6,11 +6,12 @@ import Errors._
 object TypeEnv {
 
   type Stack[T] = List[T]
+  type Scope = Map[Id, Info]
 
-  val emptyEnv: Env = Env(List(Map[Id, Info]()))
+  val emptyEnv: Env = Env(List(Map()))
 
   // extends AnyValue creates a value class which reduces runtime overhead.
-  case class Env(e: Stack[Map[Id, Info]]) extends AnyVal {
+  case class Env(e: Stack[Scope]) extends AnyVal {
     override def toString = e.foldLeft("")({ case (acc, m) => s"$acc :: $m"})
     def addScope = Env(Map[Id, Info]() :: e)
     def endScope = (Env(e.tail), e.head)
@@ -19,7 +20,7 @@ object TypeEnv {
       case None => throw UnboundVar(id)
     }
 
-    private def findBind(e: Stack[Map[Id, Info]], id: Id): Option[Info] =
+    private def findBind(e: Stack[Scope], id: Id): Option[Info] =
       e.find(m => m.get(id).isDefined) match {
         case None => None
         case Some(map) => Some(map(id))
@@ -36,20 +37,13 @@ object TypeEnv {
         Env(e.updated(scope, e(scope) + bind))
       }
     }
+    def ++(binds: Scope): Env =
+      binds.foldLeft(this)({ case (e, b) => e.addBind(b) })
 
+    // XXX(rachit): This updates the bindings in all scopes. Is this the correct behavior?
     def refreshBanks = Env(e.map(m =>
         m.map({ case (id, info) => id -> Info(id, info.typ) })))
 
-  }
-
-  implicit class RichCheck(val checkRet: (Type, Env)) extends AnyVal {
-    def typRun(typ: Type, construct: String, f: Env => Env) = {
-      if (checkRet._1 != typ) {
-        throw UnexpectedType(construct, typ, checkRet._1)
-      } else {
-        f(checkRet._2)
-      }
-    }
   }
 
   case class Info(

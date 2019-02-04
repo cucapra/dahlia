@@ -69,6 +69,7 @@ object TypeChecker {
     case CUpdate(lhs, rhs) => {
       val (t1, e1) = checkE(lhs)
       val (t2, e2) = checkE(rhs)(e1)
+      // :< is a subtyping method we defined on the type trait.
       if (t2 :< t1) (t1, t2, lhs) match {
         // Reassignment of static ints upcasts to bit<32>
         case (TStaticInt(_), TStaticInt(_), EVar(id)) =>
@@ -83,30 +84,35 @@ object TypeChecker {
       val (t1, e1) = checkE(l)
       val (ta, e2) = checkE(r)(e1)
       (t1, ta) match {
-        case (t1, TArray(t2, dims)) => if (t1 != t2) {
-          throw UnexpectedTypeWithString(s"reduction $rop", s"$t1[N bank N]", ta)
-        } else if (dims.length != 1) {
-          throw MsgError("Only allowed to use one dimensional arrays on the RHS of reductions.")
-        } else if (dims(1)._1 != dims(1)._2) {
-          throw MsgError("Only allowed to use one fully banked arrays on the RHS of reductions.")
-        } else {
-          e2
-        }
-        case (t1, t2) =>
-          throw UnexpectedTypeWithString(s"reduction $rop", s"$t1[N bank N]", t2)
+        case (t1, TArray(t2, dims)) =>
+          if (t2 :< t1 == false || dims.length != 1 || dims(0)._1 != dims(0)._2) {
+            throw ReductionInvalidRHS(r.pos, rop, ta)
+          } else {
+            e2
+          }
+        case _ =>
+          throw ReductionInvalidRHS(r.pos, rop, ta)
       }
     }
     case CLet(id, exp) => {
       val (t, e1) = checkE(exp)
       e1.addBind(id -> Info(id, t))
     }
-    case CFor(range, par, _) => {
+    case CFor(range, par, combine) => {
       val iter = range.iter
       val e1 = env.addScope.addBind(iter -> Info(iter, range.idxType))
-      checkC(par)(e1).endScope._1
+      val (e2, binds) = checkC(par)(e1).endScope
+      // Create scope where ids bound in the parallel scope map to fully banked arrays.
+      val vecBinds = binds.map({ case (id, inf) =>
+        id -> Info(id, TArray(inf.typ, List((range.u, range.u))))
+      })
+      checkC(combine)(e2.addScope ++ vecBinds).endScope._1
     }
     case CExpr(e) => checkE(e)._2
     case CEmpty => env
+    // XXX(rachit): @adrian this refreshes capabilities and banks in all the scopes globally.
+    // Should this be instead limited to the current scope?
+    // Intuitively, I would say no, since a logical time step refreshes things globally.
     case CRefreshBanks() => env.refreshBanks
   }
 }

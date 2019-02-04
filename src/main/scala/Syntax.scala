@@ -12,6 +12,7 @@ object Syntax {
   }
 
   sealed trait Type extends Positional {
+    // XXX(rachit): @adrian these are the Subtyping functions
     def :<(that: Type): Boolean = (this, that) match {
       case (TStaticInt(_), TStaticInt(_)) => true
       case (TStaticInt(_), TSizedInt(_)) | (TSizedInt(_), TStaticInt(_)) => true
