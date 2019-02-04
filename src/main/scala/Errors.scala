@@ -9,19 +9,16 @@ object Errors {
   case class MsgError(msg: String) extends RuntimeException(msg)
 
   // Type mismatch
-  case class UnexpectedType(construct: String, exp: Type, actual: Type) extends RuntimeException(
-    s"Expected type $exp in $construct, received: $actual."
+  case class UnexpectedType(pos: Position, con: String, exp: String, actual: Type) extends RuntimeException(
+    withPos(s"Expected type $exp in $con, received: $actual.", pos)
   )
-  case class UnexpectedTypeWithString(construct: String, exp: String, actual: Type) extends RuntimeException(
-    s"Expected type $exp in $construct, received: $actual."
-  )
-  case class UnexpectedSubtype(construct: String, exp: Type, actual: Type) extends RuntimeException(
-    s"Expected subtype of $exp in $construct, received: $actual."
+  case class UnexpectedSubtype(pos: Position, con: String, exp: Type, actual: Type) extends RuntimeException(
+    withPos(s"Expected subtype of $exp in $con, received: $actual.", pos)
   )
 
   // Unrolling and banking errors
-  case class UnrollRangeError(rangeSize: Int, unrollFactor: Int) extends RuntimeException(
-    s"Cannot unroll range of size $rangeSize by factor $unrollFactor."
+  case class UnrollRangeError(pos: Position, rSize: Int, uFactor: Int) extends RuntimeException(
+    withPos(s"Cannot unroll range of size $rSize by factor $uFactor.", pos)
   )
   case class InvalidIndex(id: Id, actual: Type) extends RuntimeException(
     withPos(s"Invalid indexing type for $id. Expected: TIndex or TSizedInt, actual: $actual", id.pos)
@@ -55,9 +52,9 @@ object Errors {
   )
 
   // Reduction errors
-  case class ReductionInvalidRHS(p: Position, rop: ROp, t: Type) extends RuntimeException(
+  case class ReductionInvalidRHS(p: Position, rop: ROp, tl: Type, tr: Type) extends RuntimeException(
     withPos(
-      s"Expected right hand side of $rop to be a fully banked 1-dimensional array, received: $t", p)
+      s"Unexpected type on right hand side of $rop. Expected: $tl[N bank N], received: $tr", p)
   )
 
   // Parsing errors

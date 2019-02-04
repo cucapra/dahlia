@@ -11,7 +11,7 @@ object TypeChecker {
   private def checkB(t1: Type, t2: Type, op: Op2) = op match {
     case OpEq() | OpNeq() => {
       if (t1 :< t2 || t2 :< t1) TBool()
-      else throw UnexpectedSubtype(op.toString, t1, t2)
+      else throw UnexpectedSubtype(op.pos, op.toString, t1, t2)
     }
     case OpLt() | OpLte() | OpGt() | OpGte() => (t1, t2) match {
       case ((TStaticInt(_) | TSizedInt(_)), (TStaticInt(_) | TSizedInt(_))) => TBool()
@@ -51,7 +51,7 @@ object TypeChecker {
           }
         })
       }
-      case t => throw UnexpectedTypeWithString("array access", s"$t[]", t)
+      case t => throw UnexpectedType(expr.pos, "array access", s"$t[]", t)
     }
   }
 
@@ -61,7 +61,7 @@ object TypeChecker {
     case CIf(cond, cons) => {
       val (cTyp, e1) = checkE(cond)(env.addScope)
       if (cTyp != TBool()) {
-        throw UnexpectedType("if condition", TBool(), cTyp)
+        throw UnexpectedType(cond.pos, "if condition", TBool().toString, cTyp)
       } else {
         checkC(cons)(e1).endScope._1
       }
@@ -78,7 +78,7 @@ object TypeChecker {
           e2.updateBind(id -> Info(id, t2))
         case _ => e2
       }
-      else throw UnexpectedSubtype("assignment", t1, t2)
+      else throw UnexpectedSubtype(rhs.pos, "assignment", t1, t2)
     }
     case CReduce(rop, l, r) => {
       val (t1, e1) = checkE(l)
@@ -86,19 +86,19 @@ object TypeChecker {
       (t1, ta) match {
         case (t1, TArray(t2, dims)) =>
           if (t2 :< t1 == false || dims.length != 1 || dims(0)._1 != dims(0)._2) {
-            throw ReductionInvalidRHS(r.pos, rop, ta)
+            throw ReductionInvalidRHS(r.pos, rop, t1, ta)
           } else {
             e2
           }
         case _ =>
-          throw ReductionInvalidRHS(r.pos, rop, ta)
+          throw ReductionInvalidRHS(r.pos, rop, t1, ta)
       }
     }
     case l@CLet(id, typ, exp) => {
       val (t, e1) = checkE(exp)
       typ match {
         case Some(t2) if t :< t2 => e1.addBind(id -> Info(id, t2))
-        case Some(t2) => throw UnexpectedType("let", t, t2)
+        case Some(t2) => throw UnexpectedType(exp.pos, "let", t.toString, t2)
         case None => l.typ = Some(t); e1.addBind(id -> Info(id, t))
       }
     }

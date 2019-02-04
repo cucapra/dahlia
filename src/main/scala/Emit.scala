@@ -46,7 +46,7 @@ private class Emit extends PrettyPrinter {
         "int" <+> range.iter <+> "=" <+> value(range.s) <> semi <+>
         range.iter <+> "<" <+> value(range.e) <> semi <+>
         range.iter <+> "++"
-      } <+> scope(par <> line <> text("// combiner:") <> combine)
+      } <+> scope(par <> line <> text("// combiner:") <@> combine)
     case CUpdate(lhs, rhs) => lhs <+> "=" <+> rhs <> semi
     case CReduce(rop, lhs, rhs) => lhs <+> rop.toString <+> rhs <> semi
     case CExpr(e) => e <> semi
