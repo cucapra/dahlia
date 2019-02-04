@@ -8,7 +8,7 @@ object Syntax {
   import scala.math.{max,log10,ceil}
 
   case class Id(v: String) extends Positional {
-    override def toString = s"`$v'"
+    override def toString = s"$v"
   }
 
   sealed trait Type extends Positional {
@@ -94,7 +94,7 @@ object Syntax {
   case class CRange(iter: Id, s: Int, e: Int, u: Int) extends Positional {
     def idxType: TIndex = {
       if ((e - s) % u != 0) {
-        throw UnrollRangeError(e - s, u)
+        throw UnrollRangeError(this.pos, e - s, u)
       } else {
         TIndex((0, u), (s/u, e/u))
       }
