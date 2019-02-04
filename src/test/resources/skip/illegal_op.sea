@@ -1,6 +1,0 @@
-func add_two(a: int, b: int[10 bank(5)]) {
-  for (let i = 0 .. 10) unroll 2 {
-    let x = i + a;
-  }
-}
-
