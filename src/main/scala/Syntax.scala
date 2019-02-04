@@ -8,6 +8,7 @@ object Syntax {
   import scala.math.{max,log10,ceil}
 
   case class Id(v: String) extends Positional {
+    var typ: Option[Type] = None;
     override def toString = s"$v"
   }
 

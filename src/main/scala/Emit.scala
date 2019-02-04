@@ -12,6 +12,7 @@ private class Emit extends PrettyPrinter {
 
   import scala.language.implicitConversions
   import Syntax._
+  import Errors._
 
   override val defaultIndent = 2
 
@@ -25,6 +26,22 @@ private class Emit extends PrettyPrinter {
     case n => value(s"#pragma HLS ARRAY_PARTITION variable=$id factor=$n")
   }
 
+  def binop(op: Op2, l: Expr, r: Expr) = (op, l, r) match {
+    case (OpTimes(), EInt(1), r) => r
+    case (OpTimes(), l, EInt(1)) => l
+    case (OpTimes(), EInt(0), _) => EInt(0)
+    case (OpTimes(), _, EInt(0)) => EInt(0)
+    case (OpAdd(), l, EInt(0)) => l
+    case (OpAdd(), EInt(0), r) => r
+    case _ => EBinop(op, l, r)
+  }
+
+  // FIXME(rachit): This is probably incorrect.
+  def flattenIdx(idxs: List[Expr], dimSizes: List[Int]) =
+    idxs.zip(dimSizes).foldRight[Expr](EInt(0))({
+      case ((idx, dim), acc) => binop(OpAdd(), idx, binop(OpTimes(), EInt(dim), acc))
+    })
+
   def scope(doc: Doc): Doc =
     lbrace <@> indent(doc) <@> rbrace
 
@@ -34,7 +51,7 @@ private class Emit extends PrettyPrinter {
     case _: TBool | TIndex(_, _) | TStaticInt(_) => "int"
     case _: TFloat => "float"
     case TSizedInt(_) => value(typ)
-    case TArray(typ, dims) => typ <> brackets(value(dims.map(_._1).foldLeft(1)(_ * _)))
+    case TArray(typ, _) => typ
   }
 
   implicit def exprToDoc(e: Expr): Doc = e match {
@@ -42,8 +59,12 @@ private class Emit extends PrettyPrinter {
     case EFloat(f) => value(f)
     case EBool(b) => value(if(b) 1 else 0)
     case EVar(id) => value(id)
-    case EBinop(op, e1, e2) => e1 <+> op.toString <+> e2
-    case EAA(id, idxs) => id <> hcat(idxs.map(idx => brackets(idx)))
+    case EBinop(op, e1, e2) => parens(e1 <+> op.toString <+> e2)
+    case EAA(id, idxs) => id.typ match {
+      case Some(TArray(_, dims)) => id <> brackets(flattenIdx(idxs, dims.map(_._1)))
+      case Some(_) => throw Impossible("array access doesnt use array")
+      case None => throw Impossible("type information missins in exprToDoc")
+    }
   }
 
   implicit def cmdToDoc(c: Command): Doc = c match {
@@ -54,7 +75,7 @@ private class Emit extends PrettyPrinter {
       "for" <> parens {
         "int" <+> range.iter <+> "=" <+> value(range.s) <> semi <+>
         range.iter <+> "<" <+> value(range.e) <> semi <+>
-        range.iter <+> "++"
+        range.iter <> "++"
       } <+> scope {
         unroll(range.u) <@>
         par <> line <> text("// combiner:") <@>
@@ -67,13 +88,22 @@ private class Emit extends PrettyPrinter {
     case CRefreshBanks() => "//---"
   }
 
-  def declToDoc(d: Decl): Doc = d.typ <+> d.id <> semi
+  def withArrayType(id: Id) = id.typ match {
+    case Some(TArray(_, dims)) => s"$id[${dims.foldLeft(1)(_ * _._1).toString}]"
+    case Some(_) => s"$id"
+    case None =>
+      throw Impossible("type information missing in withArrayType. Should not happen!")
+  }
+  // Declaration are the only place where arrays can be created, so use withArrayType
+  // to generate the right array type.
+  def declToDoc(d: Decl): Doc = d.typ <+> withArrayType(d.id) <> semi
 
   def progToDoc(p: Prog) = {
     val bankPragmas = p.decls
       .filter(d => d.typ.isInstanceOf[TArray])
-      .map(d => d.id -> d.typ.asInstanceOf[TArray].dims.map(_._1))
+      .map(d => d.id -> d.typ.asInstanceOf[TArray].dims.map(_._2))
       .map({ case (id, bfs) => bank(id, bfs) })
+
     val args = hsep(p.decls.map(declToDoc), comma)
     "void kernel" <> parens(args) <+> scope {
       vsep(bankPragmas) <@>

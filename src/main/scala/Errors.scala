@@ -60,5 +60,8 @@ object Errors {
   // Parsing errors
   case class ParserError(msg: String) extends RuntimeException(msg)
 
+  // Impossible
+  case class Impossible(msg: String) extends RuntimeException(s"Impossible: $msg")
+
 }
 

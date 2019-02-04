@@ -8,6 +8,7 @@ object TypeChecker {
 
   def typeCheck(p: Prog) = {
     val initEnv = p.decls.foldLeft(emptyEnv)({ case (env, Decl(id, typ)) =>
+      id.typ = Some(typ);
       env.addBind(id -> Info(id, typ))
     })
     checkC(p.cmd)(initEnv)
@@ -35,7 +36,11 @@ object TypeChecker {
     case EFloat(_) => TFloat() -> env
     case EInt(v) => TStaticInt(v) -> env
     case EBool(_) => TBool() -> env
-    case EVar(id) => env(id).typ -> env
+    case EVar(id) => {
+      // Add type information to variable
+      id.typ = Some(env(id).typ);
+      env(id).typ -> env
+    }
     case EBinop(op, e1, e2) => {
       val (t1, env1) = checkE(e1)
       val (t2, env2) = checkE(e2)(env1)
@@ -46,6 +51,8 @@ object TypeChecker {
         if (dims.length != idxs.length) {
           throw IncorrectAccessDims(id, dims.length, idxs.length)
         }
+        // update type for id
+        id.typ = Some(env(id).typ);
         typ -> idxs.zipWithIndex.foldLeft(env)({case (env1, (e, i)) =>
           checkE(e)(env1) match {
             case (TIndex((s, e), _), env2) =>
