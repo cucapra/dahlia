@@ -107,7 +107,6 @@ private class FuseParser extends RegexParsers with PackratParsers {
   // Other commands
   lazy val acmd: P[Command] = positioned {
     cfor |
-    "decl" ~> iden ~ ":" ~ typ ^^ { case id ~ _ ~ typ => CDecl(id, typ)} |
     "let" ~> iden ~ (":" ~> typ).? ~ ("=" ~> expr) ^^ { case id ~ t ~ exp => CLet(id, t, exp) } |
     "if" ~> parens(expr) ~ block  ^^ { case cond ~ cons => CIf(cond, cons) } |
     expr ~ ":=" ~ expr ^^ { case l ~ _ ~ r => CUpdate(l, r) } |
@@ -122,13 +121,23 @@ private class FuseParser extends RegexParsers with PackratParsers {
     acmd
   }
 
+  // Declarations
+  lazy val decl: P[Decl] = positioned {
+    "decl" ~> iden ~ ":" ~ typ <~ ";" ^^ { case id ~ _ ~ typ => Decl(id, typ)}
+  }
+
+  // Prog
+  lazy val prog: P[Prog] = positioned {
+    decl.* ~ cmd.? ^^ { case decls ~ cmd => Prog(decls, cmd.getOrElse(CEmpty)) }
+  }
+
 }
 
 object FuseParser {
   private val parser = new FuseParser()
   import parser._
 
-  def parse(str: String) = parseAll(cmd, str) match {
+  def parse(str: String): Prog = parseAll(prog, str) match {
     case Success(res, _) => res
     case res => throw Errors.ParserError(s"$res")
   }

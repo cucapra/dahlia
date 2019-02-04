@@ -29,7 +29,6 @@ class ParsingPositive extends org.scalatest.FunSuite {
   test("decl") {
     parseAst("decl x: bit<64>;")
     parseAst("decl x: bool;")
-    parseAst("decl x: bool")
     parseAst("decl x: bit<64>[10 bank 5];")
   }
 

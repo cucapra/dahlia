@@ -6,7 +6,12 @@ import Errors._
 object TypeChecker {
   import TypeEnv._
 
-  def checkFuse(c: Command) = checkC(c)(emptyEnv)
+  def typeCheck(p: Prog) = {
+    val initEnv = p.decls.foldLeft(emptyEnv)({ case (env, Decl(id, typ)) =>
+      env.addBind(id -> Info(id, typ))
+    })
+    checkC(p.cmd)(initEnv)
+  }
 
   private def checkB(t1: Type, t2: Type, op: Op2) = op match {
     case OpEq() | OpNeq() => {
@@ -56,7 +61,6 @@ object TypeChecker {
   }
 
   private def checkC(cmd: Command)(implicit env: Env): Env = cmd match {
-    case CDecl(id, typ) => env.addBind(id -> Info(id, typ))
     case CSeq(c1, c2) => checkC(c2)(checkC(c1))
     case CIf(cond, cons) => {
       val (cTyp, e1) = checkE(cond)(env.addScope)

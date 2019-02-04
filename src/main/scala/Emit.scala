@@ -15,6 +15,16 @@ private class Emit extends PrettyPrinter {
 
   override val defaultIndent = 2
 
+  def unroll(n: Int) = n match {
+    case 1 => ""
+    case n => s"#pragma HLS UNROLL factor=$n"
+  }
+
+  def bank(id: Id, n: List[Int]): Doc = n.foldLeft(1)(_ * _) match {
+    case 1 => value("")
+    case n => value(s"#pragma HLS ARRAY_PARTITION variable=$id factor=$n")
+  }
+
   def scope(doc: Doc): Doc =
     lbrace <@> indent(doc) <@> rbrace
 
@@ -37,7 +47,6 @@ private class Emit extends PrettyPrinter {
   }
 
   implicit def cmdToDoc(c: Command): Doc = c match {
-    case CDecl(id, typ) => typ <+> id <> semi
     case CSeq(c1, c2) => c1 <> line <> c2
     case CLet(id, typ, e) => typ.get <+> value(id) <+> equal <+> e <> semi
     case CIf(cond, cons) => "if" <> parens(cond) <> scope (cons)
@@ -46,7 +55,11 @@ private class Emit extends PrettyPrinter {
         "int" <+> range.iter <+> "=" <+> value(range.s) <> semi <+>
         range.iter <+> "<" <+> value(range.e) <> semi <+>
         range.iter <+> "++"
-      } <+> scope(par <> line <> text("// combiner:") <@> combine)
+      } <+> scope {
+        unroll(range.u) <@>
+        par <> line <> text("// combiner:") <@>
+        combine
+      }
     case CUpdate(lhs, rhs) => lhs <+> "=" <+> rhs <> semi
     case CReduce(rop, lhs, rhs) => lhs <+> rop.toString <+> rhs <> semi
     case CExpr(e) => e <> semi
@@ -54,12 +67,26 @@ private class Emit extends PrettyPrinter {
     case CRefreshBanks() => "//---"
   }
 
-  def emitC(c: Command) =
-    super.pretty(cmdToDoc(c)).layout
+  def declToDoc(d: Decl): Doc = d.typ <+> d.id <> semi
+
+  def progToDoc(p: Prog) = {
+    val bankPragmas = p.decls
+      .filter(d => d.typ.isInstanceOf[TArray])
+      .map(d => d.id -> d.typ.asInstanceOf[TArray].dims.map(_._1))
+      .map({ case (id, bfs) => bank(id, bfs) })
+    val args = hsep(p.decls.map(declToDoc), comma)
+    "void kernel" <> parens(args) <+> scope {
+      vsep(bankPragmas) <@>
+      p.cmd
+    }
+  }
+
+  def emitProg(p: Prog) =
+    super.pretty(progToDoc(p)).layout
 
 }
 
 object Emit {
   private val emitter = new Emit()
-  def emitC = emitter.emitC _
+  def emitProg = emitter.emitProg _
 }
