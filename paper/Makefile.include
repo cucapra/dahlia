@@ -127,7 +127,10 @@ $(FIGS)/%.pdf: $(FIGS)/%.svg  ## Figures for the manuscript
 	inkscape -C -z --file=$< --export-pdf=$@ 2> /dev/null
 endif
 
-pdf: $(FIG_PDF) $(PDFTARGETS)
+pdf: acmart.cls $(FIG_PDF) $(PDFTARGETS)
+
+acmart.cls:
+	wget http://sigplan.org/sites/default/files/acmart/current/acmart.cls
 
 
 view: $(PDFTARGETS)
