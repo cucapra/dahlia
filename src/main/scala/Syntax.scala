@@ -123,7 +123,10 @@ object Syntax {
   case class CUpdate(lhs: Expr, rhs: Expr) extends Command
   case class CReduce(rop: ROp, lhs: Expr, rhs: Expr) extends Command
   case class CExpr(exp: Expr) extends Command
-  case class CDecl(id: Id, typ: Type) extends Command
   case class CRefreshBanks() extends Command
   case object CEmpty extends Command
+
+  case class Decl(id: Id, typ: Type) extends Positional
+
+  case class Prog(decls: List[Decl], cmd: Command) extends Positional
 }

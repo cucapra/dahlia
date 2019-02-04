@@ -6,8 +6,8 @@ object Compiler {
 
   def compileString(prog: String) = Try {
     val ast = FuseParser.parse(prog)
-    TypeChecker.checkFuse(ast)
-    Emit.emitC(ast)
+    TypeChecker.typeCheck(ast)
+    Emit.emitProg(ast)
   } match {
     case Success(out) => out
     case Failure(f: RuntimeException) =>
