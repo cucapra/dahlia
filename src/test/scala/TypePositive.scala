@@ -40,13 +40,24 @@ class SimpleTypePositive extends FunSuite {
     assert(e3("z").typ === TSizedInt(32))
   }
 
+  test("Binding same id in different scopes") {
+    typeCheck("""
+      for (let i = 0..1) {
+        let x = 10;
+      };
+      for (let i = 0..1) {
+        let x = 10;
+      };
+      """ )
+  }
+
   test("Static index into array") {
     val e1 = typeCheck("decl a: bit<64>[10]; let x = a[1];")
     assert(e1("x").typ === TSizedInt(64))
     assert(e1("a").conBanks(0) === Set(0))
   }
 
-  test("for loop") {
+  test("for loop w/o unrolling") {
     val e1 = typeCheck("""
       decl a: bit<64>[10];
       for (let i = 0..10) {
@@ -54,7 +65,9 @@ class SimpleTypePositive extends FunSuite {
       }
     """ )
     assert(e1("a").conBanks(0) === Set(0))
+  }
 
+  test("for loop w/ unrolling") {
     val e2 = typeCheck("""
       decl a: bit<64>[10 bank 5];
       for (let i = 0..10) unroll 5 {
@@ -62,6 +75,48 @@ class SimpleTypePositive extends FunSuite {
       }
     """ )
     assert(e2("a").conBanks(0) === 0.until(5).toSet)
+  }
+
+  test("combiner w/o unrolling") {
+    typeCheck("""
+      decl a: bit<64>[10];
+      let sum = 0;
+      for (let i = 0..10) {
+        let x = a[i]
+      } combine {
+        sum += x;
+      }
+    """ )
+  }
+
+  test("combiner w/ unrolling") {
+    typeCheck("""
+      decl a: bit<64>[10 bank 5];
+      let sum = 0;
+      for (let i = 0..10) unroll 5  {
+        let x = a[i]
+      } combine {
+        sum += x;
+      }
+    """ )
+  }
+
+  test("using reducer outside a loop w/ fully banked array") {
+    typeCheck("""
+        decl a: bit<64>[10 bank 10];
+        let sum = 0;
+        sum += a;
+      """ )
+    // this is logically equivalent to:
+    typeCheck("""
+        decl a: bit<64>[10 bank 10];
+        let sum = 0;
+        for (let i = 0..10) unroll 10 {
+          let v = a[i]
+        } combine {
+          sum += v;
+        }
+      """ )
   }
 
   test("refresh banks") {
