@@ -4,6 +4,7 @@ import Utils._
 import Syntax._
 import org.scalatest.FunSuite
 
+// TODO(rachit): Use FunSpec testing instead of FunSuite.
 class SimpleTypePositive extends FunSuite {
 
   test("Adding sized int to static int") {
@@ -12,6 +13,14 @@ class SimpleTypePositive extends FunSuite {
 
   test("Adding floats") {
     typeCheck("decl f: float; let y = 1.5; f + y")
+  }
+
+  test("typed let") {
+    val e1 = typeCheck("let x: bit<16> = 1;")
+    assert(e1("x").typ === TSizedInt(16))
+
+    val e2 = typeCheck("decl a: bit<8>; let x: bit<16> = a;")
+    assert(e2("x").typ === TSizedInt(16))
   }
 
   // XXX(rachit): @adrian check Subtyping behavior
