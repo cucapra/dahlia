@@ -100,13 +100,15 @@ object TypeChecker {
     }
     case CFor(range, par, combine) => {
       val iter = range.iter
-      val e1 = env.addScope.addBind(iter -> Info(iter, range.idxType))
+      // Add binding for iterator in a separate scope.
+      val e1 = env.addScope.addBind(iter -> Info(iter, range.idxType)).addScope
       val (e2, binds) = checkC(par)(e1).endScope
       // Create scope where ids bound in the parallel scope map to fully banked arrays.
       val vecBinds = binds.map({ case (id, inf) =>
         id -> Info(id, TArray(inf.typ, List((range.u, range.u))))
       })
-      checkC(combine)(e2.addScope ++ vecBinds).endScope._1
+      // Remove the binding of the iterator and add the updated vector bindings.
+      checkC(combine)(e2.endScope._1.addScope ++ vecBinds).endScope._1
     }
     case CExpr(e) => checkE(e)._2
     case CEmpty => env
