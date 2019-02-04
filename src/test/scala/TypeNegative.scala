@@ -105,6 +105,18 @@ class SimpleTypeNegative extends FunSuite {
         """ )
     }
   }
+
+  test("Iterator should not be bound in combine block") {
+    assertThrows[UnboundVar] {
+      typeCheck("""
+        decl a: bit<32>[8];
+        for (let i = 0..8) {
+        } combine {
+          a[i];
+        }
+        """ )
+    }
+  }
 }
 
 class FileTypeNegative extends FunSuite {
