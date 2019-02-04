@@ -51,6 +51,22 @@ class ParsingPositive extends org.scalatest.FunSuite {
     """ )
   }
 
+  test("combiner syntax") {
+    parseAst("""
+      for (let i = 0..10) {
+      } combine {
+      }
+    """ )
+
+    parseAst("""
+      for (let i = 0..10) {
+      } combine {
+        sum += 10;
+        let x = 1;
+      }
+    """ )
+  }
+
   test("refresh banks") {
     parseAst("""
       x + 1;

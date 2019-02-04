@@ -10,6 +10,9 @@ object Errors {
   case class UnexpectedType(construct: String, exp: Type, actual: Type) extends RuntimeException(
     s"Expected type $exp in $construct, received: $actual."
   )
+  case class UnexpectedTypeWithString(construct: String, exp: String, actual: Type) extends RuntimeException(
+    s"Expected type $exp in $construct, received: $actual."
+  )
   case class UnexpectedSubtype(construct: String, exp: Type, actual: Type) extends RuntimeException(
     s"Expected subtype of $exp in $construct, received: $actual."
   )

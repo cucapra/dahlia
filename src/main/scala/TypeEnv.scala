@@ -13,7 +13,7 @@ object TypeEnv {
   case class Env(e: Stack[Map[Id, Info]]) extends AnyVal {
     override def toString = e.foldLeft("")({ case (acc, m) => s"$acc :: $m"})
     def addScope = Env(Map[Id, Info]() :: e)
-    def endScope = Env(e.tail)
+    def endScope = (Env(e.tail), e.head)
     def apply(id: Id): Info = findBind(e, id) match {
       case Some(info) => info
       case None => throw UnboundVar(id)
