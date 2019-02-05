@@ -153,6 +153,22 @@ class SimpleTypeNegative extends FunSpec {
     }
   }
 
+  describe("Logical sequencing doesnt refresh resources globally") {
+    it("when composed with parallel sequence") {
+      assertThrows[MsgError] {
+        typeCheck("""
+          decl a: bit<32>[8];
+          {
+            a[0];
+            ---
+            a[0];
+          };
+          a[0]
+          """ )
+      }
+    }
+  }
+
 }
 
 class FileTypeNegative extends FunSuite {

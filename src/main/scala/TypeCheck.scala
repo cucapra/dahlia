@@ -68,7 +68,7 @@ object TypeChecker {
   }
 
   private def checkC(cmd: Command)(implicit env: Env): Env = cmd match {
-    case CSeq(c1, c2) => checkC(c2)(checkC(c1))
+    case CPar(c1, c2) => checkC(c2)(checkC(c1))
     case CIf(cond, cons) => {
       val (cTyp, e1) = checkE(cond)(env.addScope)
       if (cTyp != TBool()) {
@@ -128,9 +128,11 @@ object TypeChecker {
     }
     case CExpr(e) => checkE(e)._2
     case CEmpty => env
-    // XXX(rachit): @adrian this refreshes capabilities and banks in all the scopes globally.
-    // Should this be instead limited to the current scope?
-    // Intuitively, I would say no, since a logical time step refreshes things globally.
-    case CRefreshBanks() => env.refreshBanks
+    case CSeq(c1, c2) => {
+      val _ = checkC(c1)(env)
+      val e2 = checkC(c2)(env)
+      // FIXME(rachit): This should probably be intersection of e1 and e2
+      e2
+    }
   }
 }

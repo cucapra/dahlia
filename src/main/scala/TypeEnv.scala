@@ -40,10 +40,6 @@ object TypeEnv {
     def ++(binds: Scope): Env =
       binds.foldLeft(this)({ case (e, b) => e.addBind(b) })
 
-    // XXX(rachit): This updates the bindings in all scopes. Is this the correct behavior?
-    def refreshBanks = Env(e.map(m =>
-        m.map({ case (id, info) => id -> Info(id, info.typ) })))
-
   }
 
   case class Info(
