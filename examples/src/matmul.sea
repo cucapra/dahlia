@@ -1,8 +1,8 @@
-func mmul(a: float[32][32 bank(32)], b: float[32 bank(32)][32], c: float[32][32], temp: float) {
+func mmul(a: float[32][32 bank(32)], b: float[32 bank(32)][32], c: float[32][32]) {
 
   for (let i = 0..31) unroll 1 {
     for (let j = 0..31) unroll 1 {
-      temp := 0.0;
+      let temp = 0.0;
       for (let k = 0..31) unroll 32 {
         temp := a[i][k] * b[k][j] + temp;
       }
