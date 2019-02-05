@@ -1,7 +1,6 @@
 package fuselang
 
 import scala.util.parsing.combinator._
-//import scala.util.parsing.input.Positional
 
 import Syntax._
 
