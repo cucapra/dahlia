@@ -11,6 +11,16 @@ class ParsingPositive extends org.scalatest.FunSuite {
     parseAst("true;")
   }
 
+  test("comments") {
+    parseAst("""
+      /* this is a comment
+       * on
+       * muliple lines
+       */
+      x + 1;
+      """ )
+  }
+
   test("binops") {
     parseAst("1 + 2")
     parseAst("1 + 2;")
