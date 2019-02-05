@@ -7,7 +7,7 @@ import Syntax._
 private class FuseParser extends RegexParsers with PackratParsers {
   type P[T] = PackratParser[T]
 
-  override protected val whiteSpace = """(\s|#.*|(/\*((\*[^/])|[^*])*\*/))+""".r
+  override protected val whiteSpace = """(\s|\/\/.*|(/\*((\*[^/])|[^*])*\*/))+""".r
 
   val reservedTerms = Set("for", "if", "bit", "bool", "true", "false", "bank")
 
