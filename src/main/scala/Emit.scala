@@ -96,7 +96,7 @@ private class Emit extends PrettyPrinter {
   }
   // Declaration are the only place where arrays can be created, so use withArrayType
   // to generate the right array type.
-  def declToDoc(d: Decl): Doc = d.typ <+> withArrayType(d.id) <> semi
+  def declToDoc(d: Decl): Doc = d.typ <+> withArrayType(d.id)
 
   def progToDoc(p: Prog) = {
     val bankPragmas = p.decls
