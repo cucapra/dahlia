@@ -17,6 +17,7 @@ class ParsingPositive extends org.scalatest.FunSuite {
        * on
        * muliple lines
        */
+      // this is comment
       x + 1;
       """ )
   }
