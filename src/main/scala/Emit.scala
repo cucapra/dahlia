@@ -68,7 +68,8 @@ private class Emit extends PrettyPrinter {
   }
 
   implicit def cmdToDoc(c: Command): Doc = c match {
-    case CSeq(c1, c2) => c1 <> line <> c2
+    case CPar(c1, c2) => c1 <@> c2
+    case CSeq(c1, c2) => c1 <@> text("//---") <@> c2
     case CLet(id, typ, e) => typ.get <+> value(id) <+> equal <+> e <> semi
     case CIf(cond, cons) => "if" <> parens(cond) <> scope (cons)
     case CFor(range, par, combine) =>
@@ -78,14 +79,13 @@ private class Emit extends PrettyPrinter {
         range.iter <> "++"
       } <+> scope {
         unroll(range.u) <@>
-        par <> line <> text("// combiner:") <@>
+        par <@> text("// combiner:") <@>
         combine
       }
     case CUpdate(lhs, rhs) => lhs <+> "=" <+> rhs <> semi
     case CReduce(rop, lhs, rhs) => lhs <+> rop.toString <+> rhs <> semi
     case CExpr(e) => e <> semi
     case CEmpty => ""
-    case CRefreshBanks() => "//---"
   }
 
   def withArrayType(id: Id) = id.typ match {

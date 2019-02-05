@@ -16,6 +16,7 @@ class ParsingPositive extends org.scalatest.FunSuite {
     parseAst("1 + 2;")
     parseAst("1 + 2.5;")
     parseAst("1 + 2 * 3;")
+    parseAst("(1 + 2) * 3;")
     parseAst("1 + 2 * 3 >= 10 - 5 / 7;")
     parseAst("true == false")
   }
@@ -37,12 +38,6 @@ class ParsingPositive extends org.scalatest.FunSuite {
   }
 
   test("for loop") {
-    parseAst("""
-      for (let i = 0..10) {
-        x + 1;
-      }
-    """ )
-
     parseAst("""
       for (let i = 0..10) unroll 5 {
         x + 1;
@@ -72,6 +67,14 @@ class ParsingPositive extends org.scalatest.FunSuite {
       ---
       x + 2;
     """ )
+  }
+
+  test("commands") {
+    parseAst("""
+    {
+      x + 1;
+    }
+      """ )
   }
 
 }

@@ -35,7 +35,8 @@ private class FuseParser extends RegexParsers with PackratParsers {
     float ^^ { case f => EFloat(f) } |
     number ^^ { case n => EInt(n) } |
     boolean ^^ { case b => EBool(b) } |
-    iden ^^ { case id => EVar(id) }
+    iden ^^ { case id => EVar(id) } |
+    parens(expr)
   }
 
   // Binops
@@ -69,7 +70,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
     binAdd ~ eqOps ~ binEq ^^ { case l ~ op ~ r => EBinop(op, l, r)} |
     binAdd
   }
-  lazy val expr = positioned (binEq | parens(binEq))
+  lazy val expr = positioned (binEq)
 
   // Types
   lazy val typIdx: P[(Int, Int)] =
@@ -106,6 +107,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
 
   // Other commands
   lazy val acmd: P[Command] = positioned {
+    block |
     cfor |
     "let" ~> iden ~ (":" ~> typ).? ~ ("=" ~> expr) ^^ { case id ~ t ~ exp => CLet(id, t, exp) } |
     "if" ~> parens(expr) ~ block  ^^ { case cond ~ cons => CIf(cond, cons) } |
@@ -114,11 +116,14 @@ private class FuseParser extends RegexParsers with PackratParsers {
     expr ^^ { case e => CExpr(e) }
   }
 
+  lazy val scmd: P[Command] = positioned {
+    acmd ~ ";" ~ scmd ^^ { case c1 ~ _ ~ c2 => CPar(c1, c2) } |
+    acmd <~ ";" | acmd
+  }
+
   lazy val cmd: P[Command] = positioned {
-    acmd ~ ";" ~ cmd ^^ { case c1 ~ _ ~ c2 => CSeq(c1, c2) } |
-    acmd ~ ";" ~ "---" ~ cmd ^^ { case c1 ~ _ ~ _ ~ c2 => CSeq(c1, CSeq(CRefreshBanks(), c2)) } |
-    acmd <~ ";" |
-    acmd
+    scmd ~ "---" ~ cmd ^^ { case c1 ~ _ ~ c2 => CSeq(c1, c2) } |
+    scmd
   }
 
   // Declarations

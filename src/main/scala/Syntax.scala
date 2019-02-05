@@ -117,6 +117,7 @@ object Syntax {
 
   // TODO(rachit): Create class for LValues and use them for lhs of update and reduce.
   sealed trait Command extends Positional
+  case class CPar(c1: Command, c2: Command) extends Command
   case class CSeq(c1: Command, c2: Command) extends Command
   case class CLet(id: Id, var typ: Option[Type], e: Expr) extends Command
   case class CIf(cond: Expr, cons: Command) extends Command
@@ -124,7 +125,6 @@ object Syntax {
   case class CUpdate(lhs: Expr, rhs: Expr) extends Command
   case class CReduce(rop: ROp, lhs: Expr, rhs: Expr) extends Command
   case class CExpr(exp: Expr) extends Command
-  case class CRefreshBanks() extends Command
   case object CEmpty extends Command
 
   case class Decl(id: Id, typ: Type) extends Positional
