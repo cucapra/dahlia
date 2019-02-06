@@ -37,6 +37,6 @@ Type `sbt assembly` to package up a [fat jar][] for command-line use.
 The short `fuse` shell script here invokes the built jar to run the compiler.
 To compile a simple test, for example, run:
 
-    $ ./fuse -f src/test/resources/should-compile/matadd.sea
+    $ ./fuse src/test/resources/should-compile/matadd.sea
 
 The compiler produces HLS C source code on its standard output.
