@@ -39,7 +39,7 @@ object Errors {
     s"$t1 and $t2 are incomparable. Cannot create a join.")
 
   // Operation errors
-  case class BinopError(op: Op2, t1: Type, t2: Type) extends RuntimeException(
+  case class BinopError(op: BOp, t1: Type, t2: Type) extends RuntimeException(
     withPos(s"$op expected integers or floats, received: $t1 and $t2.", op.pos)
   )
 
@@ -60,7 +60,7 @@ object Errors {
   // Parsing errors
   case class ParserError(msg: String) extends RuntimeException(msg)
 
-  // Impossible
+  // Used when a branch should be impossible at runtime.
   case class Impossible(msg: String) extends RuntimeException(s"Impossible: $msg")
 
 }

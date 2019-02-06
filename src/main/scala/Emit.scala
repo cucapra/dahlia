@@ -3,10 +3,12 @@ package fuselang
 import org.bitbucket.inkytonik.kiama.output._
 
 /**
- * This class is aggressively using Scala's implicitConversions. Make sure
+ * This class aggressively uses Scala's implicitConversions. Make sure
  * that implicits classes never leak.
- *
  * Implicit classes: https://docs.scala-lang.org/tour/implicit-conversions.html
+ *
+ * We also use the Kiama pretty printer combinators to generate the code.
+ * For reference: https://bitbucket.org/inkytonik/kiama/src/master/wiki/PrettyPrinting.md?fileviewer=file-view-default
  */
 private class Emit extends PrettyPrinter {
 
@@ -26,7 +28,8 @@ private class Emit extends PrettyPrinter {
     case n => value(s"#pragma HLS ARRAY_PARTITION variable=$id factor=$n")
   }
 
-  def binop(op: Op2, l: Expr, r: Expr) = (op, l, r) match {
+  // Simple peephole optimization to turn: 1 * x => x, 0 + x => x, 0 * x => 0
+  def binop(op: BOp, l: Expr, r: Expr) = (op, l, r) match {
     case (OpTimes(), EInt(1), r) => r
     case (OpTimes(), l, EInt(1)) => l
     case (OpTimes(), EInt(0), _) => EInt(0)

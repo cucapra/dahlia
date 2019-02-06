@@ -14,22 +14,22 @@ object TypeEnv {
     override def toString = e.foldLeft("")({ case (acc, m) => s"$acc :: $m"})
     def addScope = Env(Map[Id, Info]() :: e)
     def endScope = (Env(e.tail), e.head)
-    def apply(id: Id): Info = findBind(e, id) match {
+    def apply(id: Id): Info = find(e, id) match {
       case Some(info) => info
       case None => throw UnboundVar(id)
     }
 
-    private def findBind(e: Stack[Scope], id: Id): Option[Info] =
+    private def find(e: Stack[Scope], id: Id): Option[Info] =
       e.find(m => m.get(id).isDefined) match {
         case None => None
         case Some(map) => Some(map(id))
       }
 
-    def addBind(bind: (Id, Info)) = findBind(e, bind._1) match {
+    def add(bind: (Id, Info)) = find(e, bind._1) match {
       case Some(_) => throw AlreadyBound(bind._1)
       case None => Env(e.head + bind :: e.tail)
     }
-    def updateBind(bind: (Id, Info)) = findBind(e, bind._1) match {
+    def update(bind: (Id, Info)) = find(e, bind._1) match {
       case None => throw UnboundVar(bind._1)
       case Some(_) => {
         val scope = e.indexWhere(m => m.get(bind._1).isDefined)
@@ -37,7 +37,7 @@ object TypeEnv {
       }
     }
     def ++(binds: Scope): Env =
-      binds.foldLeft(this)({ case (e, b) => e.addBind(b) })
+      binds.foldLeft(this)({ case (e, b) => e.add(b) })
 
   }
 
