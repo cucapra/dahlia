@@ -98,6 +98,10 @@ class SimpleTypePositive extends FunSuite {
     """ )
   }
 
+  test("comparisons on floats returns a boolean") {
+    typeCheck("if (2.5 < 23.5) { 1 }")
+  }
+
   test("combiner w/ unrolling") {
     typeCheck("""
       decl a: bit<64>[10 bank 5];

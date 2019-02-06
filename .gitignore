@@ -8,3 +8,8 @@ tags
 
 ## Docs
 docs/*pdf
+
+## Scala code completion engine Ensime
+ensime.sbt
+.ensime_cache
+.ensime

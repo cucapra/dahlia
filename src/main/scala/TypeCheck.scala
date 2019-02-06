@@ -3,25 +3,41 @@ package fuselang
 import Syntax._
 import Errors._
 
+/**
+ * Type checker implementation for Fuse. Apart from normal typechecking, such as
+ * ensuring condition in `if` is a boolean, it does following.
+ * - Linear properties of banks in memories.
+ * - Checking combine blocks correctly use bound variables.
+ * - Generate subtype joins for binary operators.
+ * - TODO(rachit): Check array access generate sufficient resources needed by unrolled contexts. (See issue #50)
+ *
+ * It also MUTATES and ANNOTATES the input AST:
+ * - CLet with an explicit type get the correct type
+ * - Binders for id update the `typ` var defined on the Id class.
+ */
 object TypeChecker {
   import TypeEnv._
 
+  /* A program consists of a list of declarations and then a command. We build
+   * up an environment with all the declarations, then check the command in
+   * that environment (`checkC`).
+   */
   def typeCheck(p: Prog) = {
     val initEnv = p.decls.foldLeft(emptyEnv)({ case (env, Decl(id, typ)) =>
       id.typ = Some(typ);
-      env.addBind(id -> Info(id, typ))
+      env.add(id -> Info(id, typ))
     })
     checkC(p.cmd)(initEnv, List[Id]())
   }
 
-  private def checkB(t1: Type, t2: Type, op: Op2) = op match {
+  private def checkB(t1: Type, t2: Type, op: BOp) = op match {
     case OpEq() | OpNeq() => {
       if (t1 :< t2 || t2 :< t1) TBool()
       else throw UnexpectedSubtype(op.pos, op.toString, t1, t2)
     }
     case OpLt() | OpLte() | OpGt() | OpGte() => (t1, t2) match {
       case ((TStaticInt(_) | TSizedInt(_)), (TStaticInt(_) | TSizedInt(_))) => TBool()
-      case (_: TFloat, _: TFloat) => TFloat()
+      case (_: TFloat, _: TFloat) => TBool()
       case _ => throw BinopError(op, t1, t2)
     }
     case OpAdd() | OpTimes() | OpSub() | OpDiv() => (t1, t2) match {
@@ -32,6 +48,8 @@ object TypeChecker {
 
   }
 
+  // Implicit parameters can be elided when a recursive call is reusing the same env and its.
+  // See EBinop an example.
   private def checkE(expr: Expr)(implicit env: Env, its: ItStack): (Type, Env) = expr match {
     case EFloat(_) => TFloat() -> env
     case EInt(v) => TStaticInt(v) -> env
@@ -56,9 +74,9 @@ object TypeChecker {
         typ -> idxs.zipWithIndex.foldLeft(env)({case (env1, (e, i)) =>
           checkE(e)(env1, its) match {
             case (TIndex((s, e), _), env2) =>
-              env2.updateBind(id -> env2(id).consumeDim(i, e - s))
+              env2.update(id -> env2(id).consumeDim(i, e - s))
             case (TStaticInt(v), env2) =>
-              env2.updateBind(id -> env(id).consumeBank(i, v % dims(i)._2))
+              env2.update(id -> env(id).consumeBank(i, v % dims(i)._2))
             case (t, _) => throw InvalidIndex(id, t)
           }
         })
@@ -84,9 +102,9 @@ object TypeChecker {
       if (t2 :< t1) (t1, t2, lhs) match {
         // Reassignment of static ints upcasts to bit<32>
         case (TStaticInt(_), TStaticInt(_), EVar(id)) =>
-          e2.updateBind(id -> Info(id, TSizedInt(32)))
+          e2.update(id -> Info(id, TSizedInt(32)))
         case (TStaticInt(_), TSizedInt(_), EVar(id)) =>
-          e2.updateBind(id -> Info(id, t2))
+          e2.update(id -> Info(id, t2))
         case _ => e2
       }
       else throw UnexpectedSubtype(rhs.pos, "assignment", t1, t2)
@@ -108,15 +126,15 @@ object TypeChecker {
     case l@CLet(id, typ, exp) => {
       val (t, e1) = checkE(exp)
       typ match {
-        case Some(t2) if t :< t2 => e1.addBind(id -> Info(id, t2))
+        case Some(t2) if t :< t2 => e1.add(id -> Info(id, t2))
         case Some(t2) => throw UnexpectedType(exp.pos, "let", t.toString, t2)
-        case None => l.typ = Some(t); e1.addBind(id -> Info(id, t))
+        case None => l.typ = Some(t); e1.add(id -> Info(id, t))
       }
     }
     case CFor(range, par, combine) => {
       val iter = range.iter
       // Add binding for iterator in a separate scope.
-      val e1 = env.addScope.addBind(iter -> Info(iter, range.idxType)).addScope
+      val e1 = env.addScope.add(iter -> Info(iter, range.idxType)).addScope
       // Check for body and pop the scope.
       val (e2, binds) = checkC(par)(e1, iter :: its).endScope
       // Create scope where ids bound in the parallel scope map to fully banked arrays.

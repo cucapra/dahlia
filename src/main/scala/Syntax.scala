@@ -51,7 +51,7 @@ object Syntax {
   case class TArray(typ: Type, dims: List[(Int, Int)]) extends Type
   case class TIndex(static: (Int, Int), dynamic: (Int, Int)) extends Type
 
-  sealed trait Op2 extends Positional {
+  sealed trait BOp extends Positional {
     override def toString = this match {
       case _:OpEq => "=="
       case _:OpNeq => "!="
@@ -73,22 +73,22 @@ object Syntax {
       case _ => throw MsgError(s"toFun not defined on $this")
     }
   }
-  case class OpEq() extends Op2
-  case class OpNeq() extends Op2
-  case class OpAdd() extends Op2
-  case class OpSub() extends Op2
-  case class OpTimes() extends Op2
-  case class OpDiv() extends Op2
-  case class OpLt() extends Op2
-  case class OpLte() extends Op2
-  case class OpGt() extends Op2
-  case class OpGte() extends Op2
+  case class OpEq() extends BOp
+  case class OpNeq() extends BOp
+  case class OpAdd() extends BOp
+  case class OpSub() extends BOp
+  case class OpTimes() extends BOp
+  case class OpDiv() extends BOp
+  case class OpLt() extends BOp
+  case class OpLte() extends BOp
+  case class OpGt() extends BOp
+  case class OpGte() extends BOp
 
   sealed trait Expr extends Positional
   case class EInt(v: Int) extends Expr
   case class EFloat(f: Float) extends Expr
   case class EBool(v: Boolean) extends Expr
-  case class EBinop(op: Op2, e1: Expr, e2: Expr) extends Expr
+  case class EBinop(op: BOp, e1: Expr, e2: Expr) extends Expr
   case class EAA(id: Id, idxs: List[Expr]) extends Expr
   case class EVar(id: Id) extends Expr
 
