@@ -16,7 +16,7 @@ object Main {
       .action((x, c) => c.copy(srcFile = x))
       .text("source code file")
 
-    opt[String]('n', "-name")
+    opt[String]('n', "name")
       .valueName("<kernel>")
       .validate(x =>
           if (x.matches("[A-Za-z0-9_]+")) success
