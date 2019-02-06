@@ -48,9 +48,9 @@ private class Emit extends PrettyPrinter {
   implicit def IdToString(id: Id): Doc = value(id.v)
 
   implicit def typeToDoc(typ: Type): Doc = typ match {
-    case _: TBool | TIndex(_, _) | TStaticInt(_) => "int"
-    case _: TFloat => "float"
-    case TSizedInt(_) => value(typ)
+    case _:TBool | _:TIndex | _:TStaticInt => "int"
+    case _:TFloat => "float"
+    case _:TSizedInt => value(typ)
     case TArray(typ, _) => typ
   }
 
@@ -113,7 +113,6 @@ private class Emit extends PrettyPrinter {
 
   def emitProg(p: Prog) =
     super.pretty(progToDoc(p)).layout
-
 }
 
 object Emit {
