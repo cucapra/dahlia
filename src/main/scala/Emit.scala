@@ -101,21 +101,21 @@ private class Emit extends PrettyPrinter {
   // to generate the right array type.
   def declToDoc(d: Decl): Doc = d.typ <+> withArrayType(d.id)
 
-  def progToDoc(p: Prog) = {
+  def progToDoc(p: Prog, c: Utils.Config) = {
     val bankPragmas = p.decls
       .filter(d => d.typ.isInstanceOf[TArray])
       .map(d => d.id -> d.typ.asInstanceOf[TArray].dims.map(_._2))
       .map({ case (id, bfs) => bank(id, bfs) })
 
     val args = hsep(p.decls.map(declToDoc), comma)
-    "void kernel" <> parens(args) <+> scope {
+    "void" <+> c.kernelName <> parens(args) <+> scope {
       vsep(bankPragmas) <@>
       p.cmd
     }
   }
 
-  def emitProg(p: Prog) =
-    super.pretty(progToDoc(p)).layout
+  def emitProg(p: Prog, c: Utils.Config) =
+    super.pretty(progToDoc(p, c)).layout
 }
 
 object Emit {

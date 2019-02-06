@@ -4,10 +4,10 @@ import scala.util.{Try, Success, Failure}
 
 object Compiler {
 
-  def compileString(prog: String) = Try {
+  def compileString(prog: String, c: Utils.Config) = Try {
     val ast = FuseParser.parse(prog)
     TypeChecker.typeCheck(ast)
-    Emit.emitProg(ast)
+    Emit.emitProg(ast, c)
   } match {
     case Success(out) => out
     case Failure(f: RuntimeException) =>

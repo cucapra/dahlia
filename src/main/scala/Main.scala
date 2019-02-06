@@ -3,8 +3,9 @@ package fuselang
 import java.nio.file.Files
 import java.io.File
 
+import Utils.Config
+
 object Main {
-  case class Config(srcfile: File)
 
   val parser = new scopt.OptionParser[Config]("fuse"){
 
@@ -12,16 +13,24 @@ object Main {
 
     arg[File]("<srcfile>")
       .required()
-      .action((x, c) => c.copy(srcfile = x))
+      .action((x, c) => c.copy(srcFile = x))
       .text("source code file")
+
+    opt[String]('n', "-name")
+      .valueName("<kernel>")
+      .validate(x =>
+          if (x.matches("[A-Za-z0-9_]+")) success
+          else failure("Kernel name should only contain alphanumerals and _"))
+      .action((x, c) => c.copy(kernelName = x))
+      .text("Name of the top level function. Default name is `kernel`.")
   }
 
   def main(args: Array[String]) = {
 
     parser.parse(args, Config(null)) match {
       case Some(c) => {
-        val prog = new String(Files.readAllBytes(c.srcfile.toPath()))
-        println(Compiler.compileString(prog))
+        val prog = new String(Files.readAllBytes(c.srcFile.toPath()))
+        println(Compiler.compileString(prog, c))
       }
       case None => {
         sys.exit(1)

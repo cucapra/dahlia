@@ -2,14 +2,8 @@ package fuselang
 
 object Utils {
 
-  import scala.language.implicitConversions
-
-  // Allow for env("x") style calls.
-  implicit def stringToId(s: String) = {
-    Syntax.Id(s)
-  }
-
-  def parseAst(s: String) = FuseParser.parse(s)
-  def typeCheck(s: String) = TypeChecker.typeCheck(FuseParser.parse(s))
-
+  case class Config(
+    srcFile: java.io.File, // Required: Name of the source file
+    kernelName: String = "kernel" // Name of the kernel to emit
+  )
 }
