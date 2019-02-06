@@ -23,7 +23,7 @@ Read some notes about aspects of Seashell's design:
   This is a proposal to add two new constructs to make various parallel array
   iterations safe.
 
-* [Combine blocks.)(combine.md)
+* [Combine blocks.](combine.html)
   This is Seashell's construct for allowing reductions and other
   imperfectly-parallel patterns in parallel `for` loops.
 
