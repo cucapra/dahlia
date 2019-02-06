@@ -10,8 +10,7 @@ object TypeEnv {
 
   val emptyEnv: Env = Env(List(Map()))
 
-  // extends AnyValue creates a value class which reduces runtime overhead.
-  case class Env(e: Stack[Scope]) extends AnyVal {
+  case class Env(e: Stack[Scope]) {
     override def toString = e.foldLeft("")({ case (acc, m) => s"$acc :: $m"})
     def addScope = Env(Map[Id, Info]() :: e)
     def endScope = (Env(e.tail), e.head)
@@ -41,6 +40,9 @@ object TypeEnv {
       binds.foldLeft(this)({ case (e, b) => e.addBind(b) })
 
   }
+
+  // Stack of iterators
+  type ItStack = List[Id]
 
   case class Info(
     id: Id,
@@ -76,7 +78,6 @@ object TypeEnv {
     }
     override def toString = s"{$typ, $avBanks, $conBanks}"
   }
-
   object Info {
     def apply(id: Id, typ: Type): Info = typ match {
       case TArray(_, dims) => {

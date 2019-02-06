@@ -53,23 +53,23 @@ object Syntax {
 
   sealed trait Op2 extends Positional {
     override def toString = this match {
-      case _: OpEq => "=="
-      case _: OpNeq => "!="
-      case _: OpLt => "<"
-      case _: OpLte => "<="
-      case _: OpGt => ">"
-      case _: OpGte => ">="
-      case _: OpAdd => "+"
-      case _: OpSub => "-"
-      case _: OpTimes => "*"
-      case _: OpDiv => "/"
+      case _:OpEq => "=="
+      case _:OpNeq => "!="
+      case _:OpLt => "<"
+      case _:OpLte => "<="
+      case _:OpGt => ">"
+      case _:OpGte => ">="
+      case _:OpAdd => "+"
+      case _:OpSub => "-"
+      case _:OpTimes => "*"
+      case _:OpDiv => "/"
     }
 
     def toFun: (Int, Int) => Int = this match {
-      case _: OpAdd => _ + _
-      case _: OpTimes => _ * _
-      case _: OpDiv => _ / _
-      case _: OpSub => _ - _
+      case _:OpAdd => _ + _
+      case _:OpTimes => _ * _
+      case _:OpDiv => _ / _
+      case _:OpSub => _ - _
       case _ => throw MsgError(s"toFun not defined on $this")
     }
   }

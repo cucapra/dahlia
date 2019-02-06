@@ -9,8 +9,6 @@ private class FuseParser extends RegexParsers with PackratParsers {
 
   override protected val whiteSpace = """(\s|\/\/.*|(/\*((\*[^/])|[^*])*\*/))+""".r
 
-  val reservedTerms = Set("for", "if", "bit", "bool", "true", "false", "bank")
-
    // General parser combinators
   def braces[T](parser: P[T]): P[T] = "{" ~> parser <~ "}"
   def brackets[T](parser: P[T]): P[T] = "[" ~> parser <~ "]"
