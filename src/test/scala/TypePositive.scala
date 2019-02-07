@@ -143,6 +143,32 @@ class SimpleTypePositive extends FunSuite {
     """ )
   }
 
+  test("Array access with two dimensional unrolling") {
+    typeCheck("""
+      decl a: bit<32>[10 bank 5][10 bank 5];
+      for (let i = 0..10) unroll 5 {
+        for (let j = 0..10) unroll 5 {
+          a[j][i];
+          ---
+          a[i][j];
+        }
+      }
+      """ )
+  }
+
+  test("2d array access with one constant accessor") {
+    typeCheck("""
+      decl a: bit<32>[10 bank 5][10 bank 5];
+      for (let i = 0..10) {
+        for (let j = 0..10) unroll 5 {
+          a[0][j];
+          ---
+          a[j][0];
+        }
+      }
+      """ )
+  }
+
 }
 
 class FileTypePositive extends FunSuite {
