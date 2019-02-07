@@ -100,6 +100,7 @@ object Syntax {
         TIndex((0, u), (s/u, e/u))
       }
     }
+
   }
 
   sealed trait ROp extends Positional {

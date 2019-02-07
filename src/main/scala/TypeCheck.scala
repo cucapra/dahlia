@@ -27,7 +27,7 @@ object TypeChecker {
       id.typ = Some(typ);
       env.add(id -> Info(id, typ))
     })
-    checkC(p.cmd)(initEnv, List[Id]())
+    checkC(p.cmd)(initEnv, List[Int]())
   }
 
   private def checkB(t1: Type, t2: Type, op: BOp) = op match {
@@ -73,15 +73,24 @@ object TypeChecker {
         }
         // update type for id
         id.typ = Some(env(id).typ);
-        typ -> idxs.zipWithIndex.foldLeft(env)({case (env1, (e, i)) =>
-          checkE(e)(env1, its) match {
-            case (TIndex((s, e), _), env2) =>
-              env2.update(id -> env2(id).consumeDim(i, e - s))
-            case (TStaticInt(v), env2) =>
-              env2.update(id -> env(id).consumeBank(i, v % dims(i)._2))
-            case (t, _) => throw InvalidIndex(id, t)
-          }
+        // Create an updated env with consumed banks and calculate the capabilites
+        // used up by consumed bank.
+        val (e1, bres) = idxs.zipWithIndex.foldLeft((env, 1))({
+          case ((env1, bres), (e, i)) =>
+            checkE(e)(env1, its) match {
+              case (TIndex((s, e), _), env2) =>
+                env2.update(id -> env2(id).consumeDim(i, e - s)) -> bres * (e - s)
+              case (TStaticInt(v), env2) =>
+                env2.update(id -> env(id).consumeBank(i, v % dims(i)._2)) -> bres * 1
+              case (t, _) => throw InvalidIndex(id, t)
+            }
         })
+        val reqRes = its.foldLeft(1)(_ * _)
+        if (reqRes != bres) {
+          throw MsgError(
+            s"Invalid resources provided by array access in this context. Expected $reqRes, received: $bres")
+        }
+        typ -> e1
       }
       case t => throw UnexpectedType(expr.pos, "array access", s"$t[]", t)
     }
@@ -138,7 +147,7 @@ object TypeChecker {
       // Add binding for iterator in a separate scope.
       val e1 = env.addScope.add(iter -> Info(iter, range.idxType)).addScope
       // Check for body and pop the scope.
-      val (e2, binds) = checkC(par)(e1, iter :: its).endScope
+      val (e2, binds) = checkC(par)(e1, range.u :: its).endScope
       // Create scope where ids bound in the parallel scope map to fully banked arrays.
       val vecBinds = binds.map({ case (id, inf) =>
         id -> Info(id, TArray(inf.typ, List((range.u, range.u))))

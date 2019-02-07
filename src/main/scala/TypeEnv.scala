@@ -41,8 +41,9 @@ object TypeEnv {
 
   }
 
-  // Stack of iterators
-  type ItStack = List[Id]
+  // Stack of iterators in the current context. Used to check that an array
+  // access the right capabilities.
+  type ItStack = List[Int]
 
   case class Info(
     id: Id,

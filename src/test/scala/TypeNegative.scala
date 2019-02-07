@@ -174,6 +174,45 @@ class SimpleTypeNegative extends FunSpec {
     }
   }
 
+  describe("Array access in unrolled context require correct amount of resources") {
+    it("with one unrolled loop and a constant access") {
+      assertThrows[MsgError] {
+        typeCheck("""
+          decl a: bit<32>[10];
+          for (let i = 0..10) unroll 5 {
+            a[0]
+          }
+          """ )
+      }
+    }
+    it("with two unrolled loop and incorrect idx accessor") {
+      assertThrows[MsgError] {
+        typeCheck("""
+          decl a: bit<32>[10][10 bank 5];
+          for (let i = 0..10) {
+            for (let j = 0..10) unroll 5 {
+              a[i][0]
+            }
+          }
+          """ )
+      }
+    }
+    it("with three loops, 2 unrolled") {
+      assertThrows[MsgError] {
+        typeCheck("""
+          decl a: bit<32>[10][10 bank 5];
+          for (let k = 0..10) {
+            for (let i = 0..9) unroll 3 {
+              for (let j = 0..10) unroll 5 {
+                a[k][j]
+              }
+            }
+          }
+          """ )
+      }
+    }
+  }
+
 }
 
 class FileTypeNegative extends FunSuite {
