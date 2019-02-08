@@ -127,10 +127,13 @@ $(FIGS)/%.pdf: $(FIGS)/%.svg  ## Figures for the manuscript
 	inkscape -C -z --file=$< --export-pdf=$@ 2> /dev/null
 endif
 
-pdf: acmart.cls $(FIG_PDF) $(PDFTARGETS)
+pdf: ACM-Reference-Format.bst acmart.cls $(FIG_PDF) $(PDFTARGETS)
 
 acmart.cls:
 	wget http://sigplan.org/sites/default/files/acmart/current/acmart.cls
+
+ACM-Reference-Format.bst:
+	wget https://www.sigplan.org/sites/default/files/acmart/current/ACM-Reference-Format.bst
 
 
 view: $(PDFTARGETS)
