@@ -127,8 +127,14 @@ exposing these ad-hoc constraints.
 
 \subsection{Spatial}
 Spatial~\cite{spatial} is a domain specific programming language embedded in Scala
-and compiles to Chisel. It introduces several new abstractions for extracting
-parallelism out of accelerators. \sys{} is not Spatial because \ldots
+and compiles to Chisel. It strives to provide abstract but explicit hardware programs,
+introducing several language features for extracting parallelism out of accelerators. Spatial
+differs from \sys{} in that it abstracts the resources used to implement memories, allowing
+the compiler to automatically find resource utilization and memory access latency optimizations.
+\sys{} instead exposes these resources at the language level, and type-checks them for hardware
+realizability. Thus, \sys{} provides more fine-tune control and safety guarantees. This makes
+\sys{} a compelling target for higher-level tools that focus more on automated design space
+exploration.
 
 \rn{Similar question. Why not build higher level primitives like
 spatial and leave the safety checking and compilation to the compiler?}
