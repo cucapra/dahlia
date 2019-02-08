@@ -93,7 +93,27 @@ Introduction goes here.
 \section{Language Constructs}
 \subsection{Linear banked arrays and logical time}
 \subsection{Unrolling loops and relation to cost model}
-\subsection{Reductions}
+\subsection{Combiners and Reductions}
+In \sys{}, each \sysfor{} can have an optional \syscombine{} block that specifies
+code that runs after one unrolled iteration of the loop. In \cref{lst:combine},
+\lstinline|v| behaves as a normal variable in the \sysfor{}-loop body, but
+turns into a memory with $5$ banks. The \lstinline|+=| operator used in the
+\syscombine{} block creates an adder chain that adds all elements of \lstinline|v|
+and store the result in \lstinline|sum|.
+
+A \textit{Reducer} is a function that takes \sysmem{N}{N} and returns a single
+value. \sys{} provides several default reducers: \lstinline|+=|, \lstinline|*=|,
+\lstinline|-=|, and \lstinline|/=|. As with \sysunroll{} and \sysbank{},
+\syscombine{} blocks can be safely removed to get sequential semantics.
+
+\begin{lstlisting}[caption={\sysfor{} loop with a \syscombine{} block}, label={lst:combine}, frame=single]
+  let sum = 0;
+  for (let i = 0..10) unroll 5 {
+    let v = a[i];
+  } combine {
+    sum += v;
+  }
+\end{lstlisting}
 \subsection{Views}
 \subsection{Pipelining}
 \subsection{Polymorphism}
@@ -105,6 +125,9 @@ Introduction goes here.
 
 \section{Evaluation}
 \subsection{Implementation}
+We've implemented a compiler for \sys{} in \sysloc{} of Scala. The compiler
+takes in \sys{} programs, type checks them, and generates C code which is then
+compiled to hardware designs using the Xilinx C HLS compiler [CITE].
 \subsection{Experimental setup}
 \subsection{Baseline against CPUs}
 \subsection{Usability}
@@ -136,9 +159,8 @@ realizability. Thus, \sys{} provides more fine-tune control and safety guarantee
 \sys{} a compelling target for higher-level tools that focus more on automated design space
 exploration.
 
-\rn{Similar question. Why not build higher level primitives like
-spatial and leave the safety checking and compilation to the compiler?}
-\xxx[as]{And a similar answer: automation like represents an implicit trade-off. You get to not worry about the details, but then the details are hidden from you. So if you find you're getting back hardware out of Spatial, you don't see it manifest in the code and you have no recourse to fix it. Instead, we do the hard work to make all the details visible at the language level. This should be better for (a) experts who want exacting control over the hardware they generate, and (b) eventually building higher-level tools that enhance automation on top of this abstraction.}
+% \rn{Similar question. Why not build higher level primitives like spatial and leave the safety checking and compilation to the compiler?}
+% \xxx[as]{And a similar answer: automation like represents an implicit trade-off. You get to not worry about the details, but then the details are hidden from you. So if you find you're getting back hardware out of Spatial, you don't see it manifest in the code and you have no recourse to fix it. Instead, we do the hard work to make all the details visible at the language level. This should be better for (a) experts who want exacting control over the hardware they generate, and (b) eventually building higher-level tools that enhance automation on top of this abstraction.}
 
 %% Acknowledgments
 \begin{acks}                            %% acks environment is optional
