@@ -91,6 +91,25 @@ Introduction goes here.
 \subsection{Equivalance to Von Neumann Semantics}
 
 \section{Language Constructs}
+\sys provides several language constructs to make hardware design more explicit
+at the language. In this section, we explain by implementing General Matrix Multiply
+(GeMM) in \sys.
+
+\begin{figure}[t]
+\begin{lstlisting}[language=C++]
+  int A[M][N]; int B[N][L];
+  int C[M][L]; // Initialized with all 0s
+  for (int i = 0; i < M; i++) {
+    for (int j = 0; j < N; j++) {
+      for (int k = 0; k < L; k++) {
+        C[i][k] += A[i][j] * B[j][k];
+      }
+    }
+  }
+\end{lstlisting}
+\caption{Unoptimized GeMM implementation in C}\label{lst:combine}
+\end{figure}
+
 \subsection{Linear banked arrays and logical time}
 \subsection{Unrolling loops and relation to cost model}
 \subsection{Combiners and Reductions}
@@ -106,7 +125,8 @@ value. \sys{} provides several default reducers: \lstinline|+=|, \lstinline|*=|,
 \lstinline|-=|, and \lstinline|/=|. As with \sysunroll{} and \sysbank{},
 \syscombine{} blocks can be safely removed to get sequential semantics.
 
-\begin{lstlisting}[caption={\sysfor{} loop with a \syscombine{} block}, label={lst:combine}, frame=single]
+\begin{figure}[t]
+\begin{lstlisting}
   let sum = 0;
   for (let i = 0..10) unroll 5 {
     let v = a[i];
@@ -114,6 +134,9 @@ value. \sys{} provides several default reducers: \lstinline|+=|, \lstinline|*=|,
     sum += v;
   }
 \end{lstlisting}
+\caption{\sysfor{} loop with a \syscombine{} block}\label{lst:combine}
+\end{figure}
+
 \subsection{Views}
 \subsection{Pipelining}
 \subsection{Polymorphism}

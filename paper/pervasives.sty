@@ -35,6 +35,12 @@
 % Define colors for comments here
 \newcommand{\rn}[1]{{\color{blue}[#1 --Rachit]}}
 
+% Fuse syntax
+\lstdefinelanguage{Fuse}{
+  sensitive=false,
+  morekeywords={let,combine,decl,unroll,for}
+}
+
 % Listings setup
 \definecolor{mygreen}{rgb}{0,0.6,0}
 \lstset{ %
@@ -47,11 +53,11 @@
     breaklines=true, % sets automatic line breaking
     captionpos=b, % sets the caption-position to bottom
     keywordstyle=\color{blue}, % keyword style
-    language=C++, % the language of the code
-    morekeywords={address, Load, Wait, Store}, % if you want to add more keywords to the set
+    language=Fuse, % the language of the code
     numbers=none, % where to put the line-numbers; possible values are (none, left, right)
     tabsize=2, % sets default tabsize to 2 spaces
 }
+
 
 %%%%
 %%% Data
