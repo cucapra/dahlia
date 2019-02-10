@@ -1,0 +1,11 @@
+decl M: bit<32>[6 bank 3][8 bank 4];
+decl V: bit<32>[8 bank 4];
+decl R: bit<32>[6 bank 3];
+
+for (let i = 0..6) unroll 3 {
+  for (let j = 0..8) unroll 4 {
+    let rs = M[i][j] * V[j];
+  } combine {
+    R[i] += rs;
+  }
+}
