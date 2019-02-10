@@ -32,7 +32,9 @@ object TypeChecker {
 
   private def checkB(t1: Type, t2: Type, op: BOp) = op match {
     case OpEq() | OpNeq() => {
-      if (t1 :< t2 || t2 :< t1) TBool()
+      if (t1.isInstanceOf[TArray])
+        throw UnexpectedType(op.pos, op.toString, "primitive types", t1)
+      else if (t1 :< t2 || t2 :< t1) TBool()
       else throw UnexpectedSubtype(op.pos, op.toString, t1, t2)
     }
     case OpLt() | OpLte() | OpGt() | OpGte() => (t1, t2) match {

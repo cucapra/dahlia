@@ -59,15 +59,20 @@ class SimpleTypeNegative extends FunSpec {
     }
   }
 
-  describe("Cannot add int and float") {
-    it("constants") {
+  describe("Binary operations") {
+    it("cannot add int and float") {
       assertThrows[BinopError] {
         typeCheck("1 + 2.5")
       }
     }
-    it("declaration") {
+    it("cannot add float dec and int") {
       assertThrows[BinopError] {
         typeCheck("decl f: float; f + 1")
+      }
+    }
+    it("comparison not defined for memories") {
+      assertThrows[TypeError] {
+        typeCheck("decl a: bit<10>[10]; decl b: bit<10>[10]; a == b")
       }
     }
   }
