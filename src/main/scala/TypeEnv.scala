@@ -8,6 +8,14 @@ object TypeEnv {
   type Stack[T] = List[T]
   type Scope = Map[Id, Info]
 
+  // Product of all unroll factors enclosing the current context.
+  type ReqResources = Int
+
+  // capabilities for read/write
+  sealed trait Capability
+  case class Read(expr: Expr) extends Capability
+  case class Write(expr: Expr) extends Capability
+
   val emptyEnv: Env = Env(List(Map()))
 
   case class Env(e: Stack[Scope]) {
@@ -40,10 +48,6 @@ object TypeEnv {
       binds.foldLeft(this)({ case (e, b) => e.add(b) })
 
   }
-
-  // Stack of iterators in the current context. Used to check that an array
-  // access the right capabilities.
-  type ItStack = List[Int]
 
   case class Info(
     id: Id,
