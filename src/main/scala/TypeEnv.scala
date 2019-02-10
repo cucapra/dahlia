@@ -17,18 +17,21 @@ object TypeEnv {
   case object Read extends Capability
   case object Write extends Capability
 
-  val emptyEnv: Env = Env(List(Map()), Map())
+  val emptyEnv: Env = Env(List(Map()), List(Map()))
 
-  case class Env(e: Stack[Scope], caps: CapScope) {
-    def addScope = Env(Map[Id, Info]() :: e, caps)
-    def endScope = (Env(e.tail, caps), e.head, caps)
+  case class Env(e: Stack[Scope], caps: Stack[CapScope]) {
+    def addScope = Env(Map[Id, Info]() :: e, Map[Expr, Capability]() :: caps)
+    def endScope = (Env(e.tail, caps.tail), e.head, caps.head)
     def apply(id: Id): Info = find(e, id) match {
       case Some(info) => info
       case None => throw UnboundVar(id)
     }
 
-    def getCap(expr: Expr): Option[Capability] = caps.get(expr)
-    def addCap(expr: Expr, cap: Capability) = Env(e, caps + (expr -> cap))
+    def getCap(expr: Expr): Option[Capability] =
+      caps.find(c => c.get(expr).isDefined).map(c => c(expr))
+
+    def addCap(expr: Expr, cap: Capability) =
+      Env(e, caps.head + (expr -> cap) :: caps.tail)
 
     private def find(e: Stack[Scope], id: Id): Option[Info] =
       e.find(m => m.get(id).isDefined) match {
@@ -65,7 +68,7 @@ object TypeEnv {
           avBanks + (dim -> (avBanks(dim) - bank)),
           conBanks + (dim -> (conBanks(dim) + bank)))
       } else if (conBanks(dim).contains(bank)){
-        throw MsgError(s"Bank $bank in dimension $dim of $id already consumed.")
+        throw AlreadyConsumed(id, dim, bank)
       } else {
         throw MsgError(s"Bank $bank does not exist for dimension $dim of $id.")
       }

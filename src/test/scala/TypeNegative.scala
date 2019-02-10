@@ -174,8 +174,103 @@ class SimpleTypeNegative extends FunSpec {
     }
   }
 
-  describe("Array writes in unrolled context require correct amount of resources") {
-    it("with one unrolled loop and a constant access") {
+  describe("Capabilities in simple contexts") {
+    it("read capabilities end at scope boundaries") {
+      assertThrows[AlreadyConsumed] {
+        typeCheck("""
+          decl a: bit<32>[6 bank 6];
+
+          for(let i = 0..6) { a[0] };
+          for(let i = 0..6) { a[0] }
+          """ )
+      }
+    }
+
+    it("write capabilities can only be used once") {
+      assertThrows[AlreadyWrite] {
+        typeCheck("""
+            decl a: bit<32>[6 bank 6];
+
+            for(let i = 0..6) {
+              a[0] := 1;
+              a[0] := 1;
+            };
+          """ )
+      }
+    }
+
+    it("read capabilities can be used multiple times") {
+      typeCheck("""
+          decl a: bit<32>[6 bank 6];
+
+          for(let i = 0..6) {
+            let x = a[0];
+            let y = a[0];
+          };
+        """ )
+    }
+
+    it("read cannot occur after write") {
+      assertThrows[InvalidCap] {
+        typeCheck("""
+              decl a: bit<32>[6 bank 6];
+              for (let i = 0..6) {
+                a[0] := 1;
+                let x = a[0] + 1;
+              }
+          """ )
+      }
+    }
+
+    it("write cannot occur after read") {
+      assertThrows[InvalidCap] {
+        typeCheck("""
+              decl a: bit<32>[6 bank 6];
+              for (let i = 0..6) {
+                let x = a[0] + 1;
+                a[0] := 1;
+              }
+          """ )
+      }
+    }
+
+    it("read after write in same context with seq composition") {
+        typeCheck("""
+              decl a: bit<32>[6 bank 6];
+              for (let i = 0..6) {
+                let x = a[0] + 1;
+                ---
+                a[0] := 1;
+              }
+          """ )
+    }
+
+    it("write after read in same context with seq composition") {
+        typeCheck("""
+              decl a: bit<32>[6 bank 6];
+              for (let i = 0..6) {
+                a[0] := 1;
+                ---
+                let x = a[0] + 1;
+              }
+          """ )
+    }
+
+    it("write after write in same context with seq composition") {
+        typeCheck("""
+              decl a: bit<32>[6 bank 6];
+              for (let i = 0..6) {
+                a[0] := 1;
+                ---
+                a[0] := 2;
+              }
+          """ )
+    }
+
+  }
+
+  describe("Capabilities in unrolled context") {
+    it("write in one unrolled loop and a constant access") {
       assertThrows[InsufficientResourcesInUnrollContext] {
         typeCheck("""
           decl a: bit<32>[10];
@@ -185,7 +280,7 @@ class SimpleTypeNegative extends FunSpec {
           """ )
       }
     }
-    it("with two unrolled loop and incorrect idx accessor") {
+    it("write in two unrolled loops and incorrect idx accessor") {
       assertThrows[InsufficientResourcesInUnrollContext] {
         typeCheck("""
           decl a: bit<32>[10][10 bank 5];
@@ -197,7 +292,7 @@ class SimpleTypeNegative extends FunSpec {
           """ )
       }
     }
-    it("with three loops, 2 unrolled") {
+    it("write with three loops, 2 unrolled") {
       assertThrows[InsufficientResourcesInUnrollContext] {
         typeCheck("""
           decl a: bit<32>[10][10 bank 5];
@@ -211,6 +306,38 @@ class SimpleTypeNegative extends FunSpec {
           """ )
       }
     }
+
+    it("read in one unrolled loop and a constant access") {
+      typeCheck("""
+        decl a: bit<32>[10];
+        for (let i = 0..10) unroll 5 {
+          let x = a[0]
+        }
+        """ )
+    }
+    it("read in two unrolled loops and incorrect idx accessor") {
+      typeCheck("""
+        decl a: bit<32>[10][10 bank 5];
+        for (let i = 0..10) {
+          for (let j = 0..10) unroll 5 {
+            let x = a[i][0];
+          }
+        }
+        """ )
+    }
+    it("read with three loops, 2 unrolled") {
+      typeCheck("""
+        decl a: bit<32>[10][10 bank 5];
+        for (let k = 0..10) {
+          for (let i = 0..9) unroll 3 {
+            for (let j = 0..10) unroll 5 {
+              let x = a[k][j]
+            }
+          }
+        }
+        """ )
+    }
+
   }
 
 }
