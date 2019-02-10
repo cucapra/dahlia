@@ -17,7 +17,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
 
   // General syntax components
   lazy val iden: P[Id] = positioned {
-    "" ~> "[a-z_][a-zA-Z0-9_]*".r ^^ { v => Id(v) }
+    "" ~> "[a-zA-Z_][a-zA-Z0-9_]*".r ^^ { v => Id(v) }
   }
 
   // Atoms
