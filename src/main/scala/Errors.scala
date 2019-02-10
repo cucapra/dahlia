@@ -35,6 +35,15 @@ object Errors {
   case class BankUnrollInvalid(bf: Int, uf: Int) extends TypeError(
     s"Banking factor ($bf) not equal to ($uf).", None)
 
+  // Invalid Capability error
+  case class InvalidCap(expr: Expr, exp: String, actual: String) extends TypeError(
+    s"This expression requires $exp capability, but previous usage inferred $actual capability.", Some(expr.pos))
+
+  case class AlreadyWrite(e: Expr) extends TypeError(
+    "Already written to this expression in this context.", Some(e.pos))
+
+  case class InsufficientResourcesInUnrollContext(exp: Int, ac: Int, expr: Expr)
+    extends TypeError(s"Array access implies $ac safe copies are possible, but implied requirement $ac copies from the surrounding unroll contexts.", Some(expr.pos))
 
   // Subtyping error
   case class NoJoin(t1: Type, t2: Type) extends TypeError(
@@ -57,6 +66,10 @@ object Errors {
 
   // Parsing errors
   case class ParserError(msg: String) extends RuntimeException(msg)
+
+  // Malformed AST Errors
+  case class UnexpectedLVal(e: Expr, construct: String) extends RuntimeException(
+    withPos(s"Expected L-value in $construct.", Some(e.pos)))
 
   // Used when a branch should be impossible at runtime.
   case class Impossible(msg: String) extends RuntimeException(s"Impossible: $msg")

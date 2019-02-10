@@ -48,8 +48,41 @@ object TypeChecker {
     checkC(p.cmd)(initEnv, 1)
   }
 
+  private def consumeBanks(id: Id, idxs: List[Expr], dims: List[(Int, Int)])(implicit env: Env, rres: ReqResources) =
+    idxs.zipWithIndex.foldLeft((env, 1))({
+      case ((env1, bres), (e, i)) => checkE(e)(env1, rres) match {
+        case (TIndex((s, e), _), env2) =>
+          env2.update(id -> env2(id).consumeDim(i, e - s)) -> bres * (e - s)
+        case (TStaticInt(v), env2) =>
+          env2.update(id -> env(id).consumeBank(i, v % dims(i)._2)) -> bres * 1
+        case (t, _) => throw InvalidIndex(id, t)
+      }
+    })
+
   private def checkLVal(e: Expr)(implicit env: Env, rreq: ReqResources) = e match {
-    case _ => ???
+    case EAA(id, idxs) => env(id).typ match {
+      // This only triggers for r-values. l-values are checked in checkLVal
+      case TArray(typ, dims) => {
+        if (dims.length != idxs.length) {
+          throw IncorrectAccessDims(id, dims.length, idxs.length)
+        }
+        // Bind the type of to Id
+        id.typ = Some(env(id).typ);
+        // Capability check
+        env.getCap(e) match {
+          case Some(Write) => throw AlreadyWrite(e)
+          case Some(Read) => throw InvalidCap(e, Write.toString, Read.toString)
+          case None => {
+            val (e1, bres) = consumeBanks(id, idxs, dims)
+            if (bres != rreq)
+              throw InsufficientResourcesInUnrollContext(rreq, bres, e)
+            typ -> e1.addCap(e, Write)
+          }
+        }
+      }
+      case t => throw UnexpectedType(e.pos, "array access", s"$t[]", t)
+    }
+    case _ => checkE(e)
   }
 
   private def checkB(t1: Type, t2: Type, op: BOp) = op match {
@@ -71,8 +104,8 @@ object TypeChecker {
     }
   }
 
-  // Implicit parameters can be elided when a recursive call is reusing the same env and its.
-  // See EBinop an example.
+  // Implicit parameters can be elided when a recursive call is reusing the
+  // same env and its. See EBinop case for an example.
   private def checkE(expr: Expr)(implicit env: Env, rres: ReqResources): (Type, Env) = expr match {
     case EFloat(_) => TFloat() -> env
     case EInt(v) => TStaticInt(v) -> env
@@ -88,29 +121,23 @@ object TypeChecker {
       checkB(t1, t2, op) -> env2
     }
     case EAA(id, idxs) => env(id).typ match {
+      // This only triggers for r-values. l-values are checked in checkLVal
       case TArray(typ, dims) => {
         if (dims.length != idxs.length) {
           throw IncorrectAccessDims(id, dims.length, idxs.length)
         }
-        // update type for id
+        // Bind the type of to Id
         id.typ = Some(env(id).typ);
-        // Create an updated env with consumed banks and calculate the capabilites
-        // used up by consumed bank.
-        val (e1, bres) = idxs.zipWithIndex.foldLeft((env, 1))({
-          case ((env1, bres), (e, i)) =>
-            checkE(e)(env1, rres) match {
-              case (TIndex((s, e), _), env2) =>
-                env2.update(id -> env2(id).consumeDim(i, e - s)) -> bres * (e - s)
-              case (TStaticInt(v), env2) =>
-                env2.update(id -> env(id).consumeBank(i, v % dims(i)._2)) -> bres * 1
-              case (t, _) => throw InvalidIndex(id, t)
-            }
-        })
-        if (rres != bres) {
-          throw MsgError(
-            s"Invalid resources provided by array access in this context. Expected $rres, received: $bres")
+        // Check capabilities
+        env.getCap(expr) match {
+          case Some(Write) =>
+            throw InvalidCap(expr, Read.toString, Write.toString)
+          case Some(Read) => typ -> env
+          case None => {
+            val e1 = consumeBanks(id, idxs, dims)._1
+            typ -> e1.addCap(expr, Read)
+          }
         }
-        typ -> e1
       }
       case t => throw UnexpectedType(expr.pos, "array access", s"$t[]", t)
     }
@@ -127,7 +154,7 @@ object TypeChecker {
       }
     }
     case CUpdate(lhs, rhs) => {
-      val (t1, e1) = checkE(lhs)
+      val (t1, e1) = checkLVal(lhs)
       val (t2, e2) = checkE(rhs)(e1, rres)
       // :< is a subtyping method we defined on the type trait.
       if (t2 :< t1) (t1, t2, lhs) match {
@@ -141,7 +168,7 @@ object TypeChecker {
       else throw UnexpectedSubtype(rhs.pos, "assignment", t1, t2)
     }
     case CReduce(rop, l, r) => {
-      val (t1, e1) = checkE(l)
+      val (t1, e1) = checkLVal(l)
       val (ta, e2) = checkE(r)(e1, rres)
       (t1, ta) match {
         case (t1, TArray(t2, dims)) =>
@@ -167,7 +194,7 @@ object TypeChecker {
       // Add binding for iterator in a separate scope.
       val e1 = env.addScope.add(iter -> Info(iter, range.idxType)).addScope
       // Check for body and pop the scope.
-      val (e2, binds) = checkC(par)(e1, range.u * rres).endScope
+      val (e2, binds, _) = checkC(par)(e1, range.u * rres).endScope
       // Create scope where ids bound in the parallel scope map to fully banked arrays.
       val vecBinds = binds.map({ case (id, inf) =>
         id -> Info(id, TArray(inf.typ, List((range.u, range.u))))

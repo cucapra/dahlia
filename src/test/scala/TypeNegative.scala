@@ -160,51 +160,51 @@ class SimpleTypeNegative extends FunSpec {
 
   describe("Logical sequencing doesnt refresh resources globally") {
     it("when composed with parallel sequence") {
-      assertThrows[MsgError] {
+      assertThrows[AlreadyWrite] {
         typeCheck("""
           decl a: bit<32>[8];
           {
-            a[0];
+            a[0] := 1;
             ---
-            a[0];
+            a[0] := 1;
           };
-          a[0]
+          a[0] := 1
           """ )
       }
     }
   }
 
-  describe("Array access in unrolled context require correct amount of resources") {
+  describe("Array writes in unrolled context require correct amount of resources") {
     it("with one unrolled loop and a constant access") {
-      assertThrows[MsgError] {
+      assertThrows[InsufficientResourcesInUnrollContext] {
         typeCheck("""
           decl a: bit<32>[10];
           for (let i = 0..10) unroll 5 {
-            a[0]
+            a[0] := 1
           }
           """ )
       }
     }
     it("with two unrolled loop and incorrect idx accessor") {
-      assertThrows[MsgError] {
+      assertThrows[InsufficientResourcesInUnrollContext] {
         typeCheck("""
           decl a: bit<32>[10][10 bank 5];
           for (let i = 0..10) {
             for (let j = 0..10) unroll 5 {
-              a[i][0]
+              a[i][0] := 1
             }
           }
           """ )
       }
     }
     it("with three loops, 2 unrolled") {
-      assertThrows[MsgError] {
+      assertThrows[InsufficientResourcesInUnrollContext] {
         typeCheck("""
           decl a: bit<32>[10][10 bank 5];
           for (let k = 0..10) {
             for (let i = 0..9) unroll 3 {
               for (let j = 0..10) unroll 5 {
-                a[k][j]
+                a[k][j] := 1
               }
             }
           }
