@@ -35,6 +35,9 @@ object Errors {
   case class BankUnrollInvalid(bf: Int, uf: Int) extends TypeError(
     s"Banking factor ($bf) not equal to ($uf).", None)
 
+  case class AlreadyConsumed(id: Id, dim: Int, bank: Int) extends TypeError(
+    s"Bank $bank in dimension $dim of $id already consumed.", None)
+
   // Invalid Capability error
   case class InvalidCap(expr: Expr, exp: String, actual: String) extends TypeError(
     s"This expression requires $exp capability, but previous usage inferred $actual capability.", Some(expr.pos))
