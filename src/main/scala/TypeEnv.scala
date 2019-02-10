@@ -7,25 +7,28 @@ object TypeEnv {
 
   type Stack[T] = List[T]
   type Scope = Map[Id, Info]
+  type CapScope = Map[Expr, Capability]
 
   // Product of all unroll factors enclosing the current context.
   type ReqResources = Int
 
   // capabilities for read/write
   sealed trait Capability
-  case class Read(expr: Expr) extends Capability
-  case class Write(expr: Expr) extends Capability
+  case object Read extends Capability
+  case object Write extends Capability
 
-  val emptyEnv: Env = Env(List(Map()))
+  val emptyEnv: Env = Env(List(Map()), Map())
 
-  case class Env(e: Stack[Scope]) {
-    override def toString = e.foldLeft("")({ case (acc, m) => s"$acc :: $m"})
-    def addScope = Env(Map[Id, Info]() :: e)
-    def endScope = (Env(e.tail), e.head)
+  case class Env(e: Stack[Scope], caps: CapScope) {
+    def addScope = Env(Map[Id, Info]() :: e, caps)
+    def endScope = (Env(e.tail, caps), e.head, caps)
     def apply(id: Id): Info = find(e, id) match {
       case Some(info) => info
       case None => throw UnboundVar(id)
     }
+
+    def getCap(expr: Expr): Option[Capability] = caps.get(expr)
+    def addCap(expr: Expr, cap: Capability) = Env(e, caps + (expr -> cap))
 
     private def find(e: Stack[Scope], id: Id): Option[Info] =
       e.find(m => m.get(id).isDefined) match {
@@ -35,13 +38,13 @@ object TypeEnv {
 
     def add(bind: (Id, Info)) = find(e, bind._1) match {
       case Some(_) => throw AlreadyBound(bind._1)
-      case None => Env(e.head + bind :: e.tail)
+      case None => Env(e.head + bind :: e.tail, caps)
     }
     def update(bind: (Id, Info)) = find(e, bind._1) match {
       case None => throw UnboundVar(bind._1)
       case Some(_) => {
         val scope = e.indexWhere(m => m.get(bind._1).isDefined)
-        Env(e.updated(scope, e(scope) + bind))
+        Env(e.updated(scope, e(scope) + bind), caps)
       }
     }
     def ++(binds: Scope): Env =
@@ -97,4 +100,3 @@ object TypeEnv {
     }
   }
 }
-

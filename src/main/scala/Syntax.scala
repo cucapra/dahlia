@@ -84,7 +84,12 @@ object Syntax {
   case class OpGt() extends BOp
   case class OpGte() extends BOp
 
-  sealed trait Expr extends Positional
+  sealed trait Expr extends Positional {
+    def isLVal = this match {
+      case _:EVar | _:EAA => true
+      case _ => false
+    }
+  }
   case class EInt(v: Int) extends Expr
   case class EFloat(f: Float) extends Expr
   case class EBool(v: Boolean) extends Expr
@@ -116,15 +121,18 @@ object Syntax {
   case class RSub() extends ROp
   case class RDiv() extends ROp
 
-  // TODO(rachit): Create class for LValues and use them for lhs of update and reduce.
   sealed trait Command extends Positional
   case class CPar(c1: Command, c2: Command) extends Command
   case class CSeq(c1: Command, c2: Command) extends Command
   case class CLet(id: Id, var typ: Option[Type], e: Expr) extends Command
   case class CIf(cond: Expr, cons: Command) extends Command
   case class CFor(range: CRange, par: Command, combine: Command) extends Command
-  case class CUpdate(lhs: Expr, rhs: Expr) extends Command
-  case class CReduce(rop: ROp, lhs: Expr, rhs: Expr) extends Command
+  case class CUpdate(lhs: Expr, rhs: Expr) extends Command {
+    if (lhs.isLVal == false) throw UnexpectedLVal(lhs, "assignment")
+  }
+  case class CReduce(rop: ROp, lhs: Expr, rhs: Expr) extends Command {
+    if (lhs.isLVal == false) throw UnexpectedLVal(lhs, "assignment")
+  }
   case class CExpr(exp: Expr) extends Command
   case object CEmpty extends Command
 
