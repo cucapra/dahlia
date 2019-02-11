@@ -1,0 +1,6 @@
+decl a: float[1024 bank 16]; 
+decl c: float[1024 bank 16];
+
+for (let i = 0..1024) unroll 32 {
+  c[i] := a[i];
+}
