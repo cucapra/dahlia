@@ -85,7 +85,7 @@ object TypeEnv {
         }
         case None => throw UnknownDim(id, dim)
       }
-      case _ => ??? // Cannot happen
+      case t => throw Impossible(s"consumeDim called on non-array type $t")
     }
 
     def consumeAll = typ match {
