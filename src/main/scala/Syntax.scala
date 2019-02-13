@@ -66,6 +66,9 @@ object Syntax {
       case _:OpMod => "%"
       case _:OpLsh => "<<"
       case _:OpRsh => ">>"
+      case _:OpBAnd => "&"
+      case _:OpBOr => "|"
+      case _:OpBXor => "^"
     }
 
     def toFun: (Int, Int) => Int = this match {
@@ -73,22 +76,32 @@ object Syntax {
       case _:OpMul => _ * _
       case _:OpDiv => _ / _
       case _:OpSub => _ - _
+      case _:OpBAnd => _ & _
+      case _:OpBOr => _ | _
+      case _:OpBXor => _ ^ _
       case _ => throw MsgError(s"toFun not defined on $this")
     }
   }
+  // comparison ops
   case class OpEq() extends BOp
   case class OpNeq() extends BOp
+  case class OpLt() extends BOp
+  case class OpLte() extends BOp
+  case class OpGt() extends BOp
+  case class OpGte() extends BOp
+  // integer/float ops
   case class OpAdd() extends BOp
   case class OpSub() extends BOp
   case class OpMul() extends BOp
   case class OpDiv() extends BOp
   case class OpMod() extends BOp
-  case class OpLt() extends BOp
-  case class OpLte() extends BOp
-  case class OpGt() extends BOp
-  case class OpGte() extends BOp
+  // Shifting ops
   case class OpLsh() extends BOp
   case class OpRsh() extends BOp
+  // Bit ops
+  case class OpBAnd() extends BOp
+  case class OpBOr() extends BOp
+  case class OpBXor() extends BOp
 
   sealed trait Expr extends Positional {
     def isLVal = this match {
