@@ -61,13 +61,13 @@ object Syntax {
       case _:OpGte => ">="
       case _:OpAdd => "+"
       case _:OpSub => "-"
-      case _:OpTimes => "*"
+      case _:OpMul => "*"
       case _:OpDiv => "/"
     }
 
     def toFun: (Int, Int) => Int = this match {
       case _:OpAdd => _ + _
-      case _:OpTimes => _ * _
+      case _:OpMul => _ * _
       case _:OpDiv => _ / _
       case _:OpSub => _ - _
       case _ => throw MsgError(s"toFun not defined on $this")
@@ -77,7 +77,7 @@ object Syntax {
   case class OpNeq() extends BOp
   case class OpAdd() extends BOp
   case class OpSub() extends BOp
-  case class OpTimes() extends BOp
+  case class OpMul() extends BOp
   case class OpDiv() extends BOp
   case class OpLt() extends BOp
   case class OpLte() extends BOp
