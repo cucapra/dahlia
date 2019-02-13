@@ -145,8 +145,8 @@ object TypeChecker {
         // All functions return `void`.
         TVoid() -> args.zip(argTypes).foldLeft(env)({ case (e, (arg, expectedTyp)) => {
           val (typ, e1) = checkE(arg)(e, rres);
-          if (typ != expectedTyp) {
-            throw UnexpectedType(arg.pos, "parameter", expectedTyp.toString, typ)
+          if (typ :< expectedTyp == false) {
+            throw UnexpectedSubtype(arg.pos, "parameter", expectedTyp, typ)
           }
           // If an array id is used as a parameter, consume it completely.
           // This works correctly with capabilties.

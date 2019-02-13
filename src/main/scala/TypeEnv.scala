@@ -89,8 +89,8 @@ object TypeEnv {
     }
 
     def consumeAll = typ match {
-      case TArray(_, dims) => dims.foldLeft(this)({
-        case (info, (dim, bank)) => info.consumeDim(dim, bank)
+      case TArray(_, dims) => dims.zipWithIndex.foldLeft(this)({
+        case (info, ((_, bank), dim)) => info.consumeDim(dim, bank)
       })
       case _ => throw Impossible("consumeAll called on non-array")
     }
