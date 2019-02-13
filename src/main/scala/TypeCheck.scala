@@ -92,6 +92,10 @@ object TypeChecker {
       else if (t1 :< t2 || t2 :< t1) TBool()
       else throw UnexpectedSubtype(op.pos, op.toString, t1, t2)
     }
+    case _:OpAnd | _:OpOr => (t1, t2) match {
+      case (TBool(), TBool()) => TBool()
+      case _ => throw BinopError(op, t1, t2)
+    }
     case _:OpLt | _:OpLte | _:OpGt | _:OpGte => (t1, t2) match {
       case ((TStaticInt(_) | TSizedInt(_)), (TStaticInt(_) | TSizedInt(_))) =>
         TBool()

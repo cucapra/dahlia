@@ -61,6 +61,8 @@ private class FuseParser extends RegexParsers with PackratParsers {
   lazy val bAnd: P[BOp] = positioned("&" ^^ { _ => OpBAnd() })
   lazy val bOr: P[BOp] = positioned("|" ^^ { _ => OpBOr() })
   lazy val bXor: P[BOp] = positioned("^" ^^ { _ => OpBXor() })
+  lazy val and: P[BOp] = positioned("&&" ^^ { _ => OpAnd() })
+  lazy val or: P[BOp] = positioned("||" ^^ { _ => OpOr() })
 
   // Expressions
   // The bin* parsers implement the precedence order of operators described
@@ -94,7 +96,15 @@ private class FuseParser extends RegexParsers with PackratParsers {
     binBXor ~ bOr ~ binBOr ^^ { case l ~ op ~ r => EBinop(op, l, r)} |
     binBXor
   }
-  lazy val expr = positioned (binBOr)
+  lazy val binAnd: P[Expr] = positioned {
+    binBOr ~ and ~ binAnd ^^ { case l ~ op ~ r => EBinop(op, l, r)} |
+    binBOr
+  }
+  lazy val binOr: P[Expr] = positioned {
+    binAnd ~ or ~ binOr ^^ { case l ~ op ~ r => EBinop(op, l, r)} |
+    binAnd
+  }
+  lazy val expr = positioned (binOr)
 
   // Types
   lazy val typIdx: P[(Int, Int)] =

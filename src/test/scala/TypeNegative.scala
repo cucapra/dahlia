@@ -71,13 +71,18 @@ class SimpleTypeNegative extends FunSpec {
       }
     }
     it("comparison not defined for memories") {
-      assertThrows[TypeError] {
+      assertThrows[UnexpectedType] {
         typeCheck("decl a: bit<10>[10]; decl b: bit<10>[10]; a == b")
       }
     }
     it("cannot shift floats") {
       assertThrows[BinopError] {
         typeCheck("10.5 << 1")
+      }
+    }
+    it("logical and defined on booleans") {
+      assertThrows[BinopError] {
+        typeCheck("1 || 2")
       }
     }
   }
