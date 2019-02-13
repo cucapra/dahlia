@@ -39,7 +39,8 @@ private class FuseParser extends RegexParsers with PackratParsers {
   // Binops
   lazy val mulOps: P[BOp] = positioned {
     "/" ^^ { _ => OpDiv() } |
-    "*" ^^ { _ => OpMul() }
+    "*" ^^ { _ => OpMul() } |
+    "%" ^^ { _ => OpMul() }
   }
   lazy val addOps: P[BOp] = positioned {
     "+" ^^ { _ => OpAdd() } |

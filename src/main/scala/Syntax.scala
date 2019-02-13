@@ -63,6 +63,7 @@ object Syntax {
       case _:OpSub => "-"
       case _:OpMul => "*"
       case _:OpDiv => "/"
+      case _:OpMod => "%"
       case _:OpLsh => "<<"
       case _:OpRsh => ">>"
     }
@@ -81,6 +82,7 @@ object Syntax {
   case class OpSub() extends BOp
   case class OpMul() extends BOp
   case class OpDiv() extends BOp
+  case class OpMod() extends BOp
   case class OpLt() extends BOp
   case class OpLte() extends BOp
   case class OpGt() extends BOp

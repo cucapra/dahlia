@@ -98,7 +98,7 @@ object TypeChecker {
       case (_: TFloat, _: TFloat) => TBool()
       case _ => throw BinopError(op, t1, t2)
     }
-    case _:OpAdd | _:OpMul | _:OpSub | _:OpDiv => (t1, t2) match {
+    case _:OpAdd | _:OpMul | _:OpSub | _:OpDiv | _:OpMod => (t1, t2) match {
       case ((TStaticInt(_) | TSizedInt(_)), (TStaticInt(_) | TSizedInt(_))) =>
         t1.join(t2, op.toFun)
       case (_: TFloat, _: TFloat) => TFloat()
