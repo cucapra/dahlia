@@ -92,14 +92,21 @@ object TypeChecker {
       else if (t1 :< t2 || t2 :< t1) TBool()
       else throw UnexpectedSubtype(op.pos, op.toString, t1, t2)
     }
-    case OpLt() | OpLte() | OpGt() | OpGte() => (t1, t2) match {
-      case ((TStaticInt(_) | TSizedInt(_)), (TStaticInt(_) | TSizedInt(_))) => TBool()
+    case _:OpLt | _:OpLte | _:OpGt | _:OpGte => (t1, t2) match {
+      case ((TStaticInt(_) | TSizedInt(_)), (TStaticInt(_) | TSizedInt(_))) =>
+        TBool()
       case (_: TFloat, _: TFloat) => TBool()
       case _ => throw BinopError(op, t1, t2)
     }
-    case OpAdd() | OpMul() | OpSub() | OpDiv() => (t1, t2) match {
-      case ((TStaticInt(_) | TSizedInt(_)), (TStaticInt(_) | TSizedInt(_))) => t1.join(t2, op.toFun)
+    case _:OpAdd | _:OpMul | _:OpSub | _:OpDiv => (t1, t2) match {
+      case ((TStaticInt(_) | TSizedInt(_)), (TStaticInt(_) | TSizedInt(_))) =>
+        t1.join(t2, op.toFun)
       case (_: TFloat, _: TFloat) => TFloat()
+      case _ => throw BinopError(op, t1, t2)
+    }
+    case _:OpLsh | _:OpRsh => (t1, t2) match {
+      case (TSizedInt(_), (TStaticInt(_) | TSizedInt(_))) => t1
+      case (TStaticInt(_), (TStaticInt(_) | TSizedInt(_))) => TSizedInt(32)
       case _ => throw BinopError(op, t1, t2)
     }
   }

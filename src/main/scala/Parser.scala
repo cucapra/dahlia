@@ -53,6 +53,10 @@ private class FuseParser extends RegexParsers with PackratParsers {
     ">"  ^^ { _ => OpGt() } |
     "<"  ^^ { _ => OpLt() }
   }
+  lazy val shOps: P[BOp] = positioned {
+    ">>" ^^ { _ => OpRsh()} |
+    "<<" ^^ { _ => OpLsh()}
+  }
 
   // Expressions
   lazy val binMul: P[Expr] = positioned {
@@ -67,7 +71,11 @@ private class FuseParser extends RegexParsers with PackratParsers {
     binAdd ~ eqOps ~ binEq ^^ { case l ~ op ~ r => EBinop(op, l, r)} |
     binAdd
   }
-  lazy val expr = positioned (binEq)
+  lazy val binSh: P[Expr] = positioned {
+    binEq ~ shOps ~ binSh ^^ { case l ~ op ~ r => EBinop(op, l, r)} |
+    binEq
+  }
+  lazy val expr = positioned (binSh)
 
   // Types
   lazy val typIdx: P[(Int, Int)] =
