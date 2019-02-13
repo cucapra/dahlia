@@ -30,10 +30,10 @@ private class Emit extends PrettyPrinter {
 
   // Simple peephole optimization to turn: 1 * x => x, 0 + x => x, 0 * x => 0
   def binop(op: BOp, l: Expr, r: Expr) = (op, l, r) match {
-    case (OpTimes(), EInt(1), r) => r
-    case (OpTimes(), l, EInt(1)) => l
-    case (OpTimes(), EInt(0), _) => EInt(0)
-    case (OpTimes(), _, EInt(0)) => EInt(0)
+    case (OpMul(), EInt(1), r) => r
+    case (OpMul(), l, EInt(1)) => l
+    case (OpMul(), EInt(0), _) => EInt(0)
+    case (OpMul(), _, EInt(0)) => EInt(0)
     case (OpAdd(), l, EInt(0)) => l
     case (OpAdd(), EInt(0), r) => r
     case _ => EBinop(op, l, r)
@@ -42,7 +42,7 @@ private class Emit extends PrettyPrinter {
   // FIXME(rachit): This is probably incorrect.
   def flattenIdx(idxs: List[Expr], dimSizes: List[Int]) =
     idxs.zip(dimSizes).foldRight[Expr](EInt(0))({
-      case ((idx, dim), acc) => binop(OpAdd(), idx, binop(OpTimes(), EInt(dim), acc))
+      case ((idx, dim), acc) => binop(OpAdd(), idx, binop(OpMul(), EInt(dim), acc))
     })
 
   def scope(doc: Doc): Doc =
