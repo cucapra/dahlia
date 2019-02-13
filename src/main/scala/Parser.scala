@@ -36,7 +36,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
     parens(expr)
   }
 
-  // Binops
+  // Binops. Need to parse them seperately from EBinop to get positions.
   lazy val mulOps: P[BOp] = positioned {
     "/" ^^ { _ => OpDiv() } |
     "*" ^^ { _ => OpMul() } |
@@ -58,8 +58,14 @@ private class FuseParser extends RegexParsers with PackratParsers {
     ">>" ^^ { _ => OpRsh()} |
     "<<" ^^ { _ => OpLsh()}
   }
+  lazy val bAnd: P[BOp] = positioned("&" ^^ { _ => OpBAnd() })
+  lazy val bOr: P[BOp] = positioned("|" ^^ { _ => OpBOr() })
+  lazy val bXor: P[BOp] = positioned("^" ^^ { _ => OpBXor() })
 
   // Expressions
+  // The bin* parsers implement the precedence order of operators described
+  // for C/C++: https://en.cppreference.com/w/c/language/operator_precedence
+  // The tower-like structure is required to implement precedence correctly.
   lazy val binMul: P[Expr] = positioned {
     atom ~ mulOps ~ binMul ^^ { case l ~ op ~ r => EBinop(op, l, r)} |
     atom
@@ -76,7 +82,19 @@ private class FuseParser extends RegexParsers with PackratParsers {
     binEq ~ shOps ~ binSh ^^ { case l ~ op ~ r => EBinop(op, l, r)} |
     binEq
   }
-  lazy val expr = positioned (binSh)
+  lazy val binBAnd: P[Expr] = positioned {
+    binSh ~ bAnd ~ binBAnd ^^ { case l ~ op ~ r => EBinop(op, l, r)} |
+    binSh
+  }
+  lazy val binBXor: P[Expr] = positioned {
+    binBAnd ~ bXor ~ binBXor ^^ { case l ~ op ~ r => EBinop(op, l, r)} |
+    binBAnd
+  }
+  lazy val binBOr: P[Expr] = positioned {
+    binBXor ~ bOr ~ binBOr ^^ { case l ~ op ~ r => EBinop(op, l, r)} |
+    binBXor
+  }
+  lazy val expr = positioned (binBOr)
 
   // Types
   lazy val typIdx: P[(Int, Int)] =

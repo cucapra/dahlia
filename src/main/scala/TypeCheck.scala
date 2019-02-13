@@ -9,7 +9,7 @@ import Errors._
  * - Linear properties of banks in memories.
  * - Checking combine blocks correctly use bound variables.
  * - Generate subtype joins for binary operators.
- * - TODO(rachit): Check array access generate sufficient resources needed by unrolled contexts. (See issue #50)
+ * - Checks read/write capabilites for array accesses
  *
  * It also MUTATES and ANNOTATES the input AST:
  * - CLet with an explicit type get the correct type
@@ -98,7 +98,8 @@ object TypeChecker {
       case (_: TFloat, _: TFloat) => TBool()
       case _ => throw BinopError(op, t1, t2)
     }
-    case _:OpAdd | _:OpMul | _:OpSub | _:OpDiv | _:OpMod => (t1, t2) match {
+    case _:OpAdd | _:OpMul | _:OpSub | _:OpDiv | _:OpMod | _:OpBAnd |
+         _:OpBOr | _:OpBXor => (t1, t2) match {
       case ((TStaticInt(_) | TSizedInt(_)), (TStaticInt(_) | TSizedInt(_))) =>
         t1.join(t2, op.toFun)
       case (_: TFloat, _: TFloat) => TFloat()
