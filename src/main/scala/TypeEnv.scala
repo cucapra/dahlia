@@ -87,6 +87,14 @@ object TypeEnv {
       }
       case _ => ??? // Cannot happen
     }
+
+    def consumeAll = typ match {
+      case TArray(_, dims) => dims.foldLeft(this)({
+        case (info, (dim, bank)) => info.consumeDim(dim, bank)
+      })
+      case _ => throw Impossible("consumeAll called on non-array")
+    }
+
     override def toString = s"{$typ, $avBanks, $conBanks}"
   }
   object Info {

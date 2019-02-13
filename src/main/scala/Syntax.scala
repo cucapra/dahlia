@@ -34,6 +34,7 @@ object Syntax {
     }
 
     override def toString = this match {
+      case _: TVoid => "void"
       case _: TBool => "bool"
       case _: TFloat => "float"
       case TSizedInt(l) => s"int$l"
@@ -41,13 +42,16 @@ object Syntax {
       case TArray(t, dims) =>
         s"$t" + dims.foldLeft("")({ case (acc, (d, b)) => s"$acc[$d bank $b]" })
       case TIndex(s, d) => s"idx($s, $d)"
+      case TFun(args) => args.foldLeft("")({ case (acc, t) => s"$acc$t -> "}) + "void"
     }
   }
   // Use case class instead of case object to get unique positions
+  case class TVoid() extends Type
   case class TBool() extends Type
   case class TFloat() extends Type
   case class TSizedInt(len: Int) extends Type
   case class TStaticInt(v: Int) extends Type
+  case class TFun(args: List[Type]) extends Type
   case class TArray(typ: Type, dims: List[(Int, Int)]) extends Type
   case class TIndex(static: (Int, Int), dynamic: (Int, Int)) extends Type
 
@@ -119,6 +123,7 @@ object Syntax {
   case class EBool(v: Boolean) extends Expr
   case class EBinop(op: BOp, e1: Expr, e2: Expr) extends Expr
   case class EAA(id: Id, idxs: List[Expr]) extends Expr
+  case class EApp(func: Id, args: List[Expr]) extends Expr
   case class EVar(id: Id) extends Expr
 
   case class CRange(iter: Id, s: Int, e: Int, u: Int) extends Positional {
@@ -161,6 +166,7 @@ object Syntax {
   case object CEmpty extends Command
 
   case class Decl(id: Id, typ: Type) extends Positional
+  case class FDef(id: Id, args: List[Decl], body: Command) extends Positional
 
-  case class Prog(decls: List[Decl], cmd: Command) extends Positional
+  case class Prog(fdefs: List[FDef], decls: List[Decl], cmd: Command) extends Positional
 }
