@@ -75,6 +75,11 @@ class SimpleTypeNegative extends FunSpec {
         typeCheck("decl a: bit<10>[10]; decl b: bit<10>[10]; a == b")
       }
     }
+    it("cannot shift floats") {
+      assertThrows[BinopError] {
+        typeCheck("10.5 << 1")
+      }
+    }
   }
 
   describe("Cannot reassign to new type") {

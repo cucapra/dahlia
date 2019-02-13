@@ -63,6 +63,8 @@ object Syntax {
       case _:OpSub => "-"
       case _:OpMul => "*"
       case _:OpDiv => "/"
+      case _:OpLsh => "<<"
+      case _:OpRsh => ">>"
     }
 
     def toFun: (Int, Int) => Int = this match {
@@ -83,6 +85,8 @@ object Syntax {
   case class OpLte() extends BOp
   case class OpGt() extends BOp
   case class OpGte() extends BOp
+  case class OpLsh() extends BOp
+  case class OpRsh() extends BOp
 
   sealed trait Expr extends Positional {
     def isLVal = this match {
