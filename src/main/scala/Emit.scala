@@ -51,13 +51,16 @@ private class Emit extends PrettyPrinter {
   implicit def IdToString(id: Id): Doc = value(id.v)
 
   implicit def typeToDoc(typ: Type): Doc = typ match {
+    case _:TVoid => "void"
     case _:TBool | _:TIndex | _:TStaticInt => "int"
     case _:TFloat => "float"
     case _:TSizedInt => value(typ)
     case TArray(typ, _) => typ
+    case _:TFun => throw Impossible("Cannot emit function types")
   }
 
   implicit def exprToDoc(e: Expr): Doc = e match {
+    case EApp(fn, args) => fn <> parens(hsep(args.map(exprToDoc), comma))
     case EInt(i) => value(i)
     case EFloat(f) => value(f)
     case EBool(b) => value(if(b) 1 else 0)
@@ -101,15 +104,26 @@ private class Emit extends PrettyPrinter {
   // to generate the right array type.
   def declToDoc(d: Decl): Doc = d.typ <+> withArrayType(d.id)
 
-  def progToDoc(p: Prog, c: Utils.Config) = {
-    val bankPragmas = p.decls
-      .filter(d => d.typ.isInstanceOf[TArray])
-      .map(d => d.id -> d.typ.asInstanceOf[TArray].dims.map(_._2))
-      .map({ case (id, bfs) => bank(id, bfs) })
+  def bankPragmas(decls: List[Decl]) = decls
+    .filter(d => d.typ.isInstanceOf[TArray])
+    .map(d => d.id -> d.typ.asInstanceOf[TArray].dims.map(_._2))
+    .map({ case (id, bfs) => bank(id, bfs) })
 
+  def fDefToDoc(f: FDef): Doc = {
+    val args = hsep(f.args.map(declToDoc), comma)
+    "void" <+> f.id <> parens(args) <+> scope {
+      vsep(bankPragmas(f.args)) <@>
+      f.body
+    }
+  }
+
+  def progToDoc(p: Prog, c: Utils.Config) = {
+    val pragmas = bankPragmas(p.decls)
     val args = hsep(p.decls.map(declToDoc), comma)
+
+    vsep(p.fdefs.map(fDefToDoc)) <@>
     "void" <+> c.kernelName <> parens(args) <+> scope {
-      vsep(bankPragmas) <@>
+      vsep(pragmas) <@>
       p.cmd
     }
   }

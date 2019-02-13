@@ -36,12 +36,20 @@ import Errors._
 object TypeChecker {
   import TypeEnv._
 
-  /* A program consists of a list of declarations and then a command. We build
-   * up an environment with all the declarations, then check the command in
-   * that environment (`checkC`).
+  /* A program consists of a list of function definitions, a list of variable
+   * declarations  and then a command. We build up an environment with all the
+   * declarations, then check the command in that environment (`checkC`).
    */
   def typeCheck(p: Prog) = {
-    val initEnv = p.decls.foldLeft(emptyEnv)({ case (env, Decl(id, typ)) =>
+    val funcsEnv = p.fdefs.foldLeft(emptyEnv)({ case (env, FDef(id, args, body)) =>
+      val envWithArgs = args.foldLeft(env.addScope)({ case (env, Decl(id, typ)) =>
+        id.typ = Some(typ);
+        env.add(id -> Info(id, typ))
+      })
+      val bodyEnv = checkC(body)(envWithArgs, 1)
+      bodyEnv.endScope._1.add(id -> Info(id, TFun(args.map(_.typ))))
+    })
+    val initEnv = p.decls.foldLeft(funcsEnv)({ case (env, Decl(id, typ)) =>
       id.typ = Some(typ);
       env.add(id -> Info(id, typ))
     })
@@ -131,6 +139,25 @@ object TypeChecker {
       val (t1, env1) = checkE(e1)
       val (t2, env2) = checkE(e2)(env1, rres)
       checkB(t1, t2, op) -> env2
+    }
+    case EApp(f, args) => env(f).typ match {
+      case TFun(argTypes) => {
+        // All functions return `void`.
+        TVoid() -> args.zip(argTypes).foldLeft(env)({ case (e, (arg, expectedTyp)) => {
+          val (typ, e1) = checkE(arg)(e, rres);
+          if (typ != expectedTyp) {
+            throw UnexpectedType(arg.pos, "parameter", expectedTyp.toString, typ)
+          }
+          // If an array id is used as a parameter, consume it completely.
+          // This works correctly with capabilties.
+          (typ, arg) match {
+            case (_:TArray, EVar(id)) => e1.update(id -> e1(id).consumeAll)
+            case (_:TArray, expr) => throw Impossible(s"Type of $expr is $typ")
+            case _ => e1
+          }
+        }})
+      }
+      case t => throw UnexpectedType(expr.pos, "application", "function", t)
     }
     case EAA(id, idxs) => env(id).typ match {
       // This only triggers for r-values. l-values are checked in checkLVal

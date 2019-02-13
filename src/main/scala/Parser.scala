@@ -32,6 +32,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
     float ^^ { case f => EFloat(f) } |
     number ^^ { case n => EInt(n) } |
     boolean ^^ { case b => EBool(b) } |
+    iden ~ parens(repsep(expr, ",")) ^^ { case f ~ args => EApp(f, args) } |
     iden ^^ { case id => EVar(id) } |
     parens(expr)
   }
@@ -160,14 +161,25 @@ private class FuseParser extends RegexParsers with PackratParsers {
     scmd
   }
 
+  lazy val args: P[Decl] = iden ~ (":" ~> typ) ^^ { case i ~ t => Decl(i, t) }
+
   // Declarations
   lazy val decl: P[Decl] = positioned {
-    "decl" ~> iden ~ ":" ~ typ <~ ";" ^^ { case id ~ _ ~ typ => Decl(id, typ)}
+    "decl" ~> args  <~ ";"
+  }
+
+  // Functions
+  lazy val fDef: P[FDef] = positioned {
+    "def" ~> iden ~ parens(repsep(args, ",")) ~ block ^^ {
+      case fn ~ args ~ body => FDef(fn, args, body)
+    }
   }
 
   // Prog
   lazy val prog: P[Prog] = positioned {
-    decl.* ~ cmd.? ^^ { case decls ~ cmd => Prog(decls, cmd.getOrElse(CEmpty)) }
+    fDef.* ~ decl.* ~ cmd.? ^^ {
+      case fns ~ decls ~ cmd => Prog(fns, decls, cmd.getOrElse(CEmpty))
+    }
   }
 
 }
