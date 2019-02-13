@@ -31,12 +31,15 @@ class ParsingPositive extends org.scalatest.FunSuite {
     parseAst("1 << 2")
     parseAst("1 >> 2")
     parseAst("1 % 2")
+    parseAst("true || false")
+    parseAst("true && false")
   }
 
   test("binop precedence order") {
     parseAst("(1 + 2) * 3;")
     parseAst("1 + 2 * 3 >= 10 - 5 / 7;")
     parseAst("1 >> 2 | 3 ^ 4 & 5")
+    parseAst("1 >= 2 || 4 < 5")
   }
 
   test("if") {

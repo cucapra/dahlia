@@ -59,6 +59,8 @@ object Syntax {
       case _:OpLte => "<="
       case _:OpGt => ">"
       case _:OpGte => ">="
+      case _:OpAnd => "&&"
+      case _:OpOr => "||"
       case _:OpAdd => "+"
       case _:OpSub => "-"
       case _:OpMul => "*"
@@ -89,6 +91,9 @@ object Syntax {
   case class OpLte() extends BOp
   case class OpGt() extends BOp
   case class OpGte() extends BOp
+  // Boolean ops
+  case class OpAnd() extends BOp
+  case class OpOr() extends BOp
   // integer/float ops
   case class OpAdd() extends BOp
   case class OpSub() extends BOp
