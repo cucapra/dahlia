@@ -350,6 +350,64 @@ class SimpleTypeNegative extends FunSpec {
 
   }
 
+  describe("Functions") {
+    it("cannot have same name for multiple params") {
+      assertThrows[AlreadyBound] {
+        typeCheck("""
+          def foo(a: bool, a: bit<10>) {}
+          """ )
+      }
+    }
+
+    it("cannot be used before defintion") {
+      assertThrows[UnboundVar] {
+        typeCheck("""
+          def bar(a: bool) { foo(a) }
+          def foo(a: bool) { foo(a) }
+          """ )
+      }
+    }
+
+    it("do no allow recursion") {
+      assertThrows[UnboundVar] {
+        typeCheck("""
+          def bar(a: bool) { bar(a) }
+          """ )
+      }
+    }
+  }
+
+  describe("Function applications") {
+    it("require the correct types") {
+      assertThrows[UnexpectedSubtype] {
+        typeCheck("""
+          def bar(a: bool) { }
+          bar(1)
+          """ )
+      }
+    }
+
+    it("completely consume array parameters") {
+      assertThrows[AlreadyConsumed] {
+        typeCheck("""
+          def bar(a: bit<10>[10 bank 5]) { }
+          decl x: bit<10>[10 bank 5];
+          bar(x);
+          x[1]
+          """ )
+      }
+    }
+
+    it("do not return values") {
+      assertThrows[BinopError] {
+        typeCheck("""
+          def bar(a: bit<10>) { a }
+          1 + bar(10)
+          """ )
+      }
+    }
+  }
+
 }
 
 class FileTypeNegative extends FunSuite {

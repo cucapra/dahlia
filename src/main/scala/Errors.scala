@@ -61,7 +61,7 @@ object Errors {
     s"Variable $id not defined.", Some(id.pos))
 
   case class AlreadyBound(id: Id) extends TypeError(
-    s"Variable $id already bound in scope at ${id}.", Some(id.pos))
+    s"Variable $id already bound in scope", Some(id.pos))
 
   // Reduction errors
   case class ReductionInvalidRHS(p: Position, rop: ROp, tl: Type, tr: Type) extends TypeError(
