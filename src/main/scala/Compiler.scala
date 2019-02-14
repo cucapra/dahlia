@@ -1,15 +1,23 @@
 package fuselang
 
 import scala.util.{Try, Success, Failure}
+import Utils._
 
 object Compiler {
 
-  def compileString(prog: String, c: Utils.Config) = Try {
+  def compileStringWithError(prog: String, c: Config = emptyConf ) = {
     val ast = FuseParser.parse(prog)
     TypeChecker.typeCheck(ast)
-    Emit.emitProg(ast, c)
+    val rast = RewriteView.rewriteProg(ast)
+    Emit.emitProg(rast, c)
+  }
+
+  def compileString(prog: String, c: Utils.Config) = Try {
+    compileStringWithError(prog, c)
   } match {
     case Success(out) => out
+    case Failure(f: Errors.TypeError) =>
+      "[" + Console.RED + "Type error" + Console.RESET + "] " + f.getMessage
     case Failure(f: RuntimeException) =>
       "[" + Console.RED + "Error" + Console.RESET + "] " + f.getMessage
     case Failure(f) => throw f

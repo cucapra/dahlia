@@ -229,7 +229,9 @@ object TypeChecker {
       }
     }
     case CView(id, k@Shrink(arrId, vdims)) => env(arrId).typ match {
-      case TArray(t, dims) => {
+      case arrTyp@TArray(t, dims) => {
+        // Annotate arrId with type
+        arrId.typ = Some(arrTyp)
         // Cannot create shrink views in unrolled contexts
         if (rres != 1) {
           throw ViewInsideUnroll(cmd.pos, k, arrId)

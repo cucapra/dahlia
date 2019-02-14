@@ -1,6 +1,6 @@
 package fuselang
 
-object Utils {
+object TestUtils {
 
   import scala.language.implicitConversions
 
