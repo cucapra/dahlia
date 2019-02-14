@@ -1,6 +1,6 @@
 package fuselang
 
-import Utils._
+import TestUtils._
 import Syntax._
 import org.scalatest.FunSuite
 
@@ -181,7 +181,7 @@ class FileTypePositive extends FunSuite {
   for (file <- Files.newDirectoryStream(shouldCompile).asScala) {
     test(file.toString) {
       val prog = new String(Files.readAllBytes(file))
-      typeCheck(prog)
+      Compiler.compileStringWithError(prog)
     }
   }
 

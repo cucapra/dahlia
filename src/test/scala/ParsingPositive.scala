@@ -1,6 +1,6 @@
 package fuselang
 
-import Utils._
+import TestUtils._
 
 class ParsingPositive extends org.scalatest.FunSuite {
   test("atoms parseAst") {
@@ -111,9 +111,9 @@ class ParsingPositive extends org.scalatest.FunSuite {
   }
 
   test("views") {
-    println(parseAst("""
+    parseAst("""
       view v_a = shrink a[4 * i : 4]
-      """ ))
+      """ )
   }
 
 }

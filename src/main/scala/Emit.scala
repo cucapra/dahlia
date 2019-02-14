@@ -15,6 +15,7 @@ private class Emit extends PrettyPrinter {
   import scala.language.implicitConversions
   import Syntax._
   import Errors._
+  import CodeGenHelpers._
 
   override val defaultIndent = 2
 
@@ -28,21 +29,10 @@ private class Emit extends PrettyPrinter {
     case n => value(s"#pragma HLS ARRAY_PARTITION variable=$id factor=$n")
   }
 
-  // Simple peephole optimization to turn: 1 * x => x, 0 + x => x, 0 * x => 0
-  def binop(op: BOp, l: Expr, r: Expr) = (op, l, r) match {
-    case (OpMul(), EInt(1), r) => r
-    case (OpMul(), l, EInt(1)) => l
-    case (OpMul(), EInt(0), _) => EInt(0)
-    case (OpMul(), _, EInt(0)) => EInt(0)
-    case (OpAdd(), l, EInt(0)) => l
-    case (OpAdd(), EInt(0), r) => r
-    case _ => EBinop(op, l, r)
-  }
-
   // FIXME(rachit): This is probably incorrect.
   def flattenIdx(idxs: List[Expr], dimSizes: List[Int]) =
     idxs.zip(dimSizes).foldRight[Expr](EInt(0))({
-      case ((idx, dim), acc) => binop(OpAdd(), idx, binop(OpMul(), EInt(dim), acc))
+      case ((idx, dim), acc) => idx + (EInt(dim) * acc)
     })
 
   def scope(doc: Doc): Doc =

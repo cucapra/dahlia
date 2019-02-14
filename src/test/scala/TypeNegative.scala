@@ -1,6 +1,6 @@
 package fuselang
 
-import Utils._
+import TestUtils._
 import Errors._
 import org.scalatest.{FunSpec, FunSuite}
 
@@ -525,7 +525,7 @@ class FileTypeNegative extends FunSuite {
     test(file.toString) {
       val prog = new String(Files.readAllBytes(file))
       assertThrows[TypeError] {
-        typeCheck(prog)
+        Compiler.compileStringWithError(prog)
       }
     }
   }
