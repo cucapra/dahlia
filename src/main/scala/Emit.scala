@@ -92,6 +92,7 @@ private class Emit extends PrettyPrinter {
     case CReduce(rop, lhs, rhs) => lhs <+> rop.toString <+> rhs <> semi
     case CExpr(e) => e <> semi
     case CEmpty => ""
+    case _:CView => throw Impossible("Views should not exist during codegen.")
   }
 
   def withArrayType(id: Id) = id.typ match {

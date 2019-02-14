@@ -99,14 +99,20 @@ class ParsingPositive extends org.scalatest.FunSuite {
   }
 
   test("functions") {
-    println(parseAst("""
+    parseAst("""
       def foo(a: bit<32>) {}
-      """ ))
+      """ )
 
-    println(parseAst("""
+    parseAst("""
       def foo(a: bit<32>[10 bank 5], b: bool) {
         bar(1, 2, 3)
       }
+      """ )
+  }
+
+  test("views") {
+    println(parseAst("""
+      view v_a = shrink a[4 * i : 4]
       """ ))
   }
 

@@ -67,12 +67,20 @@ object Errors {
   case class ReductionInvalidRHS(p: Position, rop: ROp, tl: Type, tr: Type) extends TypeError(
     s"Unexpected type on right hand side of $rop. Expected: $tl[N bank N], received: $tr", Some(p))
 
+  // View errors
+  case class InvalidShrinkWidth(pos: Position, bf: Int, width: Int) extends TypeError(
+    s"Invalid width for shrink view. Expected factor of $bf (banking factor), received: $width", Some(pos))
+  case class ViewInsideUnroll(pos: Position, vt: ViewType, arrId: Id) extends TypeError(
+    s"Cannot create $vt view for $arrId inside an unrolled context.", Some(pos))
+
   // Parsing errors
   case class ParserError(msg: String) extends RuntimeException(msg)
 
   // Malformed AST Errors
   case class UnexpectedLVal(e: Expr, construct: String) extends RuntimeException(
     withPos(s"Expected L-value in $construct.", Some(e.pos)))
+  case class MalformedShrink(vt: Shrink, w: Int, step: Int) extends RuntimeException(
+    withPos(s"shrink view expects step size == width. Received $step (step), $w (width)", Some(vt.pos)))
 
   // Used when a branch should be impossible at runtime.
   case class Impossible(msg: String) extends RuntimeException(s"Impossible: $msg")

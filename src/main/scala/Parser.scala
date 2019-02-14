@@ -140,11 +140,27 @@ private class FuseParser extends RegexParsers with PackratParsers {
     "/=" ^^ { _ => RAdd() }
   }
 
+  // Some ugly validation for shrink step size = width
+  lazy val viewParam: P[(Expr, Int, Int)] =
+    number ~ "*" ~ expr ~ ":" ~ number ^^ {
+      case step ~ _ ~ idx ~ _ ~ width => (idx, width, step)
+    } |
+    number ~ ":" ~ number ^^ {
+      case idx ~ _ ~ width => (EInt(idx), width, width)
+    }
+
+  lazy val view: P[ViewType] = positioned {
+    "shrink" ~> iden ~ rep1(brackets(viewParam)) ^^ {
+      case arrId ~ params => Shrink(arrId, params)
+    }
+  }
+
   // Other commands
   lazy val acmd: P[Command] = positioned {
     block |
     cfor |
     "let" ~> iden ~ (":" ~> typ).? ~ ("=" ~> expr) ^^ { case id ~ t ~ exp => CLet(id, t, exp) } |
+    "view" ~> iden ~ "=" ~ view ^^ { case arrId ~ _ ~ vt => CView(arrId, vt) } |
     "if" ~> parens(expr) ~ block  ^^ { case cond ~ cons => CIf(cond, cons) } |
     expr ~ ":=" ~ expr ^^ { case l ~ _ ~ r => CUpdate(l, r) } |
     expr ~ rop ~ expr ^^ { case l ~ rop ~ r => CReduce(rop, l, r) } |

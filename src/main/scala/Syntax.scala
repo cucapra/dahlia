@@ -150,10 +150,21 @@ object Syntax {
   case class RSub() extends ROp
   case class RDiv() extends ROp
 
+  sealed trait ViewType extends Positional
+  case class Shrink(arrId: Id, dims: List[(Expr,Int,Int)]) extends ViewType {
+    dims.forall({ case (_, w, s) => {
+      if (w != s) {
+        throw MalformedShrink(this, w, s)
+      }
+      true
+    }})
+  }
+
   sealed trait Command extends Positional
   case class CPar(c1: Command, c2: Command) extends Command
   case class CSeq(c1: Command, c2: Command) extends Command
   case class CLet(id: Id, var typ: Option[Type], e: Expr) extends Command
+  case class CView(id: Id, kind: ViewType) extends Command
   case class CIf(cond: Expr, cons: Command) extends Command
   case class CFor(range: CRange, par: Command, combine: Command) extends Command
   case class CUpdate(lhs: Expr, rhs: Expr) extends Command {
