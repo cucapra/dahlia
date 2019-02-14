@@ -46,7 +46,7 @@ object Errors {
     "Already written to this expression in this context.", Some(e.pos))
 
   case class InsufficientResourcesInUnrollContext(exp: Int, ac: Int, expr: Expr)
-    extends TypeError(s"Array access implies $ac safe copies are possible, but implied requirement $ac copies from the surrounding unroll contexts.", Some(expr.pos))
+    extends TypeError(s"Array access implies $ac safe writes are possible, but surrounding context requires $exp copies.", Some(expr.pos))
 
   // Subtyping error
   case class NoJoin(t1: Type, t2: Type) extends TypeError(
