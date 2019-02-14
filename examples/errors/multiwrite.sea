@@ -1,9 +1,0 @@
-func mmul(a: float[3][3 bank(3)], b: float[3][3 bank(3)], c: float[3]) {
-
-  for (let i = 0..3) unroll 1 {
-    for (let j = 0..3) unroll 3 {
-      c[i] := a[i][j] + b[i][j];
-    }
-  }
-
-}

@@ -1,0 +1,9 @@
+decl a: float[3][3 bank 3];
+decl b: float[3][3 bank 3];
+decl c: float[3];
+
+for (let i = 0..3) {
+  for (let j = 0..3) unroll 3 {
+    c[i] := a[i][j] + b[i][j];
+  }
+}
