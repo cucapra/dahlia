@@ -35,6 +35,46 @@ class SimpleTypeNegative extends FunSpec {
     }
   }
 
+  describe("Array access") {
+    it("with invalid accessor type") {
+      assertThrows[InvalidIndex] {
+        typeCheck("""
+          decl a: bit<10>[10];
+          a[true];
+          """ )
+      }
+    }
+    it("with too many dimensions") {
+      assertThrows[IncorrectAccessDims] {
+        typeCheck("""
+          decl a: bit<10>[10];
+          a[1][1];
+          """ )
+      }
+    }
+    it("with too few dimensions") {
+      assertThrows[IncorrectAccessDims] {
+        typeCheck("""
+          decl a: bit<10>[10][10];
+          a[1];
+          """ )
+      }
+    }
+  }
+
+  // XXX(rachit): This seems like confusing behavior.
+  describe("Indexing with static var") {
+    it("works without reassigning") {
+      typeCheck("decl a: bit<32>[10]; let x = 1; a[x]")
+    }
+    it("doesnt work with reassigning") {
+      assertThrows[InvalidIndex] {
+        typeCheck("decl a: bit<32>[10]; let x = 1; x := 2; a[x]")
+      }
+    }
+  }
+
+
   describe("Variables do not escape their scope") {
     it("in if") {
       assertThrows[UnboundVar] {
@@ -91,18 +131,6 @@ class SimpleTypeNegative extends FunSpec {
     it("to a register") {
       assertThrows[UnexpectedSubtype] {
         typeCheck("let x = 1; x := 2.5")
-      }
-    }
-  }
-
-  // XXX(rachit): @adrian This seems to be confusing behavior.
-  describe("Indexing with static var") {
-    it("works without reassigning") {
-      typeCheck("decl a: bit<32>[10]; let x = 1; a[x]")
-    }
-    it("doesnt work with reassigning") {
-      assertThrows[InvalidIndex] {
-        typeCheck("decl a: bit<32>[10]; let x = 1; x := 2; a[x]")
       }
     }
   }
@@ -403,6 +431,82 @@ class SimpleTypeNegative extends FunSpec {
         typeCheck("""
           def bar(a: bit<10>) { a }
           1 + bar(10)
+          """ )
+      }
+    }
+  }
+
+  describe("Shrink views") {
+    it("width must be equal to step") {
+      assertThrows[MalformedShrink] {
+        typeCheck("""
+          decl a: bit<10>[10];
+          view v = shrink a[3 * i : 1]
+          """ )
+      }
+    }
+    it("width must be factor of banking factor") {
+      assertThrows[InvalidShrinkWidth] {
+        typeCheck("""
+          decl a: bit<10>[10 bank 5];
+          view v = shrink a[3 * i : 3]
+          """ )
+      }
+    }
+    it("must have dimensions equal to array") {
+      assertThrows[IncorrectAccessDims] {
+        typeCheck("""
+          decl a: bit<10>[10 bank 5][10 bank 5];
+          view v = shrink a[5 * i : 5]
+          """ )
+      }
+    }
+    it("cannot be inside unrolled context") {
+      assertThrows[ViewInsideUnroll] {
+        typeCheck("""
+          decl a: bit<10>[16 bank 8];
+          for (let i = 0..4) unroll 4 {
+            view v = shrink a[4 * i : 4]
+          }
+          """ )
+      }
+    }
+    it("cannot be nested inside unroll context") {
+      assertThrows[ViewInsideUnroll] {
+        typeCheck("""
+          decl a: bit<10>[16 bank 8];
+          for (let i = 0..4) unroll 4 {
+            for (let j = 0..4) {
+              view v = shrink a[4 * j : 4]
+            }
+          }
+          """ )
+      }
+    }
+    it("has the same type as the underlying array") {
+      assertThrows[BinopError] {
+        typeCheck("""
+          decl a: bool[10 bank 5];
+          view v = shrink a[0 : 5];
+          v[3] + 1;
+          """ )
+      }
+    }
+    it("has the same dimensions as underlying array") {
+      assertThrows[IncorrectAccessDims] {
+        typeCheck("""
+          decl a: bool[10 bank 5][10 bank 5];
+          view v = shrink a[0 : 5][0 : 5];
+          v[1]
+          """ )
+      }
+    }
+    it("completely consumes underlying array from context") {
+      assertThrows[AlreadyConsumed] {
+        typeCheck("""
+          decl a: bool[10 bank 5][10 bank 5];
+          view v = shrink a[0 : 5][0 : 5];
+          a[0][0]
           """ )
       }
     }

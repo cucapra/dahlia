@@ -228,6 +228,38 @@ object TypeChecker {
         case None => l.typ = Some(t); e1.add(id -> Info(id, t))
       }
     }
+    case CView(id, k@Shrink(arrId, vdims)) => env(arrId).typ match {
+      case TArray(t, dims) => {
+        // Cannot create shrink views in unrolled contexts
+        if (rres != 1) {
+          throw ViewInsideUnroll(cmd.pos, k, arrId)
+        }
+        // Check if view has the same dimensions as underlying array.
+        if (vdims.length != dims.length) {
+          throw IncorrectAccessDims(arrId, dims.length, vdims.length)
+        }
+        // Foreach dimension, check if bankingFactor % shrinkFactor == 0
+        // and the offset variable is a constant or a simple iterator.
+        val env1 = dims.zip(vdims).zipWithIndex.foldLeft(env)({ case (env, (zdim, idx)) => {
+          val ((_, bank), (e, width, _)) = zdim
+          if (bank % width != 0) {
+            throw InvalidShrinkWidth(e.pos, bank, width)
+          }
+          // Completely conumse the current dimension
+          val env2 = env.update(arrId -> env(arrId).consumeDim(idx, bank))
+          val (accessType, env3) = checkE(e)(env2, rres)
+          accessType match {
+            case _: TStaticInt | _: TIndex => true
+            case t => throw InvalidIndex(arrId, t)
+          }
+          env3
+        }})
+        // Add view into scope
+        val typ = TArray(t, vdims.map({ case (_, w, _) => (w, w) }))
+        env1.add(id -> Info(id, typ))
+      }
+      case t => throw UnexpectedType(cmd.pos, "shrink view", "array", t)
+    }
     case CFor(range, par, combine) => {
       val iter = range.iter
       // Add binding for iterator in a separate scope.
