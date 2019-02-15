@@ -18,7 +18,7 @@ object RewriteView {
   import Syntax._
   import CodeGenHelpers._
 
-	// We can use a flat environment because the type checker makes sure things
+  // We can use a flat environment because the type checker makes sure things
   // in the right scope.
   type T = Map[Id, List[Expr] => Expr]
 
