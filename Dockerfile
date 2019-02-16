@@ -3,14 +3,14 @@ MAINTAINER Adrian Sampson <asampson@cs.cornell.edu>
 MAINTAINER Rachit Nigam <rnigam@cs.cornell.edu>
 
 # Add Python, pipenv, and node for buildbot.
-RUN sudo apt-get install -y software-properties-common && \
-    sudo add-apt-repository ppa:deadsnakes/ppa && \
-    curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add - && \
-    sudo apt-add-repository \
+RUN apt-get install -y software-properties-common && \
+    add-apt-repository ppa:deadsnakes/ppa && \
+    curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - && \
+    apt-add-repository \
         'deb https://dl.yarnpkg.com/debian/ stable main' && \
-    sudo apt-get update
-RUN sudo apt-get install -y python3.7 nodejs yarn
-RUN curl https://bootstrap.pypa.io/get-pip.py | sudo -H python3.7
+    apt-get update
+RUN apt-get install -y python3.7 nodejs yarn
+RUN curl https://bootstrap.pypa.io/get-pip.py | python3.7
 ENV PATH ${HOME}/.local/bin:${PATH}
 RUN pip install --user pipenv
 
@@ -32,7 +32,7 @@ ENV PATH ${PWD}
 
 # Avoids a bug in a recent version of pip:
 # https://github.com/pypa/pipenv/issues/2924
-RUN sudo pip install pip==18.0
+RUN pip install pip==18.0
 RUN cd buildbot ; PIPENV_PIPFILE= pipenv run pip install pip==18.0
 
 # Set up buildbot.
