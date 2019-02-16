@@ -23,7 +23,7 @@ CMD ["pipenv", "run", \
      "buildbot.server:app"]
 
 # Add Seashell source.
-ADD /seashell
+ADD . /seashell
 WORKDIR /seashell
 
 # Build Seashell.
