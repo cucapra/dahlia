@@ -14,11 +14,6 @@ RUN curl https://bootstrap.pypa.io/get-pip.py | sudo -H python3.7
 ENV PATH ${HOME}/.local/bin:${PATH}
 RUN pip install --user pipenv
 
-# Install sshpass
-RUN sudo apt-get install sshpass
-RUN sudo chown opam:opam ~/.ssh
-#RUN sudo chown opam:opam ~/.ssh/*
-
 # Volume, port, and command for buildbot.
 VOLUME ${HOME}/seashell/buildbot/instance
 EXPOSE 8000
@@ -28,9 +23,8 @@ CMD ["pipenv", "run", \
      "buildbot.server:app"]
 
 # Add Seashell source.
-WORKDIR ${HOME}
-ADD --chown=opam . seashell
-WORKDIR seashell
+ADD /seashell
+WORKDIR /seashell
 
 # Build Seashell.
 RUN sbt assembly
