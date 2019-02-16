@@ -3,7 +3,8 @@ MAINTAINER Adrian Sampson <asampson@cs.cornell.edu>
 MAINTAINER Rachit Nigam <rnigam@cs.cornell.edu>
 
 # Add Python, pipenv, and node for buildbot.
-RUN apt-get install -y software-properties-common && \
+RUN apt-get update && \
+    apt-get install -y software-properties-common && \
     add-apt-repository ppa:deadsnakes/ppa && \
     curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - && \
     apt-add-repository \
