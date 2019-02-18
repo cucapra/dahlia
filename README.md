@@ -22,14 +22,19 @@ Now you can compile the compiler by typing `sbt compile`.
 Use `sbt test` to run the tests.
 Type `sbt assembly` to generate a [fat jar][] for command-line use and distribution.
 
-If you're working on the compiler, you probably want to use the sbt console instead (it's faster for repeated builds).
-Run `sbt` alone to get the console, where you can type commands like `compile`, `test`, and `run [args]`.
-
 [scala]: https://www.scala-lang.org/
 [sbt]: https://scala-sbt.org
 [homebrew]: https://brew.sh
 [fat jar]: https://stackoverflow.com/questions/19150811/what-is-a-fat-jar
 
+## Compiler development
+
+If you're working on the compiler, you probably want to use the sbt console instead (it's faster for repeated builds).
+Run `sbt` alone to get the console, where you can type commands like `compile`, `test`, and `run [args]`.
+
+Adding the prefix `~` (such as `~compile`) makes `sbt` go into watch mode, i.e., it will re-run the command every time a dependency changes. Use `~assembly` to continously update `./fuse` or `~test` to continously test the changes.
+
+If you want to execute a sequence of `sbt` commands without starting `sbt` console, you can type `sbt "; cmd1; cm2 ..."`. For example, `sbt "; test; assembly"` will run `sbt test` followed by `sbt assembly`.
 
 ## Use It
 
