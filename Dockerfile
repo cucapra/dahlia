@@ -1,18 +1,20 @@
-FROM hseeberger/scala-sbt
+FROM frolvlad/alpine-scala
 MAINTAINER Adrian Sampson <asampson@cs.cornell.edu>
 MAINTAINER Rachit Nigam <rnigam@cs.cornell.edu>
 
+# Add sbt for compiling the compiler.
+ENV SBT_VERSION 1.2.8
+RUN apk update && \
+    apk add bash curl
+RUN cd /opt && \
+    curl -LO "https://github.com/sbt/sbt/releases/download/v${SBT_VERSION}/sbt-${SBT_VERSION}.tgz" && \
+    tar xf sbt-${SBT_VERSION}.tgz && \
+    ln -s /opt/sbt/bin/sbt /bin && \
+    rm sbt-${SBT_VERSION}.tgz && \
+    sbt version
+
 # Add Python, pipenv, and node for buildbot.
-RUN apt-get update && \
-    apt-get install -y software-properties-common && \
-    add-apt-repository ppa:deadsnakes/ppa && \
-    curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - && \
-    apt-add-repository \
-        'deb https://dl.yarnpkg.com/debian/ stable main' && \
-    apt-get update
-RUN apt-get install -y python3.7 nodejs yarn
-RUN curl https://bootstrap.pypa.io/get-pip.py | python3.7
-ENV PATH ${HOME}/.local/bin:${PATH}
+RUN apk add python3 nodejs-current yarn
 RUN pip install --user pipenv
 
 # Volume, port, and command for buildbot.
