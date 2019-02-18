@@ -23,7 +23,7 @@ Use `sbt test` to run the tests.
 Type `sbt assembly` to generate a [fat jar][] for command-line use and distribution.
 
 If you're working on the compiler, you probably want to use the sbt console instead (it's faster for repeated builds).
-Run `sbt` alone to get the console, where you can type commands like `compile` and `test`.
+Run `sbt` alone to get the console, where you can type commands like `compile`, `test`, and `run [args]`.
 
 [scala]: https://www.scala-lang.org/
 [sbt]: https://scala-sbt.org
