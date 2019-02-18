@@ -15,7 +15,7 @@ RUN cd /opt && \
 
 # Add Python, pipenv, and node for buildbot.
 RUN apk add python3 py3-pip nodejs-current yarn
-RUN pip3 install --user pipenv
+RUN pip3 install pipenv
 
 # Volume, port, and command for buildbot.
 VOLUME ${HOME}/seashell/buildbot/instance
