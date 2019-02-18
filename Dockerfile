@@ -14,8 +14,8 @@ RUN cd /opt && \
     sbt version
 
 # Add Python, pipenv, and node for buildbot.
-RUN apk add python3 nodejs-current yarn
-RUN pip install --user pipenv
+RUN apk add python3 py3-pip nodejs-current yarn
+RUN pip3 install --user pipenv
 
 # Volume, port, and command for buildbot.
 VOLUME ${HOME}/seashell/buildbot/instance
@@ -32,11 +32,6 @@ WORKDIR /seashell
 # Build Seashell.
 RUN sbt assembly
 ENV PATH ${PWD}
-
-# Avoids a bug in a recent version of pip:
-# https://github.com/pypa/pipenv/issues/2924
-RUN pip install pip==18.0
-RUN cd buildbot ; PIPENV_PIPFILE= pipenv run pip install pip==18.0
 
 # Set up buildbot.
 RUN cd buildbot ; PIPENV_PIPFILE= pipenv install
