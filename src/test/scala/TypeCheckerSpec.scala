@@ -2,35 +2,40 @@ package fuselang
 
 import TestUtils._
 import Errors._
-import org.scalatest.{FunSpec, FunSuite}
+import Syntax._
+import org.scalatest.FunSpec
 
-class SimpleTypeNegative extends FunSpec {
+class TypeCheckerSpec extends FunSpec {
 
   describe("let with explicit type") {
+    it("assigns explicit type") {
+      val e1 = typeCheck("let x: bit<16> = 1;")
+      assert(e1("x").typ === TSizedInt(16))
+    }
+
+    it("allows using larger sized int in assignment") {
+      val e2 = typeCheck("decl a: bit<8>; let x: bit<16> = a;")
+      assert(e2("x").typ === TSizedInt(16))
+    }
+
+    it("disallows using smaller sized int in assignment") {
+      assertThrows[UnexpectedType] {
+        typeCheck("decl a: bit<16>; let x: bit<8> = a;")
+      }
+    }
+
     it("RHS type must be equal to LHS type") {
       assertThrows[UnexpectedType] {
         typeCheck("let x: bit<16> = true")
       }
     }
+
   }
 
   describe("Cannot reference undeclared var") {
     it("in top level") {
       assertThrows[UnboundVar] {
         typeCheck("x + 1")
-      }
-    }
-  }
-
-  describe("Shadowing variable names is not allowed") {
-    it("in top level") {
-      assertThrows[AlreadyBound] {
-        typeCheck("let x = 1; let x = 1;")
-      }
-    }
-    it("in if body") {
-      assertThrows[AlreadyBound] {
-        typeCheck("let x = 1; if(true) { let x = 1; }")
       }
     }
   }
@@ -60,22 +65,44 @@ class SimpleTypeNegative extends FunSpec {
           """ )
       }
     }
+
+    it("consumes bank without unroll") {
+      val e1 = typeCheck("""
+        decl a: bit<64>[10];
+        for (let i = 0..10) {
+          let x = a[i]
+        }
+        """ )
+      assert(e1("a").conBanks(0) === Set(0))
+    }
+
+    it("consumes all banks with unroll") {
+      val e2 = typeCheck("""
+        decl a: bit<64>[10 bank 5];
+        for (let i = 0..10) unroll 5 {
+          let x = a[i]
+        }
+        """ )
+      assert(e2("a").conBanks(0) === 0.until(5).toSet)
+    }
+
   }
 
-  // XXX(rachit): This seems like confusing behavior.
-  describe("Indexing with static var") {
-    it("works without reassigning") {
-      typeCheck("decl a: bit<32>[10]; let x = 1; a[x]")
-    }
-    it("doesnt work with reassigning") {
-      assertThrows[InvalidIndex] {
-        typeCheck("decl a: bit<32>[10]; let x = 1; x := 2; a[x]")
+  describe("Variables scoping") {
+
+    describe("shadowing variables not allowed") {
+      it("in top level") {
+        assertThrows[AlreadyBound] {
+          typeCheck("let x = 1; let x = 1;")
+        }
+      }
+      it("in if body") {
+        assertThrows[AlreadyBound] {
+          typeCheck("let x = 1; if(true) { let x = 1; }")
+        }
       }
     }
-  }
 
-
-  describe("Variables do not escape their scope") {
     it("in if") {
       assertThrows[UnboundVar] {
         typeCheck("if (true) {let x = 1;}; x + 2;")
@@ -97,9 +124,33 @@ class SimpleTypeNegative extends FunSpec {
             """ )
       }
     }
+
+    it("allows same name in different scopes") {
+      typeCheck("""
+        for (let i = 0..1) {
+          let x = 10;
+        };
+        for (let i = 0..1) {
+          let x = 10;
+        };
+        """ )
+    }
   }
 
   describe("Binary operations") {
+
+    it("comparisons on floats returns a boolean") {
+      typeCheck("if (2.5 < 23.5) { 1 }")
+    }
+
+    it("can add sized int to static int") {
+      typeCheck("decl x: bit<64>; let y = 1; x + y;")
+    }
+
+    it("can add floats") {
+      typeCheck("decl f: float; let y = 1.5; f + y")
+    }
+
     it("cannot add int and float") {
       assertThrows[BinopError] {
         typeCheck("1 + 2.5")
@@ -125,26 +176,51 @@ class SimpleTypeNegative extends FunSpec {
         typeCheck("1 || 2")
       }
     }
+    it("adding static ints performs type level computation") {
+      val e1 = typeCheck("let x = 1; let y = 2; let z = x + y;")
+      assert(e1("z").typ === TStaticInt(3))
+    }
+    it("result of addition upcast to subtype join") {
+      val e3 = typeCheck("decl x: bit<32>; decl y: bit<16>; let z = x + y")
+      assert(e3("z").typ === TSizedInt(32))
+    }
   }
 
-  describe("Cannot reassign to new type") {
-    it("to a register") {
+  describe("Reassign") {
+    it("cannot reassign to non-subtype") {
       assertThrows[UnexpectedSubtype] {
         typeCheck("let x = 1; x := 2.5")
       }
     }
+
+    it("can reassign static type (upcast to SizedInt)") {
+      // Assignment to static ints loses information
+      val e1 = typeCheck("let x = 1; x := 2;")
+      assert(e1("x").typ === TSizedInt(32), "assiging static := static")
+    }
+
+    it("can reassign static type to decl (upcast to join)") {
+      val e2 = typeCheck("decl y: bit<64>; let x = 1; x := y;")
+      assert(e2("x").typ === TSizedInt(64), "assigning static := dynamic")
+    }
+
+    it("can reassign decl") {
+      val e3 = typeCheck("decl x: bit<32>; decl y: bit<16>; x := y")
+      assert(e3("x").typ === TSizedInt(32), "assigning dynamic := dynamic")
+      assert(e3("y").typ === TSizedInt(16), "assigning dynamic := dynamic")
+    }
   }
 
-  describe("Condition in if should be boolean") {
-    it("cannot be number") {
+  describe("Conditionals (if)") {
+    it("condition must be a boolean") {
       assertThrows[UnexpectedType] {
         typeCheck("if (1) { let x = 10; }")
       }
     }
   }
 
-  describe("Invalid unrolling factor for range") {
-    it("unrolling factor not a factor of range length") {
+  describe("Ranges") {
+    it("Unrolling constant must be factor of length") {
       assertThrows[UnrollRangeError] {
         typeCheck("""
           for (let i = 0..10) unroll 3 {
@@ -155,21 +231,66 @@ class SimpleTypeNegative extends FunSpec {
     }
   }
 
-  describe("RHS of reduction") {
-    it("not an array") {
+  describe("Reductions") {
+    it("RHS should be an array") {
       assertThrows[ReductionInvalidRHS] {
         typeCheck("let x = 1; x += x;")
       }
     }
-    it("not fully banked") {
+    it("RHS should be fully banked") {
       assertThrows[ReductionInvalidRHS] {
         typeCheck("decl a: bit<32>[8 bank 2]; let x = 0; x += a;")
       }
     }
-    it("not 1 dimensional array") {
+    it("RHS should be 1-dimensional array") {
       assertThrows[ReductionInvalidRHS] {
         typeCheck("decl a: bit<32>[8 bank 8][10]; let x = 0; x += a;")
       }
+    }
+    it("outside a loop with fully banked array") {
+      typeCheck("""
+        decl a: bit<64>[10 bank 10];
+        let sum = 0;
+        sum += a;
+        """ )
+    }
+    // This is equivalent to the example above
+    it ("fully unrolled loop and fully banked array") {
+      typeCheck("""
+        decl a: bit<64>[10 bank 10];
+        let sum = 0;
+        for (let i = 0..10) unroll 10 {
+          let v = a[i]
+          } combine {
+            sum += v;
+          }
+          """ )
+    }
+  }
+
+  describe("Combine") {
+    it("without unrolling") {
+      typeCheck("""
+        decl a: bit<64>[10];
+        let sum = 0;
+        for (let i = 0..10) {
+          let x = a[i]
+          } combine {
+            sum += x;
+          }
+          """ )
+    }
+
+    it("with unrolling") {
+      typeCheck("""
+        decl a: bit<64>[10 bank 5];
+        let sum = 0;
+        for (let i = 0..10) unroll 5  {
+          let x = a[i]
+          } combine {
+            sum += x;
+          }
+          """ )
     }
   }
 
@@ -196,8 +317,8 @@ class SimpleTypeNegative extends FunSpec {
     }
   }
 
-  describe("Logical sequencing doesnt refresh resources globally") {
-    it("when composed with parallel sequence") {
+  describe("Sequential composition") {
+    it("doesnt refresh resources globally when composed with parallel composition") {
       assertThrows[AlreadyWrite] {
         typeCheck("""
           decl a: bit<32>[8];
@@ -209,6 +330,19 @@ class SimpleTypeNegative extends FunSpec {
           a[0] := 1
           """ )
       }
+    }
+  }
+
+  describe("Parallel composition") {
+    it("allows same banks to used") {
+      typeCheck("""
+        decl a: bit<64>[10 bank 5];
+        for (let i = 0..10) unroll 5 {
+          let x = a[i];
+          ---
+          let y = a[i];
+        }
+        """ )
     }
   }
 
@@ -305,6 +439,7 @@ class SimpleTypeNegative extends FunSpec {
           """ )
     }
 
+
   }
 
   describe("Capabilities in unrolled context") {
@@ -344,7 +479,18 @@ class SimpleTypeNegative extends FunSpec {
           """ )
       }
     }
-
+    it("read with one constant accessor and one unrolled iterator") {
+      typeCheck("""
+        decl a: bit<32>[10 bank 5][10 bank 5];
+        for (let i = 0..10) {
+          for (let j = 0..10) unroll 5 {
+            a[0][j];
+            ---
+            a[j][0];
+          }
+        }
+        """ )
+    }
     it("read in one unrolled loop and a constant access") {
       typeCheck("""
         decl a: bit<32>[10];
@@ -375,7 +521,18 @@ class SimpleTypeNegative extends FunSpec {
         }
         """ )
     }
-
+    it("read with two dimensional unrolling") {
+      typeCheck("""
+        decl a: bit<32>[10 bank 5][10 bank 5];
+        for (let i = 0..10) unroll 5 {
+          for (let j = 0..10) unroll 5 {
+            a[j][i];
+            ---
+            a[i][j];
+          }
+        }
+        """ )
+    }
   }
 
   describe("Functions") {
@@ -512,22 +669,17 @@ class SimpleTypeNegative extends FunSpec {
     }
   }
 
-}
-
-class FileTypeNegative extends FunSuite {
-
-  import java.nio.file.{Files, Paths}
-  import collection.JavaConverters._
-
-  val shouldCompile = Paths.get("src/test/resources/should-fail")
-
-  for (file <- Files.newDirectoryStream(shouldCompile).asScala) {
-    test(file.toString) {
-      val prog = new String(Files.readAllBytes(file))
-      assertThrows[TypeError] {
-        Compiler.compileStringWithError(prog)
+  // XXX(rachit): This seems like confusing behavior.
+  describe("Indexing with static var") {
+    it("works without reassigning") {
+      typeCheck("decl a: bit<32>[10]; let x = 1; a[x]")
+    }
+    it("doesnt work with reassigning") {
+      assertThrows[InvalidIndex] {
+        typeCheck("decl a: bit<32>[10]; let x = 1; x := 2; a[x]")
       }
     }
   }
 
 }
+
