@@ -105,21 +105,19 @@ object TypeChecker {
       case _ => throw BinopError(op, t1, t2)
     }
     case _:OpLt | _:OpLte | _:OpGt | _:OpGte => (t1, t2) match {
-      case ((TStaticInt(_) | TSizedInt(_)), (TStaticInt(_) | TSizedInt(_))) =>
-        TBool()
+      case (_:IntType, _:IntType) => TBool()
       case (_: TFloat, _: TFloat) => TBool()
       case _ => throw BinopError(op, t1, t2)
     }
     case _:OpAdd | _:OpMul | _:OpSub | _:OpDiv | _:OpMod | _:OpBAnd |
          _:OpBOr | _:OpBXor => (t1, t2) match {
-      case ((TStaticInt(_) | TSizedInt(_)), (TStaticInt(_) | TSizedInt(_))) =>
-        t1.join(t2, op.toFun)
+      case (_:IntType, _:IntType) => t1.join(t2, op.toFun)
       case (_: TFloat, _: TFloat) => TFloat()
       case _ => throw BinopError(op, t1, t2)
     }
     case _:OpLsh | _:OpRsh => (t1, t2) match {
-      case (TSizedInt(_), (TStaticInt(_) | TSizedInt(_))) => t1
-      case (TStaticInt(_), (TStaticInt(_) | TSizedInt(_))) => TSizedInt(32)
+      case (_:TSizedInt, _:IntType) => t1
+      case (_:TStaticInt, _:IntType) => TSizedInt(32)
       case _ => throw BinopError(op, t1, t2)
     }
   }

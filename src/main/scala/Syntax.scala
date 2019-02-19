@@ -30,6 +30,9 @@ object Syntax {
       case (TSizedInt(s), TStaticInt(v)) => {
         TSizedInt(max(s, ceil(log10(v)/log10(2)).toInt))
       }
+      case (_: TIndex, _:TStaticInt) | (_:TStaticInt, _:TIndex) => TSizedInt(32)
+      case (_: TIndex, t2@TSizedInt(_)) => t2
+      case (t2@TSizedInt(_), _:TIndex) => t2
       case (t1, t2) => throw NoJoin(t1, t2)
     }
 
@@ -45,15 +48,17 @@ object Syntax {
       case TFun(args) => args.foldLeft("")({ case (acc, t) => s"$acc$t -> "}) + "void"
     }
   }
+  // Types that can be upcast to Ints
+  trait IntType
   // Use case class instead of case object to get unique positions
   case class TVoid() extends Type
   case class TBool() extends Type
   case class TFloat() extends Type
-  case class TSizedInt(len: Int) extends Type
-  case class TStaticInt(v: Int) extends Type
   case class TFun(args: List[Type]) extends Type
   case class TArray(typ: Type, dims: List[(Int, Int)]) extends Type
-  case class TIndex(static: (Int, Int), dynamic: (Int, Int)) extends Type
+  case class TSizedInt(len: Int) extends Type with IntType
+  case class TStaticInt(v: Int) extends Type with IntType
+  case class TIndex(static: (Int, Int), dynamic: (Int, Int)) extends Type with IntType
 
   sealed trait BOp extends Positional {
     override def toString = this match {

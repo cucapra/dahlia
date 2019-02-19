@@ -669,6 +669,27 @@ class TypeCheckerSpec extends FunSpec {
     }
   }
 
+  describe("Loop iterators") {
+    it("can be used for arithmetic") {
+      typeCheck("""
+        for (let i = 0..10) {
+          let x = i * 2;
+        }
+        """ )
+    }
+
+    it("with arithmetic cannot be used for access") {
+      assertThrows[InvalidIndex] {
+        typeCheck("""
+          decl a: bit<10>[10];
+          for (let i = 0..10) {
+            a[i * 2];
+          }
+          """ )
+      }
+    }
+  }
+
   // XXX(rachit): This seems like confusing behavior.
   describe("Indexing with static var") {
     it("works without reassigning") {
@@ -682,4 +703,3 @@ class TypeCheckerSpec extends FunSpec {
   }
 
 }
-
