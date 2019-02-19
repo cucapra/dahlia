@@ -163,14 +163,21 @@ private class FuseParser extends RegexParsers with PackratParsers {
     }
   }
 
+  // If
+  lazy val conditional: P[Command] = positioned {
+    "if" ~> parens(expr) ~ block ~ "else" ~ block.?  ^^ {
+      case cond ~ cons ~ _ ~ alt => CIf(cond, cons, if (alt.isDefined) alt.get else CEmpty )
+    }
+  }
+
   // Other commands
   lazy val acmd: P[Command] = positioned {
     block |
     cfor |
+    conditional |
     "while" ~> parens(expr) ~ block ^^ { case cond ~ body => CWhile(cond, body) } |
     "let" ~> iden ~ (":" ~> typ).? ~ ("=" ~> expr) ^^ { case id ~ t ~ exp => CLet(id, t, exp) } |
     "view" ~> iden ~ "=" ~ view ^^ { case arrId ~ _ ~ vt => CView(arrId, vt) } |
-    "if" ~> parens(expr) ~ block  ^^ { case cond ~ cons => CIf(cond, cons) } |
     expr ~ ":=" ~ expr ^^ { case l ~ _ ~ r => CUpdate(l, r) } |
     expr ~ rop ~ expr ^^ { case l ~ rop ~ r => CReduce(rop, l, r) } |
     expr ^^ { case e => CExpr(e) }
