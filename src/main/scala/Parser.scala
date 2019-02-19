@@ -159,6 +159,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
   lazy val acmd: P[Command] = positioned {
     block |
     cfor |
+    "while" ~> parens(expr) ~ block ^^ { case cond ~ body => CWhile(cond, body) } |
     "let" ~> iden ~ (":" ~> typ).? ~ ("=" ~> expr) ^^ { case id ~ t ~ exp => CLet(id, t, exp) } |
     "view" ~> iden ~ "=" ~ view ^^ { case arrId ~ _ ~ vt => CView(arrId, vt) } |
     "if" ~> parens(expr) ~ block  ^^ { case cond ~ cons => CIf(cond, cons) } |

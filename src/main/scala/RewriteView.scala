@@ -83,6 +83,10 @@ object RewriteView {
       val (c2n, e2) = rewriteCommand(c2)(e1)
       cf.copy(par = c1n, combine = c2n) -> e2
     }
+    case cw@CWhile(_, c) => {
+      val (cn, e1) = rewriteCommand(c)
+      cw.copy(body = cn) -> e1
+    }
     case CUpdate(e1, e2) => {
       val (e1n, env1) = rewriteExpr(e1)
       val (e2n, env2) = rewriteExpr(e2)(env1)

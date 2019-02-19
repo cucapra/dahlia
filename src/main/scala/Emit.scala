@@ -78,6 +78,7 @@ private class Emit extends PrettyPrinter {
         par <@> text("// combiner:") <@>
         combine
       }
+    case CWhile(cond, body) => "while" <> parens(cond) <+> scope(body)
     case CUpdate(lhs, rhs) => lhs <+> "=" <+> rhs <> semi
     case CReduce(rop, lhs, rhs) => lhs <+> rop.toString <+> rhs <> semi
     case CExpr(e) => e <> semi

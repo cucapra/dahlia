@@ -190,6 +190,14 @@ object TypeChecker {
         checkC(cons)(e1, rres).endScope._1
       }
     }
+    case CWhile(cond, body) => {
+      val (cTyp, e1) = checkE(cond)(env.addScope, rres)
+      if (cTyp != TBool()) {
+        throw UnexpectedType(cond.pos, "while condition", TBool().toString, cTyp)
+      } else {
+        checkC(body)(e1, rres).endScope._1
+      }
+    }
     case CUpdate(lhs, rhs) => {
       val (t1, e1) = checkLVal(lhs)
       val (t2, e2) = checkE(rhs)(e1, rres)

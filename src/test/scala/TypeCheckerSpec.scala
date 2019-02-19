@@ -113,6 +113,11 @@ class TypeCheckerSpec extends FunSpec {
         typeCheck("for (let i = 0..10){let x = 1;}; x + 2;")
       }
     }
+    it("in while") {
+      assertThrows[UnboundVar] {
+        typeCheck("while (true) {let x = 1;}; x + 2;")
+      }
+    }
     it("iterator id in combine block") {
       assertThrows[UnboundVar] {
         typeCheck("""
@@ -216,6 +221,16 @@ class TypeCheckerSpec extends FunSpec {
       assertThrows[UnexpectedType] {
         typeCheck("if (1) { let x = 10; }")
       }
+    }
+  }
+
+  describe("while loops") {
+    it("work") {
+      typeCheck("""
+        while (true) {
+          let x = 1;
+        }
+        """ )
     }
   }
 
