@@ -139,7 +139,6 @@ object Syntax {
         TIndex((0, u), (s/u, e/u))
       }
     }
-
   }
 
   sealed trait ROp extends Positional {
@@ -170,7 +169,7 @@ object Syntax {
   case class CSeq(c1: Command, c2: Command) extends Command
   case class CLet(id: Id, var typ: Option[Type], e: Expr) extends Command
   case class CView(id: Id, kind: ViewType) extends Command
-  case class CIf(cond: Expr, cons: Command) extends Command
+  case class CIf(cond: Expr, cons: Command, alt: Command) extends Command
   case class CFor(range: CRange, par: Command, combine: Command) extends Command
   case class CWhile(cond: Expr, body: Command) extends Command
   case class CUpdate(lhs: Expr, rhs: Expr) extends Command {

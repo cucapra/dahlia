@@ -182,7 +182,7 @@ object TypeChecker {
 
   private def checkC(cmd: Command)(implicit env: Env, rres: ReqResources): Env = cmd match {
     case CPar(c1, c2) => checkC(c2)(checkC(c1), rres)
-    case CIf(cond, cons) => {
+    case CIf(cond, cons, _) => {
       val (cTyp, e1) = checkE(cond)(env.addScope, rres)
       if (cTyp != TBool()) {
         throw UnexpectedType(cond.pos, "if condition", TBool().toString, cTyp)

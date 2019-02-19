@@ -73,7 +73,8 @@ private class Emit extends PrettyPrinter {
     case CPar(c1, c2) => c1 <@> c2
     case CSeq(c1, c2) => c1 <@> text("//---") <@> c2
     case CLet(id, typ, e) => typ.get <+> value(id) <+> equal <+> e <> semi
-    case CIf(cond, cons) => "if" <> parens(cond) <> scope (cons)
+    case CIf(cond, cons, alt) =>
+      "if" <> parens(cond) <> scope (cons) <+> "else" <> scope(alt)
     case CFor(range, par, combine) =>
       "for" <> parens {
         "int" <+> range.iter <+> "=" <+> value(range.s) <> semi <+>

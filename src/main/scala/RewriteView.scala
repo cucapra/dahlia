@@ -73,10 +73,11 @@ object RewriteView {
       }))
       (CEmpty, env + (id -> f))
     }
-    case CIf(e1, c2) => {
+    case CIf(e1, c1, c2) => {
       val (e1n, env1) = rewriteExpr(e1)
-      val (c2n, env2) = rewriteCommand(c2)(env1)
-      CIf(e1n, c2n) -> env2
+      val (c1n, env2) = rewriteCommand(c1)(env1)
+      val (c2n, env3) = rewriteCommand(c2)(env2)
+      CIf(e1n, c1n, c2n) -> env3
     }
     case cf@CFor(_, c1, c2) => {
       val (c1n, e1) = rewriteCommand(c1)
