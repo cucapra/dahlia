@@ -66,6 +66,18 @@ class ParsingPositive extends org.scalatest.FunSuite {
     """ )
   }
 
+  test("while loop") {
+    parseAst("""
+      while (false) {
+        let x = 1;
+        for (let i = 0..10) unroll 5 {
+          let y = a[i];
+          x + y;
+        }
+      }
+    """ )
+  }
+
   test("combiner syntax") {
     parseAst("""
       for (let i = 0..10) {

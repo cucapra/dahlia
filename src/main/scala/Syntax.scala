@@ -172,6 +172,7 @@ object Syntax {
   case class CView(id: Id, kind: ViewType) extends Command
   case class CIf(cond: Expr, cons: Command) extends Command
   case class CFor(range: CRange, par: Command, combine: Command) extends Command
+  case class CWhile(cond: Expr, body: Command) extends Command
   case class CUpdate(lhs: Expr, rhs: Expr) extends Command {
     if (lhs.isLVal == false) throw UnexpectedLVal(lhs, "assignment")
   }
