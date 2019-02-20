@@ -56,7 +56,9 @@ object TypeChecker {
     checkC(p.cmd)(initEnv, 1)
   }
 
-  private def consumeBanks(id: Id, idxs: List[Expr], dims: List[(Int, Int)])(implicit env: Env, rres: ReqResources) =
+  private def consumeBanks
+    (id: Id, idxs: List[Expr], dims: List[(Int, Int)])
+    (implicit env: Environment, rres: ReqResources) =
     idxs.zipWithIndex.foldLeft((env, 1))({
       case ((env1, bres), (e, i)) => checkE(e)(env1, rres) match {
         case (TIndex((s, e), _), env2) =>
@@ -67,7 +69,7 @@ object TypeChecker {
       }
     })
 
-  private def checkLVal(e: Expr)(implicit env: Env, rreq: ReqResources) = e match {
+  private def checkLVal(e: Expr)(implicit env: Environment, rreq: ReqResources) = e match {
     case EAA(id, idxs) => env(id).typ match {
       // This only triggers for r-values. l-values are checked in checkLVal
       case TArray(typ, dims) => {
@@ -124,7 +126,7 @@ object TypeChecker {
 
   // Implicit parameters can be elided when a recursive call is reusing the
   // same env and its. See EBinop case for an example.
-  private def checkE(expr: Expr)(implicit env: Env, rres: ReqResources): (Type, Env) = expr match {
+  private def checkE(expr: Expr)(implicit env:Environment, rres: ReqResources): (Type,Environment) = expr match {
     case EFloat(_) => TFloat() -> env
     case EInt(v, _) => TStaticInt(v) -> env
     case EBool(_) => TBool() -> env
@@ -180,7 +182,7 @@ object TypeChecker {
     }
   }
 
-  private def checkC(cmd: Command)(implicit env: Env, rres: ReqResources): Env = cmd match {
+  private def checkC(cmd: Command)(implicit env:Environment, rres: ReqResources):Environment = cmd match {
     case CPar(c1, c2) => checkC(c2)(checkC(c1), rres)
     case CIf(cond, cons, _) => {
       val (cTyp, e1) = checkE(cond)(env.addScope, rres)
@@ -273,7 +275,7 @@ object TypeChecker {
       // Add binding for iterator in a separate scope.
       val e1 = env.addScope.add(iter -> Info(iter, range.idxType)).addScope
       // Check for body and pop the scope.
-      val (e2, binds, _) = checkC(par)(e1, range.u * rres).endScope
+      val (e2, binds) = checkC(par)(e1, range.u * rres).endScope
       // Create scope where ids bound in the parallel scope map to fully banked arrays.
       val vecBinds = binds.map({ case (id, inf) =>
         id -> Info(id, TArray(inf.typ, List((range.u, range.u))))
