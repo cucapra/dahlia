@@ -44,14 +44,14 @@ object TypeChecker {
     val funcsEnv = p.fdefs.foldLeft(emptyEnv)({ case (env, FDef(id, args, body)) =>
       val envWithArgs = args.foldLeft(env.addScope)({ case (env, Decl(id, typ)) =>
         id.typ = Some(typ);
-        env.add(id -> Info(id, typ))
+        env.add(id, Info(id, typ))
       })
       val bodyEnv = checkC(body)(envWithArgs, 1)
-      bodyEnv.endScope._1.add(id -> Info(id, TFun(args.map(_.typ))))
+      bodyEnv.endScope._1.add(id, Info(id, TFun(args.map(_.typ))))
     })
     val initEnv = p.decls.foldLeft(funcsEnv)({ case (env, Decl(id, typ)) =>
       id.typ = Some(typ);
-      env.add(id -> Info(id, typ))
+      env.add(id, Info(id, typ))
     })
     checkC(p.cmd)(initEnv, 1)
   }
@@ -62,9 +62,9 @@ object TypeChecker {
     idxs.zipWithIndex.foldLeft((env, 1))({
       case ((env1, bres), (e, i)) => checkE(e)(env1, rres) match {
         case (TIndex((s, e), _), env2) =>
-          env2.update(id -> env2(id).consumeDim(i, e - s)) -> bres * (e - s)
+          env2.update(id, env2(id).consumeDim(i, e - s)) -> bres * (e - s)
         case (TStaticInt(v), env2) =>
-          env2.update(id -> env(id).consumeBank(i, v % dims(i)._2)) -> bres * 1
+          env2.update(id, env(id).consumeBank(i, v % dims(i)._2)) -> bres * 1
         case (t, _) => throw InvalidIndex(id, t)
       }
     })
@@ -151,7 +151,7 @@ object TypeChecker {
           // If an array id is used as a parameter, consume it completely.
           // This works correctly with capabilties.
           (typ, arg) match {
-            case (_:TArray, EVar(id)) => e1.update(id -> e1(id).consumeAll)
+            case (_:TArray, EVar(id)) => e1.update(id, e1(id).consumeAll)
             case (_:TArray, expr) => throw Impossible(s"Type of $expr is $typ")
             case _ => e1
           }
@@ -207,9 +207,9 @@ object TypeChecker {
       if (t2 :< t1) (t1, t2, lhs) match {
         // Reassignment of static ints upcasts to bit<32>
         case (TStaticInt(_), TStaticInt(_), EVar(id)) =>
-          e2.update(id -> Info(id, TSizedInt(32)))
+          e2.update(id, Info(id, TSizedInt(32)))
         case (TStaticInt(_), TSizedInt(_), EVar(id)) =>
-          e2.update(id -> Info(id, t2))
+          e2.update(id, Info(id, t2))
         case _ => e2
       }
       else throw UnexpectedSubtype(rhs.pos, "assignment", t1, t2)
@@ -231,9 +231,9 @@ object TypeChecker {
     case l@CLet(id, typ, exp) => {
       val (t, e1) = checkE(exp)
       typ match {
-        case Some(t2) if t :< t2 => e1.add(id -> Info(id, t2))
+        case Some(t2) if t :< t2 => e1.add(id, Info(id, t2))
         case Some(t2) => throw UnexpectedType(exp.pos, "let", t.toString, t2)
-        case None => l.typ = Some(t); e1.add(id -> Info(id, t))
+        case None => l.typ = Some(t); e1.add(id, Info(id, t))
       }
     }
     case CView(id, k@Shrink(arrId, vdims)) => env(arrId).typ match {
@@ -256,7 +256,7 @@ object TypeChecker {
             throw InvalidShrinkWidth(e.pos, bank, width)
           }
           // Completely conumse the current dimension
-          val env2 = env.update(arrId -> env(arrId).consumeDim(idx, bank))
+          val env2 = env.update(arrId, env(arrId).consumeDim(idx, bank))
           val (accessType, env3) = checkE(e)(env2, rres)
           accessType match {
             case _: TStaticInt | _: TIndex => true
@@ -266,14 +266,14 @@ object TypeChecker {
         }})
         // Add view into scope
         val typ = TArray(t, vdims.map({ case (_, w, _) => (w, w) }))
-        env1.add(id -> Info(id, typ))
+        env1.add(id, Info(id, typ))
       }
       case t => throw UnexpectedType(cmd.pos, "shrink view", "array", t)
     }
     case CFor(range, par, combine) => {
       val iter = range.iter
       // Add binding for iterator in a separate scope.
-      val e1 = env.addScope.add(iter -> Info(iter, range.idxType)).addScope
+      val e1 = env.addScope.add(iter, Info(iter, range.idxType)).addScope
       // Check for body and pop the scope.
       val (e2, binds) = checkC(par)(e1, range.u * rres).endScope
       // Create scope where ids bound in the parallel scope map to fully banked arrays.
