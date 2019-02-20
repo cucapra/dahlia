@@ -7,7 +7,7 @@ import org.scalatest.FunSpec
 
 class TypeCheckerSpec extends FunSpec {
 
-  describe("let with explicit type") {
+  describe("Let with explicit type") {
     it("assigns explicit type") {
       val e1 = typeCheck("let x: bit<16> = 1;")
       assert(e1("x").typ === TSizedInt(16))
@@ -689,6 +689,26 @@ class TypeCheckerSpec extends FunSpec {
       typeCheck("""
         for (let i = 0..10) {
           let x = i * 2;
+        }
+        """ )
+    }
+
+    it("can be passed to functions with int types") {
+      typeCheck("""
+        def test(a: bit<32>) {
+          let test2 = a;
+        }
+
+        for (let i = 0..5) {
+          test(i);
+        }
+        """ )
+    }
+
+    it("can be used with bit shifts") {
+      typeCheck("""
+        for (let i = 0..10) {
+          let x = i | 2;
         }
         """ )
     }
