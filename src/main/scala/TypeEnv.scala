@@ -14,6 +14,10 @@ object TypeEnv {
   // Product of all unroll factors enclosing the current context.
   type ReqResources = Int
 
+  /**
+   * An Environment to keep track of the types associated with identifiers
+   * and capabilities associated with expressions.
+   */
   trait Environment {
 
     // A Scope in the environment
@@ -45,19 +49,21 @@ object TypeEnv {
 
     /**
      * Add a new type binding in the current scope.
-     * @param bind The binding to be added to the environment.
+     * @param id The identifier to which the type is mapped.
+     * @param typ The [[Info]] associated with the identifier.
      * @return A new environment which contains the mapping.
      * @throws [[AlreadyBound]] if a bindings for Id already exists.
      */
-    def add(bind: (Id, Info)): Environment
+    def add(id: Id, typ: Info): Environment
 
     /**
      * Update bindings associated with Id. Method traverses the entire scope chain.
-     * @param bind The new binding for Id.
+     * @param id The identifier whose type is being updated.
+     * @param typ The new type associated with the identifier.
      * @return A new environment where Id is bound to this Type.
      * @throw [[UnboundVar]] If the Id doesn't already have a binding
      */
-    def update(bind: (Id, Info)): Environment
+    def update(id: Id, typ: Info): Environment
 
     /**
      * Create a new Environment with all the bindings in [[binds]] added to the
@@ -170,19 +176,18 @@ object TypeEnv {
         case Some(map) => Some(map(id))
       }
 
-    def add(bind: (Id, Info)) = find(e, bind._1) match {
-      case Some(_) => throw AlreadyBound(bind._1)
-      case None => Env(e.head + bind :: e.tail, caps)
+    def add(id: Id, typ: Info) = find(e, id) match {
+      case Some(_) => throw AlreadyBound(id)
+      case None => Env(e.head + (id -> typ) :: e.tail, caps)
     }
-    def update(bind: (Id, Info)) = find(e, bind._1) match {
-      case None => throw UnboundVar(bind._1)
+    def update(id: Id, typ: Info) = find(e, id) match {
+      case None => throw UnboundVar(id)
       case Some(_) => {
-        val scope = e.indexWhere(m => m.get(bind._1).isDefined)
-        Env(e.updated(scope, e(scope) + bind), caps)
+        val scope = e.indexWhere(m => m.get(id).isDefined)
+        Env(e.updated(scope, e(scope) + (id -> typ)), caps)
       }
     }
     def ++(binds: TypeScope) =
-      binds.foldLeft[Environment](this)({ case (e, b) => e.add(b) })
+      binds.foldLeft[Environment](this)({ case (e, b) => e.add(b._1, b._2) })
   }
-
 }
