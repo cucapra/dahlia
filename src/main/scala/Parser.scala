@@ -22,15 +22,23 @@ private class FuseParser extends RegexParsers with PackratParsers {
 
   // Atoms
   lazy val number = "(-)?[0-9]+".r ^^ { n => n.toInt }
-  lazy val float = "(-)?[0-9]+.[0-9]+".r ^^ { n => n.toFloat }
+  lazy val hex = "0x[0-9a-fA-F]+".r ^^ { n => Integer.parseInt(n.substring(2), 16) }
+  lazy val octal = "0[0-7]+".r ^^ { n => Integer.parseInt(n.substring(1), 8) }
+  // Need to separately parse 0 to avoid conflict with octal parsing
+  lazy val zero = "0".r ^^ { _ => EInt(0) }
+  lazy val float = "(-)?[0-9]+\\.[0-9]+".r ^^ { n => n.toFloat }
   lazy val boolean = "true" ^^ { _ => true } | "false" ^^ { _ => false }
+
   lazy val eaa: P[Expr] = positioned {
     iden ~ rep1(brackets(expr)) ^^ { case id ~ idxs => EAA(id, idxs) }
   }
+
   lazy val atom: P[Expr] = positioned {
     eaa |
     float ^^ { case f => EFloat(f) } |
-    number ^^ { case n => EInt(n) } |
+    hex ^^ { case h => EInt(h, 16) } |
+    octal ^^ { case o => EInt(o, 8) } |
+    number ^^ { case n => EInt(n, 10) } |
     boolean ^^ { case b => EBool(b) } |
     iden ~ parens(repsep(expr, ",")) ^^ { case f ~ args => EApp(f, args) } |
     iden ^^ { case id => EVar(id) } |

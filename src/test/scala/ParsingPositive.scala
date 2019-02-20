@@ -2,12 +2,18 @@ package fuselang
 
 import TestUtils._
 
-class ParsingPositive extends org.scalatest.FunSuite {
-  test("atoms parseAst") {
+class ParsingTests extends org.scalatest.FunSuite {
+  test("numbers") {
     parseAst("1")
     parseAst("1.25")
     parseAst("0.25")
+    parseAst("0x19")
+    parseAst("014")
+  }
+
+  test("atoms") {
     parseAst("true")
+    parseAst("false")
     parseAst("true;")
   }
 

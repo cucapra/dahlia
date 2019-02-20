@@ -31,7 +31,7 @@ object RewriteView {
       })
 
   def rewriteExpr(e: Expr)(implicit env: T): (Expr, T) = e match {
-    case EVar(_) | EInt(_) | EFloat(_) | EBool(_) => e -> env
+    case EVar(_) | EInt(_, _) | EFloat(_) | EBool(_) => e -> env
     case eb@EBinop(_, e1, e2) => {
       val (e1n, env1) = rewriteExpr(e1)
       val (e2n, env2) = rewriteExpr(e2)(env1)

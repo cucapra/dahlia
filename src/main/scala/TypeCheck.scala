@@ -126,7 +126,7 @@ object TypeChecker {
   // same env and its. See EBinop case for an example.
   private def checkE(expr: Expr)(implicit env: Env, rres: ReqResources): (Type, Env) = expr match {
     case EFloat(_) => TFloat() -> env
-    case EInt(v) => TStaticInt(v) -> env
+    case EInt(v, _) => TStaticInt(v) -> env
     case EBool(_) => TBool() -> env
     case EVar(id) => {
       // Add type information to variable

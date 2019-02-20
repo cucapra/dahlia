@@ -123,7 +123,7 @@ object Syntax {
       case _ => false
     }
   }
-  case class EInt(v: Int) extends Expr
+  case class EInt(v: Int, base: Int = 10) extends Expr
   case class EFloat(f: Float) extends Expr
   case class EBool(v: Boolean) extends Expr
   case class EBinop(op: BOp, e1: Expr, e2: Expr) extends Expr

@@ -38,6 +38,12 @@ private class Emit extends PrettyPrinter {
   def scope(doc: Doc): Doc =
     lbrace <@> indent(doc) <@> rbrace
 
+  def emitBaseInt(v: Int, base: Int) = base match {
+    case 8 => s"0${Integer.toString(v, 8)}"
+    case 10 => v
+    case 16 => s"0x${Integer.toString(v, 16)}"
+  }
+
   implicit def IdToString(id: Id): Doc = value(id.v)
 
   implicit def typeToDoc(typ: Type): Doc = typ match {
@@ -51,7 +57,7 @@ private class Emit extends PrettyPrinter {
 
   implicit def exprToDoc(e: Expr): Doc = e match {
     case EApp(fn, args) => fn <> parens(hsep(args.map(exprToDoc), comma))
-    case EInt(i) => value(i)
+    case EInt(v, base) => value(emitBaseInt(v, base))
     case EFloat(f) => value(f)
     case EBool(b) => value(if(b) 1 else 0)
     case EVar(id) => value(id)
