@@ -30,7 +30,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
   lazy val boolean = "true" ^^ { _ => true } | "false" ^^ { _ => false }
 
   lazy val eaa: P[Expr] = positioned {
-    iden ~ rep1(brackets(expr)) ^^ { case id ~ idxs => EAA(id, idxs) }
+    iden ~ rep1(brackets(expr)) ^^ { case id ~ idxs => EArrAccess(id, idxs) }
   }
 
   lazy val atom: P[Expr] = positioned {

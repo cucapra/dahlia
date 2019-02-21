@@ -37,7 +37,7 @@ object RewriteView {
       val (e2n, env2) = rewriteExpr(e2)(env1)
       eb.copy(e1 = e1n, e2 = e2n) -> env2
     }
-    case eaa@EAA(arrId, idxs) => {
+    case eaa@EArrAccess(arrId, idxs) => {
       val (idxsn, env1) = foldExprs(idxs)
       // If the array id is a view array rewrite it and recur
       if (env.contains(arrId)) {
@@ -68,7 +68,7 @@ object RewriteView {
       l.copy(e = en) -> env1
     }
     case CView(id, Shrink(arrId, dims)) => {
-      val f = (es: List[Expr]) => EAA(arrId, es.zip(dims).map({
+      val f = (es: List[Expr]) => EArrAccess(arrId, es.zip(dims).map({
         case (e, (idx, _, s)) => e + (idx * EInt(s))
       }))
       (CEmpty, env + (id -> f))

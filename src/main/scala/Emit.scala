@@ -62,7 +62,7 @@ private class Emit extends PrettyPrinter {
     case EBool(b) => value(if(b) 1 else 0)
     case EVar(id) => value(id)
     case EBinop(op, e1, e2) => parens(e1 <+> op.toString <+> e2)
-    case EAA(id, idxs) => id.typ match {
+    case EArrAccess(id, idxs) => id.typ match {
       case Some(TArray(_, dims)) => id <> brackets(flattenIdx(idxs, dims.map(_._1)))
       case Some(_) => throw Impossible("array access doesnt use array")
       case None => throw Impossible("type information missins in exprToDoc")
