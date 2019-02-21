@@ -28,7 +28,8 @@ object TypeEnv {
     type Scope[K, V] = Map[K, V]
 
     /**
-     * Methods to manipulate type bindings.
+     * Methods to manipulate type defs. Since the typedefs are top level,
+     * they don't need to use scopes.
      */
     /**
      * Creates a new alias for the [[typ]].
@@ -68,7 +69,8 @@ object TypeEnv {
     def apply(id: Id): Info
 
     /**
-     * Add a new type binding in the current scope.
+     * Add a new type binding in the current scope. If the type being added is
+     * an alias type, instead add the resolved underlying type.
      * @param id The identifier to which the type is mapped.
      * @param typ The [[Info]] associated with the identifier.
      * @return A new environment which contains the mapping.
@@ -141,19 +143,18 @@ object TypeEnv {
   private case class Env(
     typeMap: ScopedMap[Id, Info] = ScopedMap(),
     capMap: ScopedMap[Expr, Capability] = ScopedMap(),
-    typeDefMap: ScopedMap[Id, Type] = ScopedMap()) extends Environment {
+    typeDefMap: Map[Id, Type] = Map()) extends Environment {
 
     type TypeScope = Map[Id, Info]
     type CapScope = Map[Expr, Capability]
 
     /** Scope management */
-    def addScope = Env(typeMap.addScope, capMap.addScope, typeDefMap.addScope)
+    def addScope = Env(typeMap.addScope, capMap.addScope, typeDefMap)
     def endScope = {
       val scopes = for {
         (tScope, tMap) <- typeMap.endScope;
         (cScope, cMap) <- capMap.endScope
-        (_, tdMap) <- typeDefMap.endScope
-      } yield (Env(tMap, cMap, tdMap), tScope, cScope)
+      } yield (Env(tMap, cMap, typeDefMap), tScope, cScope)
 
       scopes match {
         case None => throw Impossible("Removed topmost scope")
@@ -169,11 +170,15 @@ object TypeEnv {
     }
 
     /** Type defintions */
-    def addType(alias: Id, typ: Type) = typeDefMap.add(alias, typ) match {
-      case Some(tDefMap) => this.copy(typeDefMap = tDefMap)
-      case None => throw AlreadyBoundType(alias)
+    private def resolveType(t: Type): Type = t match {
+      case TAlias(name) => resolveType(typeDefMap(name))
+      case t => t
     }
-    def getType(alias: Id) = typeDefMap(alias) match {
+    def addType(alias: Id, typ: Type) = typeDefMap.get(alias) match {
+      case Some(_) => throw AlreadyBoundType(alias)
+      case None => this.copy(typeDefMap = typeDefMap + (alias -> typ))
+    }
+    def getType(alias: Id) = typeDefMap.get(alias) match {
       case Some(t) => t
       case None => throw UnboundType(alias)
     }
@@ -185,7 +190,7 @@ object TypeEnv {
       case None => throw UnboundVar(id)
     }
 
-    def add(id: Id, typ: Info) = typeMap.add(id, typ) match {
+    def add(id: Id, inf: Info) = typeMap.add(id, inf.copy(typ = resolveType(inf.typ))) match {
       case None => throw AlreadyBound(id)
       case Some(tMap) => this.copy(typeMap = tMap)
     }

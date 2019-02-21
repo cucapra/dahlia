@@ -781,6 +781,88 @@ class TypeCheckerSpec extends FunSpec {
     }
   }
 
+  describe("Records") {
+    it("type can be defined") {
+      typeCheck("""
+        record point {
+          x: bit<32>;
+          y: bit<32>;
+        }
+        """ )
+    }
+    it("can be used in a declaration") {
+      typeCheck("""
+        record point {
+          x: bit<32>;
+          y: bit<32>;
+        };
+        decl k: point;
+        """ )
+    }
+    it("can be used in a declaration nested declaration") {
+      typeCheck("""
+        record point {
+          x: bit<32>;
+          y: bit<32>;
+        };
+        record bars {
+          k: point;
+        }
+        """ )
+    }
+    it("cannot use undefined type aliases") {
+      assertThrows[UnboundType] {
+        typeCheck("""
+          record bars {
+            k: point;
+          }
+          """ )
+      }
+    }
+    it("cannot rebind type alias") {
+      assertThrows[AlreadyBoundType] {
+        typeCheck("""
+          record bars {
+            k: bit<32>;
+          }
+          record bars {
+            l: bit<32>;
+          }
+          """ )
+      }
+    }
+    it("can access bound field") {
+      typeCheck("""
+        record point {
+          x: bit<32>;
+        };
+        decl k: point;
+        let x = k.x;
+        """ )
+    }
+    it("can bound field has the right return type") {
+      typeCheck("""
+        record point {
+          x: bit<32>;
+        };
+        decl k: point;
+        let x = k.x + 1;
+        """ )
+    }
+    it("can bound field has the right return type in nested struct") {
+      typeCheck("""
+        record point {
+          x: bit<32>;
+        };
+        record foo {
+          p: point;
+        }
+        decl k: foo;
+        let x = k.p.x + 1;
+        """ )
+    }
+  }
+
   // XXX(rachit): This seems like confusing behavior.
   describe("Indexing with static var") {
     it("works without reassigning") {

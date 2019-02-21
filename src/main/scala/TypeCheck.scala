@@ -37,20 +37,13 @@ import TypeInfo._
 object TypeChecker {
   import TypeEnv._
 
-  /* A program consists of a list of function definitions, a list of variable
-   * declarations  and then a command. We build up an environment with all the
-   * declarations, then check the command in that environment (`checkC`).
+  /* A program consists of a list of function or type definitions, a list of
+   * variable declarations and then a command. We build up an environment with
+   * all the declarations and definitions, then check the command in that environment
+   * (`checkC`).
    */
   def typeCheck(p: Prog) = {
-    val funcsEnv = p.fdefs.foldLeft(emptyEnv)({ case (env, FDef(id, args, body)) =>
-      val envWithArgs = args.foldLeft(env.addScope)({ case (env, Decl(id, typ)) =>
-        checkBound(typ, env)
-        id.typ = Some(typ);
-        env.add(id, Info(id, typ))
-      })
-      val bodyEnv = checkC(body)(envWithArgs, 1)
-      bodyEnv.endScope._1.add(id, Info(id, TFun(args.map(_.typ))))
-    })
+    val funcsEnv = p.defs.foldLeft(emptyEnv)({ case (e, d) => checkDef(d, e) })
     val initEnv = p.decls.foldLeft(funcsEnv)({ case (env, Decl(id, typ)) =>
       id.typ = Some(typ);
       env.add(id, Info(id, typ))
@@ -58,9 +51,25 @@ object TypeChecker {
     checkC(p.cmd)(initEnv, 1)
   }
 
-  private def checkBound(typ: Type, env: Environment): Unit = typ match {
-    case TAlias(n) => env.getType(n); ()
-    case _ => ()
+  private def checkDef(defi: Definition, env: Environment) = defi match {
+    case FuncDef(id, args, body) => {
+      val envWithArgs = args.foldLeft(env.addScope)({ case (env, Decl(id, typ)) =>
+        val rTyp = resolveType(typ, env)
+        id.typ = Some(rTyp);
+        env.add(id, Info(id, rTyp))
+      })
+      val bodyEnv = checkC(body)(envWithArgs, 1)
+      bodyEnv.endScope._1.add(id, Info(id, TFun(args.map(_.typ))))
+    }
+    case RecordDef(name, fields) => {
+      val rFields = fields.map({ case (k, t) => k -> resolveType(t, env) })
+      env.addType(name, TRecType(name, rFields))
+    }
+  }
+
+  private def resolveType(typ: Type, env: Environment) = typ match {
+    case TAlias(n) => env.getType(n)
+    case t => t
   }
 
   private def consumeBanks
@@ -246,9 +255,9 @@ object TypeChecker {
     }
     case l@CLet(id, typ, exp) => {
       // Check if the explicit type is bound in scope
-      typ.map(checkBound(_, env))
+      val rTyp = typ.map(resolveType(_, env))
       val (t, e1) = checkE(exp)
-      typ match {
+      rTyp match {
         case Some(t2) if t :< t2 => e1.add(id, Info(id, t2))
         case Some(t2) => throw UnexpectedType(exp.pos, "let", t.toString, t2)
         case None => l.typ = Some(t); e1.add(id, Info(id, t))
@@ -302,11 +311,6 @@ object TypeChecker {
       checkC(combine)(e2.endScope._1.addScope ++ vecBinds, rres).endScope._1
     }
     case CExpr(e) => checkE(e)._2
-    case CRecordDef(id, fields) => {
-      // Check all used TAliases are bound
-      fields.map({ case (_, t) => checkBound(t, env) })
-      env.addType(id, TRecType(id, fields))
-    }
     case CEmpty => env
     case CSeq(c1, c2) => {
       val _ = checkC(c1)

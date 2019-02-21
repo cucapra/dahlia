@@ -33,8 +33,13 @@ private class FuseParser extends RegexParsers with PackratParsers {
     iden ~ rep1(brackets(expr)) ^^ { case id ~ idxs => EArrAccess(id, idxs) }
   }
 
+  lazy val recAccess: P[Expr] = positioned {
+    expr ~ "." ~ iden ^^ { case rec ~ _ ~ f => ERecAccess(rec, f) }
+  }
+
   lazy val atom: P[Expr] = positioned {
     eaa |
+    recAccess |
     float ^^ { case f => EFloat(f) } |
     hex ^^ { case h => EInt(h, 16) } |
     octal ^^ { case o => EInt(o, 8) } |
@@ -122,7 +127,8 @@ private class FuseParser extends RegexParsers with PackratParsers {
   lazy val atyp: P[Type] =
     "float" ^^ { _ => TFloat() } |
     "bool" ^^ { _ => TBool() } |
-    "bit" ~> angular(number) ^^ { case s => TSizedInt(s) }
+    "bit" ~> angular(number) ^^ { case s => TSizedInt(s) } |
+    iden ^^ { case id => TAlias(id) }
   lazy val typ: P[Type] =
     atyp ~ rep1(typIdx) ^^ { case t ~ dims => TArray(t, dims) } |
     atyp
@@ -200,16 +206,22 @@ private class FuseParser extends RegexParsers with PackratParsers {
     "decl" ~> args  <~ ";"
   }
 
-  // Functions
-  lazy val fDef: P[FDef] = positioned {
-    "def" ~> iden ~ parens(repsep(args, ",")) ~ block ^^ {
-      case fn ~ args ~ body => FDef(fn, args, body)
+  // Definitions
+  lazy val recordDef: P[RecordDef] = positioned {
+    "record" ~> iden ~ braces(rep1(args <~ ";")) <~ ";".? ^^ {
+      case n ~ fs => RecordDef(n, fs.map(decl => decl.id -> decl.typ).toMap)
     }
   }
+  lazy val funcDef: P[FuncDef] = positioned {
+    "def" ~> iden ~ parens(repsep(args, ",")) ~ block <~ ";".? ^^ {
+      case fn ~ args ~ body => FuncDef(fn, args, body)
+    }
+  }
+  lazy val defs = funcDef | recordDef
 
   // Prog
   lazy val prog: P[Prog] = positioned {
-    fDef.* ~ decl.* ~ cmd.? ^^ {
+    defs.* ~ decl.* ~ cmd.? ^^ {
       case fns ~ decls ~ cmd => Prog(fns, decls, cmd.getOrElse(CEmpty))
     }
   }

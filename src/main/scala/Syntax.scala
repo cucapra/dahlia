@@ -178,7 +178,6 @@ object Syntax {
   case class CSeq(c1: Command, c2: Command) extends Command
   case class CLet(id: Id, var typ: Option[Type], e: Expr) extends Command
   case class CView(id: Id, kind: ViewType) extends Command
-  case class CRecordDef(name: Id, fields: Map[Id, Type]) extends Command
   case class CIf(cond: Expr, cons: Command, alt: Command) extends Command
   case class CFor(range: CRange, par: Command, combine: Command) extends Command
   case class CWhile(cond: Expr, body: Command) extends Command
@@ -191,8 +190,10 @@ object Syntax {
   case class CExpr(exp: Expr) extends Command
   case object CEmpty extends Command
 
-  case class Decl(id: Id, typ: Type) extends Positional
-  case class FDef(id: Id, args: List[Decl], body: Command) extends Positional
+  sealed trait Definition extends Positional
+  case class FuncDef(id: Id, args: List[Decl], body: Command) extends Definition
+  case class RecordDef(name: Id, fields: Map[Id, Type]) extends Definition
 
-  case class Prog(fdefs: List[FDef], decls: List[Decl], cmd: Command) extends Positional
+  case class Decl(id: Id, typ: Type) extends Positional
+  case class Prog(defs: List[Definition], decls: List[Decl], cmd: Command) extends Positional
 }
