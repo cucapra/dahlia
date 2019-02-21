@@ -17,6 +17,7 @@ scalacOptions ++= Seq(
   "-Ywarn-unused",
   "-Ywarn-value-discard",
   "-Yno-adapted-args",
+  "-Xfatal-warnings"
 )
 
 testOptions in Test += Tests.Argument("-oD")
