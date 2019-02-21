@@ -2,6 +2,7 @@ package fuselang
 
 import Syntax._
 import Errors._
+import TypeInfo._
 
 /**
  * Type checker implementation for Fuse. Apart from normal typechecking, such as
