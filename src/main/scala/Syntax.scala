@@ -156,11 +156,10 @@ object Syntax {
 
   sealed trait ViewType extends Positional
   case class Shrink(arrId: Id, dims: List[(Expr,Int,Int)]) extends ViewType {
-    dims.forall({ case (_, w, s) => {
+    dims.foreach({ case (_, w, s) => {
       if (w != s) {
         throw MalformedShrink(this, w, s)
       }
-      true
     }})
   }
 

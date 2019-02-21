@@ -81,7 +81,7 @@ object TypeChecker {
         // Capability check
         env.getCap(e) match {
           case Some(Write) => throw AlreadyWrite(e)
-          case Some(Read) => throw InvalidCap(e, Write.toString, Read.toString)
+          case Some(Read) => throw InvalidCap(e, Write, Read)
           case None => {
             val (e1, bres) = consumeBanks(id, idxs, dims)
             if (bres != rreq)
@@ -170,7 +170,7 @@ object TypeChecker {
         // Check capabilities
         env.getCap(expr) match {
           case Some(Write) =>
-            throw InvalidCap(expr, Read.toString, Write.toString)
+            throw InvalidCap(expr, Read, Write)
           case Some(Read) => typ -> env
           case None => {
             val e1 = consumeBanks(id, idxs, dims)._1
