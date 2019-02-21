@@ -267,8 +267,8 @@ class TypeCheckerSpec extends FunSpec {
         a[1]
         """ )
     }
-    it("cannot create different capabilities in branches") {
-      assertThrows[InvalidCap] {
+    it("can create different capabilities in branches") {
+      // See discussion in: https://github.com/cucapra/seashell/pull/81
         typeCheck("""
           decl a: bit<10>[2 bank 2];
           if (true) {
@@ -277,7 +277,6 @@ class TypeCheckerSpec extends FunSpec {
             let x = a[0];
           }
           """ )
-      }
     }
   }
 

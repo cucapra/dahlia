@@ -189,15 +189,8 @@ object TypeChecker {
       if (cTyp != TBool()) {
         throw UnexpectedType(cond.pos, "if condition", TBool().toString, cTyp)
       } else {
-        val (e2, _, caps1) = checkC(cons)(e1, rres).endScope
-        val (e3, _, caps2) = checkC(alt)(e1, rres).endScope
-        // Capabilities for common expressions must be the same
-        (caps1.keys.toSet intersect caps2.keys.toSet).foreach({ case expr => {
-          val (cCap, aCap) = (caps1(expr), caps2(expr))
-          if (cCap != aCap) {
-            throw InvalidCap(expr, cCap, aCap)
-          }
-        }})
+        val (e2, _, _) = checkC(cons)(e1, rres).endScope
+        val (e3, _, _) = checkC(alt)(e1, rres).endScope
         e2 merge e3
       }
     }
