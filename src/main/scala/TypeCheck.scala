@@ -159,6 +159,7 @@ object TypeChecker {
       }
       case t => throw UnexpectedType(expr.pos, "application", "function", t)
     }
+    case _:ERecAccess => ???
     case EArrAccess(id, idxs) => env(id).typ match {
       // This only triggers for r-values. l-values are checked in checkLVal
       case TArray(typ, dims) => {
@@ -286,6 +287,7 @@ object TypeChecker {
       checkC(combine)(e2.endScope._1.addScope ++ vecBinds, rres).endScope._1
     }
     case CExpr(e) => checkE(e)._2
+    case _:CRecordDef => ???
     case CEmpty => env
     case CSeq(c1, c2) => {
       val _ = checkC(c1)

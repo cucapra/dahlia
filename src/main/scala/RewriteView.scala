@@ -31,7 +31,7 @@ object RewriteView {
       })
 
   def rewriteExpr(e: Expr)(implicit env: T): (Expr, T) = e match {
-    case EVar(_) | EInt(_, _) | EFloat(_) | EBool(_) => e -> env
+    case EVar(_) | EInt(_, _) | EFloat(_) | EBool(_) | _:ERecAccess => e -> env
     case eb@EBinop(_, e1, e2) => {
       val (e1n, env1) = rewriteExpr(e1)
       val (e2n, env2) = rewriteExpr(e2)(env1)
@@ -53,6 +53,7 @@ object RewriteView {
   }
 
   def rewriteCommand(c: Command)(implicit env: T): (Command, T) = c match {
+    case _:CRecordDef => c -> env
     case CPar(c1, c2) => {
       val (c1n, env1) = rewriteCommand(c1)
       val (c2n, env2) = rewriteCommand(c2)(env1)

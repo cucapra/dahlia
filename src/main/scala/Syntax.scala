@@ -45,7 +45,11 @@ object Syntax {
       case TArray(t, dims) =>
         s"$t" + dims.foldLeft("")({ case (acc, (d, b)) => s"$acc[$d bank $b]" })
       case TIndex(s, d) => s"idx($s, $d)"
-      case TFun(args) => args.foldLeft("")({ case (acc, t) => s"$acc$t -> "}) + "void"
+      case TFun(args) => s"${args.mkString("->")} -> void"
+      case TRecType(n, fs) => {
+        val fields = fs.toList.map({ case (id, typ) => s"$id: $typ"}).mkString(";")
+        s"$n($fields)"
+      }
     }
   }
   // Types that can be upcast to Ints
@@ -55,6 +59,7 @@ object Syntax {
   case class TBool() extends Type
   case class TFloat() extends Type
   case class TFun(args: List[Type]) extends Type
+  case class TRecType(name: Id, fields: Map[Id, Type]) extends Type
   case class TArray(typ: Type, dims: List[(Int, Int)]) extends Type
   case class TSizedInt(len: Int) extends Type with IntType
   case class TStaticInt(v: Int) extends Type with IntType
@@ -129,7 +134,7 @@ object Syntax {
   case class EBinop(op: BOp, e1: Expr, e2: Expr) extends Expr
   // TODO(rachit): Allow arbitrary exprs for arrId
   case class EArrAccess(id: Id, idxs: List[Expr]) extends Expr
-  //case class ERecAccess(rec: Expr, fieldName: Id) extends Expr
+  case class ERecAccess(rec: Expr, fieldName: Id) extends Expr
   case class EApp(func: Id, args: List[Expr]) extends Expr
   case class EVar(id: Id) extends Expr
 
@@ -171,7 +176,7 @@ object Syntax {
   case class CSeq(c1: Command, c2: Command) extends Command
   case class CLet(id: Id, var typ: Option[Type], e: Expr) extends Command
   case class CView(id: Id, kind: ViewType) extends Command
-  //case class CRecordDef(name: Id, fields: Map[Id, Type]) extends Command
+  case class CRecordDef(name: Id, fields: Map[Id, Type]) extends Command
   case class CIf(cond: Expr, cons: Command, alt: Command) extends Command
   case class CFor(range: CRange, par: Command, combine: Command) extends Command
   case class CWhile(cond: Expr, body: Command) extends Command

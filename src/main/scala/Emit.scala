@@ -52,6 +52,7 @@ private class Emit extends PrettyPrinter {
     case _:TFloat => "float"
     case _:TSizedInt => value(typ)
     case TArray(typ, _) => typ
+    case TRecType(n, _) => n
     case _:TFun => throw Impossible("Cannot emit function types")
   }
 
@@ -67,12 +68,17 @@ private class Emit extends PrettyPrinter {
       case Some(_) => throw Impossible("array access doesnt use array")
       case None => throw Impossible("type information missins in exprToDoc")
     }
+    case ERecAccess(rec, field) => rec <> dot <> field
   }
 
   implicit def cmdToDoc(c: Command): Doc = c match {
     case CPar(c1, c2) => c1 <@> c2
     case CSeq(c1, c2) => c1 <@> text("//---") <@> c2
     case CLet(id, typ, e) => typ.get <+> value(id) <+> equal <+> e <> semi
+    case CRecordDef(name, fields) =>
+      "typedef struct" <+> scope {
+        vsep(fields.toList.map({ case (id, typ) => typ <+> id <> semi }))
+      } <+> name <> semi
     case CIf(cond, cons, alt) =>
       "if" <> parens(cond) <> scope (cons) <+> "else" <> scope(alt)
     case CFor(range, par, combine) =>
