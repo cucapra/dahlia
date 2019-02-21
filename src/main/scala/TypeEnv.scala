@@ -34,12 +34,13 @@ object TypeEnv {
      * Creates a new alias for the [[typ]].
      * @throws [[AlreadyBoundType]] if the type definition is already bound.
      */
-    //def addType(alias: Id, typ: Type)
+    def addType(alias: Id, typ: Type): Environment
 
     /**
      * Returns the type [[alias]] is associated to.
      * @throws [[UnboundType]] if the alias has no binding for types.
      */
+    def getType(alias: Id): Type
 
     /**
      * Methods to manipulate the scopes with the environment.
@@ -139,18 +140,20 @@ object TypeEnv {
 
   private case class Env(
     typeMap: ScopedMap[Id, Info] = ScopedMap(),
-    capMap: ScopedMap[Expr, Capability] = ScopedMap()) extends Environment {
+    capMap: ScopedMap[Expr, Capability] = ScopedMap(),
+    typeDefMap: ScopedMap[Id, Type] = ScopedMap()) extends Environment {
 
     type TypeScope = Map[Id, Info]
     type CapScope = Map[Expr, Capability]
 
-    def addScope = Env(typeMap.addScope, capMap.addScope)
-
+    /** Scope management */
+    def addScope = Env(typeMap.addScope, capMap.addScope, typeDefMap.addScope)
     def endScope = {
       val scopes = for {
         (tScope, tMap) <- typeMap.endScope;
         (cScope, cMap) <- capMap.endScope
-      } yield (Env(tMap, cMap), tScope, cScope)
+        (_, tdMap) <- typeDefMap.endScope
+      } yield (Env(tMap, cMap, tdMap), tScope, cScope)
 
       scopes match {
         case None => throw Impossible("Removed topmost scope")
@@ -164,6 +167,17 @@ object TypeEnv {
       case Some(cMap) => this.copy(capMap = cMap)
       case None => throw Impossible(s"Capability for $expr already exists.")
     }
+
+    /** Type defintions */
+    def addType(alias: Id, typ: Type) = typeDefMap.add(alias, typ) match {
+      case Some(tDefMap) => this.copy(typeDefMap = tDefMap)
+      case None => throw AlreadyBoundType(alias)
+    }
+    def getType(alias: Id) = typeDefMap(alias) match {
+      case Some(t) => t
+      case None => throw UnboundType(alias)
+    }
+
 
     /** Type binding methods */
     def apply(id: Id): Info = typeMap(id) match {

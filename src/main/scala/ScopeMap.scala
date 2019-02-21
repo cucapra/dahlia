@@ -2,6 +2,10 @@ package fuselang
 
 object ScopeMap {
 
+  /**
+   * A map that undestands scopes. A ScopedMap is a chain of maps from
+   * [[K]] to [[V]].
+   */
   case class ScopedMap[K, V](mapList: List[Map[K, V]] = List(Map[K, V]())) {
 
     def get(key: K): Option[V] =
@@ -18,7 +22,8 @@ object ScopeMap {
     }
 
     /**
-     * Update the binding for [[key]] to [[value]].
+     * Update the binding for [[key]] to [[value]]. The update method walks
+     * the scope chain to find where the implementation is bound and update it.
      * @returns None if [[key]] is not already bound in the scope chains, otherwise
      *          returns a new [[ScopedMap]] with the key bound to value
      */
@@ -31,6 +36,7 @@ object ScopeMap {
       }
     }
 
+    /** Methods to manage scopes. */
     def addScope: ScopedMap[K, V] = ScopedMap(Map[K, V]() :: mapList)
 
     def endScope: Option[(Map[K, V], ScopedMap[K, V])] = mapList match {
@@ -38,6 +44,7 @@ object ScopeMap {
       case hd :: tl => Some((hd, ScopedMap(tl)))
     }
 
+    /** Return the set of all keys. */
     def keys = mapList.flatMap(m => m.keys).toSet
 
     // Convinience methods
