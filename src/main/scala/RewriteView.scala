@@ -53,7 +53,6 @@ object RewriteView {
   }
 
   def rewriteCommand(c: Command)(implicit env: T): (Command, T) = c match {
-    case _:CRecordDef => c -> env
     case CPar(c1, c2) => {
       val (c1n, env1) = rewriteCommand(c1)
       val (c2n, env2) = rewriteCommand(c2)(env1)
@@ -108,8 +107,11 @@ object RewriteView {
 
   def rewriteProg(p: Prog): Prog = {
     val emptyEnv = Map[Id, List[Expr] => Expr]()
-    val fs = p.fdefs.map(fdef => fdef.copy(body = rewriteCommand(fdef.body)(emptyEnv)._1))
+    val fs = p.defs.map(defi => defi match {
+      case fdef@FuncDef(_, _, b) => fdef.copy(body = rewriteCommand(b)(emptyEnv)._1)
+      case _ => defi
+    })
     val cmdn = rewriteCommand(p.cmd)(emptyEnv)._1
-    p.copy(fdefs = fs, cmd = cmdn)
+    p.copy(defs = fs, cmd = cmdn)
   }
 }

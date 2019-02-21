@@ -76,10 +76,10 @@ object Errors {
 
   // Type definition errors
   case class AlreadyBoundType(id: Id) extends TypeError(
-    s"Type alias $id already bound in scope.", None)
+    s"Type alias $id already bound in scope.", Some(id.pos))
 
   case class UnboundType(id: Id) extends TypeError(
-    s"Type alias $id not bound in scope.", None)
+    s"Type alias $id not bound in scope.", Some(id.pos))
 
   // Record Errors
   case class UnknownRecordField(pos: Position, recType: Id, field: Id) extends TypeError(

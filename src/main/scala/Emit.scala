@@ -76,10 +76,6 @@ private class Emit extends PrettyPrinter {
     case CPar(c1, c2) => c1 <@> c2
     case CSeq(c1, c2) => c1 <@> text("//---") <@> c2
     case CLet(id, typ, e) => typ.get <+> value(id) <+> equal <+> e <> semi
-    case CRecordDef(name, fields) =>
-      "typedef struct" <+> scope {
-        vsep(fields.toList.map({ case (id, typ) => typ <+> id <> semi }))
-      } <+> name <> semi
     case CIf(cond, cons, alt) =>
       "if" <> parens(cond) <> scope (cons) <+> "else" <> scope(alt)
     case CFor(range, par, combine) =>
@@ -115,19 +111,25 @@ private class Emit extends PrettyPrinter {
     .map(d => d.id -> d.typ.asInstanceOf[TArray].dims.map(_._2))
     .map({ case (id, bfs) => bank(id, bfs) })
 
-  def fDefToDoc(f: FDef): Doc = {
-    val args = hsep(f.args.map(declToDoc), comma)
-    "void" <+> f.id <> parens(args) <+> scope {
-      vsep(bankPragmas(f.args)) <@>
-      f.body
+  def defToDoc(defi: Definition): Doc = defi match {
+    case FuncDef(id, args, body) => {
+      val as = hsep(args.map(declToDoc), comma)
+      "void" <+> id <> parens(as) <+> scope {
+        vsep(bankPragmas(args)) <@>
+        body
+      }
     }
+    case RecordDef(name, fields) =>
+      "typedef struct" <+> scope {
+        vsep(fields.toList.map({ case (id, typ) => typ <+> id <> semi }))
+      } <+> name <> semi
   }
 
   def progToDoc(p: Prog, c: Utils.Config) = {
     val pragmas = bankPragmas(p.decls)
     val args = hsep(p.decls.map(declToDoc), comma)
 
-    vsep(p.fdefs.map(fDefToDoc)) <@>
+    vsep(p.defs.map(defToDoc)) <@>
     "void" <+> c.kernelName <> parens(args) <+> scope {
       vsep(pragmas) <@>
       p.cmd
