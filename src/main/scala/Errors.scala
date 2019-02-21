@@ -2,6 +2,7 @@ package fuselang
 
 object Errors {
   import Syntax._
+  import TypeEnv.Capability
   import scala.util.parsing.input.Position
 
   def withPos(s: String, pos: Option[Position]) =
@@ -39,7 +40,7 @@ object Errors {
     s"Bank $bank in dimension $dim of $id already consumed.", None)
 
   // Invalid Capability error
-  case class InvalidCap(expr: Expr, exp: String, actual: String) extends TypeError(
+  case class InvalidCap(expr: Expr, exp: Capability, actual: Capability) extends TypeError(
     s"This expression requires $exp capability, but previous usage inferred $actual capability.", Some(expr.pos))
 
   case class AlreadyWrite(e: Expr) extends TypeError(

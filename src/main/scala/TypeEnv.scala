@@ -66,14 +66,6 @@ object TypeEnv {
     def update(id: Id, typ: Info): Environment
 
     /**
-     * Create a new Environment with all the bindings in [[binds]] added to the
-     * current scope.
-     * @param binds A scope with bindings to be added to the environment.
-     * @returns A new environment with all the bindings in the environment.
-     */
-    def ++(binds: Scope[Id, Info]): Environment
-
-    /**
      * Capability manipulation
      */
     /** Get the capability associated with [[e]].
@@ -88,6 +80,33 @@ object TypeEnv {
      * @return A new environment which contains the capability mapping.
      */
     def addCap(e: Expr, cap: Capability): Environment
+
+    /**
+     * Create a new Environment with all the bindings in [[binds]] added to the
+     * current scope.
+     * @param binds A scope with bindings to be added to the environment.
+     * @returns A new environment with all the bindings in the environment.
+     */
+    def ++(binds: Scope[Id, Info]): Environment
+
+    /**
+     * Merge this environment with [[that]]. The final env e' has two properties:
+     * 1. For each identifier id, e'.banks(id) <= this.banks(id) and e'.banks(id) <= that.banks(id)
+     * 2. For each expr, e'.cap(expr) >= this.cap(exp) and e'.cap(expr) >= that.cap(expr)
+     * @assumes: this.getBoundIds == that.getBoundIds
+     * @throws [[InvalidCap]] If capabilities are inconsistent between the two environments.
+     */
+    def merge(that: Environment): Environment
+
+    /**
+     * @returns a set with all the bound Ids in this environment
+     */
+    def getBoundIds: Set[Id]
+
+    /**
+     * @return a set of all expressions that have capabilites bound to them,
+     */
+    def getCapExprs: Set[Expr]
 
   }
 
@@ -131,6 +150,21 @@ object TypeEnv {
       case _ => throw Impossible("consumeAll called on non-array")
     }
 
+    /**
+     * Return a new Info such that for each dimension:
+     * - conBanks is the union of this.conBanks and that.conBanks
+     * - avBanks is the intersection of this.conBanks and that.conBanks
+     */
+    def merge(that: Info): Info = {
+      val conBanks = this.conBanks.map({
+        case (dim, bankSet) => dim -> (that.conBanks(dim) union bankSet)
+      })
+      val avBanks = this.avBanks.map({
+        case (dim, bankSet) => dim -> (that.avBanks(dim) union bankSet)
+      })
+      Info(id, typ, avBanks, conBanks)
+    }
+
     override def toString = s"{$typ, $avBanks, $conBanks}"
   }
 
@@ -150,16 +184,16 @@ object TypeEnv {
   }
 
   private case class Env(
-    e: List[Map[Id, Info]],
+    typs: List[Map[Id, Info]],
     caps: List[Map[Expr, Capability]]) extends Environment {
 
     type Stack[T] = List[T]
     type TypeScope = Map[Id, Info]
     type CapScope = Map[Expr, Capability]
 
-    def addScope = Env(Map[Id, Info]() :: e, Map[Expr, Capability]() :: caps)
-    def endScope = (Env(e.tail, caps.tail), e.head)
-    def apply(id: Id): Info = find(e, id) match {
+    def addScope = Env(Map[Id, Info]() :: typs, Map[Expr, Capability]() :: caps)
+    def endScope = (Env(typs.tail, caps.tail), typs.head)
+    def apply(id: Id): Info = find(typs, id) match {
       case Some(info) => info
       case None => throw UnboundVar(id)
     }
@@ -168,7 +202,7 @@ object TypeEnv {
       caps.find(c => c.get(expr).isDefined).map(c => c(expr))
 
     def addCap(expr: Expr, cap: Capability) =
-      Env(e, caps.head + (expr -> cap) :: caps.tail)
+      Env(typs, caps.head + (expr -> cap) :: caps.tail)
 
     private def find(e: Stack[TypeScope], id: Id): Option[Info] =
       e.find(m => m.get(id).isDefined) match {
@@ -176,18 +210,56 @@ object TypeEnv {
         case Some(map) => Some(map(id))
       }
 
-    def add(id: Id, typ: Info) = find(e, id) match {
+    def add(id: Id, typ: Info) = find(typs, id) match {
       case Some(_) => throw AlreadyBound(id)
-      case None => Env(e.head + (id -> typ) :: e.tail, caps)
+      case None => Env(typs.head + (id -> typ) :: typs.tail, caps)
     }
-    def update(id: Id, typ: Info) = find(e, id) match {
+    def update(id: Id, typ: Info) = find(typs, id) match {
       case None => throw UnboundVar(id)
       case Some(_) => {
-        val scope = e.indexWhere(m => m.get(id).isDefined)
-        Env(e.updated(scope, e(scope) + (id -> typ)), caps)
+        val scope = typs.indexWhere(m => m.get(id).isDefined)
+        Env(typs.updated(scope, typs(scope) + (id -> typ)), caps)
       }
     }
     def ++(binds: TypeScope) =
       binds.foldLeft[Environment](this)({ case (e, b) => e.add(b._1, b._2) })
+
+    lazy val getBoundIds =
+      typs.flatMap(m => m.keys).toSet
+
+    lazy val getCapExprs =
+      caps.flatMap(m => m.keys).toSet
+
+    /**
+     * XXX(rachit): This can be rewritten to be faster. Only rewrite it if
+     * it's a bottleneck.
+     */
+    def merge(that: Environment): Environment = {
+      // For all capabilities in the intersection of this and that environment,
+      // check they are consistent with capabilites in that environment.
+      val commonCaps = this.getCapExprs & that.getCapExprs
+      commonCaps.foreach(e => {
+        val (c1, c2) = (this.getCap(e).get, that.getCap(e).get)
+        if (c1 != c2) throw InvalidCap(e, c1, c2)
+      })
+
+      // For all capabilities not in this environment, add bindings from the
+      // other environment
+      val missingCaps: Set[Expr] = that.getCapExprs -- this.getCapExprs
+      val env1 = missingCaps.foldLeft[Environment](this)({ case (env, expr) => {
+        env.addCap(expr, that.getCap(expr).get)
+      }})
+
+      // Sanity check: The same set of ids are bound by both environments
+      if (this.getBoundIds != that.getBoundIds) {
+        throw Impossible(s"Trying to merge two environments which bind different sets of ids. Intersection of bind set: ${this.getBoundIds & that.getBoundIds}")
+      }
+
+      // For each bound id, set consumed banks to the union of consumed bank sets
+      // from both environments
+      this.getBoundIds.foldLeft[Environment](env1)({ case (env, id) => {
+        env.update(id, env(id) merge that(id))
+      }})
+    }
   }
 }
