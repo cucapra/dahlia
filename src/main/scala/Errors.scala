@@ -74,6 +74,17 @@ object Errors {
   case class ViewInsideUnroll(pos: Position, vt: ViewType, arrId: Id) extends TypeError(
     s"Cannot create $vt view for $arrId inside an unrolled context.", Some(pos))
 
+  // Type definition errors
+  case class AlreadyBoundType(id: Id) extends TypeError(
+    s"Type alias $id already bound in scope.", None)
+
+  case class UnboundType(id: Id) extends TypeError(
+    s"Type alias $id not bound in scope.", None)
+
+  // Record Errors
+  case class UnknownRecordField(pos: Position, recType: Id, field: Id) extends TypeError(
+    s"Record type $recType has no field named $field.", Some(pos))
+
   // Parsing errors
   case class ParserError(msg: String) extends RuntimeException(msg)
 

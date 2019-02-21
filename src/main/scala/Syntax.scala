@@ -50,6 +50,7 @@ object Syntax {
         val fields = fs.toList.map({ case (id, typ) => s"$id: $typ"}).mkString(";")
         s"$n($fields)"
       }
+      case TAlias(n) => n.toString
     }
   }
   // Types that can be upcast to Ints
@@ -60,6 +61,7 @@ object Syntax {
   case class TFloat() extends Type
   case class TFun(args: List[Type]) extends Type
   case class TRecType(name: Id, fields: Map[Id, Type]) extends Type
+  case class TAlias(name: Id) extends Type
   case class TArray(typ: Type, dims: List[(Int, Int)]) extends Type
   case class TSizedInt(len: Int) extends Type with IntType
   case class TStaticInt(v: Int) extends Type with IntType

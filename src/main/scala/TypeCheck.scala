@@ -44,6 +44,7 @@ object TypeChecker {
   def typeCheck(p: Prog) = {
     val funcsEnv = p.fdefs.foldLeft(emptyEnv)({ case (env, FDef(id, args, body)) =>
       val envWithArgs = args.foldLeft(env.addScope)({ case (env, Decl(id, typ)) =>
+        checkBound(typ, env)
         id.typ = Some(typ);
         env.add(id, Info(id, typ))
       })
@@ -55,6 +56,11 @@ object TypeChecker {
       env.add(id, Info(id, typ))
     })
     checkC(p.cmd)(initEnv, 1)
+  }
+
+  private def checkBound(typ: Type, env: Environment): Unit = typ match {
+    case TAlias(n) => env.getType(n); ()
+    case _ => ()
   }
 
   private def consumeBanks
@@ -160,7 +166,13 @@ object TypeChecker {
       }
       case t => throw UnexpectedType(expr.pos, "application", "function", t)
     }
-    case _:ERecAccess => ???
+    case ERecAccess(rec, field) => checkE(rec) match {
+      case (TRecType(name, fields), env1) => fields.get(field) match {
+        case Some(typ) => typ -> env1
+        case None => throw UnknownRecordField(expr.pos, name, field)
+      }
+      case (t, _) => throw UnexpectedType(expr.pos, "record access", "record type", t)
+    }
     case EArrAccess(id, idxs) => env(id).typ match {
       // This only triggers for r-values. l-values are checked in checkLVal
       case TArray(typ, dims) => {
@@ -233,6 +245,8 @@ object TypeChecker {
       }
     }
     case l@CLet(id, typ, exp) => {
+      // Check if the explicit type is bound in scope
+      typ.map(checkBound(_, env))
       val (t, e1) = checkE(exp)
       typ match {
         case Some(t2) if t :< t2 => e1.add(id, Info(id, t2))
@@ -288,7 +302,11 @@ object TypeChecker {
       checkC(combine)(e2.endScope._1.addScope ++ vecBinds, rres).endScope._1
     }
     case CExpr(e) => checkE(e)._2
-    case _:CRecordDef => ???
+    case CRecordDef(id, fields) => {
+      // Check all used TAliases are bound
+      fields.map({ case (_, t) => checkBound(t, env) })
+      env.addType(id, TRecType(id, fields))
+    }
     case CEmpty => env
     case CSeq(c1, c2) => {
       val _ = checkC(c1)

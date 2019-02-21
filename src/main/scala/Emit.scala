@@ -54,6 +54,7 @@ private class Emit extends PrettyPrinter {
     case TArray(typ, _) => typ
     case TRecType(n, _) => n
     case _:TFun => throw Impossible("Cannot emit function types")
+    case TAlias(n) => n
   }
 
   implicit def exprToDoc(e: Expr): Doc = e match {
