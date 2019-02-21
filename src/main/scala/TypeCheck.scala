@@ -70,7 +70,7 @@ object TypeChecker {
     })
 
   private def checkLVal(e: Expr)(implicit env: Environment, rreq: ReqResources) = e match {
-    case EAA(id, idxs) => env(id).typ match {
+    case EArrAccess(id, idxs) => env(id).typ match {
       // This only triggers for r-values. l-values are checked in checkLVal
       case TArray(typ, dims) => {
         if (dims.length != idxs.length) {
@@ -159,7 +159,7 @@ object TypeChecker {
       }
       case t => throw UnexpectedType(expr.pos, "application", "function", t)
     }
-    case EAA(id, idxs) => env(id).typ match {
+    case EArrAccess(id, idxs) => env(id).typ match {
       // This only triggers for r-values. l-values are checked in checkLVal
       case TArray(typ, dims) => {
         if (dims.length != idxs.length) {

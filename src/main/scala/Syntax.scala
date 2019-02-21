@@ -119,7 +119,7 @@ object Syntax {
 
   sealed trait Expr extends Positional {
     def isLVal = this match {
-      case _:EVar | _:EAA => true
+      case _:EVar | _:EArrAccess => true
       case _ => false
     }
   }
@@ -127,7 +127,9 @@ object Syntax {
   case class EFloat(f: Float) extends Expr
   case class EBool(v: Boolean) extends Expr
   case class EBinop(op: BOp, e1: Expr, e2: Expr) extends Expr
-  case class EAA(id: Id, idxs: List[Expr]) extends Expr
+  // TODO(rachit): Allow arbitrary exprs for arrId
+  case class EArrAccess(id: Id, idxs: List[Expr]) extends Expr
+  //case class ERecAccess(rec: Expr, fieldName: Id) extends Expr
   case class EApp(func: Id, args: List[Expr]) extends Expr
   case class EVar(id: Id) extends Expr
 
@@ -155,6 +157,7 @@ object Syntax {
   case class RDiv() extends ROp
 
   sealed trait ViewType extends Positional
+  // TODO(rachit): Allow arbitrary exprs for arrId
   case class Shrink(arrId: Id, dims: List[(Expr,Int,Int)]) extends ViewType {
     dims.foreach({ case (_, w, s) => {
       if (w != s) {
@@ -168,6 +171,7 @@ object Syntax {
   case class CSeq(c1: Command, c2: Command) extends Command
   case class CLet(id: Id, var typ: Option[Type], e: Expr) extends Command
   case class CView(id: Id, kind: ViewType) extends Command
+  //case class CRecordDef(name: Id, fields: Map[Id, Type]) extends Command
   case class CIf(cond: Expr, cons: Command, alt: Command) extends Command
   case class CFor(range: CRange, par: Command, combine: Command) extends Command
   case class CWhile(cond: Expr, body: Command) extends Command
