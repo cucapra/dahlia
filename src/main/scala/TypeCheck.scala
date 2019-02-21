@@ -184,12 +184,21 @@ object TypeChecker {
 
   private def checkC(cmd: Command)(implicit env:Environment, rres: ReqResources):Environment = cmd match {
     case CPar(c1, c2) => checkC(c2)(checkC(c1), rres)
-    case CIf(cond, cons, _) => {
+    case CIf(cond, cons, alt) => {
       val (cTyp, e1) = checkE(cond)(env.addScope, rres)
       if (cTyp != TBool()) {
         throw UnexpectedType(cond.pos, "if condition", TBool().toString, cTyp)
       } else {
-        checkC(cons)(e1, rres).endScope._1
+        val (e2, _, caps1) = checkC(cons)(e1, rres).endScope
+        val (e3, _, caps2) = checkC(alt)(e1, rres).endScope
+        // Capabilities for common expressions must be the same
+        (caps1.keys.toSet intersect caps2.keys.toSet).foreach({ case expr => {
+          val (cCap, aCap) = (caps1(expr), caps2(expr))
+          if (cCap != aCap) {
+            throw InvalidCap(expr, cCap, aCap)
+          }
+        }})
+        e2 merge e3
       }
     }
     case CWhile(cond, body) => {
@@ -275,7 +284,7 @@ object TypeChecker {
       // Add binding for iterator in a separate scope.
       val e1 = env.addScope.add(iter, Info(iter, range.idxType)).addScope
       // Check for body and pop the scope.
-      val (e2, binds) = checkC(par)(e1, range.u * rres).endScope
+      val (e2, binds, _) = checkC(par)(e1, range.u * rres).endScope
       // Create scope where ids bound in the parallel scope map to fully banked arrays.
       val vecBinds = binds.map({ case (id, inf) =>
         id -> Info(id, TArray(inf.typ, List((range.u, range.u))))

@@ -222,6 +222,63 @@ class TypeCheckerSpec extends FunSpec {
         typeCheck("if (1) { let x = 10; }")
       }
     }
+    it("cannot consume same banks in sequenced statements") {
+      assertThrows[AlreadyConsumed] {
+        typeCheck("""
+          decl a: bit<10>[2 bank 2];
+          if (true) {
+            a[0]
+          };
+          a[0]
+          """ )
+      }
+    }
+    it("cannot consume same banks in sequenced statements from else branch") {
+      assertThrows[AlreadyConsumed] {
+        typeCheck("""
+          decl a: bit<10>[2 bank 2];
+          if (true) {
+            a[0]
+          } else {
+            a[1]
+          };
+          a[1]
+          """ )
+      }
+    }
+    it("can consume same banks in branches") {
+      typeCheck("""
+        decl a: bit<10>[10];
+        if (true) {
+          a[0]
+        } else {
+          a[0]
+        }
+        """ )
+    }
+    it("can consume bank in sequenced statement not used in either branch") {
+      typeCheck("""
+        decl a: bit<10>[2 bank 2];
+        if (true) {
+          a[0]
+        } else {
+          a[0]
+        };
+        a[1]
+        """ )
+    }
+    it("cannot create different capabilities in branches") {
+      assertThrows[InvalidCap] {
+        typeCheck("""
+          decl a: bit<10>[2 bank 2];
+          if (true) {
+            a[0] := 1;
+          } else {
+            let x = a[0];
+          }
+          """ )
+      }
+    }
   }
 
   describe("while loops") {

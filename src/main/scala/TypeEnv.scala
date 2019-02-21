@@ -34,7 +34,7 @@ object TypeEnv {
      *  @returns A new environment without the topmost scope, A Scope containing
      *           all bindings in the topmost scope.
      */
-    def endScope: (Environment, Scope[Id, Info])
+    def endScope: (Environment, Scope[Id, Info], Scope[Expr, Capability])
 
     /**
      * Type binding manipulation
@@ -90,11 +90,10 @@ object TypeEnv {
     def ++(binds: Scope[Id, Info]): Environment
 
     /**
-     * Merge this environment with [[that]]. The final env e' has two properties:
-     * 1. For each identifier id, e'.banks(id) <= this.banks(id) and e'.banks(id) <= that.banks(id)
-     * 2. For each expr, e'.cap(expr) >= this.cap(exp) and e'.cap(expr) >= that.cap(expr)
+     * Merge this environment with [[that]] to create e' such that for each
+     * identifier id, e'.banks(id) <= this.banks(id) and e'.banks(id) <=
+     * that.banks(id).
      * @assumes: this.getBoundIds == that.getBoundIds
-     * @throws [[InvalidCap]] If capabilities are inconsistent between the two environments.
      */
     def merge(that: Environment): Environment
 
@@ -102,11 +101,6 @@ object TypeEnv {
      * @returns a set with all the bound Ids in this environment
      */
     def getBoundIds: Set[Id]
-
-    /**
-     * @return a set of all expressions that have capabilites bound to them,
-     */
-    def getCapExprs: Set[Expr]
 
   }
 
@@ -160,7 +154,7 @@ object TypeEnv {
         case (dim, bankSet) => dim -> (that.conBanks(dim) union bankSet)
       })
       val avBanks = this.avBanks.map({
-        case (dim, bankSet) => dim -> (that.avBanks(dim) union bankSet)
+        case (dim, bankSet) => dim -> (that.avBanks(dim) intersect bankSet)
       })
       Info(id, typ, avBanks, conBanks)
     }
@@ -192,7 +186,7 @@ object TypeEnv {
     type CapScope = Map[Expr, Capability]
 
     def addScope = Env(Map[Id, Info]() :: typs, Map[Expr, Capability]() :: caps)
-    def endScope = (Env(typs.tail, caps.tail), typs.head)
+    def endScope = (Env(typs.tail, caps.tail), typs.head, caps.head)
     def apply(id: Id): Info = find(typs, id) match {
       case Some(info) => info
       case None => throw UnboundVar(id)
@@ -227,29 +221,7 @@ object TypeEnv {
     lazy val getBoundIds =
       typs.flatMap(m => m.keys).toSet
 
-    lazy val getCapExprs =
-      caps.flatMap(m => m.keys).toSet
-
-    /**
-     * XXX(rachit): This can be rewritten to be faster. Only rewrite it if
-     * it's a bottleneck.
-     */
     def merge(that: Environment): Environment = {
-      // For all capabilities in the intersection of this and that environment,
-      // check they are consistent with capabilites in that environment.
-      val commonCaps = this.getCapExprs & that.getCapExprs
-      commonCaps.foreach(e => {
-        val (c1, c2) = (this.getCap(e).get, that.getCap(e).get)
-        if (c1 != c2) throw InvalidCap(e, c1, c2)
-      })
-
-      // For all capabilities not in this environment, add bindings from the
-      // other environment
-      val missingCaps: Set[Expr] = that.getCapExprs -- this.getCapExprs
-      val env1 = missingCaps.foldLeft[Environment](this)({ case (env, expr) => {
-        env.addCap(expr, that.getCap(expr).get)
-      }})
-
       // Sanity check: The same set of ids are bound by both environments
       if (this.getBoundIds != that.getBoundIds) {
         throw Impossible(s"Trying to merge two environments which bind different sets of ids. Intersection of bind set: ${this.getBoundIds & that.getBoundIds}")
@@ -257,7 +229,7 @@ object TypeEnv {
 
       // For each bound id, set consumed banks to the union of consumed bank sets
       // from both environments
-      this.getBoundIds.foldLeft[Environment](env1)({ case (env, id) => {
+      this.getBoundIds.foldLeft[Environment](this)({ case (env, id) => {
         env.update(id, env(id) merge that(id))
       }})
     }
