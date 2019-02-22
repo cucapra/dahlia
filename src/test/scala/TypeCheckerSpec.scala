@@ -902,6 +902,22 @@ class TypeCheckerSpec extends FunSpec {
           let f: bit<32> = p.x;
           """ )
     }
+    it("cannot have fields missing") {
+      assertThrows[MissingField] {
+        typeCheck("""
+          record point { x: bit<32>; y: bit<32> };
+          let p: point = {x = 1};
+          """ )
+      }
+    }
+    it("cannot have extra fields") {
+      assertThrows[ExtraField] {
+        typeCheck("""
+          record point { x: bit<32>};
+          let p: point = {x = 1; y = 2};
+          """ )
+      }
+    }
   }
 
   // XXX(rachit): This seems like confusing behavior.
