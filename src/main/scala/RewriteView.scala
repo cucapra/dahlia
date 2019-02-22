@@ -1,5 +1,8 @@
 package fuselang
 
+import Syntax._
+import CodeGenHelpers._
+
 /**
  * AST pass to rewrite views into simple array accesses. Should be used after
  * type checking.
@@ -15,109 +18,82 @@ package fuselang
  * If `a` itself is a view, we keep rewriting it until we reach a true array.
  */
 object RewriteView {
-  import Syntax._
-  import CodeGenHelpers._
+  import Utils.State
 
-  // We can use a flat environment because the type checker makes sure things
-  // in the right scope.
   type T = Map[Id, List[Expr] => Expr]
 
-  def foldExprs(es: List[Expr])(implicit env: T): (List[Expr], T) =
-      es.foldLeft((List[Expr](), env))({
-        case ((idxsn, env), e) => {
-          val (e1, env1) = rewriteExpr(e)(env)
-          (e1 :: idxsn, env1)
-        }
-      })
-
-  def rewriteExpr(e: Expr)(implicit env: T): (Expr, T) = e match {
-    case EVar(_) | EInt(_, _) | EFloat(_) | EBool(_) | _:ERecAccess => e -> env
-    case ERecLiteral(fs) => {
-      // Don't need to fold over these. Rewriting expressions cannot change
-      // the context.
-      val nfs = fs.map({ case (id, exp) => id -> rewriteExpr(exp)._1})
-      ERecLiteral(nfs) -> env
-    }
-    case eb@EBinop(_, e1, e2) => {
-      val (e1n, env1) = rewriteExpr(e1)
-      val (e2n, env2) = rewriteExpr(e2)(env1)
-      eb.copy(e1 = e1n, e2 = e2n) -> env2
-    }
-    case eaa@EArrAccess(arrId, idxs) => {
-      val (idxsn, env1) = foldExprs(idxs)
-      // If the array id is a view array rewrite it and recur
+  def rewriteExpr(e: Expr): State[T, Expr] = e match {
+    case EVar(_) | EInt(_, _) | EFloat(_) | EBool(_) | _:ERecAccess => State.unit(e)
+    case eb@EBinop(_, e1, e2) => for {
+      e1n <- rewriteExpr(e1)
+      e2n <- rewriteExpr(e2)
+    } yield eb.copy(e1 = e1n, e2 = e2n)
+    case eaa@EArrAccess(arrId, idxs) => State { env =>
+      val (idxsn, env1) = State.foldLeft(rewriteExpr)(idxs)(env)
+      // If the array id is a view array rewrite it and recurr. The recursive
+      // call is needed to handle views on views.
       if (env.contains(arrId)) {
-        rewriteExpr(env(arrId)(idxsn))
+        rewriteExpr(env(arrId)(idxsn))(env1)
       } else {
         eaa.copy(idxs = idxsn) -> env1
       }
     }
-    case app@EApp(_, args) => {
-      val (argsn, env1) = foldExprs(args)
-      app.copy(args = argsn) -> env1
-    }
+    case app@EApp(_, args) => for {
+      argsn <- State.foldLeft(rewriteExpr)(args)
+    } yield app.copy(args = argsn)
   }
 
-  def rewriteCommand(c: Command)(implicit env: T): (Command, T) = c match {
-    case CPar(c1, c2) => {
-      val (c1n, env1) = rewriteCommand(c1)
-      val (c2n, env2) = rewriteCommand(c2)(env1)
-      CPar(c1n, c2n) -> env2
-    }
-    case CSeq(c1, c2) => {
-      val (c1n, env1) = rewriteCommand(c1)
-      val (c2n, env2) = rewriteCommand(c2)(env1)
-      CSeq(c1n, c2n) -> env2
-    }
-    case l@CLet(_, _, e) => {
-      val (en, env1) = rewriteExpr(e)
-      l.copy(e = en) -> env1
-    }
-    case CView(id, Shrink(arrId, dims)) => {
+  def rewriteC(c: Command): State[T, Command] = c match {
+    case CPar(c1, c2) => for {
+      c1n <- rewriteC(c1)
+      c2n <- rewriteC(c2)
+    } yield CPar(c1n, c2n)
+    case CSeq(c1, c2) => for {
+      c1n <- rewriteC(c1)
+      c2n <- rewriteC(c2)
+    } yield CSeq(c1n, c2n)
+    case l@CLet(_, _, e) => for {
+      en <- rewriteExpr(e)
+    } yield l.copy(e = en)
+    case CView(id, Shrink(arrId, dims)) => State { env =>
       val f = (es: List[Expr]) => EArrAccess(arrId, es.zip(dims).map({
         case (e, (idx, _, s)) => e + (idx * EInt(s))
       }))
       (CEmpty, env + (id -> f))
     }
-    case CIf(e1, c1, c2) => {
-      val (e1n, env1) = rewriteExpr(e1)
-      val (c1n, env2) = rewriteCommand(c1)(env1)
-      val (c2n, env3) = rewriteCommand(c2)(env2)
-      CIf(e1n, c1n, c2n) -> env3
-    }
-    case cf@CFor(_, c1, c2) => {
-      val (c1n, e1) = rewriteCommand(c1)
-      val (c2n, e2) = rewriteCommand(c2)(e1)
-      cf.copy(par = c1n, combine = c2n) -> e2
-    }
-    case cw@CWhile(_, c) => {
-      val (cn, e1) = rewriteCommand(c)
-      cw.copy(body = cn) -> e1
-    }
-    case CUpdate(e1, e2) => {
-      val (e1n, env1) = rewriteExpr(e1)
-      val (e2n, env2) = rewriteExpr(e2)(env1)
-      CUpdate(e1n, e2n) -> env2
-    }
-    case cr@CReduce(_, e1, e2) => {
-      val (e1n, env1) = rewriteExpr(e1)
-      val (e2n, env2) = rewriteExpr(e2)(env1)
-      cr.copy(lhs = e1n, rhs = e2n) -> env2
-    }
-    case CExpr(exp) => {
-      val (e1n, env1) = rewriteExpr(exp)
-      CExpr(e1n) -> env1
-    }
-    case CEmpty => c -> env
+    case CIf(e1, c1, c2) => for {
+      e1n <- rewriteExpr(e1)
+      c1n <- rewriteC(c1)
+      c2n <- rewriteC(c2)
+    } yield CIf(e1n, c1n, c2n)
+    case cf@CFor(_, c1, c2) => for {
+      c1n <- rewriteC(c1)
+      c2n <- rewriteC(c2)
+    } yield cf.copy(par = c1n, combine = c2n)
+    case cw@CWhile(_, c) => for {
+      cn <- rewriteC(c)
+    } yield cw.copy(body = cn)
+    case CUpdate(e1, e2) => for {
+      e1n <- rewriteExpr(e1)
+      e2n <- rewriteExpr(e2)
+    } yield CUpdate(e1n, e2n)
+    case cr@CReduce(_, e1, e2) => for {
+      e1n <- rewriteExpr(e1)
+      e2n <- rewriteExpr(e2)
+    } yield cr.copy(lhs = e1n, rhs = e2n)
+    case CExpr(exp) => for {
+      e1n <- rewriteExpr(exp)
+    } yield CExpr(e1n)
+    case CEmpty => State.unit(c)
   }
 
   def rewriteProg(p: Prog): Prog = {
     val emptyEnv = Map[Id, List[Expr] => Expr]()
     val fs = p.defs.map(defi => defi match {
-      case fdef@FuncDef(_, _, b) => fdef.copy(body = rewriteCommand(b)(emptyEnv)._1)
+      case fdef@FuncDef(_, _, b) => fdef.copy(body = rewriteC(b)(emptyEnv)._1)
       case _ => defi
     })
-    val cmdn = rewriteCommand(p.cmd)(emptyEnv)._1
+    val cmdn = rewriteC(p.cmd)(emptyEnv)._1
     p.copy(defs = fs, cmd = cmdn)
   }
 }
