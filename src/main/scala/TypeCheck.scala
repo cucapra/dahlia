@@ -278,8 +278,8 @@ object TypeChecker {
           })
 
           // Check there are no extra fields in the literal
-          (actualTypes.keys.toSet -- expTypes.keys.toSet).foreach({ case field => {
-            throw ExtraField(fs(field).pos, name, field)
+          (actualTypes.keys.toSet diff expTypes.keys.toSet).foreach({ case field => {
+            throw ExtraField(field.pos, name, field)
           }})
           env1.add(id, Info(id, recTyp))
         }
