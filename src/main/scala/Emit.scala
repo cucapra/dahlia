@@ -70,6 +70,9 @@ private class Emit extends PrettyPrinter {
       case None => throw Impossible("type information missins in exprToDoc")
     }
     case ERecAccess(rec, field) => rec <> dot <> field
+    case ERecLiteral(fs) => scope {
+      hsep(fs.toList.map({ case (id, expr) => "." <> id <+> "=" <+> expr }), comma)
+    }
   }
 
   implicit def cmdToDoc(c: Command): Doc = c match {

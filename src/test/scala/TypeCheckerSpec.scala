@@ -872,6 +872,38 @@ class TypeCheckerSpec extends FunSpec {
     }
   }
 
+  describe("Record Literals") {
+    it("can be defined with let") {
+      typeCheck("""
+        record point { x: bit<32>; y: bit<32> };
+        let p: point = {x = 1; y = 2 }
+        """ )
+    }
+    it("cannot be defined without explicit type in let") {
+      assertThrows[ExplicitRecTypeMissing] {
+        typeCheck("""
+          record point { x: bit<32>; y: bit<32> };
+          let p = {x = 1; y = 2 }
+          """ )
+      }
+    }
+    it("cannot be used inside expressions") {
+      assertThrows[RecLiteralNotInBinder] {
+        typeCheck("""
+          record point { x: bit<32>; y: bit<32> };
+          let p = 1 + {x = 1; y = 2 }
+          """ )
+      }
+    }
+    it("get the right type") {
+        typeCheck("""
+          record point { x: bit<32>; y: bit<32> };
+          let p: point = {x = 1; y = 2 };
+          let f: bit<32> = p.x;
+          """ )
+    }
+  }
+
   // XXX(rachit): This seems like confusing behavior.
   describe("Indexing with static var") {
     it("works without reassigning") {

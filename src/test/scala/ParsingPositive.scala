@@ -150,9 +150,9 @@ class ParsingTests extends org.scalatest.FunSuite {
   }
 
   test("records access") {
-    println(parseAst("""
+    parseAst("""
       let k = p.x;
-      """ ))
+      """ )
   }
 
 }

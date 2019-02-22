@@ -136,6 +136,7 @@ object Syntax {
   case class EBinop(op: BOp, e1: Expr, e2: Expr) extends Expr
   case class EArrAccess(id: Id, idxs: List[Expr]) extends Expr
   case class ERecAccess(rec: Expr, fieldName: Id) extends Expr
+  case class ERecLiteral(fields: Map[Id, Expr]) extends Expr
   case class EApp(func: Id, args: List[Expr]) extends Expr
   case class EVar(id: Id) extends Expr
 
