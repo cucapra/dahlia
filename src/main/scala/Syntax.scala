@@ -134,7 +134,6 @@ object Syntax {
   case class EFloat(f: Float) extends Expr
   case class EBool(v: Boolean) extends Expr
   case class EBinop(op: BOp, e1: Expr, e2: Expr) extends Expr
-  // TODO(rachit): Allow arbitrary exprs for arrId
   case class EArrAccess(id: Id, idxs: List[Expr]) extends Expr
   case class ERecAccess(rec: Expr, fieldName: Id) extends Expr
   case class EApp(func: Id, args: List[Expr]) extends Expr
@@ -192,7 +191,12 @@ object Syntax {
 
   sealed trait Definition extends Positional
   case class FuncDef(id: Id, args: List[Decl], body: Command) extends Definition
-  case class RecordDef(name: Id, fields: Map[Id, Type]) extends Definition
+  case class RecordDef(name: Id, fields: Map[Id, Type]) extends Definition {
+    fields.foreach({ case (f, t) => t match {
+      case _:TArray => throw ArrayInRecord(name, f, t)
+      case _ => ()
+    }})
+  }
 
   case class Decl(id: Id, typ: Type) extends Positional
   case class Prog(defs: List[Definition], decls: List[Decl], cmd: Command) extends Positional
