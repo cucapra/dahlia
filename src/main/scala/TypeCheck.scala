@@ -146,6 +146,7 @@ object TypeChecker {
     case EFloat(_) => TFloat() -> env
     case EInt(v, _) => TStaticInt(v) -> env
     case EBool(_) => TBool() -> env
+    case ERecLiteral(_) => throw RecLiteralNotInBinder(expr.pos)
     case EVar(id) => {
       // Add type information to variable
       id.typ = Some(env(id).typ);
@@ -252,6 +253,39 @@ object TypeChecker {
         case _ =>
           throw ReductionInvalidRHS(r.pos, rop, t1, ta)
       }
+    }
+    case l@CLet(id, typ, exp@ERecLiteral(fs)) => typ match {
+      case Some(typ) => resolveType(typ, env) match {
+        case recTyp@TRecType(name, expTypes) => {
+          // Typecheck expressions in the literal and generate a new id to type map.
+          val (env1, actualTypes) = fs.foldLeft((env, Map[Id, Type]()))({
+            case ((env, map), (id, exp)) => {
+              val (t, e1) = checkE(exp)(env, rres)
+              (e1, map + (id -> t))
+            }
+          })
+
+          // Check all fields have the expected type and the literal has all required fields.
+          expTypes.keys.foreach(field => {
+            val (eTyp, acTyp) = (expTypes(field), actualTypes.get(field))
+            if (acTyp.isDefined == false) {
+              throw MissingField(exp.pos, name, field)
+            }
+            if (acTyp.get :< eTyp == false) {
+              throw UnexpectedType(
+                fs(field).pos, "record literal", expTypes(field).toString, acTyp.get)
+            }
+          })
+
+          // Check there are no extra fields in the literal
+          (actualTypes.keys.toSet -- expTypes.keys.toSet).foreach({ case field => {
+            throw ExtraField(fs(field).pos, name, field)
+          }})
+          env1.add(id, Info(id, recTyp))
+        }
+        case t => throw UnexpectedType(exp.pos, "let", "record type", t)
+      }
+      case None => throw ExplicitRecTypeMissing(l.pos, id)
     }
     case l@CLet(id, typ, exp) => {
       // Check if the explicit type is bound in scope

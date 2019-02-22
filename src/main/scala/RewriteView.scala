@@ -32,6 +32,12 @@ object RewriteView {
 
   def rewriteExpr(e: Expr)(implicit env: T): (Expr, T) = e match {
     case EVar(_) | EInt(_, _) | EFloat(_) | EBool(_) | _:ERecAccess => e -> env
+    case ERecLiteral(fs) => {
+      // Don't need to fold over these. Rewriting expressions cannot change
+      // the context.
+      val nfs = fs.map({ case (id, exp) => id -> rewriteExpr(exp)._1})
+      ERecLiteral(nfs) -> env
+    }
     case eb@EBinop(_, e1, e2) => {
       val (e1n, env1) = rewriteExpr(e1)
       val (e2n, env2) = rewriteExpr(e2)(env1)

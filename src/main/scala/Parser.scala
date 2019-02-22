@@ -37,9 +37,15 @@ private class FuseParser extends RegexParsers with PackratParsers {
     expr ~ "." ~ iden ^^ { case rec ~ _ ~ f => ERecAccess(rec, f) }
   }
 
+  lazy val recLiteralField: P[(Id, Expr)] = iden ~ ("=" ~> expr) ^^ { case i ~ e => (i, e) }
+  lazy val recLiteral: P[Expr] = positioned {
+    braces(repsep(recLiteralField, ";")) ^^ { case fs => ERecLiteral(fs.toMap) }
+  }
+
   lazy val atom: P[Expr] = positioned {
     eaa |
     recAccess |
+    recLiteral |
     float ^^ { case f => EFloat(f) } |
     hex ^^ { case h => EInt(h, 16) } |
     octal ^^ { case o => EInt(o, 8) } |
@@ -208,7 +214,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
 
   // Definitions
   lazy val recordDef: P[RecordDef] = positioned {
-    "record" ~> iden ~ braces(rep1(args <~ ";")) <~ ";".? ^^ {
+    "record" ~> iden ~ braces(repsep(args, ";") <~ ";".?) <~ ";".? ^^ {
       case n ~ fs => RecordDef(n, fs.map(decl => decl.id -> decl.typ).toMap)
     }
   }

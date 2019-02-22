@@ -86,7 +86,15 @@ object Errors {
 
   // Record Errors
   case class UnknownRecordField(pos: Position, recType: Id, field: Id) extends TypeError(
-    s"Record type $recType has no field named $field.", pos)
+    s"Record type $recType has no field named `$field'.", pos)
+  case class RecLiteralNotInBinder(pos: Position) extends TypeError(
+    s"Record literal can only be bound by `let'. Found in context:", pos)
+  case class ExplicitRecTypeMissing(pos: Position, id: Id) extends TypeError(
+    s"Record literals require explict types. Missing type for `$id'.", pos)
+  case class MissingField(pos: Position, recType: Id, field: Id) extends TypeError(
+    s"Record literal of type $recType missing field `$field'", pos)
+  case class ExtraField(pos: Position, recType: Id, field: Id) extends TypeError(
+    s"Record literal of type $recType has an extra field `$field'", pos)
 
   // Parsing errors
   case class ParserError(msg: String) extends RuntimeException(msg)
