@@ -819,6 +819,15 @@ class TypeCheckerSpec extends FunSpec {
           """ )
       }
     }
+    it("cannot contain arrays") {
+      assertThrows[ArrayInRecord] {
+        typeCheck("""
+          record bars {
+            k: bit<10>[10];
+          }
+          """ )
+      }
+    }
     it("cannot rebind type alias") {
       assertThrows[AlreadyBoundType] {
         typeCheck("""
