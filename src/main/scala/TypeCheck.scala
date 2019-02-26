@@ -46,7 +46,7 @@ object TypeChecker {
     val funcsEnv = p.defs.foldLeft(emptyEnv)({ case (e, d) => checkDef(d, e) })
     val initEnv = p.decls.foldLeft(funcsEnv)({ case (env, Decl(id, typ)) =>
       id.typ = Some(typ);
-      env.add(id, Info(id, typ))
+      env.add(id, typ)
     })
     checkC(p.cmd)(initEnv, 1)
   }
@@ -56,10 +56,10 @@ object TypeChecker {
       val envWithArgs = args.foldLeft(env.addScope)({ case (env, Decl(id, typ)) =>
         val rTyp = resolveType(typ, env)
         id.typ = Some(rTyp);
-        env.add(id, Info(id, rTyp))
+        env.add(id, rTyp)
       })
       val bodyEnv = checkC(body)(envWithArgs, 1)
-      bodyEnv.endScope._1.add(id, Info(id, TFun(args.map(_.typ))))
+      bodyEnv.endScope._1.add(id, TFun(args.map(_.typ)))
     }
     case RecordDef(name, fields) => {
       val rFields = fields.map({ case (k, t) => k -> resolveType(t, env) })
@@ -281,7 +281,7 @@ object TypeChecker {
           (actualTypes.keys.toSet diff expTypes.keys.toSet).foreach({ case field => {
             throw ExtraField(field.pos, name, field)
           }})
-          env1.add(id, Info(id, recTyp))
+          env1.add(id, recTyp)
         }
         case t => throw UnexpectedType(exp.pos, "let", "record type", t)
       }
@@ -292,9 +292,9 @@ object TypeChecker {
       val rTyp = typ.map(resolveType(_, env))
       val (t, e1) = checkE(exp)
       rTyp match {
-        case Some(t2) if t :< t2 => e1.add(id, Info(id, t2))
+        case Some(t2) if t :< t2 => e1.add(id, t2)
         case Some(t2) => throw UnexpectedType(exp.pos, "let", t.toString, t2)
-        case None => l.typ = Some(t); e1.add(id, Info(id, t))
+        case None => l.typ = Some(t); e1.add(id, t)
       }
     }
     case CView(id, k@Shrink(arrId, vdims)) => env(arrId).typ match {
@@ -327,14 +327,14 @@ object TypeChecker {
         }})
         // Add view into scope
         val typ = TArray(t, vdims.map({ case (_, w, _) => (w, w) }))
-        env1.add(id, Info(id, typ))
+        env1.add(id, typ)
       }
       case t => throw UnexpectedType(cmd.pos, "shrink view", "array", t)
     }
     case CFor(range, par, combine) => {
       val iter = range.iter
       // Add binding for iterator in a separate scope.
-      val e1 = env.addScope.add(iter, Info(iter, range.idxType)).addScope
+      val e1 = env.addScope.add(iter, range.idxType).addScope
       // Check for body and pop the scope.
       val (e2, binds, _) = checkC(par)(e1, range.u * rres).endScope
       // Create scope where ids bound in the parallel scope map to fully banked arrays.

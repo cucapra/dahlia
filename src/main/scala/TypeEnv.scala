@@ -11,21 +11,26 @@ object TypeEnv {
   case object Read extends Capability
   case object Write extends Capability
 
-  val emptyEnv: Environment = Env()
+  val emptyEnv: Environment = Env()(1)
 
   // Product of all unroll factors enclosing the current context.
   type ReqResources = Int
 
   /**
-   * An Environment to keep track of the types associated with identifiers
-   * and capabilities associated with expressions. An environment is a
-   * chain of scopes. Interface provides methods to manipulate scopes and bindings.
+   * An environment keep tracks of information for type checking:
+   * - The typedefs bound at the start of the program.
+   * - The association of Identifiers to corresponding types.
+   * - The association of Expressions to the capabilities acquired.
+   * - Number of resources nested unrolled contexts imply.
+   * The environment structure is built using a chain of scope over the
+   * last two associations. A scope is a logical grouping of assoication
+   * corresponding to lexical scope in programs.
    */
   trait Environment {
 
     // A Scope in the environment. A scope is a collection of bindings in the
     // current lexical scope.
-    type Scope[K, V] = Map[K, V]
+    private type Scope[K, V] = Map[K, V]
 
     /**
      * Methods to manipulate type defs. Since the typedefs are top level,
@@ -76,7 +81,7 @@ object TypeEnv {
      * @return A new environment which contains the mapping.
      * @throws [[AlreadyBound]] if a bindings for Id already exists.
      */
-    def add(id: Id, typ: Info): Environment
+    def add(id: Id, typ: Type): Environment
 
     /**
      * Update bindings associated with Id. Method traverses the entire scope chain.
@@ -110,7 +115,7 @@ object TypeEnv {
      * @returns A new environment with all the bindings in the environment.
      */
     def ++(binds: Scope[Id, Info]): Environment =
-      binds.foldLeft[Environment](this)({ case (e, b) => e.add(b._1, b._2) })
+      binds.foldLeft[Environment](this)({ case (e, b) => e.add(b._1, b._2.typ) })
 
     /**
      * Merge this environment with [[that]] to create e' such that for each
@@ -143,7 +148,8 @@ object TypeEnv {
   private case class Env(
     typeMap: ScopedMap[Id, Info] = ScopedMap(),
     capMap: ScopedMap[Expr, Capability] = ScopedMap(),
-    typeDefMap: Map[Id, Type] = Map()) extends Environment {
+    typeDefMap: Map[Id, Type] = Map())
+    (implicit val rres: Int) extends Environment {
 
     type TypeScope = Map[Id, Info]
     type CapScope = Map[Expr, Capability]
@@ -190,7 +196,7 @@ object TypeEnv {
       case None => throw UnboundVar(id)
     }
 
-    def add(id: Id, inf: Info) = typeMap.add(id, inf.copy(typ = resolveType(inf.typ))) match {
+    def add(id: Id, typ: Type) = typeMap.add(id, Info(id, resolveType(typ))) match {
       case None => throw AlreadyBound(id)
       case Some(tMap) => this.copy(typeMap = tMap)
     }
