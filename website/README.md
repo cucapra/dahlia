@@ -1,16 +1,88 @@
-Seashell Demo
--------------
+This website was created with [Docusaurus](https://docusaurus.io/).
 
-This folder contains the code to generate the UI for the  client-side demo for
-Seashell.
+# Table of contents
 
-### Build Instructions
+* [Get Started in 5 Minutes](#get-started-in-5-minutes)
+* [Adding Content](#adding-content)
+* [Full Documentation](#full-documentation)
 
-The following commands only rebuild the UI code. If the ocaml code changes,
-navigate to the repository's top and run `make local-website` and `firefox
-website/dist/index.html` to view the updated demo page.
+# Get started
 
-1. Install `yarn` for JS package management.
-2. Run `yarn install` to install deps.
-3. Run `yarn build` if making local changes. Run `make demo` from repo top if
-   changing ocaml.
+1. Make sure all the dependencies for the website are installed:
+
+```sh
+# Install dependencies
+$ yarn
+```
+2. Run your dev server:
+
+```sh
+# Start the site
+$ yarn start
+```
+
+The dev website will be located at [localhost:3000/seashell][]
+
+# Adding Content
+
+## Adding a new docs page to an existing sidebar
+
+1. Create the doc as a new markdown file in `/docs`, example `docs/newly-created-doc.md`:
+
+```md
+---
+id: newly-created-doc
+title: This Doc Needs To Be Edited
+---
+
+My new content here..
+```
+
+1. Refer to that doc's ID in an existing sidebar in `website/sidebar.json`:
+
+```javascript
+// Add newly-created-doc to the Getting Started category of docs
+{
+  "docs": {
+    "Getting Started": [
+      "quick-start",
+      "newly-created-doc" // new doc here
+    ],
+    ...
+  },
+  ...
+}
+```
+
+For more information about adding new docs, click [here](https://docusaurus.io/docs/en/navigation)
+
+## Adding items to your site's top navigation bar
+
+1. Add links to docs, custom pages or external links by editing the headerLinks field of `website/siteConfig.js`:
+
+`website/siteConfig.js`
+```javascript
+{
+  headerLinks: [
+    ...
+    /* you can add docs */
+    { doc: 'my-examples', label: 'Examples' },
+    /* you can add custom pages */
+    { page: 'help', label: 'Help' },
+    /* you can add external links */
+    { href: 'https://github.com/facebook/Docusaurus', label: 'GitHub' },
+    ...
+  ],
+  ...
+}
+```
+
+For more information about the navigation bar, click [here](https://docusaurus.io/docs/en/navigation)
+
+# Full Documentation
+
+Full documentation can be found on the [website](https://docusaurus.io/).
+
+# Deployment
+
+The website is automatically deployed by hooknook githooks.
