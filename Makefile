@@ -8,4 +8,4 @@ install:
 
 # Rsync the docs and the website
 website:
-	$(MAKE) -C docs deploy
+	$(MAKE) -C notes deploy
