@@ -153,6 +153,12 @@ class ParsingTests extends org.scalatest.FunSuite {
     parseAst("""
       let k = p.x;
       """ )
+    parseAst("""
+      let k = foo[i].x;
+      """ )
+    parseAst("""
+      let k = rec.po.x;
+      """ )
   }
 
 }

@@ -33,18 +33,13 @@ private class FuseParser extends RegexParsers with PackratParsers {
     iden ~ rep1(brackets(expr)) ^^ { case id ~ idxs => EArrAccess(id, idxs) }
   }
 
-  lazy val recAccess: P[Expr] = positioned {
-    expr ~ "." ~ iden ^^ { case rec ~ _ ~ f => ERecAccess(rec, f) }
-  }
-
   lazy val recLiteralField: P[(Id, Expr)] = iden ~ ("=" ~> expr) ^^ { case i ~ e => (i, e) }
   lazy val recLiteral: P[Expr] = positioned {
     braces(repsep(recLiteralField, ";")) ^^ { case fs => ERecLiteral(fs.toMap) }
   }
 
-  lazy val atom: P[Expr] = positioned {
+  lazy val simpleAtom: P[Expr] = positioned {
     eaa |
-    recAccess |
     recLiteral |
     float ^^ { case f => EFloat(f) } |
     hex ^^ { case h => EInt(h, 16) } |
@@ -54,6 +49,11 @@ private class FuseParser extends RegexParsers with PackratParsers {
     iden ~ parens(repsep(expr, ",")) ^^ { case f ~ args => EApp(f, args) } |
     iden ^^ { case id => EVar(id) } |
     parens(expr)
+  }
+
+  lazy val recAccess: P[Expr] = positioned {
+    recAccess ~ "." ~ iden ^^ { case rec ~ _ ~ f => ERecAccess(rec, f) } |
+    simpleAtom
   }
 
   // Binops. Need to parse them seperately from EBinop to get positions.
@@ -89,8 +89,8 @@ private class FuseParser extends RegexParsers with PackratParsers {
   // for C/C++: https://en.cppreference.com/w/c/language/operator_precedence
   // The tower-like structure is required to implement precedence correctly.
   lazy val binMul: P[Expr] = positioned {
-    atom ~ mulOps ~ binMul ^^ { case l ~ op ~ r => EBinop(op, l, r)} |
-    atom
+    recAccess ~ mulOps ~ binMul ^^ { case l ~ op ~ r => EBinop(op, l, r)} |
+    recAccess
   }
   lazy val binAdd: P[Expr] = positioned {
     binMul ~ addOps ~ binAdd ^^ { case l ~ op ~ r => EBinop(op, l, r)} |

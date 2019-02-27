@@ -45,8 +45,9 @@ object TypeChecker {
   def typeCheck(p: Prog) = {
     val funcsEnv = p.defs.foldLeft(emptyEnv)({ case (e, d) => checkDef(d, e) })
     val initEnv = p.decls.foldLeft(funcsEnv)({ case (env, Decl(id, typ)) =>
-      id.typ = Some(typ);
-      env.add(id, typ)
+      val rTyp = resolveType(typ, env);
+      id.typ = Some(rTyp)
+      env.add(id, rTyp)
     })
     checkC(p.cmd)(initEnv, 1)
   }
@@ -67,8 +68,10 @@ object TypeChecker {
     }
   }
 
-  private def resolveType(typ: Type, env: Environment) = typ match {
+  private def resolveType(typ: Type, env: Environment): Type = typ match {
     case TAlias(n) => env.getType(n)
+    case TFun(args) => TFun(args.map(resolveType(_, env)))
+    case arr@TArray(t, _) => arr.copy(typ = resolveType(t, env))
     case t => t
   }
 
