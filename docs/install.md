@@ -1,13 +1,11 @@
-# Fuse
-
-[![CircleCI](https://circleci.com/gh/cucapra/seashell.svg?style=svg)](https://circleci.com/gh/cucapra/seashell)
+---
+id: installation
+title: Installation
+---
 
 Fuse is a programming language for designing hardware accelerators.
 It provides abstractions that guarantee hardware realizability after type checking.
 For more details, see [the documentation][docs].
-
-[docs]: https://capra.cs.cornell.edu/seashell/docs/index.html
-
 
 ## Set It Up
 
@@ -45,18 +43,3 @@ To compile a simple test, for example, run:
     $ ./fuse src/test/resources/should-compile/matadd.sea
 
 The compiler produces HLS C source code on its standard output.
-
-## Documentation
-
-The documentation is hosted [here](https://cucapra.github.io/seashell). We
-use [Docusaurus](https://docusaurus.io/en/) to generate our documentation.
-
-### Source
-
-Because of how Docusaurus is structured, the website is stored in the `website/`
-directory and the documentation files are stored in `docs/`.
-
-### Building
-
-We use github pages to deploy the page. Read the README under `website/` for
-instructions.

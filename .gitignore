@@ -13,3 +13,5 @@ docs/*pdf
 ensime.sbt
 .ensime_cache
 .ensime
+
+node_modules/

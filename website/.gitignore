@@ -1,4 +1,1 @@
-node_modules
-bundle.js
-index.html
-seashell.js
+build/
