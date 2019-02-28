@@ -1,12 +1,6 @@
 #ifndef _GEMM_H_
 #define _GEMM_H_
 
-//#define SDX
-
-//Standard Libraries
-//#include <stdio.h>
-//#include <stdlib.h>
-
 //Define compute data type
 //#define TYPE double
 #define TYPE float
