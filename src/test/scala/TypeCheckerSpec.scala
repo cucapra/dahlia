@@ -769,15 +769,13 @@ class TypeCheckerSpec extends FunSpec {
         """ )
     }
 
-    it("with arithmetic cannot be used for access") {
-      assertThrows[InvalidIndex] {
-        typeCheck("""
-          decl a: bit<10>[10];
-          for (let i = 0..10) {
-            a[i * 2];
-          }
-          """ )
-      }
+    it("with arithmetic, can be used for access") {
+      typeCheck("""
+        decl a: bit<10>[10];
+        for (let i = 0..10) {
+          a[i * 2];
+        }
+        """ )  
     }
   }
 
@@ -920,16 +918,16 @@ class TypeCheckerSpec extends FunSpec {
     }
   }
 
-  // XXX(rachit): This seems like confusing behavior.
-  describe("Indexing with static var") {
-    it("works without reassigning") {
-      typeCheck("decl a: bit<32>[10]; let x = 1; a[x]")
+  describe("Indexing with dynamic (sized) var") {
+    it("works with an unbanked array") {
+      typeCheck("decl a: bit<10>[10]; decl x: bit<10>; a[x] := 5")
     }
-    it("doesnt work with reassigning") {
-      assertThrows[InvalidIndex] {
-        typeCheck("decl a: bit<32>[10]; let x = 1; x := 2; a[x]")
+    it ("doesn't work with banked array") {
+      assertThrows[InvalidDynamicIndex] {
+        typeCheck("decl a: bit<10>[10 bank 5]; decl x: bit<10>; a[x] := 5")
       }
     }
   }
+
 
 }

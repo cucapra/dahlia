@@ -42,6 +42,9 @@ object Errors {
   case class AlreadyConsumed(id: Id, dim: Int, bank: Int) extends TypeError(
     s"Bank $bank in dimension $dim of $id already consumed.")
 
+  case class InvalidDynamicIndex(id:Id, bf:Int) extends TypeError(
+    s"Dynamic access of array $id requires unbanked array. Actual banking factor: $bf. Use a shrink view to create unbanked array.", id.pos)
+
   // Invalid Capability error
   case class InvalidCap(expr: Expr, exp: Capability, actual: Capability) extends TypeError(
     s"This expression requires $exp capability, but previous usage inferred $actual capability.", expr.pos)
