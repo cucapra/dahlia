@@ -1,0 +1,16 @@
+def stencil (orig: float[24 bank 3][24 bank 3], sol: float[24][24], filter: float[3 bank 3][3 bank 3] ) {
+
+    for (let r = 0..22) {
+        for (let c = 0..22) {
+            view v_orig = shrink orig[3: r][3: c];
+            for (let k1 = 0..3) unroll 3 {
+                for (let k2 = 0..3) unroll 3 {
+                    let mul = filter[k1][k2] * v_orig[k1][k2];
+                } combine {
+                    sol[r][c] += mul;
+                }
+            }
+        }
+    }
+
+}
