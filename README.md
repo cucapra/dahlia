@@ -48,7 +48,7 @@ The compiler produces HLS C source code on its standard output.
 
 ## Documentation
 
-The documentation is hosted [here](https://cucapra.github.io/seashell). We
+The documentation is hosted [here][docs]. We
 use [Docusaurus](https://docusaurus.io/en/) to generate our documentation.
 
 ### Source
