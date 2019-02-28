@@ -16,6 +16,11 @@ object Main {
       .action((x, c) => c.copy(srcFile = x))
       .text("source code file")
 
+    opt[String]('o', "out")
+      .valueName("<outfile>")
+      .action((f, c) => c.copy(output = Some(f)))
+      .text("Output code in a file. Emits code to standard out if absent.")
+
     opt[String]('n', "name")
       .valueName("<kernel>")
       .validate(x =>
@@ -25,12 +30,15 @@ object Main {
       .text("Name of the top level function. Default name is `kernel`.")
   }
 
-  def main(args: Array[String]) = {
+  def main(args: Array[String]): Unit = {
 
     parser.parse(args, Config(null)) match {
       case Some(c) => {
-        val prog = new String(Files.readAllBytes(c.srcFile.toPath()))
-        println(Compiler.compileString(prog, c))
+        val prog = new String(Files.readAllBytes(c.srcFile.toPath))
+        c.output match {
+          case Some(out) => Compiler.compileStringToFile(prog, c, out)
+          case None => println(Compiler.compileString(prog, c))
+        }
       }
       case None => {
         sys.exit(1)
