@@ -13,7 +13,7 @@ object Compiler {
     VivadoBackend.emitProg(rast, c)
   }
 
-  def compileString(prog: String, c: Utils.Config) = Try {
+  def compileString(prog: String, c: Config) = Try {
     compileStringWithError(prog, c)
   } match {
     case Success(out) => out
@@ -23,4 +23,16 @@ object Compiler {
       "[" + Console.RED + "Error" + Console.RESET + "] " + f.getMessage
     case Failure(f) => throw f
   }
+
+  def compileStringToFile(prog: String, c: Config, out: String): Unit = {
+    import java.nio.file.{Files, Paths, StandardOpenOption}
+
+    Files.write(
+      Paths.get(out),
+      compileString(prog, c).toCharArray.map(_.toByte),
+      StandardOpenOption.CREATE_NEW,
+      StandardOpenOption.WRITE)
+    ()
+  }
+
 }
