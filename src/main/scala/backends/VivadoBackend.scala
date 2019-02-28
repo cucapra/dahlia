@@ -1,6 +1,10 @@
-package fuselang
+package fuselang.backend
 
 import org.bitbucket.inkytonik.kiama.output._
+import fuselang.{Backend, Utils}
+import fuselang.Syntax._
+import fuselang.Errors._
+import fuselang.CodeGenHelpers._
 
 /**
  * This class aggressively uses Scala's implicitConversions. Make sure
@@ -10,12 +14,9 @@ import org.bitbucket.inkytonik.kiama.output._
  * We also use the Kiama pretty printer combinators to generate the code.
  * For reference: https://bitbucket.org/inkytonik/kiama/src/master/wiki/PrettyPrinting.md?fileviewer=file-view-default
  */
-private class Emit extends PrettyPrinter {
+private class VivadoBackend extends Backend with PrettyPrinter {
 
   import scala.language.implicitConversions
-  import Syntax._
-  import Errors._
-  import CodeGenHelpers._
 
   override val defaultIndent = 2
 
@@ -50,7 +51,7 @@ private class Emit extends PrettyPrinter {
     case _:TVoid => "void"
     case _:TBool | _:TIndex | _:TStaticInt => "int"
     case _:TFloat => "float"
-    case _:TSizedInt => value(typ)
+    case TSizedInt(s) => s"ap_int<$s>"
     case TArray(typ, _) => typ
     case TRecType(n, _) => n
     case _:TFun => throw Impossible("Cannot emit function types")
@@ -143,7 +144,7 @@ private class Emit extends PrettyPrinter {
     super.pretty(progToDoc(p, c)).layout
 }
 
-object Emit {
-  private val emitter = new Emit()
+object VivadoBackend {
+  private val emitter = new VivadoBackend()
   def emitProg = emitter.emitProg _
 }
