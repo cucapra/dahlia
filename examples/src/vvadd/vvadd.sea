@@ -1,0 +1,15 @@
+/////////////////////////////////////////////
+// vvadd
+// - This application uses two banked arrays as input,
+// one banked array as output, regular banking with each
+// unroll accessing different bank and all operands are
+// banked arrays of similar parameters
+////////////////////////////////////////////
+
+def madd(a: float[1024 bank 32], b: float[1024 bank 32], c: float[1024 bank 32]) {
+
+  for (let i = 0..1024) unroll 32 {
+    c[i] := a[i] + b[i];
+  }
+
+}
