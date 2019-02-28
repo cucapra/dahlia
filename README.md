@@ -6,7 +6,7 @@ Fuse is a programming language for designing hardware accelerators.
 It provides abstractions that guarantee hardware realizability after type checking.
 For more details, see [the documentation][docs].
 
-[docs]: https://capra.cs.cornell.edu/seashell/docs/index.html
+[docs]: https://capra.cs.cornell.edu/fuse
 
 
 ## Set It Up
