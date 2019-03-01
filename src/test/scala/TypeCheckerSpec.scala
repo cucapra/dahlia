@@ -7,6 +7,13 @@ import org.scalatest.FunSpec
 
 class TypeCheckerSpec extends FunSpec {
 
+  describe("Let without type") {
+    it("infers dynamic type for static numbers") {
+      val e1 = typeCheck("let x = 1")
+      assert(e1("x").typ === TSizedInt(1))
+    }
+  }
+
   describe("Let with explicit type") {
     it("assigns explicit type") {
       val e1 = typeCheck("let x: bit<16> = 1;")
@@ -19,13 +26,13 @@ class TypeCheckerSpec extends FunSpec {
     }
 
     it("disallows using smaller sized int in assignment") {
-      assertThrows[UnexpectedType] {
+      assertThrows[UnexpectedSubtype] {
         typeCheck("decl a: bit<16>; let x: bit<8> = a;")
       }
     }
 
     it("RHS type must be equal to LHS type") {
-      assertThrows[UnexpectedType] {
+      assertThrows[UnexpectedSubtype] {
         typeCheck("let x: bit<16> = true")
       }
     }
@@ -180,9 +187,9 @@ class TypeCheckerSpec extends FunSpec {
         typeCheck("1 || 2")
       }
     }
-    it("adding static ints performs type level computation") {
+    it("adding static ints does NOT perform type level computation") {
       val e1 = typeCheck("let x = 1; let y = 2; let z = x + y;")
-      assert(e1("z").typ === TStaticInt(3))
+      assert(e1("z").typ === TSizedInt(2))
     }
     it("result of addition upcast to subtype join") {
       val e3 = typeCheck("decl x: bit<32>; decl y: bit<16>; let z = x + y")
@@ -195,17 +202,6 @@ class TypeCheckerSpec extends FunSpec {
       assertThrows[UnexpectedSubtype] {
         typeCheck("let x = 1; x := 2.5")
       }
-    }
-
-    it("can reassign static type (upcast to SizedInt)") {
-      // Assignment to static ints loses information
-      val e1 = typeCheck("let x = 1; x := 2;")
-      assert(e1("x").typ === TSizedInt(32), "assiging static := static")
-    }
-
-    it("can reassign static type to decl (upcast to join)") {
-      val e2 = typeCheck("decl y: bit<64>; let x = 1; x := y;")
-      assert(e2("x").typ === TSizedInt(64), "assigning static := dynamic")
     }
 
     it("can reassign decl") {
@@ -320,7 +316,7 @@ class TypeCheckerSpec extends FunSpec {
     it("outside a loop with fully banked array") {
       typeCheck("""
         decl a: bit<64>[10 bank 10];
-        let sum = 0;
+        let sum: bit<64> = 0;
         sum += a;
         """ )
     }
@@ -328,7 +324,7 @@ class TypeCheckerSpec extends FunSpec {
     it ("fully unrolled loop and fully banked array") {
       typeCheck("""
         decl a: bit<64>[10 bank 10];
-        let sum = 0;
+        let sum: bit<64> = 0;
         for (let i = 0..10) unroll 10 {
           let v = a[i]
           } combine {
@@ -342,7 +338,7 @@ class TypeCheckerSpec extends FunSpec {
     it("without unrolling") {
       typeCheck("""
         decl a: bit<64>[10];
-        let sum = 0;
+        let sum: bit<64> = 0;
         for (let i = 0..10) {
           let x = a[i]
           } combine {
@@ -354,7 +350,7 @@ class TypeCheckerSpec extends FunSpec {
     it("with unrolling") {
       typeCheck("""
         decl a: bit<64>[10 bank 5];
-        let sum = 0;
+        let sum: bit<64> = 0;
         for (let i = 0..10) unroll 5  {
           let x = a[i]
           } combine {
@@ -744,6 +740,17 @@ class TypeCheckerSpec extends FunSpec {
       typeCheck("""
         for (let i = 0..10) {
           let x = i * 2;
+        }
+        """ )
+    }
+
+    it("can be used for comparisons") {
+      typeCheck("""
+        let temp = 0;
+        for (let i = 0..10) {
+          if (i == temp) {
+            let x = 0;
+          }
         }
         """ )
     }
