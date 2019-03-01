@@ -19,8 +19,8 @@ let img_odd = 0;
 while (span == 0) {
 	for (let odd = 0..32) {
 		if (odd >= span) {
-			odd := odd | span;
-			even := odd ^ span;
+			//odd := odd | span;
+			//even := odd ^ span;
 
 			real_even := real[even];
 			---
