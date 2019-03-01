@@ -1,0 +1,71 @@
+def local_scan(bucket: bit<32>[10]) {
+	let bad = 5;
+}
+
+def sum_scan(bucket: bit<32>[10], sum: bit<32>[5]) {
+	let bad = 5;
+}
+
+def last_step_scan(bucket: bit<32>[10], sum: bit<32>[5]) {
+	let bad = 5;
+}
+
+def init(bucket: bit<32>[10]) {
+	let bad = 5;
+}
+
+def hist(bucket: bit<32>[10], a: bit<32>[40], exp: bit<32>) {
+	let bad = 5;
+}
+
+def update(b: bit<32>[40], bucket: bit<32>[10], a: bit<32>[40], exp: bit<32>) {
+
+  let bucket_idx = 0;
+  let elem_per_block = 10;
+  let a_idx = 0;
+
+  let bucket_temp = 0;
+
+  for (let block_id = 0..10) {
+    for (let i = 0..4) {
+      bucket_idx := ((a[block_id * elem_per_block + i]));
+      ---
+      a_idx := block_id * elem_per_block + i;
+      ---
+      b[bucket[bucket_idx]] := a[a_idx];
+      ---
+      bucket_temp := bucket[bucket_idx];
+      ---
+      bucket[bucket_idx] := bucket_temp + 1;
+    }
+  }
+}
+
+decl a: bit<32>[40];
+decl b: bit<32>[40];
+decl bucket: bit<32>[10];
+decl sum: bit<32>[5];
+
+let valid_buffer = 0;
+let buffer_a = 0;
+let buffer_b = 1;
+
+for (let exp = 0..16) {
+
+	init(bucket);
+	---
+	if (valid_buffer == buffer_a) {
+		hist(bucket, a, exp);
+	}
+	---
+	if (valid_buffer == buffer_b) {
+		hist(bucket, a, exp);
+	}
+	---
+	local_scan(bucket);
+	---
+	sum_scan(bucket, sum);
+	---
+	last_step_scan(bucket, sum);
+
+}
