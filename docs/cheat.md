@@ -163,7 +163,7 @@ decl a: bit<32>[8 bank 4];
 view v = shrink a[2 * i : 2];
 ```
 
-### Program Structure
+## Program Structure
 
 A fuse program has the following structure:
 ```C
