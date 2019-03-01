@@ -1,5 +1,8 @@
 package fuselang
 
+import backend.VivadoBackend
+import backend.Backend
+
 import java.io.File
 
 object Utils {
@@ -9,7 +12,8 @@ object Utils {
   case class Config(
     srcFile: File, // Required: Name of the source file
     kernelName: String = "kernel", // Name of the kernel to emit
-    output: Option[String] = None // Name of output file.
+    output: Option[String] = None, // Name of output file.
+    backend: Backend = VivadoBackend
   )
 
 }

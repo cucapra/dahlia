@@ -1,7 +1,6 @@
 package fuselang
 
 import scala.util.{Try, Success, Failure}
-import backend.VivadoBackend
 import Utils._
 
 object Compiler {
@@ -10,7 +9,7 @@ object Compiler {
     val ast = FuseParser.parse(prog)
     TypeChecker.typeCheck(ast)
     val rast = RewriteView.rewriteProg(ast)
-    VivadoBackend.emitProg(rast, c)
+    c.backend.emitProg(rast, c)
   }
 
   def compileString(prog: String, c: Config) = Try {
