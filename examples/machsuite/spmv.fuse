@@ -1,0 +1,26 @@
+decl val: bit<32>[50];
+decl cols: bit<32>[50];
+decl row_delimiters: bit<32>[25];
+decl vec: bit<32>[10];
+decl out: bit<32>[10];
+
+let sum = 0;
+let si = 0;
+
+let tmp_begin = 0;
+let tmp_end = 0;
+let j = 0;
+
+for (let i = 0..10) {
+  sum := 0;
+  si := 0;
+  tmp_begin := row_delimiters[i];
+  tmp_end := row_delimiters[i];
+
+  j := tmp_begin;
+  while (j < tmp_end) {
+    si := val[j] * vec[cols[j]];
+    sum := sum + si;
+  };
+  out[i] := sum;
+}
