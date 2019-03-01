@@ -935,5 +935,47 @@ class TypeCheckerSpec extends FunSpec {
     }
   }
 
+  describe("subtyping relations") {
+    ignore("static ints are always subtypes") {
+      typeCheck("1 == 2")
+    }
 
+    it("smaller sized ints are subtypes of larger sized ints") {
+      typeCheck("""
+        decl x: bit<16>;
+        decl y: bit<32>;
+        x == y
+        """ )
+    }
+
+    it("static ints are subtypes of index types") {
+      typeCheck("""
+        for (let i = 0..12) {
+          i == 1
+        }
+        """ )
+    }
+
+    it("index types are subtypes of sized ints") {
+      typeCheck("""
+        decl x: bit<32>;
+        for (let i = 0..12) {
+          i == x
+        }
+        """ )
+    }
+
+    it("Array subtyping is not allowed") {
+      assertThrows[UnexpectedSubtype] {
+        typeCheck("""
+          def foo(b: bit<10>[10]) {
+            b[0] := 10; // overflows
+          }
+
+          decl a: bit<2>[10];
+          foo(a)
+          """ )
+      }
+    }
+  }
 }

@@ -27,7 +27,10 @@ object Subtyping {
     case (TSizedInt(v1), TSizedInt(v2)) => v1 <= v2
     case (_:IntType, _:TSizedInt) => true
     case (_:TStaticInt, _:TIndex) => true
-    case (TArray(tsub, _), TArray(tsup, _)) => isSubtype(tsup, tsub)
+    case (TArray(tsub, _), TArray(tsup, _)) => {
+      // Arrays are mutable so we are conservative and disallow subtyping.
+      areEqual(tsup, tsub)
+    }
     case _ => areEqual(sub, sup)
   }
 
