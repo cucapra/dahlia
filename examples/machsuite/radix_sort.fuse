@@ -15,11 +15,29 @@ def local_scan(bucket: bit<32>[10]) {
 }
 
 def sum_scan(bucket: bit<32>[10], sum: bit<32>[5]) {
-	let bad = 5;
+  let bucket_idx = 0;
+  let sum_tmp = 0;
+  //sum[0] := 0;
+  //---
+  for (let radix_id = 1..10) {
+    bucket_idx := radix_id * 10 - 1;
+    sum_tmp := sum[radix_id - 1];
+    ---
+    sum[radix_id] := sum_tmp + bucket[bucket_idx];
+  }
 }
 
 def last_step_scan(bucket: bit<32>[10], sum: bit<32>[5]) {
-	let bad = 5;
+  let bucket_idx = 0;
+  let bucket_tmp = 0;
+  for (let radix_id = 0..10) {
+    for (let i = 0..5) {
+      bucket_idx := radix_id * 5 + i;
+      bucket_tmp := bucket[bucket_idx];
+      ---
+      bucket[bucket_idx] := bucket_tmp + sum[radix_id];
+    }
+  }
 }
 
 def init(bucket: bit<32>[10]) {
@@ -77,7 +95,6 @@ let buffer_a = 0;
 let buffer_b = 1;
 
 for (let exp = 0..16) {
-
   init(bucket);
   ---
   if (valid_buffer == buffer_a) {
@@ -93,5 +110,4 @@ for (let exp = 0..16) {
   sum_scan(bucket, sum);
   ---
   last_step_scan(bucket, sum);
-
 }
