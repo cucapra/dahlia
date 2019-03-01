@@ -2,7 +2,6 @@ package fuselang
 
 import scala.math.{max,log10,ceil}
 import Syntax._
-import Errors.NoJoin
 
 /**
  * Subtyping relations are only defined over the number hierarchy. Read 't1 < t2'
@@ -47,6 +46,7 @@ object Subtyping {
   def areEqual(t1: Type, t2: Type) = (t1, t2) match {
     case (TStaticInt(v1), TStaticInt(v2)) => v1 == v2
     case (_:TIndex, _:TIndex) => true
+    case (_:TFloat, _:TFloat) => true
     case _ => t1 == t2
   }
 
@@ -61,26 +61,26 @@ object Subtyping {
     case _ => areEqual(sub, sup)
   }
 
-  def hasJoin(t1: Type, t2: Type): Boolean = (t1, t2) match {
-    case (_:IntType, _:IntType) => true
-    case _ => false
-  }
-
-  def joinOf(t1: Type, t2: Type, op: (Int, Int) => Int) = (t1, t2) match {
-    case (TStaticInt(v1), TStaticInt(v2)) => TStaticInt(op(v1, v2))
-    case (TSizedInt(s1), TSizedInt(s2)) => TSizedInt(max(s1, s2))
+  def joinOf(t1: Type, t2: Type, op: BOp): Option[Type] = (t1, t2) match {
+    case (TStaticInt(v1), TStaticInt(v2)) => op.toFun match {
+      case Some(fun) => Some(TStaticInt(fun(v1, v2)))
+      case None => Some(TSizedInt(max(bitsNeeded(v1), bitsNeeded(v2))))
+    }
+    case (TSizedInt(s1), TSizedInt(s2)) =>
+      Some(TSizedInt(max(s1, s2)))
     case (TStaticInt(v), TSizedInt(s)) => {
-      TSizedInt(max(s, bitsNeeded(v)))
+      Some(TSizedInt(max(s, bitsNeeded(v))))
     }
     case (TSizedInt(s), TStaticInt(v)) => {
-      TSizedInt(max(s, bitsNeeded(v)))
+      Some(TSizedInt(max(s, bitsNeeded(v))))
     }
     case (idx@TIndex(_, _), TStaticInt(v)) =>
-      TSizedInt(max(idx.maxVal, bitsNeeded(v)))
+      Some(TSizedInt(max(idx.maxVal, bitsNeeded(v))))
     case (TStaticInt(v), idx@TIndex(_, _)) =>
-      TSizedInt(max(idx.maxVal, bitsNeeded(v)))
-    case (_: TIndex, t2@TSizedInt(_)) => t2
-    case (t2@TSizedInt(_), _:TIndex) => t2
-    case (t1, t2) => throw NoJoin(t1, t2)
+      Some(TSizedInt(max(idx.maxVal, bitsNeeded(v))))
+    case (_: TIndex, t2@TSizedInt(_)) => Some(t2)
+    case (t2@TSizedInt(_), _:TIndex) => Some(t2)
+    case (_:TFloat, _:TFloat) => Some(TFloat())
+    case _ => None
   }
 }

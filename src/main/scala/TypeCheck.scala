@@ -113,30 +113,31 @@ object TypeChecker {
   }
 
   private def checkB(t1: Type, t2: Type, op: BOp) = op match {
-    case OpEq() | OpNeq() => {
+    case _:EqOp => {
       if (t1.isInstanceOf[TArray])
         throw UnexpectedType(op.pos, op.toString, "primitive types", t1)
-      else if (isSubtype(t1, t2) || isSubtype(t2, t1)) TBool()
-      else throw UnexpectedSubtype(op.pos, op.toString, t1, t2)
+      else if (joinOf(t1, t2, op).isDefined)
+        TBool()
+      else
+        throw NoJoin(op.pos, op.toString, t1, t2)
     }
-    case _:OpAnd | _:OpOr => (t1, t2) match {
+    case _:BoolOp => (t1, t2) match {
       case (TBool(), TBool()) => TBool()
       case _ => throw BinopError(op, t1, t2)
     }
-    case _:OpLt | _:OpLte | _:OpGt | _:OpGte => (t1, t2) match {
+    case _:CmpOp => (t1, t2) match {
       case (_:IntType, _:IntType) => TBool()
-      case (_: TFloat, _: TFloat) => TBool()
+      case (_:TFloat, _:TFloat) => TBool()
       case _ => throw BinopError(op, t1, t2)
     }
-    case _:OpAdd | _:OpMul | _:OpSub | _:OpDiv | _:OpMod | _:OpBAnd |
-         _:OpBOr | _:OpBXor => (t1, t2) match {
-      case (_:IntType, _:IntType) => joinOf(t1, t2, op.toFun)
-      case (_: TFloat, _: TFloat) => TFloat()
-      case _ => throw BinopError(op, t1, t2)
+    case _:NumOp => joinOf(t1, t2, op) match {
+      case Some(t) => t
+      case None => throw NoJoin(op.pos, op.toString, t1, t2)
     }
-    case _:OpLsh | _:OpRsh => (t1, t2) match {
+    case _:BitOp => (t1, t2) match {
       case (_:TSizedInt, _:IntType) => t1
-      case (_:TStaticInt, _:IntType) => TSizedInt(32)
+      case (TStaticInt(v), _:IntType) => TSizedInt(bitsNeeded(v))
+      case (tidx@TIndex(_, _), _:IntType) => TSizedInt(bitsNeeded(tidx.maxVal))
       case _ => throw BinopError(op, t1, t2)
     }
   }

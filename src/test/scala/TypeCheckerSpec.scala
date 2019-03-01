@@ -153,22 +153,19 @@ class TypeCheckerSpec extends FunSpec {
     it("comparisons on floats returns a boolean") {
       typeCheck("if (2.5 < 23.5) { 1 }")
     }
-
     it("can add sized int to static int") {
       typeCheck("decl x: bit<64>; let y = 1; x + y;")
     }
-
     it("can add floats") {
       typeCheck("decl f: float; let y = 1.5; f + y")
     }
-
     it("cannot add int and float") {
-      assertThrows[BinopError] {
+      assertThrows[NoJoin] {
         typeCheck("1 + 2.5")
       }
     }
     it("cannot add float dec and int") {
-      assertThrows[BinopError] {
+      assertThrows[NoJoin] {
         typeCheck("decl f: float; f + 1")
       }
     }
@@ -650,7 +647,7 @@ class TypeCheckerSpec extends FunSpec {
     }
 
     it("do not return values") {
-      assertThrows[BinopError] {
+      assertThrows[NoJoin] {
         typeCheck("""
           def bar(a: bit<10>) { a }
           1 + bar(10)
@@ -707,7 +704,7 @@ class TypeCheckerSpec extends FunSpec {
       }
     }
     it("has the same type as the underlying array") {
-      assertThrows[BinopError] {
+      assertThrows[NoJoin] {
         typeCheck("""
           decl a: bool[10 bank 5];
           view v = shrink a[0 : 5];
@@ -936,7 +933,7 @@ class TypeCheckerSpec extends FunSpec {
   }
 
   describe("subtyping relations") {
-    ignore("static ints are always subtypes") {
+    it("static ints are always subtypes") {
       typeCheck("1 == 2")
     }
 

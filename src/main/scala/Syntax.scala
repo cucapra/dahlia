@@ -30,7 +30,7 @@ object Syntax {
     }
   }
   // Types that can be upcast to Ints
-  trait IntType
+  sealed trait IntType
   case class TSizedInt(len: Int) extends Type with IntType
   case class TStaticInt(v: Int) extends Type with IntType
   case class TIndex(static: (Int, Int), dynamic: (Int, Int)) extends Type with IntType {
@@ -67,40 +67,45 @@ object Syntax {
       case _:OpBXor => "^"
     }
 
-    def toFun: (Int, Int) => Int = this match {
-      case _:OpAdd => _ + _
-      case _:OpMul => _ * _
-      case _:OpDiv => _ / _
-      case _:OpSub => _ - _
-      case _:OpBAnd => _ & _
-      case _:OpBOr => _ | _
-      case _:OpBXor => _ ^ _
-      case _ => throw MsgError(s"toFun not defined on $this")
+    def toFun: Option[(Int, Int) => Int] = this match {
+      case _:OpAdd => Some(_ + _)
+      case _:OpMul => Some(_ * _)
+      case _:OpDiv => Some(_ / _)
+      case _:OpSub => Some(_ - _)
+      case _:OpBOr => Some(_ | _)
+      case _:OpBAnd => Some(_ & _)
+      case _:OpBXor => Some(_ ^ _)
+      case _ => None
     }
   }
-  // comparison ops
-  case class OpEq() extends BOp
-  case class OpNeq() extends BOp
-  case class OpLt() extends BOp
-  case class OpLte() extends BOp
-  case class OpGt() extends BOp
-  case class OpGte() extends BOp
+  // Equality ops
+  sealed trait EqOp
+  case class OpEq() extends BOp with EqOp
+  case class OpNeq() extends BOp with EqOp
+  // Comparison ops
+  sealed trait CmpOp
+  case class OpLt() extends BOp with CmpOp
+  case class OpGt() extends BOp with CmpOp
+  case class OpLte() extends BOp with CmpOp
+  case class OpGte() extends BOp with CmpOp
   // Boolean ops
-  case class OpAnd() extends BOp
-  case class OpOr() extends BOp
+  sealed trait BoolOp
+  case class OpAnd() extends BOp with BoolOp
+  case class OpOr() extends BOp with BoolOp
   // integer/float ops
-  case class OpAdd() extends BOp
-  case class OpSub() extends BOp
-  case class OpMul() extends BOp
-  case class OpDiv() extends BOp
-  case class OpMod() extends BOp
-  // Shifting ops
-  case class OpLsh() extends BOp
-  case class OpRsh() extends BOp
+  sealed trait NumOp
+  case class OpAdd() extends BOp with NumOp
+  case class OpSub() extends BOp with NumOp
+  case class OpMul() extends BOp with NumOp
+  case class OpDiv() extends BOp with NumOp
+  case class OpMod() extends BOp with NumOp
   // Bit ops
-  case class OpBAnd() extends BOp
-  case class OpBOr() extends BOp
-  case class OpBXor() extends BOp
+  sealed trait BitOp
+  case class OpLsh() extends BOp with BitOp
+  case class OpRsh() extends BOp with BitOp
+  case class OpBOr() extends BOp with BitOp
+  case class OpBAnd() extends BOp with BitOp
+  case class OpBXor() extends BOp with BitOp
 
   sealed trait Expr extends Positional {
     def isLVal = this match {
