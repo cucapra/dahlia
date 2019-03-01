@@ -144,7 +144,8 @@ def run(cmd, **kwargs):
         return subprocess.run(
             cmd,
             check=True,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             **kwargs
         )
     except subprocess.CalledProcessError as exc:
