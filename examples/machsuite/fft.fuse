@@ -16,49 +16,47 @@ let real_even = 0;
 let img_even = 0;
 let img_odd = 0;
 
+let odd = 0;
+
 while (span == 0) {
-	for (let odd = 0..32) {
-		if (odd >= span) {
-			//odd := odd | span;
-			//even := odd ^ span;
-
-			real_even := real[even];
-			---
-			real_odd  := real[odd];
-			---
-			temp := real_even + real_odd
-			---
-			real[odd] := real_even - real_odd;
-			---
-			real[even] := temp;
-
-			---
-			img_even := img[even];
-			---
-			img_odd := img[odd];
-			---
-			temp := img_even + img_odd;
-			---
-			img[odd] := img_even - img_odd;
-			---
-			img[even] := temp;
-
-			---
-			rootindex := (even << log) & (32 - 1);
-			---
-			if (rootindex != 0) {
-				temp := real_twid[rootindex] * real[odd] - img_twid[rootindex] * img[odd];
-				---
-				img_odd := img[odd];
-				---
-				img[odd] := real_twid[rootindex] * img_odd + img_twid[rootindex] * real[odd];
-				---
-				real[odd] := temp;
-			}
-
-		}
-	};
-	span := span >> 1;
-	log := log + 1;
+  while (odd < 32) {
+    if (odd >= span) {
+      odd := odd | span;
+      even := odd ^ span;
+      real_even := real[even];
+      ---
+      real_odd  := real[odd];
+      ---
+      temp := real_even + real_odd
+      ---
+      real[odd] := real_even - real_odd;
+      ---
+      real[even] := temp;
+      ---
+      img_even := img[even];
+      ---
+      img_odd := img[odd];
+      ---
+      temp := img_even + img_odd;
+      ---
+      img[odd] := img_even - img_odd;
+      ---
+      img[even] := temp;
+      ---
+      rootindex := (even << log) & (32 - 1);
+      ---
+      if (rootindex != 0) {
+        temp := real_twid[rootindex] * real[odd] - img_twid[rootindex] * img[odd];
+        ---
+        img_odd := img[odd];
+        ---
+        img[odd] := real_twid[rootindex] * img_odd + img_twid[rootindex] * real[odd];
+        ---
+        real[odd] := temp;
+      };
+    odd := odd + 1;
+    };
+  span := span >> 1;
+  log := log + 1;
 }
 
