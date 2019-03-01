@@ -52,20 +52,20 @@ let buffer_b = 1;
 
 for (let exp = 0..16) {
 
-	init(bucket);
-	---
-	if (valid_buffer == buffer_a) {
-		hist(bucket, a, exp);
-	}
-	---
-	if (valid_buffer == buffer_b) {
-		hist(bucket, a, exp);
-	}
-	---
-	local_scan(bucket);
-	---
-	sum_scan(bucket, sum);
-	---
-	last_step_scan(bucket, sum);
+  init(bucket);
+  ---
+  if (valid_buffer == buffer_a) {
+    hist(bucket, a, exp);
+  }
+  ---
+  if (valid_buffer == buffer_b) {
+    hist(bucket, a, exp);
+  }
+  ---
+  local_scan(bucket);
+  ---
+  sum_scan(bucket, sum);
+  ---
+  last_step_scan(bucket, sum);
 
 }
