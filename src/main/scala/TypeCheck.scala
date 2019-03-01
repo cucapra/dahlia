@@ -3,6 +3,7 @@ package fuselang
 import Syntax._
 import Errors._
 import TypeInfo._
+import Subtyping._
 
 /**
  * Type checker implementation for Fuse. Apart from normal typechecking, such as
@@ -45,7 +46,7 @@ object TypeChecker {
   def typeCheck(p: Prog) = {
     val funcsEnv = p.defs.foldLeft(emptyEnv)({ case (e, d) => checkDef(d, e) })
     val initEnv = p.decls.foldLeft(funcsEnv)({ case (env, Decl(id, typ)) =>
-      val rTyp = resolveType(typ, env);
+      val rTyp = env.resolveType(typ);
       id.typ = Some(rTyp)
       env.add(id, rTyp)
     })
@@ -55,7 +56,7 @@ object TypeChecker {
   private def checkDef(defi: Definition, env: Environment) = defi match {
     case FuncDef(id, args, body) => {
       val envWithArgs = args.foldLeft(env.addScope)({ case (env, Decl(id, typ)) =>
-        val rTyp = resolveType(typ, env)
+        val rTyp = env.resolveType(typ)
         id.typ = Some(rTyp);
         env.add(id, rTyp)
       })
@@ -63,16 +64,9 @@ object TypeChecker {
       bodyEnv.endScope._1.add(id, TFun(args.map(_.typ)))
     }
     case RecordDef(name, fields) => {
-      val rFields = fields.map({ case (k, t) => k -> resolveType(t, env) })
+      val rFields = fields.map({ case (k, t) => k -> env.resolveType(t) })
       env.addType(name, TRecType(name, rFields))
     }
-  }
-
-  private def resolveType(typ: Type, env: Environment): Type = typ match {
-    case TAlias(n) => env.getType(n)
-    case TFun(args) => TFun(args.map(resolveType(_, env)))
-    case arr@TArray(t, _) => arr.copy(typ = resolveType(t, env))
-    case t => t
   }
 
   private def consumeBanks
@@ -122,7 +116,7 @@ object TypeChecker {
     case OpEq() | OpNeq() => {
       if (t1.isInstanceOf[TArray])
         throw UnexpectedType(op.pos, op.toString, "primitive types", t1)
-      else if (t1 :< t2 || t2 :< t1) TBool()
+      else if (isSubtype(t1, t2) || isSubtype(t2, t1)) TBool()
       else throw UnexpectedSubtype(op.pos, op.toString, t1, t2)
     }
     case _:OpAnd | _:OpOr => (t1, t2) match {
@@ -136,7 +130,7 @@ object TypeChecker {
     }
     case _:OpAdd | _:OpMul | _:OpSub | _:OpDiv | _:OpMod | _:OpBAnd |
          _:OpBOr | _:OpBXor => (t1, t2) match {
-      case (_:IntType, _:IntType) => t1.join(t2, op.toFun)
+      case (_:IntType, _:IntType) => joinOf(t1, t2, op.toFun)
       case (_: TFloat, _: TFloat) => TFloat()
       case _ => throw BinopError(op, t1, t2)
     }
@@ -168,8 +162,9 @@ object TypeChecker {
       case TFun(argTypes) => {
         // All functions return `void`.
         TVoid() -> args.zip(argTypes).foldLeft(env)({ case (e, (arg, expectedTyp)) => {
+          // XXX(rachit): Probably wrong, maybe needs contravariance.
           val (typ, e1) = checkE(arg)(e, rres);
-          if (typ :< expectedTyp == false) {
+          if (isSubtype(typ, expectedTyp) == false) {
             throw UnexpectedSubtype(arg.pos, "parameter", expectedTyp, typ)
           }
           // If an array id is used as a parameter, consume it completely.
@@ -236,15 +231,7 @@ object TypeChecker {
     case CUpdate(lhs, rhs) => {
       val (t1, e1) = checkLVal(lhs)
       val (t2, e2) = checkE(rhs)(e1, rres)
-      // :< is a subtyping method we defined on the type trait.
-      if (t2 :< t1) (t1, t2, lhs) match {
-        // Reassignment of static ints upcasts to bit<32>
-        case (TStaticInt(_), TStaticInt(_), EVar(id)) =>
-          e2.update(id, Info(id, TSizedInt(32)))
-        case (TStaticInt(_), TSizedInt(_), EVar(id)) =>
-          e2.update(id, Info(id, t2))
-        case _ => e2
-      }
+      if (isSubtype(t2, t1)) e2
       else throw UnexpectedSubtype(rhs.pos, "assignment", t1, t2)
     }
     case CReduce(rop, l, r) => {
@@ -252,7 +239,9 @@ object TypeChecker {
       val (ta, e2) = checkE(r)(e1, rres)
       (t1, ta) match {
         case (t1, TArray(t2, dims)) =>
-          if (t2 :< t1 == false || dims.length != 1 || dims(0)._1 != dims(0)._2) {
+          if (isSubtype(t2, t1) == false ||
+              dims.length != 1 ||
+              dims(0)._1 != dims(0)._2) {
             throw ReductionInvalidRHS(r.pos, rop, t1, ta)
           } else {
             e2
@@ -262,7 +251,7 @@ object TypeChecker {
       }
     }
     case l@CLet(id, typ, exp@ERecLiteral(fs)) => typ match {
-      case Some(typ) => resolveType(typ, env) match {
+      case Some(typ) => env.resolveType(typ) match {
         case recTyp@TRecType(name, expTypes) => {
           // Typecheck expressions in the literal and generate a new id to type map.
           val (env1, actualTypes) = fs.foldLeft((env, Map[Id, Type]()))({
@@ -278,7 +267,7 @@ object TypeChecker {
             if (acTyp.isDefined == false) {
               throw MissingField(exp.pos, name, field)
             }
-            if (acTyp.get :< eTyp == false) {
+            if (isSubtype(acTyp.get, eTyp) == false) {
               throw UnexpectedType(
                 fs(field).pos, "record literal", expTypes(field).toString, acTyp.get)
             }
@@ -295,13 +284,28 @@ object TypeChecker {
       case None => throw ExplicitRecTypeMissing(l.pos, id)
     }
     case l@CLet(id, typ, exp) => {
-      // Check if the explicit type is bound in scope
-      val rTyp = typ.map(resolveType(_, env))
+      // Check if the explicit type is bound in scope. Also, if the type is
+      // a static int, upcast it to sized int. We do not allow variables to
+      // have static types.
+      val rTyp = typ.map(env.resolveType(_)).map(t => t match {
+        case TStaticInt(v) => TSizedInt(bitsNeeded(v))
+        case t => t
+      })
       val (t, e1) = checkE(exp)
       rTyp match {
-        case Some(t2) if t :< t2 => e1.add(id, t2)
-        case Some(t2) => throw UnexpectedType(exp.pos, "let", t.toString, t2)
-        case None => l.typ = Some(t); e1.add(id, t)
+        case Some(t2) => {
+          if (isSubtype(t, t2))
+            e1.add(id, t2)
+          else
+            throw UnexpectedSubtype(exp.pos, "let", t2, t)
+        }
+        case None => {
+          val typ = t match {
+            case TStaticInt(v) => TSizedInt(bitsNeeded(v))
+            case t => t
+          }
+          l.typ = Some(typ); e1.add(id, typ)
+        }
       }
     }
     case CView(id, k@Shrink(arrId, vdims)) => env(arrId).typ match {

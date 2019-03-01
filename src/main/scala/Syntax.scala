@@ -5,7 +5,6 @@ import scala.util.parsing.input.Positional
 object Syntax {
 
   import Errors._
-  import scala.math.{max,log10,ceil}
 
   case class Id(v: String) extends Positional {
     var typ: Option[Type] = None;
@@ -13,29 +12,6 @@ object Syntax {
   }
 
   sealed trait Type extends Positional {
-    def :<(that: Type): Boolean = (this, that) match {
-      case (TSizedInt(v1), TSizedInt(v2)) => v1 <= v2
-      case (_:TStaticInt, _:TStaticInt) => true
-      case (_:TStaticInt, _:TSizedInt) | (_:TSizedInt, _:TStaticInt) => true
-      case (_: TIndex, _:TSizedInt) => true
-      case _ => this == that
-    }
-
-    def join(that: Type, op: (Int, Int) => Int): Type = (this, that) match {
-      case (TSizedInt(s1), TSizedInt(s2)) => TSizedInt(max(s1, s2))
-      case (TStaticInt(v1), TStaticInt(v2)) => TStaticInt(op(v1, v2))
-      case (TStaticInt(v), TSizedInt(s)) => {
-        TSizedInt(max(s, ceil(log10(v)/log10(2)).toInt))
-      }
-      case (TSizedInt(s), TStaticInt(v)) => {
-        TSizedInt(max(s, ceil(log10(v)/log10(2)).toInt))
-      }
-      case (_: TIndex, _:TStaticInt) | (_:TStaticInt, _:TIndex) => TSizedInt(32)
-      case (_: TIndex, t2@TSizedInt(_)) => t2
-      case (t2@TSizedInt(_), _:TIndex) => t2
-      case (t1, t2) => throw NoJoin(t1, t2)
-    }
-
     override def toString = this match {
       case _: TVoid => "void"
       case _: TBool => "bool"
@@ -55,6 +31,11 @@ object Syntax {
   }
   // Types that can be upcast to Ints
   trait IntType
+  case class TSizedInt(len: Int) extends Type with IntType
+  case class TStaticInt(v: Int) extends Type with IntType
+  case class TIndex(static: (Int, Int), dynamic: (Int, Int)) extends Type with IntType {
+    val maxVal: Int = static._2 * dynamic._2
+  }
   // Use case class instead of case object to get unique positions
   case class TVoid() extends Type
   case class TBool() extends Type
@@ -63,9 +44,6 @@ object Syntax {
   case class TRecType(name: Id, fields: Map[Id, Type]) extends Type
   case class TAlias(name: Id) extends Type
   case class TArray(typ: Type, dims: List[(Int, Int)]) extends Type
-  case class TSizedInt(len: Int) extends Type with IntType
-  case class TStaticInt(v: Int) extends Type with IntType
-  case class TIndex(static: (Int, Int), dynamic: (Int, Int)) extends Type with IntType
 
   sealed trait BOp extends Positional {
     override def toString = this match {
@@ -164,7 +142,6 @@ object Syntax {
   case class RDiv() extends ROp
 
   sealed trait ViewType extends Positional
-  // TODO(rachit): Allow arbitrary exprs for arrId
   case class Shrink(arrId: Id, dims: List[(Expr,Int,Int)]) extends ViewType {
     dims.foreach({ case (_, w, s) => {
       if (w != s) {

@@ -49,6 +49,11 @@ object TypeEnv {
     def getType(alias: Id): Type
 
     /**
+     * Returns a type with recursively resolved TAlias.
+     */
+    def resolveType(typ: Type): Type
+
+    /**
      * Methods to manipulate the scopes with the environment.
      * INVARIANT: There is at least one scope in the environment.
      */
@@ -176,10 +181,13 @@ object TypeEnv {
     }
 
     /** Type defintions */
-    private def resolveType(t: Type): Type = t match {
-      case TAlias(name) => resolveType(typeDefMap(name))
+    def resolveType(typ: Type): Type = typ match {
+      case TAlias(n) => getType(n)
+      case TFun(args) => TFun(args.map(resolveType(_)))
+      case arr@TArray(t, _) => arr.copy(typ = resolveType(t))
       case t => t
     }
+
     def addType(alias: Id, typ: Type) = typeDefMap.get(alias) match {
       case Some(_) => throw AlreadyBoundType(alias)
       case None => this.copy(typeDefMap = typeDefMap + (alias -> typ))
@@ -188,7 +196,6 @@ object TypeEnv {
       case Some(t) => t
       case None => throw UnboundType(alias)
     }
-
 
     /** Type binding methods */
     def apply(id: Id): Info = typeMap(id) match {
