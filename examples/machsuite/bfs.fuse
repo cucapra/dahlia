@@ -1,0 +1,50 @@
+record edge_t {
+  dst: bit<32>;
+};
+
+record node_t {
+  edge_begin: bit<32>;
+  edge_end: bit<32>;
+};
+
+decl nodes: node_t[50];
+decl edges: edge_t[50];
+decl starting_node: bit<32>;
+decl level: bit<32>[50];
+decl level_counts: bit<32>[50];
+
+let cnt = 0;
+
+// Temporary variables for serial updates
+let tmp_begin = 0;
+let tmp_end   = 0;
+let tmp_dst   = 0;
+let tmp_level = 0;
+
+let tmp_l = 0;
+
+for (let horizon = 0..50) {
+  cnt := 0;
+  for (let n = 0..50) {
+    tmp_l := level[n];
+    ---
+    if (tmp_l == horizon) {
+      tmp_begin := nodes[n].edge_begin;
+      ---
+      tmp_end := nodes[n].edge_end;
+      ---
+      for (let e = 0..50) { // FIXME: find upper bound
+        if (e >= tmp_begin && e <= tmp_end) {
+          tmp_dst := edges[e].dst;
+	  tmp_level := level[tmp_dst];
+	  ---
+	  if (tmp_level == MAX_LEVEL) {
+            level[tmp_dst] := horizon + 1;
+	    ---
+	    cnt := cnt + 1;
+	  }
+	}
+      }
+    }
+  }
+}
