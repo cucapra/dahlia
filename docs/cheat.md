@@ -162,3 +162,14 @@ Shrink views must have the same step and width parameters.
 decl a: bit<32>[8 bank 4];
 view v = shrink a[2 * i : 2];
 ```
+
+### Program Structure
+
+A fuse program has the following structure:
+```C
+<func defs or record defs>
+<decls>
+<commands>
+```
+
+Any one of these may be omitted but the order between them must be maintained.
