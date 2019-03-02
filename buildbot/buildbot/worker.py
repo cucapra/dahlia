@@ -14,6 +14,10 @@ C_MAIN = 'main.cpp'  # Currently, the host code *must* be named this.
 HOST_O = 'main.o'  # The .o file for host code.
 EXECUTABLE = 'sdsoc'
 
+# For executing on a Xilinx Zynq board.
+ZYNQ_SSH_PREFIX = ['sshpass', '-p', 'root']  # Provide Zynq SSH password.
+ZYNQ_HOST = ['zb1']
+
 
 class WorkError(Exception):
     """An error that occurs in a worker that needs to be displayed in
@@ -329,14 +333,15 @@ def stage_areesh(db, config):
         # Zynq board.
         bin_dir = os.path.join(task.dir, 'sd_card')
         bin_files = [os.path.join(bin_dir, f) for f in os.listdir(bin_dir)]
+        dest = ZYNQ_HOST + ':/mnt'
         task.run(
-            ['sshpass', '-p', 'root', 'scp', '-r'] + bin_files + ['zb1:/mnt'],
+            ZYNQ_SSH_PREFIX + ['scp', '-r'] + bin_files + [dest],
             timeout=1200
         )
 
         # Restart the FPGA
         task.run(
-            ['sshpass', '-p', 'root', 'ssh', 'zb1', '/sbin/reboot'],
+            ZYNQ_SSH_PREFIX + ['ssh', ZYNQ_HOST, '/sbin/reboot'],
             timeout=120
         )
 
@@ -348,7 +353,7 @@ def stage_areesh(db, config):
 
         # Run the FPGA program and collect results
         task.run(
-            ['sshpass', '-p', 'root', 'ssh', 'zb1', '/mnt/sdsoc'],
+            ZYNQ_SSH_PREFIX + ['ssh', ZYNQ_HOST, '/mnt/sdsoc'],
             timeout=120
         )
 
