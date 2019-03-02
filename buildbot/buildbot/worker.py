@@ -321,6 +321,12 @@ def stage_hls(db, config):
 def stage_fpga_execute(db, config):
     """Work stage: upload bitstream to the FPGA controller, run the
     program, and output the results.
+
+    This stage currently assumes we want to execute on a Xilinx Zynq
+    board, which is accessible via SSH. We require `sshpass` to provide
+    the password for the board (because the OS that comes with ZedBoards
+    hard-codes the root password as root---not terribly secure, so the
+    board should clearly not be on a public network).
     """
     with work(db, 'hlsed', 'fpga_executing', 'done') as task:
         # Do nothing in this stage if we're just running estimation.
