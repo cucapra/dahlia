@@ -37,3 +37,4 @@ ENV PATH /seashell:${PATH}
 RUN cd buildbot ; PIPENV_PIPFILE= pipenv install
 RUN cd buildbot ; yarn
 RUN cd buildbot ; yarn build
+
