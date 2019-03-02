@@ -31,7 +31,7 @@ WORKDIR /seashell
 
 # Build Seashell.
 RUN sbt assembly
-ENV PATH ${PWD}
+ENV PATH /seashell:${PATH}
 
 # Set up buildbot.
 RUN cd buildbot ; PIPENV_PIPFILE= pipenv install
