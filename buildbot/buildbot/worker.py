@@ -318,15 +318,14 @@ def stage_hls(db, config):
         )
 
 
-def stage_areesh(db, config):
+def stage_fpga_execute(db, config):
     """Work stage: upload bitstream to the FPGA controller, run the
     program, and output the results.
     """
-    with work(db, 'hlsed', 'areeshing', 'done') as task:
+    with work(db, 'hlsed', 'fpga_executing', 'done') as task:
+        # Do nothing in this stage if we're just running estimation.
         if task['config'].get('estimate'):
-            # Skip the Areesh stage. Bit files not generated in
-            # estimation stage.
-            task.log('skipping run on FPGA stage')
+            task.log('skipping FPGA execution stage')
             return
 
         # Copy the compiled code (CPU binary + FPGA bitstream) to the
@@ -362,6 +361,6 @@ def work_threads(db, config):
     """Get a list of (unstarted) Thread objects for processing tasks.
     """
     out = []
-    for stage in (stage_unpack, stage_seashell, stage_hls, stage_areesh):
+    for stage in (stage_unpack, stage_seashell, stage_hls, stage_fpga_execute):
         out.append(WorkThread(db, config, stage))
     return out
