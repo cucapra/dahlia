@@ -5,6 +5,7 @@ from .db import ARCHIVE_NAME, CODE_DIR, log
 from contextlib import contextmanager
 import traceback
 import shlex
+import time
 
 SEASHELL_EXT = '.sea'
 C_EXT = '.cpp'
@@ -17,6 +18,7 @@ EXECUTABLE = 'sdsoc'
 # For executing on a Xilinx Zynq board.
 ZYNQ_SSH_PREFIX = ['sshpass', '-p', 'root']  # Provide Zynq SSH password.
 ZYNQ_HOST = ['zb1']
+ZYNQ_REBOOT_DELAY = 120
 
 
 class WorkError(Exception):
@@ -344,17 +346,12 @@ def stage_fpga_execute(db, config):
             timeout=1200
         )
 
-        # Restart the FPGA
+        # Restart the FPGA and wait for it to come back up.
         task.run(
             ZYNQ_SSH_PREFIX + ['ssh', ZYNQ_HOST, '/sbin/reboot'],
-            timeout=120
         )
-
-        # Wait for restart
-        task.run(
-            ['sleep', '120'],
-            timeout=1200
-        )
+        task.log('waiting {} seconds for reboot'.format(ZYNQ_REBOOT_DELAY))
+        time.sleep(ZYNQ_REBOOT_DELAY)
 
         # Run the FPGA program and collect results
         task.run(
