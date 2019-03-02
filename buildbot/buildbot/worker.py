@@ -5,7 +5,6 @@ from .db import ARCHIVE_NAME, CODE_DIR, log
 from contextlib import contextmanager
 import traceback
 import shlex
-import glob
 
 SEASHELL_EXT = '.sea'
 C_EXT = '.cpp'
@@ -328,12 +327,12 @@ def stage_areesh(db, config):
 
         # Copy the compiled code (CPU binary + FPGA bitstream) to the
         # Zynq board.
-        for i in glob.glob(os.path.join(os.path.join(task.dir, 'sd_card'), '*')):
-            task.run(
-                ['sshpass', '-p', 'root', 'scp', '-r',
-                 os.path.join(task.dir, i), 'zb1:/mnt'],
-                timeout=1200
-            )
+        bin_dir = os.path.join(task.dir, 'sd_card')
+        bin_files = [os.path.join(bin_dir, f) for f in os.listdir(bin_dir)]
+        task.run(
+            ['sshpass', '-p', 'root', 'scp', '-r'] + bin_files + ['zb1:/mnt'],
+            timeout=1200
+        )
 
         # Restart the FPGA
         task.run(
