@@ -315,37 +315,9 @@ def stage_hls(db, config):
         )
 
 
-def _copy_file(task, path, mode):
-    if mode == 'scp':
-        task.run(
-            ['sshpass', '-p', 'root', 'scp', '-r',
-             os.path.join(task.dir, path), 'zb1:/mnt'],
-            timeout=1200
-        )
-    else:
-        task.run(['cp', '-r', path, 'sd_card/'])
-
-
-def _copy_directory(task, path, mode):
-    for i in glob.glob(os.path.join(os.path.join(task.dir, path), '*')):
-        _copy_file(task, i, mode)
-
-
-def stage_cheat(db, config):
-    """Work stage: Skip hls stage to test Areesh.
-    """
-    with work(db, 'seashelled', 'cheating', 'hlsed') as task:
-        # Make sd card directory
-        task.run(['mkdir', 'sd_card'])
-
-        # Copy folder to current directory
-        _copy_directory(task, '/home/opam/seashell/buildbot/instance/'
-                              'jobs/n3EOVfKLock/code/sd_card', 'copy')
-
-
 def stage_areesh(db, config):
     """Work stage: upload bitstream to the FPGA controller, run the
-    program, and output the result gathered.
+    program, and output the results.
     """
     with work(db, 'hlsed', 'areeshing', 'done') as task:
         if task['config'].get('estimate'):
@@ -354,8 +326,14 @@ def stage_areesh(db, config):
             task.log('skipping run on FPGA stage')
             return
 
-        # Upload bit stream to FPGA
-        _copy_directory(task, 'sd_card', 'scp')
+        # Copy the compiled code (CPU binary + FPGA bitstream) to the
+        # Zynq board.
+        for i in glob.glob(os.path.join(os.path.join(task.dir, 'sd_card'), '*')):
+            task.run(
+                ['sshpass', '-p', 'root', 'scp', '-r',
+                 os.path.join(task.dir, i), 'zb1:/mnt'],
+                timeout=1200
+            )
 
         # Restart the FPGA
         task.run(
