@@ -4,7 +4,13 @@
       "installation"
     ],
     "Language constructs": [
-      "cheatsheet"
+      "cheatsheet",
+      "literals",
+      "binders",
+      "types"
+    ],
+    "CLI": [
+      "cli-compile"
     ]
   }
 }
