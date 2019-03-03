@@ -12,38 +12,46 @@ import CodeGenHelpers._
  * view v_a = shrink a[4 * i : 4];
  * v_a[k];
  * ==>
- * ; // remove the view decl
+ * // remove the view decl
  * a[4*i + k]
  *
  * If `a` itself is a view, we keep rewriting it until we reach a true array.
+ *
+ * For information about the monadic implementation, refer to the docs for
+ * [[fuselang.StateHelper.State]].
  */
 object RewriteView {
-  import Utils.State
+  import StateHelper._
 
-  type T = Map[Id, List[Expr] => Expr]
+  /**
+   * Represents a mapping from view ids to a function that takes all dimension
+   * expressions returns a new array access expression
+   */
+  type Env = Map[Id, List[Expr] => Expr]
 
-  def rewriteExpr(e: Expr): State[T, Expr] = e match {
+  private def rewriteExpr(e: Expr): State[Env, Expr] = e match {
     case EVar(_) | EInt(_, _) | EFloat(_) | EBool(_) | _:ERecAccess => State.unit(e)
     case eb@EBinop(_, e1, e2) => for {
       e1n <- rewriteExpr(e1)
       e2n <- rewriteExpr(e2)
     } yield eb.copy(e1 = e1n, e2 = e2n)
-    case eaa@EArrAccess(arrId, idxs) => State { env =>
-      val (idxsn, env1) = State.foldLeft(rewriteExpr)(idxs)(env)
-      // If the array id is a view array rewrite it and recurr. The recursive
-      // call is needed to handle views on views.
-      if (env.contains(arrId)) {
-        rewriteExpr(env(arrId)(idxsn))(env1)
-      } else {
-        eaa.copy(idxs = idxsn) -> env1
-      }
-    }
+    case eaa@EArrAccess(arrId, idxs) => for {
+      idxsn <- State.mapList(rewriteExpr)(idxs)
+      state <- State.get
+      ret <- if (state.contains(arrId)) rewriteExpr(state(arrId)(idxsn))
+             else State.unit[Env, Expr](eaa.copy(idxs = idxsn))
+    } yield ret
     case app@EApp(_, args) => for {
-      argsn <- State.foldLeft(rewriteExpr)(args)
+      argsn <- State.mapList(rewriteExpr)(args)
     } yield app.copy(args = argsn)
+    case ERecLiteral(fs) => {
+      for {
+        fsn <- State.mapMap(rewriteExpr)(fs)
+      } yield ERecLiteral(fsn)
+    }
   }
 
-  def rewriteC(c: Command): State[T, Command] = c match {
+  private def rewriteC(c: Command): State[Env, Command] = c match {
     case CPar(c1, c2) => for {
       c1n <- rewriteC(c1)
       c2n <- rewriteC(c2)
@@ -96,4 +104,93 @@ object RewriteView {
     val cmdn = rewriteC(p.cmd)(emptyEnv)._1
     p.copy(defs = fs, cmd = cmdn)
   }
+}
+
+private object StateHelper {
+
+  /**
+   * Monadic implementation of `State`. The type variable [[S]] refers to
+   * an abstract state that is carried through the computations over [[A]].
+   *
+   * The parameter [[computation]] refers to the entire computation collected
+   * upto this point. The functions [[map]] and [[flatMap]] allow us to build
+   * up other computations over the current one.
+   *
+   * Extending AnyVal is an optimization to reduce the overhead of this case
+   * class.
+   *
+   * For more funky examples, read this series of blog posts: http://eed3si9n.com/learning-scalaz/State.html
+   *
+   */
+  case class State[S, A](computation: S => (A, S)) extends AnyVal {
+
+    /**
+     * Run this computation with the initial state [[initState]] and return
+     * the answer with the final state.
+     */
+    def apply(initState: S): (A, S) = computation(initState)
+
+    /**
+     * Transform the result using the function [[f]]. When the this monad is
+     * run, it will first run [[computation]] and apply [[f]] to the result.
+     */
+    def map[B](f: A => B) = State[S, B] { state =>
+      val (value, newState) = computation(state)
+      (f(value), newState)
+    }
+
+    /**
+     * Merge another computation [[f]] into this one. This is done by first
+     * running this computation and then passing the result and the state to
+     * the next computation.
+     */
+    def flatMap[B](f: A => State[S, B]) = State[S, B] { state =>
+      val (value, newState) = computation(state)
+      f(value)(newState)
+    }
+
+  }
+
+  object State {
+    def unit[S, A](a: A): State[S, A] = State { state => (a, state) }
+
+    /**
+     * Type theory note: The code for foldLeft is repetitive. There might
+     * be a generic notion of a `lift` function that can turn `map` on a
+     * collection into a `map` over the monadic version of that collection.
+     *
+     * Formally:
+     *
+     * lift: (C[A] -> (A -> B) -> C[B]) -> (M[C[A]] -> (A -> B) -> M[C[B]])
+     *
+     * where `C` and `M` are monads (being a functor might suffice).
+     * Unfortunately, implementing this in scala requires enabling the
+     * `higherKinds` features.
+     *
+     * Instead, we just manually define these over List and Map which are the
+     * two commonly used collections in our AST.
+     *
+     */
+    def mapMap[S, K, V1, V2]
+      (f: V1 => State[S, V2])
+      (map: Map[K, V1]): State[S, Map[K, V2]] =
+        mapList[S, (K, V1), (K, V2)]({
+          case (k, v) => f(v).map(v2 => k -> v2)
+        })(map.toList).map(_.toMap)
+
+    def mapList[S, A, B](f: A => State[S, B])(es: List[A]): State[S, List[B]] =
+      es match {
+        case Nil => State.unit(Nil)
+        case hd :: tl => for {
+          hdn <- f(hd)
+          tln <- mapList(f)(tl)
+        } yield hdn :: tln
+      }
+
+    /**
+     * Return the current state as a value
+     */
+    def get[S] = State[S, S] { state => (state, state) }
+  }
+
 }
