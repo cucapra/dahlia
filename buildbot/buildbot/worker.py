@@ -17,7 +17,7 @@ EXECUTABLE = 'sdsoc'
 
 # For executing on a Xilinx Zynq board.
 ZYNQ_SSH_PREFIX = ['sshpass', '-p', 'root']  # Provide Zynq SSH password.
-ZYNQ_HOST = ['zb1']
+ZYNQ_HOST = 'zb1'
 ZYNQ_REBOOT_DELAY = 40
 
 
