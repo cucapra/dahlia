@@ -5,7 +5,7 @@ from .db import ARCHIVE_NAME, CODE_DIR, log
 from contextlib import contextmanager
 import traceback
 import shlex
-import glob
+import time
 
 SEASHELL_EXT = '.sea'
 C_EXT = '.cpp'
@@ -14,6 +14,11 @@ SDS_PLATFORM = 'zed'
 C_MAIN = 'main.cpp'  # Currently, the host code *must* be named this.
 HOST_O = 'main.o'  # The .o file for host code.
 EXECUTABLE = 'sdsoc'
+
+# For executing on a Xilinx Zynq board.
+ZYNQ_SSH_PREFIX = ['sshpass', '-p', 'root']  # Provide Zynq SSH password.
+ZYNQ_HOST = 'zb1'
+ZYNQ_REBOOT_DELAY = 40
 
 
 class WorkError(Exception):
@@ -315,63 +320,42 @@ def stage_hls(db, config):
         )
 
 
-def _copy_file(task, path, mode):
-    if mode == 'scp':
-        task.run(
-            ['sshpass', '-p', 'root', 'scp', '-r',
-             os.path.join(task.dir, path), 'zb1:/mnt'],
-            timeout=1200
-        )
-    else:
-        task.run(['cp', '-r', path, 'sd_card/'])
-
-
-def _copy_directory(task, path, mode):
-    for i in glob.glob(os.path.join(os.path.join(task.dir, path), '*')):
-        _copy_file(task, i, mode)
-
-
-def stage_cheat(db, config):
-    """Work stage: Skip hls stage to test Areesh.
-    """
-    with work(db, 'seashelled', 'cheating', 'hlsed') as task:
-        # Make sd card directory
-        task.run(['mkdir', 'sd_card'])
-
-        # Copy folder to current directory
-        _copy_directory(task, '/home/opam/seashell/buildbot/instance/'
-                              'jobs/n3EOVfKLock/code/sd_card', 'copy')
-
-
-def stage_areesh(db, config):
+def stage_fpga_execute(db, config):
     """Work stage: upload bitstream to the FPGA controller, run the
-    program, and output the result gathered.
+    program, and output the results.
+
+    This stage currently assumes we want to execute on a Xilinx Zynq
+    board, which is accessible via SSH. We require `sshpass` to provide
+    the password for the board (because the OS that comes with ZedBoards
+    hard-codes the root password as root---not terribly secure, so the
+    board should clearly not be on a public network).
     """
-    with work(db, 'hlsed', 'areeshing', 'done') as task:
+    with work(db, 'hlsed', 'fpga_executing', 'done') as task:
+        # Do nothing in this stage if we're just running estimation.
         if task['config'].get('estimate'):
-            # Skip the Areesh stage. Bit files not generated in
-            # estimation stage.
-            task.log('skipping run on FPGA stage')
+            task.log('skipping FPGA execution stage')
             return
 
-        # Upload bit stream to FPGA
-        _copy_directory(task, 'sd_card', 'scp')
-
-        # Restart the FPGA
+        # Copy the compiled code (CPU binary + FPGA bitstream) to the
+        # Zynq board.
+        bin_dir = os.path.join(task.code_dir, 'sd_card')
+        bin_files = [os.path.join(bin_dir, f) for f in os.listdir(bin_dir)]
+        dest = ZYNQ_HOST + ':/mnt'
         task.run(
-            ['sshpass', '-p', 'root', 'ssh', 'zb1', '/sbin/reboot'],
-            timeout=120
-        )
-
-        # Wait for restart
-        task.run(
-            ['sleep', '120'],
+            ZYNQ_SSH_PREFIX + ['scp', '-r'] + bin_files + [dest],
             timeout=1200
         )
+
+        # Restart the FPGA and wait for it to come back up.
+        task.run(
+            ZYNQ_SSH_PREFIX + ['ssh', ZYNQ_HOST, '/sbin/reboot'],
+        )
+        task.log('waiting {} seconds for reboot'.format(ZYNQ_REBOOT_DELAY))
+        time.sleep(ZYNQ_REBOOT_DELAY)
 
         # Run the FPGA program and collect results
         task.run(
-            ['sshpass', '-p', 'root', 'ssh', 'zb1', '/mnt/sdsoc'],
+            ZYNQ_SSH_PREFIX + ['ssh', ZYNQ_HOST, '/mnt/' + EXECUTABLE],
             timeout=120
         )
 
@@ -380,6 +364,6 @@ def work_threads(db, config):
     """Get a list of (unstarted) Thread objects for processing tasks.
     """
     out = []
-    for stage in (stage_unpack, stage_seashell, stage_hls, stage_areesh):
+    for stage in (stage_unpack, stage_seashell, stage_hls, stage_fpga_execute):
         out.append(WorkThread(db, config, stage))
     return out
