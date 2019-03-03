@@ -144,7 +144,8 @@ def run(cmd, **kwargs):
         return subprocess.run(
             cmd,
             check=True,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             **kwargs
         )
     except subprocess.CalledProcessError as exc:
@@ -191,6 +192,7 @@ def stage_unpack(db, config):
     """
     with work(db, 'uploaded', 'unpacking', 'unpacked') as task:
         # Unzip the archive into the code directory.
+        os.mkdir(task.code_dir)
         task.run(["unzip", "-d", task.code_dir, "{}.zip".format(ARCHIVE_NAME)])
 
         # Check for single-directory zip files: if the code directory
