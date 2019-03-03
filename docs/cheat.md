@@ -1,7 +1,6 @@
 ---
 id: cheatsheet
 title: Cheatsheet
-sidebar_label: Cheatsheet
 ---
 
 The next few sections will cover these in details. Feel free to skip this if
