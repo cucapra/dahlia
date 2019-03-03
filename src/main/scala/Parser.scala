@@ -19,13 +19,12 @@ private class FuseParser extends RegexParsers with PackratParsers {
   lazy val iden: P[Id] = positioned {
     "" ~> "[a-zA-Z_][a-zA-Z0-9_]*".r ^^ { v => Id(v) }
   }
+  lazy val number = "[0-9]+".r ^^ { n => n.toInt } | err("Expected positive number")
 
   // Atoms
-  lazy val number = "(-)?[0-9]+".r ^^ { n => n.toInt }
+  lazy val uInt: P[Expr] = "[0-9]+".r ^^ { n => EInt(n.toInt) }
   lazy val hex = "0x[0-9a-fA-F]+".r ^^ { n => Integer.parseInt(n.substring(2), 16) }
   lazy val octal = "0[0-7]+".r ^^ { n => Integer.parseInt(n.substring(1), 8) }
-  // Need to separately parse 0 to avoid conflict with octal parsing
-  lazy val zero = "0".r ^^ { _ => EInt(0) }
   lazy val float = "(-)?[0-9]+\\.[0-9]+".r ^^ { n => n.toFloat }
   lazy val boolean = "true" ^^ { _ => true } | "false" ^^ { _ => false }
 
@@ -44,7 +43,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
     float ^^ { case f => EFloat(f) } |
     hex ^^ { case h => EInt(h, 16) } |
     octal ^^ { case o => EInt(o, 8) } |
-    number ^^ { case n => EInt(n, 10) } |
+    uInt |
     boolean ^^ { case b => EBool(b) } |
     iden ~ parens(repsep(expr, ",")) ^^ { case f ~ args => EApp(f, args) } |
     iden ^^ { case id => EVar(id) } |
@@ -182,27 +181,32 @@ private class FuseParser extends RegexParsers with PackratParsers {
     }
   }
 
-  // Other commands
-  lazy val acmd: P[Command] = positioned {
-    block |
-    cfor |
-    conditional |
-    "while" ~> parens(expr) ~ block ^^ { case cond ~ body => CWhile(cond, body) } |
-    "let" ~> iden ~ (":" ~> typ).? ~ ("=" ~> expr) ^^ { case id ~ t ~ exp => CLet(id, t, exp) } |
+  lazy val simpleCmd: P[Command] = positioned {
+    "let" ~> iden ~ (":" ~> typ).? ~ ("=" ~> expr) ^^ {
+      case id ~ t ~ exp => CLet(id, t, exp)
+    } |
     "view" ~> iden ~ "=" ~ view ^^ { case arrId ~ _ ~ vt => CView(arrId, vt) } |
     expr ~ ":=" ~ expr ^^ { case l ~ _ ~ r => CUpdate(l, r) } |
     expr ~ rop ~ expr ^^ { case l ~ rop ~ r => CReduce(rop, l, r) } |
     expr ^^ { case e => CExpr(e) }
   }
 
-  lazy val scmd: P[Command] = positioned {
-    acmd ~ ";" ~ scmd ^^ { case c1 ~ _ ~ c2 => CPar(c1, c2) } |
-    acmd <~ ";" | acmd
+  lazy val blockCmd: P[Command] = positioned {
+    block |
+    cfor |
+    conditional |
+    "while" ~> parens(expr) ~ block ^^ { case cond ~ body => CWhile(cond, body) }
+  }
+
+  lazy val parCmd: P[Command] = positioned {
+    simpleCmd ~ ";" ~ parCmd ^^ { case c1 ~ _ ~ c2 => CPar(c1, c2) } |
+    blockCmd ~ parCmd ^^ { case c1 ~ c2 => CPar(c1, c2) } |
+    simpleCmd <~ ";" | blockCmd | simpleCmd
   }
 
   lazy val cmd: P[Command] = positioned {
-    scmd ~ "---" ~ cmd ^^ { case c1 ~ _ ~ c2 => CSeq(c1, c2) } |
-    scmd
+    parCmd ~ "---" ~ cmd ^^ { case c1 ~ _ ~ c2 => CSeq(c1, c2) } |
+    parCmd
   }
 
   lazy val args: P[Decl] = iden ~ (":" ~> typ) ^^ { case i ~ t => Decl(i, t) }
@@ -214,12 +218,12 @@ private class FuseParser extends RegexParsers with PackratParsers {
 
   // Definitions
   lazy val recordDef: P[RecordDef] = positioned {
-    "record" ~> iden ~ braces(repsep(args, ";") <~ ";".?) <~ ";".? ^^ {
+    "record" ~> iden ~ braces(repsep(args, ";")) ^^ {
       case n ~ fs => RecordDef(n, fs.map(decl => decl.id -> decl.typ).toMap)
     }
   }
   lazy val funcDef: P[FuncDef] = positioned {
-    "def" ~> iden ~ parens(repsep(args, ",")) ~ block <~ ";".? ^^ {
+    "def" ~> iden ~ parens(repsep(args, ",")) ~ block ^^ {
       case fn ~ args ~ body => FuncDef(fn, args, body)
     }
   }

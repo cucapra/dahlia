@@ -105,17 +105,17 @@ class TypeCheckerSpec extends FunSpec {
 
     it("in if") {
       assertThrows[UnboundVar] {
-        typeCheck("if (true) {let x = 1;}; x + 2;")
+        typeCheck("if (true) {let x = 1;} x + 2;")
       }
     }
     it("in for") {
       assertThrows[UnboundVar] {
-        typeCheck("for (let i = 0..10){let x = 1;}; x + 2;")
+        typeCheck("for (let i = 0..10){let x = 1;} x + 2;")
       }
     }
     it("in while") {
       assertThrows[UnboundVar] {
-        typeCheck("while (true) {let x = 1;}; x + 2;")
+        typeCheck("while (true) {let x = 1;} x + 2;")
       }
     }
     it("iterator id in combine block") {
@@ -129,15 +129,14 @@ class TypeCheckerSpec extends FunSpec {
             """ )
       }
     }
-
     it("allows same name in different scopes") {
       typeCheck("""
         for (let i = 0..1) {
           let x = 10;
-        };
+        }
         for (let i = 0..1) {
           let x = 10;
-        };
+        }
         """ )
     }
   }
@@ -228,7 +227,7 @@ class TypeCheckerSpec extends FunSpec {
           decl a: bit<10>[2 bank 2];
           if (true) {
             a[0]
-          };
+          }
           a[0]
           """ )
       }
@@ -241,7 +240,7 @@ class TypeCheckerSpec extends FunSpec {
             a[0]
           } else {
             a[1]
-          };
+          }
           a[1]
           """ )
       }
@@ -263,7 +262,7 @@ class TypeCheckerSpec extends FunSpec {
           a[0]
         } else {
           a[0]
-        };
+        }
         a[1]
         """ )
     }
@@ -397,7 +396,7 @@ class TypeCheckerSpec extends FunSpec {
             a[0] := 1;
             ---
             a[0] := 1;
-          };
+          }
           a[0] := 1
           """ )
       }
@@ -423,7 +422,7 @@ class TypeCheckerSpec extends FunSpec {
         typeCheck("""
           decl a: bit<32>[6 bank 6];
 
-          for(let i = 0..6) { a[0] };
+          for(let i = 0..6) { a[0] }
           for(let i = 0..6) { a[0] }
           """ )
       }
@@ -437,7 +436,7 @@ class TypeCheckerSpec extends FunSpec {
             for(let i = 0..6) {
               a[0] := 1;
               a[0] := 1;
-            };
+            }
           """ )
       }
     }
@@ -449,7 +448,7 @@ class TypeCheckerSpec extends FunSpec {
           for(let i = 0..6) {
             let x = a[0];
             let y = a[0];
-          };
+          }
         """ )
     }
 
@@ -775,7 +774,7 @@ class TypeCheckerSpec extends FunSpec {
         for (let i = 0..10) {
           a[i * 2];
         }
-        """ )  
+        """ )
     }
   }
 
@@ -784,7 +783,7 @@ class TypeCheckerSpec extends FunSpec {
       typeCheck("""
         record point {
           x: bit<32>;
-          y: bit<32>;
+          y: bit<32>
         }
         """ )
     }
@@ -792,8 +791,8 @@ class TypeCheckerSpec extends FunSpec {
       typeCheck("""
         record point {
           x: bit<32>;
-          y: bit<32>;
-        };
+          y: bit<32>
+        }
         decl k: point;
         """ )
     }
@@ -801,10 +800,10 @@ class TypeCheckerSpec extends FunSpec {
       typeCheck("""
         record point {
           x: bit<32>;
-          y: bit<32>;
-        };
+          y: bit<32>
+        }
         record bars {
-          k: point;
+          k: point
         }
         """ )
     }
@@ -812,7 +811,7 @@ class TypeCheckerSpec extends FunSpec {
       assertThrows[UnboundType] {
         typeCheck("""
           record bars {
-            k: point;
+            k: point
           }
           """ )
       }
@@ -821,7 +820,7 @@ class TypeCheckerSpec extends FunSpec {
       assertThrows[ArrayInRecord] {
         typeCheck("""
           record bars {
-            k: bit<10>[10];
+            k: bit<10>[10]
           }
           """ )
       }
@@ -830,10 +829,10 @@ class TypeCheckerSpec extends FunSpec {
       assertThrows[AlreadyBoundType] {
         typeCheck("""
           record bars {
-            k: bit<32>;
+            k: bit<32>
           }
           record bars {
-            l: bit<32>;
+            l: bit<32>
           }
           """ )
       }
@@ -841,8 +840,8 @@ class TypeCheckerSpec extends FunSpec {
     it("can access bound field") {
       typeCheck("""
         record point {
-          x: bit<32>;
-        };
+          x: bit<32>
+        }
         decl k: point;
         let x = k.x;
         """ )
@@ -850,8 +849,8 @@ class TypeCheckerSpec extends FunSpec {
     it("can bound field has the right return type") {
       typeCheck("""
         record point {
-          x: bit<32>;
-        };
+          x: bit<32>
+        }
         decl k: point;
         let x = k.x + 1;
         """ )
@@ -859,10 +858,10 @@ class TypeCheckerSpec extends FunSpec {
     it("can bound field has the right return type in nested struct") {
       typeCheck("""
         record point {
-          x: bit<32>;
-        };
+          x: bit<32>
+        }
         record foo {
-          p: point;
+          p: point
         }
         decl k: foo;
         let x = k.p.x + 1;
@@ -873,14 +872,14 @@ class TypeCheckerSpec extends FunSpec {
   describe("Record Literals") {
     it("can be defined with let") {
       typeCheck("""
-        record point { x: bit<32>; y: bit<32> };
+        record point { x: bit<32>; y: bit<32> }
         let p: point = {x = 1; y = 2 }
         """ )
     }
     it("cannot be defined without explicit type in let") {
       assertThrows[ExplicitRecTypeMissing] {
         typeCheck("""
-          record point { x: bit<32>; y: bit<32> };
+          record point { x: bit<32>; y: bit<32> }
           let p = {x = 1; y = 2 }
           """ )
       }
@@ -888,14 +887,14 @@ class TypeCheckerSpec extends FunSpec {
     it("cannot be used inside expressions") {
       assertThrows[RecLiteralNotInBinder] {
         typeCheck("""
-          record point { x: bit<32>; y: bit<32> };
+          record point { x: bit<32>; y: bit<32> }
           let p = 1 + {x = 1; y = 2 }
           """ )
       }
     }
     it("get the right type") {
         typeCheck("""
-          record point { x: bit<32>; y: bit<32> };
+          record point { x: bit<32>; y: bit<32> }
           let p: point = {x = 1; y = 2 };
           let f: bit<32> = p.x;
           """ )
@@ -903,7 +902,7 @@ class TypeCheckerSpec extends FunSpec {
     it("cannot have fields missing") {
       assertThrows[MissingField] {
         typeCheck("""
-          record point { x: bit<32>; y: bit<32> };
+          record point { x: bit<32>; y: bit<32> }
           let p: point = {x = 1};
           """ )
       }
@@ -911,7 +910,7 @@ class TypeCheckerSpec extends FunSpec {
     it("cannot have extra fields") {
       assertThrows[ExtraField] {
         typeCheck("""
-          record point { x: bit<32>};
+          record point { x: bit<32> }
           let p: point = {x = 1; y = 2};
           """ )
       }
