@@ -37,6 +37,22 @@ const siteConfig = {
   highlight: {
     // Highlight.js theme to use for syntax highlighting in code blocks.
     theme: 'default',
+    hljs: function(hljs) {
+      hljs.registerLanguage('fuse', function(hljs) {
+        return {
+          case_insensitive: false,
+          keywords: {
+            keyword: 'for if while let decl view def bank unroll combine shrink',
+            types: "bool bit float"
+          },
+          contains: [
+            hljs.C_LINE_COMMENT_MODE,
+            hljs.C_BLOCK_COMMENT_MODE,
+            hljs.C_NUMBER_MODE
+          ]
+        }
+      })
+    }
   },
 
   // Add custom scripts here that would be placed in <script> tags.

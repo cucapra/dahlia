@@ -5,12 +5,23 @@
     "previous": "Previous",
     "tagline": "A typed programming language for safe high-level synthesis",
     "docs": {
+      "binders": {
+        "title": "Variable Binders"
+      },
       "cheatsheet": {
-        "title": "Cheatsheet",
-        "sidebar_label": "Cheatsheet"
+        "title": "Cheatsheet"
+      },
+      "cli-compile": {
+        "title": "Compilation Options"
       },
       "installation": {
         "title": "Installation"
+      },
+      "literals": {
+        "title": "Literals"
+      },
+      "types": {
+        "title": "Types"
       }
     },
     "links": {
@@ -19,7 +30,8 @@
     },
     "categories": {
       "Setup": "Setup",
-      "Language constructs": "Language constructs"
+      "Language constructs": "Language constructs",
+      "CLI": "CLI"
     }
   },
   "pages-strings": {

@@ -72,7 +72,7 @@ static int result_check(TYPE *D, TYPE *D_sw)
 int gemm_test(TYPE *m1,  TYPE *m2, TYPE *prod, TYPE *prod_sw)
 {
      std::cout << "Testing " << NUM_TESTS << " iterations of " << row_size << "x" << col_size 
-               << "float" << " MachSuite blocked gemm..." << std::endl;
+               << "float" << " MachSuite ncubed gemm..." << std::endl;
 
      perf_counter hw_ctr, sw_ctr;
      
