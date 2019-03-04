@@ -11,6 +11,9 @@
     ],
     "CLI": [
       "cli-compile"
+    ],
+    "Tools": [
+      "text-editors"
     ]
   }
 }

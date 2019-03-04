@@ -20,6 +20,9 @@
       "literals": {
         "title": "Literals"
       },
+      "text-editors": {
+        "title": "Text Editors"
+      },
       "types": {
         "title": "Types"
       }
@@ -31,7 +34,8 @@
     "categories": {
       "Setup": "Setup",
       "Language constructs": "Language constructs",
-      "CLI": "CLI"
+      "CLI": "CLI",
+      "Tools": "Tools"
     }
   },
   "pages-strings": {
