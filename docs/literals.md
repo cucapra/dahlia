@@ -4,7 +4,7 @@ title: Literals
 ---
 
 The set of literals in Fuse largely overlaps with those in C with some
-conviniences.
+conveniences.
 
 ## Numerical constants
 
