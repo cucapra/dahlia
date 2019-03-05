@@ -34,7 +34,7 @@ T get_arg(string name, string type_name, picojson::value &json) {
  * double to be castable to T.
  */
 template <typename T>
-vector<T> to_num_vect(picojson::array &arr, unsigned int len) {
+vector<T> to_order_1_tensor(picojson::array &arr, unsigned int len) {
   vector<T> ret = {};
 
   for (auto elem: arr) {
@@ -61,12 +61,12 @@ T to_num(double x) {
  * of give type T. Expects double to be castable to T.
  */
 template <typename T>
-vector<vector<T>> to_num_matrix(picojson::array &arr, unsigned int row_dim, unsigned int col_dim) {
+vector<vector<T>> to_order_2_tensor(picojson::array &arr, unsigned int row_dim, unsigned int col_dim) {
   vector<vector<T>> ret = {};
 
   for(picojson::value vect: arr) {
     if (vect.is<picojson::array>()) {
-      ret.push_back(to_num_vect<T>(vect.get<picojson::array>(), row_dim));
+      ret.push_back(to_order_1_tensor<T>(vect.get<picojson::array>(), row_dim));
     }
   }
 
