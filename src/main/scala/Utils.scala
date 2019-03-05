@@ -6,6 +6,10 @@ import backend.{VivadoBackend, CppRunnable, Backend}
 
 object Utils {
 
+  sealed trait Mode
+  case object Compile extends Mode
+  case object Run extends Mode
+
   val emptyConf = Config(null)
 
   val validBackends = Set("vivado", "c++")
@@ -20,7 +24,8 @@ object Utils {
     srcFile: File, // Required: Name of the source file
     kernelName: String = "kernel", // Name of the kernel to emit
     output: Option[String] = None, // Name of output file.
-    backend: Backend = VivadoBackend
+    backend: Backend = VivadoBackend,
+    mode: Mode = Compile
   )
 
 }

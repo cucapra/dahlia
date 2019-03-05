@@ -36,16 +36,36 @@ object Main {
                      else failure(s"Invalid backend name. Valid backes are ${validBackends.mkString(",")}"))
       .action((b, c) => c.copy(backend = toBackend(b)))
       .text("Name of the backend to use. Default backed is vivado.")
+
+    cmd("run")
+      .action((_, c) => c.copy(mode = Run, backend = toBackend("c++")))
+      .text("Generate a runnable object file. Assumes GCC and required headers are available. Implies mode=c++.")
+      .children(
+        opt[String]('o', "outfile")
+          .required()
+          .action((f, c) => c.copy(output = Some(f)))
+          .text("name of the output artifact."))
   }
 
   def main(args: Array[String]): Unit = {
 
     parser.parse(args, Config(null)) match {
-      case Some(c) => {
-        val prog = new String(Files.readAllBytes(c.srcFile.toPath))
-        c.output match {
-          case Some(out) => Compiler.compileStringToFile(prog, c, out)
-          case None => println(Compiler.compileString(prog, c))
+      case Some(conf) => {
+        val prog = new String(Files.readAllBytes(conf.srcFile.toPath))
+
+        val cppPath = conf.output match {
+          case Some(out) => Some(Compiler.compileStringToFile(prog, conf, out))
+          case None => println(Compiler.compileString(prog, conf)); None
+        }
+
+        val status = conf.mode match {
+          case Run => GenerateExec.generateExec(cppPath.get, s"${conf.output.get}.o")
+          case _ => 0
+        }
+
+        if (status != 0) {
+          println("Failed to generate executable!")
+          sys.exit(status);
         }
       }
       case None => {
