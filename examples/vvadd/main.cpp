@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#include "madd.h"
+#include "vvadd.h"
 
 #if SDX == 1
 #include "sds_lib.h"
@@ -43,7 +43,7 @@ static void init_arrays(float *A,  float *B, float *C, float *C_sw)
      }
 }
 
-void madd_golden(float *A, float *B, float *C)
+void vvadd_golden(float *A, float *B, float *C)
 {
      for (int row = 0; row < N; row++) {
           for (int col = 0; col < N; col++) {
@@ -77,11 +77,11 @@ int vvadd_test(float *A,  float *B, float *C, float *C_sw)
           init_arrays(A, B, C, C_sw);
 
           sw_ctr.start();
-          madd_golden(A, B, C_sw);
+          vvadd_golden(A, B, C_sw);
           sw_ctr.stop();
 
           hw_ctr.start();
-          madd(A, B, C);
+          vvadd(A, B, C);
           hw_ctr.stop();
 
           if (result_check(C, C_sw))
