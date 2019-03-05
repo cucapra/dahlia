@@ -1,6 +1,7 @@
 package fuselang
 
 import scala.util.{Try, Success, Failure}
+import java.nio.file.Path
 import Utils._
 
 object Compiler {
@@ -23,7 +24,7 @@ object Compiler {
     case Failure(f) => throw f
   }
 
-  def compileStringToFile(prog: String, c: Config, out: String): Unit = {
+  def compileStringToFile(prog: String, c: Config, out: String): Path = {
     import java.nio.file.{Files, Paths, StandardOpenOption}
 
     Files.write(
@@ -31,7 +32,6 @@ object Compiler {
       compileString(prog, c).toCharArray.map(_.toByte),
       StandardOpenOption.CREATE_NEW,
       StandardOpenOption.WRITE)
-    ()
   }
 
 }
