@@ -1,7 +1,9 @@
 
 BENCHMARKS=\
-	../mach-gemm_ncubed \
-	../mach-stencil2d
+	../mach-gemm_ncubed 
+#	../mach-stencil2d
+#	../mach-gemm-blocked
+#	../mach-stencil3d
 
 GLOBALPOLLY=http://gorgonzola.cs.cornell.edu:8000
 
