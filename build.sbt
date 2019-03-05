@@ -33,12 +33,14 @@ getPicoJson := {
   import java.io.File
   import java.net.URL
 
-  val picoJsonHdr = new URL("https://raw.githubusercontent.com/kazuho/picojson/master/picojson.h")
   val picoJsonHdrLoc = new File("src/main/resources/headers/picojson.h")
-  val cmd = s"wget $picoJsonHdr --directory-prefix=${picoJsonHdrLoc.toString}"
 
-  // sys.process DSL magic!
-  picoJsonHdr #> picoJsonHdrLoc !!
+  if (!picoJsonHdrLoc.exists()) {
+    val picoJsonHdr = new URL("https://raw.githubusercontent.com/kazuho/picojson/master/picojson.h")
+    val cmd = s"wget $picoJsonHdr --directory-prefix=${picoJsonHdrLoc.toString}"
+    // sys.process DSL magic!
+    picoJsonHdr #> picoJsonHdrLoc !!
+  }
 }
 
 /* Override default assembly task to depend on getPicoJson */
