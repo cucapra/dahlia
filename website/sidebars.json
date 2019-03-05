@@ -10,7 +10,8 @@
       "types"
     ],
     "CLI": [
-      "cli-compile"
+      "cli-compile",
+      "cpp-runnable"
     ],
     "Tools": [
       "text-editors"
