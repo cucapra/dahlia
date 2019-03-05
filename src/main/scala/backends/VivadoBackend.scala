@@ -8,7 +8,36 @@ import Cpp._
 
 private class VivadoBackend extends CppLike {
 
-  def typeToDoc(typ: Type) = typ match {
+  def unroll(n: Int) = n match {
+    case 1 => ""
+    case n => s"#pragma HLS UNROLL factor=$n"
+  }
+
+  def bank(id: Id, n: List[Int]): String = n.foldLeft(1)(_ * _) match {
+    case 1 => ""
+    case n => s"#pragma HLS ARRAY_PARTITION variable=$id factor=$n"
+  }
+
+  def bankPragmas(decls: List[Decl]) = decls
+    .withFilter(d => d.typ.isInstanceOf[TArray])
+    .map(d => bank(d.id, d.typ.asInstanceOf[TArray].dims.map(_._2)))
+    .withFilter(s => s != "")
+    .map(s => value(s))
+
+  def emitFor(cmd: CFor): Doc =
+    "for" <> emitRange(cmd.range) <+> scope {
+      unroll(cmd.range.u) <@>
+      cmd.par <@>
+      (if (cmd.combine != CEmpty) text("// combiner:") <@> cmd.combine else value(""))
+    }
+
+  def emitFuncHeader(func: FuncDef): Doc = {
+    vsep(bankPragmas(func.args))
+  }
+
+  def emitArrayDecl(ta: TArray, id: Id) = s"${ta.typ}" <+> "*" <> id
+
+  def emitType(typ: Type) = typ match {
     case _:TVoid => "void"
     case _:TBool | _:TIndex | _:TStaticInt => "int"
     case _:TFloat => "float"
@@ -18,6 +47,15 @@ private class VivadoBackend extends CppLike {
     case _:TFun => throw Impossible("Cannot emit function types")
     case TAlias(n) => n
   }
+
+  def emitProg(p: Prog, c: fuselang.Utils.Config): String = {
+    val layout =
+      vsep(p.defs.map(emitDef)) <@>
+      emitFunc(FuncDef(Id(c.kernelName), p.decls, p.cmd))
+
+    super.pretty(layout).layout
+  }
+
 }
 
 case object VivadoBackend extends Backend {

@@ -3,19 +3,10 @@ package fuselang
 import java.nio.file.Files
 import java.io.File
 
-import backend.{VivadoBackend, CppRunnable, Backend}
 
-import Utils.Config
+import Utils._
 
 object Main {
-
-  val validBackends = Set("vivado", "c++")
-
-  def toBackend(str: String): Backend = str match {
-    case "vivado" => VivadoBackend
-    case "c++" => CppRunnable
-    case b => throw Errors.Impossible(s"Unknown backend $b")
-  }
 
   val parser = new scopt.OptionParser[Config]("fuse"){
 
@@ -44,7 +35,7 @@ object Main {
       .validate(b => if (validBackends.contains(b)) success
                      else failure(s"Invalid backend name. Valid backes are ${validBackends.mkString(",")}"))
       .action((b, c) => c.copy(backend = toBackend(b)))
-      .text("Name of the backend to use. Default backed is vivado")
+      .text("Name of the backend to use. Default backed is vivado.")
   }
 
   def main(args: Array[String]): Unit = {
