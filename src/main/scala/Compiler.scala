@@ -30,7 +30,8 @@ object Compiler {
     Files.write(
       Paths.get(out),
       compileString(prog, c).toCharArray.map(_.toByte),
-      StandardOpenOption.CREATE_NEW,
+      StandardOpenOption.CREATE,
+      StandardOpenOption.TRUNCATE_EXISTING,
       StandardOpenOption.WRITE)
   }
 
