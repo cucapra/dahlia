@@ -20,6 +20,8 @@ the executable.
 As an example, we'll be using the following fuse code:
 
 ```C
+def extern print_vector(c: float[4]);
+
 decl a: float[2][2];
 decl b: float[2][2];
 decl c: float[2][2];
@@ -29,9 +31,12 @@ for (let i = 0..2) {
     c[i][j] := a[i][j] + b[i][j];
   }
 }
+---
+print_vector(c);
 ```
 
-Add this code to a file titled `matadd.fuse`.
+Add this code to a file titled `matadd.fuse`. The `print_vector` extern is
+provided by the parsing library.
 
 Next, run the command:
 
@@ -41,13 +46,8 @@ fuse run matadd.fuse -o matadd.cpp
 
 the command will something similar to the following:
 
-```sh
-g++ --std=c++11 -Wall -Isrc/main/resources/headers matadd.cpp -o matadd.cpp.o
-```
-
 When the command succeeds, it will add two new files to the directory --
-`matadd.cpp` and `matadd.cpp.out`. Remember the output from above, we'll use it
-in a later step.
+`matadd.cpp` and `matadd.cpp.out`.
 
 Create another file titled `data.json` with the following contents:
 
@@ -61,23 +61,6 @@ Create another file titled `data.json` with the following contents:
 
 and run the command:
 
-```
-./matadd.cpp.out data.json
-```
-
-You should see no output indicating that the program ran successfully. However,
-this is not very useful. To see an output, open `matadd.cpp` and add the following
-line after the call to `kernel`:
-
-```C
-int main {
-  ...
-  kernel(a, b, c); // Already present
-  print_vector(c); // Provided by picojson
-}
-```
-
-and the run the `g++` command produced by `fuse run` earlier followed by
 ```
 ./matadd.cpp.out data.json
 ```
