@@ -223,8 +223,11 @@ private class FuseParser extends RegexParsers with PackratParsers {
     }
   }
   lazy val funcDef: P[FuncDef] = positioned {
+    "def" ~ "extern" ~> iden ~ parens(repsep(args, ",")) <~ ";" ^^ {
+      case fn ~ args  => FuncDef(fn, args, None)
+    } |
     "def" ~> iden ~ parens(repsep(args, ",")) ~ block ^^ {
-      case fn ~ args ~ body => FuncDef(fn, args, body)
+      case fn ~ args ~ body => FuncDef(fn, args, Some(body))
     }
   }
   lazy val defs = funcDef | recordDef

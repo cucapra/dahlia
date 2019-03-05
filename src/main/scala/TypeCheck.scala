@@ -54,13 +54,13 @@ object TypeChecker {
   }
 
   private def checkDef(defi: Definition, env: Environment) = defi match {
-    case FuncDef(id, args, body) => {
+    case FuncDef(id, args, bodyOpt) => {
       val envWithArgs = args.foldLeft(env.addScope)({ case (env, Decl(id, typ)) =>
         val rTyp = env.resolveType(typ)
         id.typ = Some(rTyp);
         env.add(id, rTyp)
       })
-      val bodyEnv = checkC(body)(envWithArgs, 1)
+      val bodyEnv = bodyOpt.map(body => checkC(body)(envWithArgs, 1)).getOrElse(envWithArgs)
       bodyEnv.endScope._1.add(id, TFun(args.map(_.typ)))
     }
     case RecordDef(name, fields) => {

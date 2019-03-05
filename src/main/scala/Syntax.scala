@@ -173,7 +173,7 @@ object Syntax {
   case object CEmpty extends Command
 
   sealed trait Definition extends Positional
-  case class FuncDef(id: Id, args: List[Decl], body: Command) extends Definition
+  case class FuncDef(id: Id, args: List[Decl], bodyOpt: Option[Command]) extends Definition
   case class RecordDef(name: Id, fields: Map[Id, Type]) extends Definition {
     fields.foreach({ case (f, t) => t match {
       case _:TArray => throw ArrayInRecord(name, f, t)
