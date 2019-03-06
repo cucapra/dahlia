@@ -115,7 +115,7 @@ object Errors {
     s"Header $hdr is missing from location $hdrLoc.")
 
   // Used when a branch should be impossible at runtime.
-  case class Impossible(msg: String) extends RuntimeException(s"Impossible: $msg")
+  case class Impossible(msg: String) extends RuntimeException(s"$msg")
 
 }
 

@@ -60,7 +60,7 @@ private class CppRunnable extends CppLike {
           cCall("get_arg", Some("double"),
             List(quote(id), quote("int"), "v")))
       }
-      case arr@TArray(_:IntType | _:TFloat, _) => {
+      case arr@TArray(_:IntType | _:TFloat | _:TBool, _) => {
         cBind(s"${id}_t",
           cCall(
             "get_arg",
@@ -75,7 +75,7 @@ private class CppRunnable extends CppLike {
         cBind(s"$id",
           cCall("to_num", Some(emitType(typ)), List(s"${id}_t")))
       }
-      case arr@TArray(_:IntType | _:TFloat, dims) => {
+      case arr@TArray(_:IntType | _:TFloat | _:TBool, dims) => {
         val funcName = s"to_order_${dims.length}_tensor"
         cBind(s"$id",
           cCall("flatten_matrix", Some(emitType(arr.typ)),
