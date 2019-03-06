@@ -23,10 +23,10 @@ The `-b` or `--backend` allows changing the backend used for generating code.
 Support backends are:
 
 1. `vivado`: Generates code compatible with Vivado HLS.
-2. `c++`: Generate code that can be compiled into an executable. See [this](cpp-runnable.md).
+2. `c++`: Generate code that can be compiled into an executable.
 
 ## `run`
 
 The subcommand `run` requires the `-o` to be present. It automatically generates
-a CPP file and links it with the json data parser. See [this](cpp-runnable.md)
-for more information.
+a C++ file and links it with the json data parser. See ["Generating
+Executables"](cpp-runnable.md) for more information.

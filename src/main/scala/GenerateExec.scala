@@ -37,7 +37,7 @@ object GenerateExec {
     }
   }
 
-  val CXX = s"g++ --std=c++11 -Wall -I$headerLocation"
+  val CXX = Seq("g++", "--std=c++11", "-Wall", "-I", headerLocation.toString)
 
   /**
    * Generates an executable object [[out]]. Assumes that [[src]] is a valid
@@ -53,8 +53,8 @@ object GenerateExec {
 
     // Generate [[out]]. `!` is defined by sys.process:
     // https://www.scala-lang.org/api/2.12.8/scala/sys/process/index.html
-    val cmd = s"$CXX ${src.toString} -o $out"
-    println(cmd)
+    val cmd = CXX ++ Seq(src.toString, "-o", out)
+    println(cmd.mkString(" "))
     cmd.!
   }
 }
