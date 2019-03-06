@@ -89,7 +89,7 @@ object Cpp {
       case EArrAccess(id, idxs) => id.typ match {
         case Some(TArray(_, dims)) => id <> brackets(flattenIdx(idxs, dims.map(_._1)))
         case Some(_) => throw Impossible("array access doesnt use array")
-        case None => throw Impossible("type information missins in exprToDoc")
+        case None => throw Impossible("type information missing in exprToDoc")
       }
       case ERecAccess(rec, field) => rec <> dot <> field
       case ERecLiteral(fs) => scope {

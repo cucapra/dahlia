@@ -37,7 +37,7 @@ getPicoJson := {
 
   if (!picoJsonHdrLoc.exists()) {
     val picoJsonHdr = new URL("https://raw.githubusercontent.com/kazuho/picojson/master/picojson.h")
-    val cmd = s"wget $picoJsonHdr --directory-prefix=${picoJsonHdrLoc.toString}"
+    val cmd = Seq("wget", picoJsonHdr, "--directory-prefix", picoJsonHdrLoc.toString)
     // sys.process DSL magic!
     picoJsonHdr #> picoJsonHdrLoc !!
   }
