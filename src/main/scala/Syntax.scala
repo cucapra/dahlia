@@ -173,6 +173,10 @@ object Syntax {
   case object CEmpty extends Command
 
   sealed trait Definition extends Positional
+  /**
+   * Represents function definitions. A missing function body implies that
+   * this is an extern function.
+   */
   case class FuncDef(id: Id, args: List[Decl], bodyOpt: Option[Command]) extends Definition
   case class RecordDef(name: Id, fields: Map[Id, Type]) extends Definition {
     fields.foreach({ case (f, t) => t match {
