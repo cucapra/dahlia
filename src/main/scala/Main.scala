@@ -1,8 +1,7 @@
 package fuselang
 
-import java.nio.file.Files
+import java.nio.file.{Files, Path}
 import java.io.File
-
 
 import Utils._
 
@@ -53,20 +52,17 @@ object Main {
       case Some(conf) => {
         val prog = new String(Files.readAllBytes(conf.srcFile.toPath))
 
-        val cppPath = conf.output match {
-          case Some(out) => Some(Compiler.compileStringToFile(prog, conf, out))
-          case None => println(Compiler.compileString(prog, conf)); None
+        val cppPath: Either[String, Option[Path]] = conf.output match {
+          case Some(out) => Compiler.compileStringToFile(prog, conf, out).map(path => Some(path))
+          case None => Compiler.compileString(prog, conf).map(res => { println(res); None })
         }
 
-        val status = conf.mode match {
-          case Run => GenerateExec.generateExec(cppPath.get, s"${conf.output.get}.o")
-          case _ => 0
-        }
+        val status: Either[String, Unit] = cppPath.flatMap(pathOpt => conf.mode match {
+          case Run => GenerateExec.generateExec(pathOpt.get, s"${conf.output.get}.o")
+          case _ => Right(())
+        })
 
-        if (status != 0) {
-          println("Failed to generate executable!")
-          sys.exit(status);
-        }
+        status.left.map(compileErr => println(compileErr)).merge
       }
       case None => {
         sys.exit(1)

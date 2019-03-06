@@ -42,8 +42,11 @@ object GenerateExec {
   /**
    * Generates an executable object [[out]]. Assumes that [[src]] is a valid
    * C++ file. Returns the result of running the compilations commands.
+   *
+   * The error message returned assumes that CXX would have created some
+   * useful errors already.
    */
-  def generateExec(src: Path, out: String): Int = {
+  def generateExec(src: Path, out: String): Either[String, Unit] = {
     // Make sure all headers are downloaded.
     for (header <- headers) {
       if (Files.exists(headerLocation.resolve(header)) == false) {
@@ -55,6 +58,12 @@ object GenerateExec {
     // https://www.scala-lang.org/api/2.12.8/scala/sys/process/index.html
     val cmd = CXX ++ Seq(src.toString, "-o", out)
     println(cmd.mkString(" "))
-    cmd.!
+    val status = cmd.!
+
+    if (status != 0) {
+      Left(s"Failed to generate the executable $out")
+    } else {
+      Right(())
+    }
   }
 }
