@@ -1,7 +1,8 @@
 package fuselang
 
 import sys.process._
-import java.nio.file.{Files, Paths, Path}
+import scala.io.Source
+import java.nio.file.{Files, Paths, Path, StandardOpenOption}
 
 import Errors.HeaderMissing
 
@@ -12,7 +13,29 @@ import Errors.HeaderMissing
 object GenerateExec {
   val headers = List("parser.cpp", "picojson.h")
 
-  val headerLocation = Paths.get("src/main/resources/headers")
+  var headerLocation = Paths.get("src/main/resources/headers")
+  val headerFallbackLocation = Paths.get("_headers/")
+
+  // Not the compiler directory, check if the fallback directory has been setup.
+  if(Files.exists(headerLocation) == false) {
+    // Fallback for headers not setup. Unpack headers from JAR file.
+    headerLocation = headerFallbackLocation
+
+    if (Files.exists(headerFallbackLocation) == false)  {
+      println(s"Missing required headers for `fuse run`. Unpacking from JAR file into $headerFallbackLocation.")
+
+      val dir = Files.createDirectory(headerFallbackLocation)
+      for (header <- headers) {
+        val stream = getClass.getResourceAsStream(s"/headers/$header")
+        val hdrSource = Source.fromInputStream(stream).toArray.map(_.toByte)
+        Files.write(
+          dir.resolve(header),
+          hdrSource,
+          StandardOpenOption.CREATE_NEW,
+          StandardOpenOption.WRITE)
+      }
+    }
+  }
 
   val CXX = s"g++ --std=c++11 -Wall -I$headerLocation"
 
