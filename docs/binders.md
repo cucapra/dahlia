@@ -66,4 +66,14 @@ def foo(x: bit<10>, y: bit<10>) {
 }
 ```
 
+External functions, such as functions provided by header files, can be
+declared using the `extern` keyword.
+
+```
+def extern print_vector(c: float[4]);
+```
+
+Backends can either provide their implementations for `extern`s (for example
+to implement printing when running on CPUs) or erase the calls completely.
+
 For more details on the exact hardware semantics see here **TODO**.
