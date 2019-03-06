@@ -127,12 +127,13 @@ object Cpp {
       case _ => s"${emitType(d.typ)} ${d.id}"
     }
 
-    def emitFunc: FuncDef => Doc = { case func@FuncDef(id, args, body) =>
+    def emitFunc: FuncDef => Doc = { case func@FuncDef(id, args, bodyOpt) =>
       val as = hsep(args.map(emitDecl), comma)
-      "void" <+> id <> parens(as) <+> scope {
+      // If body is not defined, this is an extern. Elide the definition.
+      bodyOpt.map(body => "void" <+> id <> parens(as) <+> scope {
         emitFuncHeader(func) <@>
         body
-      }
+      }).getOrElse(value(""))
     }
 
     def emitDef(defi: Definition): Doc = defi match {

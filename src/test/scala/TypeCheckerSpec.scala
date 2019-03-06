@@ -616,12 +616,18 @@ class TypeCheckerSpec extends FunSpec {
       }
     }
 
-    it("do no allow recursion") {
+    it("do not allow recursion") {
       assertThrows[UnboundVar] {
         typeCheck("""
           def bar(a: bool) { bar(a) }
           """ )
       }
+    }
+
+    it("allow externs to be defined") {
+      typeCheck("""
+        def extern bar(a: bool);
+        """ )
     }
   }
 
@@ -651,6 +657,28 @@ class TypeCheckerSpec extends FunSpec {
         typeCheck("""
           def bar(a: bit<10>) { a }
           1 + bar(10)
+          """ )
+      }
+    }
+  }
+
+  describe("Function applications w/ externs") {
+    it("require the correct types") {
+      assertThrows[UnexpectedSubtype] {
+        typeCheck("""
+          def extern bar(a: bool);
+          bar(1)
+          """ )
+      }
+    }
+
+    it("completely consume array parameters") {
+      assertThrows[AlreadyConsumed] {
+        typeCheck("""
+          def extern bar(a: bit<10>[10 bank 5]);
+          decl x: bit<10>[10 bank 5];
+          bar(x);
+          x[1]
           """ )
       }
     }
