@@ -37,8 +37,6 @@ object GenerateExec {
     }
   }
 
-  val CXX = Seq("g++", "--std=c++11", "-Wall", "-I", headerLocation.toString)
-
   /**
    * Generates an executable object [[out]]. Assumes that [[src]] is a valid
    * C++ file. Returns the result of running the compilations commands.
@@ -46,7 +44,12 @@ object GenerateExec {
    * The error message returned assumes that CXX would have created some
    * useful errors already.
    */
-  def generateExec(src: Path, out: String): Either[String, Unit] = {
+  def generateExec(src: Path, out: String, includes: List[String]): Either[String, Unit] = {
+
+    val CXX =
+      Seq("g++", "--std=c++11", "-Wall", "-I", headerLocation.toString) ++
+      includes.flatMap(incl => List("-I", incl))
+
     // Make sure all headers are downloaded.
     for (header <- headers) {
       if (Files.exists(headerLocation.resolve(header)) == false) {

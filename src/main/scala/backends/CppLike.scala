@@ -144,6 +144,8 @@ object Cpp {
         } <+> name <> semi
     }
 
+    def emitInclude(incl: Include): Doc = "#include" <+> incl.name
+
   }
 
 }

@@ -1003,4 +1003,16 @@ class TypeCheckerSpec extends FunSpec {
       }
     }
   }
+
+  describe("Imports") {
+    it("adds externs into type checking scope") {
+      typeCheck("""
+        import "print.cpp" {
+          def extern print_vect(f: float[4]);
+        }
+        decl a: float[4];
+        print_vect(a);
+        """ )
+    }
+  }
 }

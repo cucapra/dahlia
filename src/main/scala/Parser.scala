@@ -21,6 +21,9 @@ private class FuseParser extends RegexParsers with PackratParsers {
   }
   lazy val number = "[0-9]+".r ^^ { n => n.toInt } | err("Expected positive number")
 
+  lazy val stringVal: P[String] =
+    "\"" ~> "[^\"]*".r <~ "\""
+
   // Atoms
   lazy val uInt: P[Expr] = "[0-9]+".r ^^ { n => EInt(n.toInt) }
   lazy val hex = "0x[0-9a-fA-F]+".r ^^ { n => Integer.parseInt(n.substring(2), 16) }
@@ -141,6 +144,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
   // For loops
   lazy val block: P[Command] =
     braces(cmd.?) ^^ { case c => c.getOrElse(CEmpty) }
+
   lazy val crange: P[CRange] = positioned {
     parens("let" ~> iden ~ "=" ~ number ~ ".." ~ number) ~ ("unroll" ~> number).? ^^ {
       case id ~ _ ~ s ~ _ ~ e ~ u => CRange(id, s, e, u.getOrElse(1))
@@ -222,20 +226,31 @@ private class FuseParser extends RegexParsers with PackratParsers {
       case n ~ fs => RecordDef(n, fs.map(decl => decl.id -> decl.typ).toMap)
     }
   }
-  lazy val funcDef: P[FuncDef] = positioned {
+  lazy val externFuncDef: P[FuncDef] = positioned {
     "def" ~ "extern" ~> iden ~ parens(repsep(args, ",")) <~ ";" ^^ {
       case fn ~ args  => FuncDef(fn, args, None)
-    } |
+    }
+  }
+  lazy val funcDef: P[FuncDef] = positioned {
+    externFuncDef |
     "def" ~> iden ~ parens(repsep(args, ",")) ~ block ^^ {
       case fn ~ args ~ body => FuncDef(fn, args, Some(body))
     }
   }
   lazy val defs = funcDef | recordDef
 
+  // Include
+  lazy val include: P[Include] = positioned {
+    "import" ~> stringVal ~ braces(externFuncDef.*) ^^ {
+      case name ~ funcs => Include(name, funcs)
+    }
+  }
+
   // Prog
   lazy val prog: P[Prog] = positioned {
-    defs.* ~ decl.* ~ cmd.? ^^ {
-      case fns ~ decls ~ cmd => Prog(fns, decls, cmd.getOrElse(CEmpty))
+    include.* ~ defs.* ~ decl.* ~ cmd.? ^^ {
+      case incls ~ fns ~ decls ~ cmd =>
+        Prog(incls, fns, decls, cmd.getOrElse(CEmpty))
     }
   }
 

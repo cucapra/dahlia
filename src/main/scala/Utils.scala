@@ -25,7 +25,8 @@ object Utils {
     kernelName: String = "kernel", // Name of the kernel to emit
     output: Option[String] = None, // Name of output file.
     backend: Backend = VivadoBackend,
-    mode: Mode = Compile
+    mode: Mode = Compile,
+    includes: List[String] = List()
   )
 
 }

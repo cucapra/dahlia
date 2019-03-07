@@ -167,7 +167,7 @@ object Syntax {
     if (lhs.isLVal == false) throw UnexpectedLVal(lhs, "assignment")
   }
   case class CReduce(rop: ROp, lhs: Expr, rhs: Expr) extends Command {
-    if (lhs.isLVal == false) throw UnexpectedLVal(lhs, "assignment")
+    if (lhs.isLVal == false) throw UnexpectedLVal(lhs, "reduction")
   }
   case class CExpr(exp: Expr) extends Command
   case object CEmpty extends Command
@@ -185,6 +185,15 @@ object Syntax {
     }})
   }
 
+  /**
+   * An include with the name of the module and external function definitions.
+   */
+  case class Include(name: String, defs: List[FuncDef]) extends Positional
+
   case class Decl(id: Id, typ: Type) extends Positional
-  case class Prog(defs: List[Definition], decls: List[Decl], cmd: Command) extends Positional
+  case class Prog(
+    includes: List[Include],
+    defs: List[Definition],
+    decls: List[Decl],
+    cmd: Command) extends Positional
 }

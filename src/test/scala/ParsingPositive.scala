@@ -171,4 +171,15 @@ class ParsingTests extends org.scalatest.FunSuite {
       """ )
   }
 
+  test("imports") {
+    parseAst("""
+      import "print.h" {}
+      """ )
+    parseAst("""
+      import "print.h" {
+        def extern foo(a: bit<32>);
+      }
+      """ )
+  }
+
 }
