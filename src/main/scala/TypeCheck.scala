@@ -44,7 +44,8 @@ object TypeChecker {
    * (`checkC`).
    */
   def typeCheck(p: Prog) = {
-    val funcsEnv = p.defs.foldLeft(emptyEnv)({ case (e, d) => checkDef(d, e) })
+    val defs = p.defs ++ p.includes.flatMap(_.defs)
+    val funcsEnv = defs.foldLeft(emptyEnv)({ case (e, d) => checkDef(d, e) })
     val initEnv = p.decls.foldLeft(funcsEnv)({ case (env, Decl(id, typ)) =>
       val rTyp = env.resolveType(typ);
       id.typ = Some(rTyp)
@@ -64,7 +65,7 @@ object TypeChecker {
       bodyEnv.endScope._1.add(id, TFun(args.map(_.typ)))
     }
     case RecordDef(name, fields) => {
-      val rFields = fields.map({ case (k, t) => k -> env.resolveType(t) })
+      val rFields = fields.map({case (k, t) => k -> env.resolveType(t)})
       env.addType(name, TRecType(name, rFields))
     }
   }

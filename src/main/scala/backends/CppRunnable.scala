@@ -92,6 +92,7 @@ private class CppRunnable extends CppLike {
 
   def emitProg(p: Prog, c: Config) = {
     val prog =
+      vsep(p.includes.map(emitInclude)) <@>
       vsep(p.defs.map(emitDef)) <@>
       emitFunc(FuncDef(Id(c.kernelName), p.decls, Some(p.cmd)))
 
