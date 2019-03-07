@@ -44,7 +44,7 @@ object GenerateExec {
    * The error message returned assumes that CXX would have created some
    * useful errors already.
    */
-  def generateExec(src: Path, out: String, compilerOpts: List[String]): Either[String, Unit] = {
+  def generateExec(src: Path, out: String, compilerOpts: List[String]): Either[String, Int] = {
 
     val CXX =
       Seq("g++", "--std=c++11", "-Wall", "-I", headerLocation.toString) ++ compilerOpts
@@ -65,7 +65,7 @@ object GenerateExec {
     if (status != 0) {
       Left(s"Failed to generate the executable $out")
     } else {
-      Right(())
+      Right(status)
     }
   }
 }
