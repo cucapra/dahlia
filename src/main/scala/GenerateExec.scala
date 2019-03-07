@@ -44,11 +44,10 @@ object GenerateExec {
    * The error message returned assumes that CXX would have created some
    * useful errors already.
    */
-  def generateExec(src: Path, out: String, includes: List[String]): Either[String, Unit] = {
+  def generateExec(src: Path, out: String, compilerOpts: List[String]): Either[String, Unit] = {
 
     val CXX =
-      Seq("g++", "--std=c++11", "-Wall", "-I", headerLocation.toString) ++
-      includes.flatMap(incl => List("-I", incl))
+      Seq("g++", "--std=c++11", "-Wall", "-I", headerLocation.toString) ++ compilerOpts
 
     // Make sure all headers are downloaded.
     for (header <- headers) {

@@ -44,10 +44,10 @@ object Main {
           .required()
           .action((f, c) => c.copy(output = Some(f)))
           .text("Name of the output artifact."),
-        opt[String]('i', "include")
+        opt[String]('x', "--compiler-opt")
           .optional()
           .unbounded()
-          .action((i, c) => c.copy(includes = i :: c.includes))
+          .action((x, c) => c.copy(compilerOpts = x :: c.compilerOpts))
           .text("Include location for header for CXX compilation. Can be repeated."))
   }
 
@@ -63,7 +63,8 @@ object Main {
         }
 
         val status: Either[String, Unit] = cppPath.flatMap(pathOpt => conf.mode match {
-          case Run => GenerateExec.generateExec(pathOpt.get, s"${conf.output.get}.o", conf.includes)
+          case Run =>
+            GenerateExec.generateExec(pathOpt.get, s"${conf.output.get}.o", conf.compilerOpts)
           case _ => Right(())
         })
 
