@@ -43,7 +43,12 @@ object Main {
         opt[String]('o', "outfile")
           .required()
           .action((f, c) => c.copy(output = Some(f)))
-          .text("name of the output artifact."))
+          .text("Name of the output artifact."),
+        opt[String]('i', "include")
+          .optional()
+          .unbounded()
+          .action((i, c) => c.copy(includes = i :: c.includes))
+          .text("Include location for header for CXX compilation."))
   }
 
   def main(args: Array[String]): Unit = {
@@ -58,7 +63,7 @@ object Main {
         }
 
         val status: Either[String, Unit] = cppPath.flatMap(pathOpt => conf.mode match {
-          case Run => GenerateExec.generateExec(pathOpt.get, s"${conf.output.get}.o")
+          case Run => GenerateExec.generateExec(pathOpt.get, s"${conf.output.get}.o", conf.includes)
           case _ => Right(())
         })
 

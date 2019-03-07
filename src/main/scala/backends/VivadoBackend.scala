@@ -50,6 +50,7 @@ private class VivadoBackend extends CppLike {
 
   def emitProg(p: Prog, c: fuselang.Utils.Config): String = {
     val layout =
+      vsep(p.includes.map(emitInclude)) <@>
       vsep(p.defs.map(emitDef)) <@>
       emitFunc(FuncDef(Id(c.kernelName), p.decls, Some(p.cmd)))
 
