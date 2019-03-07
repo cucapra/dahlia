@@ -24,8 +24,6 @@ private class CppRunnable extends CppLike {
     case TAlias(n) => n
   }
 
-  def quote(id: Any) = dquotes(id.toString)
-
   def emitArrayDecl(ta: TArray, id: Id) = emitType(ta) <+> s"&$id"
 
   def emitFor(cmd: CFor): Doc =
