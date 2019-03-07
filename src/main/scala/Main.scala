@@ -62,13 +62,14 @@ object Main {
           case None => Compiler.compileString(prog, conf).map(res => { println(res); None })
         }
 
-        val status: Either[String, Unit] = cppPath.flatMap(pathOpt => conf.mode match {
+        val status: Either[String, Int] = cppPath.flatMap(pathOpt => conf.mode match {
           case Run =>
             GenerateExec.generateExec(pathOpt.get, s"${conf.output.get}.o", conf.compilerOpts)
-          case _ => Right(())
+          case _ => Right(0)
         })
 
-        status.left.map(compileErr => println(compileErr)).merge
+        sys.exit(
+          status.left.map(compileErr => { sys.error(compileErr); 1 }).merge)
       }
       case None => {
         sys.exit(1)
