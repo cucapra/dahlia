@@ -44,7 +44,7 @@ object Main {
           .required()
           .action((f, c) => c.copy(output = Some(f)))
           .text("Name of the output artifact."),
-        opt[String]('x', "--compiler-opt")
+        opt[String]('x', "compiler-opt")
           .optional()
           .unbounded()
           .action((x, c) => c.copy(compilerOpts = x :: c.compilerOpts))

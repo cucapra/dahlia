@@ -18,3 +18,6 @@ node_modules/
 
 ## Ignore run headers
 src/main/resources/headers/*.h
+
+## Testing dir
+_runTestTmp
