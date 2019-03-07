@@ -48,7 +48,7 @@ object Main {
           .optional()
           .unbounded()
           .action((i, c) => c.copy(includes = i :: c.includes))
-          .text("Include location for header for CXX compilation."))
+          .text("Include location for header for CXX compilation. Can be repeated."))
   }
 
   def main(args: Array[String]): Unit = {
