@@ -166,6 +166,7 @@ view v = shrink a[2 * i : 2];
 
 A fuse program has the following structure:
 ```C
+<includes>
 <func defs or record defs>
 <decls>
 <commands>

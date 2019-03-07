@@ -3,7 +3,7 @@ id: binders
 title: Variable Binders
 ---
 
-Variables in Fuse can be bound in three ways.
+Variables in Fuse can be bound in four ways.
 
 ## Let bindings
 
