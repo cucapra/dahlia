@@ -15,6 +15,9 @@
     ],
     "Tools": [
       "text-editors"
+    ],
+    "Development": [
+      "testing"
     ]
   }
 }

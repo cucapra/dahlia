@@ -6,6 +6,10 @@ import scala.concurrent._
 import java.nio.file.{Files, Paths, Path}
 import collection.JavaConverters._
 
+import org.scalatest.Tag
+
+object SlowTest extends Tag("fuselang.tag.SlowTest")
+
 object AsyncRun {
 
   def asyncProcRun(proc: Seq[String])(implicit ec: ExecutionContext, logger: ProcessLogger) =
@@ -15,7 +19,7 @@ object AsyncRun {
   (srcFile: Path, dataFile: Path, outFile: Path)
   (implicit ec: ExecutionContext, logger: ProcessLogger): Future[Int] = {
     // Assumes that `fuse run` creates outFile.o
-    val compileCmd = Seq("fuse", "run", srcFile.toString, "-o", outFile.toString)
+    val compileCmd = Seq("./fuse", "run", srcFile.toString, "-o", outFile.toString)
 
     asyncProcRun(compileCmd).flatMap(status => {
       if (status == 0) {
@@ -31,6 +35,7 @@ object AsyncRun {
 }
 
 class RunTests extends org.scalatest.AsyncFunSuite {
+
   val shouldRun = Paths.get("src/test/should-run")
   val srcFilePattern = """.*\.fuse"""
 
@@ -40,7 +45,7 @@ class RunTests extends org.scalatest.AsyncFunSuite {
   for (file <- Files.newDirectoryStream(shouldRun).asScala
        if file.toString.matches(srcFilePattern)) {
 
-         test(file.toString) {
+         test(file.toString, SlowTest) {
            val dataPath = Paths.get(file + ".data.json")
            val outFile = tmpDir.resolve(file.getFileName + ".cpp")
 
