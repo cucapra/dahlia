@@ -23,4 +23,4 @@ src/main/resources/headers/*.h
 fuse-benchmarks/
 
 ## Testing dir
-_runTestTmp
+_test
