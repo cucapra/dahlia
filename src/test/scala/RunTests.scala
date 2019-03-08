@@ -40,7 +40,7 @@ class RunTests extends org.scalatest.AsyncFunSuite {
   val srcFilePattern = """.*\.fuse"""
 
   // Create a temporary directory for generating C++ files.
-  val tmpDir = Files.createDirectories(Paths.get(".").resolve("_runTestTmp"))
+  val tmpDir = Files.createDirectories(Paths.get(".").resolve("_test"))
 
   for (file <- Files.newDirectoryStream(shouldRun).asScala
        if file.toString.matches(srcFilePattern)) {

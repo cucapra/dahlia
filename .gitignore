@@ -20,4 +20,4 @@ node_modules/
 src/main/resources/headers/*.h
 
 ## Testing dir
-_runTestTmp
+_test
