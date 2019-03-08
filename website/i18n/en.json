@@ -17,11 +17,17 @@
       "cpp-runnable": {
         "title": "Generating Executables"
       },
+      "imports": {
+        "title": "Imports"
+      },
       "installation": {
         "title": "Installation"
       },
       "literals": {
         "title": "Literals"
+      },
+      "testing": {
+        "title": "Testing Fuse"
       },
       "text-editors": {
         "title": "Text Editors"
@@ -38,7 +44,8 @@
       "Setup": "Setup",
       "Language constructs": "Language constructs",
       "CLI": "CLI",
-      "Tools": "Tools"
+      "Tools": "Tools",
+      "Development": "Development"
     }
   },
   "pages-strings": {
