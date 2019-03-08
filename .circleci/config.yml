@@ -4,11 +4,15 @@ jobs:
 
     docker:
       - image: hseeberger/scala-sbt
-
     steps:
+      - run:
+          name: Install g++
+          command: |
+            apt update
+            apt install -y g++
       - checkout
-
       - run:
           name: Compile and Test
           command: |
-            sbt ";compile; test"
+            sbt assembly
+            sbt test
