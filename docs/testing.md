@@ -38,13 +38,13 @@ Simply add a Fuse program under the directory to get them to run.
 ## Run tests
 
 This harness is used to check the functional correctness of the emitted code.
-It creates a temporary directory `_runTestTmp` to store intermediary C++ files.
+It creates a temporary directory `_test` to store intermediary C++ files.
 
 For every `*.fuse` program under the `src/test/should-run` directory, the
 harness does the following:
 
-1. Call `fuse run <src> -o ./_runTestTmp/<src>.cpp`
-2. Call `./_runTestTmp/<src>.cpp.o src/test/should-run/<src>.data.json`
+1. Call `fuse run <src> -o ./_test/<src>.cpp`
+2. Call `./_test/<src>.cpp.o src/test/should-run/<src>.data.json`
 
 ### Adding tests
 
@@ -54,12 +54,20 @@ To add a new test, create a fuse program `<src>` and import the `cassert` header
 import "cassert" {
   def extern assert(cond: bool);
 }
+```
 
+Add a `gold` argument to the kernel using a `decl`. At the end of the program,
+compare the result of the computation with the `gold` value:
+
+```
 decl gold: ...
 ...
-
-assert(res == gold)
+assert(result == gold);
 ```
+
+> `==` only works correctly for primitive types. To make `gold` a memory type,
+> define a function that walks over the two arrays and checks if each element
+> is equal.
 
 Next, create a file with the name `<src>.data.json` and add a json file with
 the arguments to the kernel as specified in ["Generating executables"](cpp-runnable.md).

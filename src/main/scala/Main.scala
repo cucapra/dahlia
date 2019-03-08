@@ -48,7 +48,7 @@ object Main {
           .optional()
           .unbounded()
           .action((x, c) => c.copy(compilerOpts = x :: c.compilerOpts))
-          .text("Include location for header for CXX compilation. Can be repeated."))
+          .text("Option to be passed to the C++ compiler. Can be repeated."))
   }
 
   def main(args: Array[String]): Unit = {
