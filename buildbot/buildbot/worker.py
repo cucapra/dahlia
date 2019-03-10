@@ -6,6 +6,7 @@ from contextlib import contextmanager
 import traceback
 import shlex
 import time
+import .data_extract import synth_data, runtime_data
 
 SEASHELL_EXT = '.sea'
 C_EXT = '.cpp'
@@ -94,6 +95,7 @@ class JobTask:
         arguments are forwarded to `subprocess.run`.
         """
         kwargs['timeout'] = timeout
+
         kwargs['cwd'] = os.path.normpath(os.path.join(self.dir, cwd))
         proc = run(cmd, **kwargs)
         self.proc_log(cmd, proc, stdout=log_stdout)
@@ -318,6 +320,8 @@ def stage_hls(db, config):
             timeout=3000,
             cwd=CODE_DIR,
         )
+
+	synth_data()
 
 
 def stage_fpga_execute(db, config):
