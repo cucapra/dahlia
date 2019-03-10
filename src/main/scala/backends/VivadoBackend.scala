@@ -39,7 +39,7 @@ private class VivadoBackend extends CppLike {
     s"${ta.typ}" <+> id <> generateDims(ta.dims)
 
   def generateDims(dims: List[(Int, Int)]): Doc =
-    dims.map(dim => brackets(value(dim._1))).foldLeft(value(""))(_ <> _)
+    brackets(value(dims.foldLeft(1)({ case (acc, (l, _)) => acc * l})))
 
   def emitType(typ: Type) = typ match {
     case _:TVoid => "void"
