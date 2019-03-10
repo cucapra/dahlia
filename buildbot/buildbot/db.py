@@ -112,13 +112,13 @@ class JobDB:
         self._write(job)
         return job
 
-    def _gen_name(self):
+    def _gen_name(self, basename):
         """Generate a new, random job name.
         """
-        return secrets.token_urlsafe(8)
+        return basename + secrets.token_urlsafe(8)
 
     def _add(self, state, config):
-        name = self._gen_name()
+        name = self._gen_name("")
         os.mkdir(self.job_dir(name))
         job = self._init(name, state, config)
         return job
@@ -132,13 +132,13 @@ class JobDB:
         return job
 
     @contextmanager
-    def create(self, state, config={}):
+    def create(self, state, basename="", config={}):
         """A context manager for creating a new job. A directory is
         created for the job, and the working directory is temporarily
         changed there, and *then* the job is initialized in the given
         state. The context gets the new job's name.
         """
-        name = self._gen_name()
+        name = self._gen_name(basename)
         job_dir = self.job_dir(name)
         os.mkdir(job_dir)
         with chdir(job_dir):

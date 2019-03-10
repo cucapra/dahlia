@@ -111,12 +111,12 @@ def add_job():
         file = request.files['file']
 
         # Check that the file has an allowed extension.
-        _, ext = os.path.splitext(file.filename)
+        base, ext = os.path.splitext(file.filename)
         if ext[1:] not in app.config['UPLOAD_EXTENSIONS']:
             return 'invalid extension {}'.format(ext), 400
 
         # Create the job and save the archive file.
-        with db.create(state.UPLOAD, config) as name:
+        with db.create(state.UPLOAD, base, config) as name:
             file.save(ARCHIVE_NAME + ext)
         notify_workers(name)
 
@@ -124,7 +124,7 @@ def add_job():
         code = request.values['code']
 
         # Create a job and save the code to a file.
-        with db.create(state.UNPACK_FINISH, config) as name:
+        with db.create(state.UNPACK_FINISH, "", config) as name:
             os.mkdir(CODE_DIR)
             with open(os.path.join(CODE_DIR, 'main.ss'), 'w') as f:
                 f.write(code)
