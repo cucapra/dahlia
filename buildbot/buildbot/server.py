@@ -46,9 +46,9 @@ def _datetime_filter(value, withtime=True):
         return ''
     dt = datetime.fromtimestamp(value)
 
-    fmt = '%B %d, %Y'
+    fmt = '%m/%d/%y'
     if withtime:
-        fmt += ', %I:%M %p'
+        fmt += ', %H:%M'
     return _unpad(dt.strftime(fmt))
 
 
