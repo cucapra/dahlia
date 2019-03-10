@@ -7,6 +7,7 @@ from . import workproc
 from .db import JobDB, ARCHIVE_NAME, CODE_DIR, NotFoundError
 from datetime import datetime
 import re
+from . import state
 
 # Our Flask application.
 app = flask.Flask(__name__, instance_relative_config=True)
@@ -103,7 +104,7 @@ def add_job():
             return 'invalid extension {}'.format(ext), 400
 
         # Create the job and save the archive file.
-        with db.create('uploaded', config) as name:
+        with db.create(state.UPLOAD, config) as name:
             file.save(ARCHIVE_NAME + ext)
         notify_workers(name)
 
@@ -111,7 +112,7 @@ def add_job():
         code = request.values['code']
 
         # Create a job and save the code to a file.
-        with db.create('unpacked', config) as name:
+        with db.create(state.UNPACK_FINISH, config) as name:
             os.mkdir(CODE_DIR)
             with open(os.path.join(CODE_DIR, 'main.ss'), 'w') as f:
                 f.write(code)
