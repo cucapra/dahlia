@@ -72,3 +72,34 @@ hr {
     margin: 1em 0;
     padding: 0;
 }
+
+/* Labels for states */
+
+.status {
+  border-radius: 25px;
+}
+
+.Done {
+  background-color: green;
+  color: white;
+}
+
+.Failed {
+  background-color: #FF2400;
+  color: white;
+}
+
+.Compiled {
+  background-color: #189ad3;
+  color: white;
+}
+
+.HLSed {
+  background-color: #db9a59;
+  color: white;
+}
+
+.Running {
+  background-color: #be29ec;
+  color: white;
+}
