@@ -35,7 +35,11 @@ private class VivadoBackend extends CppLike {
     vsep(bankPragmas(func.args))
   }
 
-  def emitArrayDecl(ta: TArray, id: Id) = s"${ta.typ}" <+> "*" <> id
+  def emitArrayDecl(ta: TArray, id: Id) =
+    s"${ta.typ}" <+> id <> generateDims(ta.dims)
+
+  def generateDims(dims: List[(Int, Int)]): Doc =
+    dims.map(dim => brackets(value(dim._1))).foldLeft(value(""))(_ <> _)
 
   def emitType(typ: Type) = typ match {
     case _:TVoid => "void"

@@ -40,8 +40,8 @@ def synth_data():
 	TIMING  = re.split("\|",''.join(lines[LAT+7].split()))
 	LATENCY = re.split("\|",''.join(lines[LAT+16].split()))
 	
-	print 'Target Clock, Estimated Clock, Min Latency, Max Latency, Pipelining'
-	print TIMING[2],TIMING[3],LATENCY[1],LATENCY[2],LATENCY[5]
+	print ('Target Clock, Estimated Clock, Min Latency, Max Latency, Pipelining')
+	print (TIMING[2],TIMING[3],LATENCY[1],LATENCY[2],LATENCY[5])
 	
 	hwfwriter.writerow(['Target Clock','Estimated Clock','Min latency','Max latency','Pipelining'])
 	hwfwriter.writerow([TIMING[2],TIMING[3],LATENCY[1],LATENCY[2],LATENCY[5]])
@@ -63,7 +63,7 @@ def synth_data():
 	
 	items = len(NAMES)
 	for num in range(1,items-1):
-		print NAMES[num],'-',TOTAL[num],'of',AVAIL[num],'->',UTIL[num],'%'
+		print (NAMES[num],'-',TOTAL[num],'of',AVAIL[num],'->',UTIL[num],'%')
 		hwfwriter.writerow([NAMES[num],TOTAL[num],AVAIL[num],UTIL[num]])
 	hwfwriter.writerow([ ])
 	
@@ -83,7 +83,7 @@ def synth_data():
 	lines = []
 	for line in dmn:
 		if 'li' in line:
-			print line
+			print(line)
 		else:
 			lines.append(line)
 	
@@ -98,7 +98,7 @@ def synth_data():
 	
 	items = items/2 # IP Port appears twice in the report for the two tables
 	
-	print 'IP port- Connection- Transfer size- Mem layout- Data mover setup time- Transfer time'
+	print ('IP port- Connection- Transfer size- Mem layout- Data mover setup time- Transfer time')
 	
 	dmnwriter.writerow(['IP port','Connection','Transfer size','Mem layout','Data mover setup time','Transfer time'])
 	
@@ -110,12 +110,12 @@ def synth_data():
 		MemL = re.findall('(?<=>).*(?=<)',lines[ACS+15+8*item])
 		DMst = re.findall('(?<=>).*(?=<)',lines[ACS+16+8*item])
 		Trft = re.findall('(?<=>).*(?=<)',lines[ACS+17+8*item])
-		print IP[0],Conn[0],TSiz[0],MemL[0],DMst[0],Trft[0]
+		print(IP[0],Conn[0],TSiz[0],MemL[0],DMst[0],Trft[0])
 		dmnwriter.writerow([IP[0],Conn[0],TSiz[0],MemL[0],DMst[0],Trft[0]])
 	
 	# Close file
 	dmn.close()
 
-def runtime_data():
+#def runtime_data():
 
 	######### Open json ##########
