@@ -42,7 +42,7 @@ Or see the <a href="{{ url_for('live_html') }}">live interface</a>.
                 </a>
             </td>
             <td>{{ job.started | dt }}</td>
-            <td class="{{ job.state }} status">{{ job.state }}</td>
+            <td class="{{ job.state }} status">{{ status_strings[job.state] }}</td>
         </tr>
         {% endfor %}
     </tbody>

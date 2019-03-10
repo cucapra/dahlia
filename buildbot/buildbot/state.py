@@ -1,12 +1,12 @@
 # Define various states workers can be in
 
-UPLOAD = "Uploaded",
-UNPACK = "Unpacking",
-UNPACK_FINISH = "Unpacked",
-COMPILE = "Compiling",
-COMPILE_FINISH = "Compiled",
-HLS = "HLS",
-HLS_FINISH = "HLSed",
-RUN = "Running",
-DONE = "Done"
-FAIL = "Failed"
+UPLOAD = "uploaded"
+UNPACK = "unpacking"
+UNPACK_FINISH = "unpacked"
+COMPILE = "seashelling"
+COMPILE_FINISH = "seashelled"
+HLS = "hlsing"
+HLS_FINISH = "hlsed"
+RUN = "fpga_executing"
+DONE = "done"
+FAIL = "failed"

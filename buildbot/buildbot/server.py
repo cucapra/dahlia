@@ -23,6 +23,18 @@ if app.config['WORKER_THREADS'] is None:
 # Connect to our database.
 db = JobDB(app.instance_path)
 
+STATUS_STRINGS = {
+    state.UPLOAD: "Uploaded",
+    state.UNPACK: "Unpacking",
+    state.UNPACK_FINISH: "Unpacked",
+    state.COMPILE: "Compiling",
+    state.COMPILE_FINISH: "Compiled",
+    state.HLS: "Synthesis",
+    state.HLS_FINISH: "Synthesized",
+    state.RUN: "Running",
+    state.DONE: "Done",
+    state.FAIL: "Failed"
+}
 
 def _get(job_name):
     """Get a job by name, or raise a 404 error."""
@@ -151,7 +163,10 @@ def jobs_csv():
 
 @app.route('/')
 def jobs_html():
-    return flask.render_template('joblist.html', jobs=db._all())
+    return flask.render_template(
+        'joblist.html',
+        jobs=db._all(),
+        status_strings=STATUS_STRINGS)
 
 
 @app.route('/live.html')

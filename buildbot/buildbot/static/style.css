@@ -76,27 +76,27 @@ textarea {
   border-radius: 25px;
 }
 
-.Done {
+.done {
   background-color: green;
   color: white;
 }
 
-.Failed {
+.failed {
   background-color: #FF2400;
   color: white;
 }
 
-.Compiled {
+.seashelled {
   background-color: #189ad3;
   color: white;
 }
 
-.HLSed {
+.hlsed {
   background-color: #db9a59;
   color: white;
 }
 
-.Running {
+.fpga_executing {
   background-color: #be29ec;
   color: white;
 }
