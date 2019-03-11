@@ -33,8 +33,9 @@ STATUS_STRINGS = {
     state.HLS_FINISH: "Synthesized",
     state.RUN: "Running",
     state.DONE: "Done",
-    state.FAIL: "Failed"
+    state.FAIL: "Failed",
 }
+
 
 def _get(job_name):
     """Get a job by name, or raise a 404 error."""
@@ -166,7 +167,8 @@ def jobs_html():
     return flask.render_template(
         'joblist.html',
         jobs=db._all(),
-        status_strings=STATUS_STRINGS)
+        status_strings=STATUS_STRINGS,
+    )
 
 
 @app.route('/live.html')
