@@ -59,7 +59,7 @@ def _datetime_filter(value, withtime=True):
         return ''
     dt = datetime.fromtimestamp(value)
 
-    fmt = '%Y-%M-%d'
+    fmt = '%Y-%m-%d'
     if withtime:
         fmt += ' %H:%M'
     return _unpad(dt.strftime(fmt))
