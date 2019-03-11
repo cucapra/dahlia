@@ -10,8 +10,8 @@ import csv
 def synth_data():
 
 	################ Open CSV files to write results to ##########################
-	hwfcsv = open('hwperf.csv','wb') #overwrite existing
-	dmncsv = open('data_motion.csv','wb')
+	hwfcsv = open('hwperf.csv','w') #overwrite existing
+	dmncsv = open('data_motion.csv','w')
 	hwfwriter = csv.writer(hwfcsv)
 	dmnwriter = csv.writer(dmncsv)
 	
@@ -19,8 +19,8 @@ def synth_data():
 	
 	################ Open hardware module file ###################################
 	print("--hardware preformance data--")
-	if os.path.isfile("sds_gemm.rpt"):
-		hwf = open("sds_gemm.rpt", "r+")
+	if os.path.isfile("_sds/reports/sds_gemm.rpt"):
+		hwf = open("_sds/reports/sds_gemm.rpt", "r+")
 	else:
 		print("sds_gemm does not exit!!")
 		sys.exit()
@@ -74,8 +74,8 @@ def synth_data():
 	################ Open data motion network file ###############################
 	print('')
 	print("--data motion network--")
-	if os.path.isfile("data_motion.html"):
-		dmn = open("data_motion.html", "r+")
+	if os.path.isfile("_sds/reports/data_motion.html"):
+		dmn = open("_sds/reports/data_motion.html", "r+")
 	else:
 		print("data_motion does not exit!!")
 		sys.exit()
@@ -96,14 +96,14 @@ def synth_data():
 		if 'PORT' in line: # Assume every interface will have an IP Port called PORT something
 			items += 1
 	
-	items = items/2 # IP Port appears twice in the report for the two tables
+	items = items//2 # IP Port appears twice in the report for the two tables
 	
 	print ('IP port- Connection- Transfer size- Mem layout- Data mover setup time- Transfer time')
 	
 	dmnwriter.writerow(['IP port','Connection','Transfer size','Mem layout','Data mover setup time','Transfer time'])
 	
 	# loop over port number
-	for item in xrange(items):
+	for item in range(items):
 		IP   = re.findall('(?<=>).*(?=<)',lines[DMN+13+10*item])
 		Conn = re.findall('(?<=>).*(?=<)',lines[DMN+19+10*item])
 		TSiz = re.findall('(?<=>).*(?=<)',lines[ACS+14+8*item])
