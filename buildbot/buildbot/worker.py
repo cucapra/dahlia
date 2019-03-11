@@ -321,8 +321,6 @@ def stage_hls(db, config):
             cwd=CODE_DIR,
         )
         
-        data_extract.synth_data()
-
 
 def stage_fpga_execute(db, config):
     """Work stage: upload bitstream to the FPGA controller, run the
