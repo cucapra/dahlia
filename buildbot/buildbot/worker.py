@@ -6,7 +6,7 @@ from contextlib import contextmanager
 import traceback
 import shlex
 import time
-from .data_extract import synth_data
+from . import data_extract
 
 SEASHELL_EXT = '.sea'
 C_EXT = '.cpp'
@@ -321,7 +321,7 @@ def stage_hls(db, config):
             cwd=CODE_DIR,
         )
         
-        synth_data()
+        data_extract.synth_data()
 
 
 def stage_fpga_execute(db, config):
