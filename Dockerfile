@@ -13,8 +13,10 @@ RUN cd /opt && \
     rm sbt-${SBT_VERSION}.tgz && \
     sbt version
 
-# Add Python, pipenv, and node for buildbot.
-RUN apk add python3 py3-pip nodejs-current yarn
+# Add Python, pipenv, and node for buildbot. The buildbot also needs OpenSSH
+# and the sshpass utility for its Zynq execution stage.
+RUN apk add python3 py3-pip nodejs-current yarn \
+    openssh sshpass
 RUN pip3 install pipenv
 
 # Volume, port, and command for buildbot.
