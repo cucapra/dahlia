@@ -6,6 +6,7 @@ from contextlib import contextmanager
 import traceback
 import shlex
 import time
+from . import state
 
 SEASHELL_EXT = '.sea'
 C_EXT = '.cpp'
@@ -111,10 +112,10 @@ def work(db, old_state, temp_state, done_state):
         yield task
     except WorkError as exc:
         task.log(exc.message)
-        task.set_state('failed')
+        task.set_state(state.FAIL)
     except Exception:
         task.log(traceback.format_exc())
-        task.set_state('failed')
+        task.set_state(state.FAIL)
     else:
         task.set_state(done_state)
 
@@ -195,7 +196,7 @@ class WorkThread(threading.Thread):
 def stage_unpack(db, config):
     """Work stage: unpack source code.
     """
-    with work(db, 'uploaded', 'unpacking', 'unpacked') as task:
+    with work(db, state.UPLOAD, state.UNPACK, state.UNPACK_FINISH) as task:
         # Unzip the archive into the code directory.
         os.mkdir(task.code_dir)
         task.run(["unzip", "-d", task.code_dir, "{}.zip".format(ARCHIVE_NAME)])
@@ -216,7 +217,7 @@ def stage_seashell(db, config):
     """Work stage: compile Seashell code to HLS C.
     """
     compiler = config["SEASHELL_COMPILER"]
-    with work(db, 'unpacked', 'seashelling', 'seashelled') as task:
+    with work(db, state.UNPACK_FINISH, state.COMPILE, state.COMPILE_FINISH) as task:
         if task['config'].get('skipseashell'):
             # Skip the Seashell stage. Instead, just try to guess which
             # file contains the hardware function. For now, this
@@ -284,7 +285,7 @@ def stage_hls(db, config):
     bitstream with HLS toolchain.
     """
     prefix = config["HLS_COMMAND_PREFIX"]
-    with work(db, 'seashelled', 'hlsing', 'hlsed') as task:
+    with work(db, state.COMPILE_FINISH, state.HLS, state.HLS_FINISH) as task:
         hw_basename, hw_c, hw_o = _hw_filenames(task)
         xflags = ''
 
@@ -330,7 +331,7 @@ def stage_fpga_execute(db, config):
     hard-codes the root password as root---not terribly secure, so the
     board should clearly not be on a public network).
     """
-    with work(db, 'hlsed', 'fpga_executing', 'done') as task:
+    with work(db, state.HLS_FINISH, state.RUN, state.DONE) as task:
         # Do nothing in this stage if we're just running estimation.
         if task['config'].get('estimate'):
             task.log('skipping FPGA execution stage')

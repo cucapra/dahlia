@@ -9,3 +9,5 @@ yarn.lock
 node_modules/
 buildbot/static/live.js
 buildbot/static/live.map
+
+__pycache__
