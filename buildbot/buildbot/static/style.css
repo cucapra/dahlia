@@ -6,6 +6,10 @@ body {
 
 h1 {
     margin: 0;
+    border: 0;
+    border-bottom: 1px solid #ccc;
+    margin: 1em 0;
+    padding: 0;
 }
 h2 {
     margin: 1rem 0 0.5rem;
@@ -64,4 +68,35 @@ textarea {
 }
 #jobLink {
     font-size: 80%;
+}
+
+/* Labels for states */
+
+.status {
+  border-radius: 25px;
+}
+
+.done {
+  background-color: green;
+  color: white;
+}
+
+.failed {
+  background-color: #FF2400;
+  color: white;
+}
+
+.seashelled {
+  background-color: #189ad3;
+  color: white;
+}
+
+.hlsed {
+  background-color: #db9a59;
+  color: white;
+}
+
+.fpga_executing {
+  background-color: #be29ec;
+  color: white;
 }
