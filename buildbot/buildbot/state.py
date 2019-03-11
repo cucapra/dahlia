@@ -1,4 +1,4 @@
-# Define various states workers can be in
+# These are the states that jobs can be in.
 
 UPLOAD = "uploaded"
 UNPACK = "unpacking"
