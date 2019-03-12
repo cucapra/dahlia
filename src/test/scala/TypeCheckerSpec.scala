@@ -502,6 +502,27 @@ class TypeCheckerSpec extends FunSpec {
           """ )
     }
 
+    it("Allow declarations in first statement to be used in second") {
+      typeCheck("""
+              let bucket_idx = 10;
+              ---
+              bucket_idx := 20;
+         """)
+      
+    }
+
+    it("Check for declarations used in both branches") {
+      typeCheck("""
+              let test_var = 10;
+              {
+                test_var := 50;
+                ---
+                test_var := 30;
+              }
+         """)
+      
+    }
+
 
   }
 
