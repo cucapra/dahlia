@@ -6,27 +6,29 @@ import os
 import sys
 import csv
 
-def synth_data(func_hw):
+def synth_data(task):
     ################ Open CSV files to write results to ##########################
     datacsv = open('run_data.csv','w') #overwrite existing
     datawriter = csv.writer(datacsv)
     
-    hw_rpt(datawriter, func_hw)
-    dm_rpt(datawriter)
-    md_rpt(datawriter)
+    hw_rpt(datawriter, task)
+    dm_rpt(datawriter, task)
+    #md_rpt(datawriter, task)
 
     # Close file
     data.close()
     
+def test_extract(task):
+    task.log('Testing extract script worker access')
 
 def hw_rpt(datawriter, func_hw):
     ################ Open hardware module file ###################################
-    print("--hardware preformance data--")
+    task.log("--hardware preformance data--")
     report = os.path.join(os.getcwd(), '_sds/reports', 'sds_' + func_hw + '.rpt')
     if os.path.isfile(report): # Use with for file open
         data = open(report, "r+")
     else:
-        print("sds_" + func_hw + " does not exit!! @ " + report)
+        task.log("sds_" + func_hw + " does not exit!! @ " + report)
         sys.exit()
     
     lines = []
@@ -44,8 +46,8 @@ def hw_rpt(datawriter, func_hw):
     timing  = re.split("\|",''.join(lines[lat+7].split()))
     latency = re.split("\|",''.join(lines[lat+16].split()))
     
-    print ('Target Clock, Estimated Clock, Min Latency, Max Latency, Pipelining')
-    print (timing[2],timing[3],latency[1],latency[2],latency[5])
+    task.log ('Target Clock, Estimated Clock, Min Latency, Max Latency, Pipelining')
+    task.log (timing[2],timing[3],latency[1],latency[2],latency[5])
     
     datawriter.writerow(['Target Clock','Estimated Clock','Min latency','Max latency','Pipelining'])
     datawriter.writerow([timing[2],timing[3],latency[1],latency[2],latency[5]])
@@ -66,24 +68,24 @@ def hw_rpt(datawriter, func_hw):
             util  = re.split("\|+",''.join(line.split()))[1:-1]
     
     for num in range(len(names)):
-        print (names[num],'-',total[num],'of',avail[num],'->',util[num],'%')
+        task.log (names[num],'-',total[num],'of',avail[num],'->',util[num],'%')
         datawriter.writerow([names[num],total[num],avail[num],util[num]])
     datawriter.writerow([ ])
     
 def dm_rpt(datawriter):    
     ################ Open data motion network file ###############################
-    print("--data motion network--")
+    task.log("--data motion network--")
     report = os.path.join(os.getcwd(), '_sds/reports', 'data_motion.html')
     if os.path.isfile(report):  # Use with for file open
         data = open(report, "r+")
     else:
-        print("data_motion does not exit!! @ " + report)
+        task.log("data_motion does not exit!! @ " + report)
         sys.exit()
     
     lines = []
     for line in data:
         if 'li' in line: # This removes additional lines added to the report for a certain pragma (update this comment)
-            print(line)
+            task.log(line)
         else:
             lines.append(line)
     
@@ -98,7 +100,7 @@ def dm_rpt(datawriter):
     
     items = items//2 # IP Port appears twice in the report for the two tables
     
-    print ('IP port- Connection- Transfer size- Mem layout- Data mover setup time- Transfer time')
+    task.log ('IP port- Connection- Transfer size- Mem layout- Data mover setup time- Transfer time')
     
     datawriter.writerow(['IP port','Connection','Transfer size','Mem layout','Data mover setup time','Transfer time'])
     
@@ -110,7 +112,7 @@ def dm_rpt(datawriter):
         meml = re.findall('(?<=>).*(?=<)',lines[acs+15+8*item])
         dmst = re.findall('(?<=>).*(?=<)',lines[acs+16+8*item])
         trft = re.findall('(?<=>).*(?=<)',lines[acs+17+8*item])
-        print(ip[0],conn[0],tsiz[0],meml[0],dmst[0],trft[0])
+        task.log(ip[0],conn[0],tsiz[0],meml[0],dmst[0],trft[0])
         datawriter.writerow([ip[0],conn[0],tsiz[0],meml[0],dmst[0],trft[0]])
 
 #def runtime_data():

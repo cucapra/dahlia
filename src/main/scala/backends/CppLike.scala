@@ -23,6 +23,8 @@ object Cpp {
 
     override val defaultIndent = 2
 
+    def quote(id: Any) = dquotes(id.toString)
+
     /**
      * Helper to generate a variable declaration with an initial value.
      */
@@ -124,7 +126,7 @@ object Cpp {
 
     def emitDecl(d: Decl): Doc = d.typ match {
       case ta:TArray => emitArrayDecl(ta, d.id)
-      case _ => s"${emitType(d.typ)} ${d.id}"
+      case _ => emitType(d.typ) <+> d.id
     }
 
     def emitFunc: FuncDef => Doc = { case func@FuncDef(id, args, bodyOpt) =>
@@ -143,6 +145,8 @@ object Cpp {
           vsep(fields.toList.map({ case (id, typ) => emitType(typ) <+> id <> semi }))
         } <+> name <> semi
     }
+
+    def emitInclude(incl: Include): Doc = "#include" <+> quote(incl.name)
 
   }
 

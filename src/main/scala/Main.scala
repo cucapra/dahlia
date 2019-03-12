@@ -43,7 +43,12 @@ object Main {
         opt[String]('o', "outfile")
           .required()
           .action((f, c) => c.copy(output = Some(f)))
-          .text("name of the output artifact."))
+          .text("Name of the output artifact."),
+        opt[String]('x', "compiler-opt")
+          .optional()
+          .unbounded()
+          .action((x, c) => c.copy(compilerOpts = x :: c.compilerOpts))
+          .text("Option to be passed to the C++ compiler. Can be repeated."))
   }
 
   def main(args: Array[String]): Unit = {
@@ -57,12 +62,14 @@ object Main {
           case None => Compiler.compileString(prog, conf).map(res => { println(res); None })
         }
 
-        val status: Either[String, Unit] = cppPath.flatMap(pathOpt => conf.mode match {
-          case Run => GenerateExec.generateExec(pathOpt.get, s"${conf.output.get}.o")
-          case _ => Right(())
+        val status: Either[String, Int] = cppPath.flatMap(pathOpt => conf.mode match {
+          case Run =>
+            GenerateExec.generateExec(pathOpt.get, s"${conf.output.get}.o", conf.compilerOpts)
+          case _ => Right(0)
         })
 
-        status.left.map(compileErr => println(compileErr)).merge
+        sys.exit(
+          status.left.map(compileErr => { sys.error(compileErr); 1 }).merge)
       }
       case None => {
         sys.exit(1)

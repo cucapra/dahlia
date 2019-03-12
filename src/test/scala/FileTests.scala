@@ -7,7 +7,7 @@ import org.scalatest.FunSuite
 
 class FileTypePositive extends FunSuite {
 
-  val shouldCompile = Paths.get("src/test/resources/should-compile")
+  val shouldCompile = Paths.get("src/test/should-compile")
 
   for (file <- Files.newDirectoryStream(shouldCompile).asScala) {
     test(file.toString) {
@@ -20,7 +20,7 @@ class FileTypePositive extends FunSuite {
 
 class FileTypeNegative extends FunSuite {
 
-  val shouldFail = Paths.get("src/test/resources/should-fail")
+  val shouldFail = Paths.get("src/test/should-fail")
 
   for (file <- Files.newDirectoryStream(shouldFail).asScala) {
     test(file.toString) {

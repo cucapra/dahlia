@@ -21,3 +21,6 @@ src/main/resources/headers/*.h
 
 ## Ignore fuse-benchmarks github repo
 fuse-benchmarks/
+
+## Testing dir
+_test
