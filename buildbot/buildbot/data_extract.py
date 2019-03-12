@@ -8,7 +8,8 @@ import csv
 
 def synth_data(task):
     ################ Open CSV files to write results to ##########################
-    datacsv = open('run_data.csv','w') #overwrite existing
+    datacsvpath = os.path.join(task.code_dir, 'run_data.csv')
+    datacsv = open(datacsvpath,'w') #overwrite existing
     datawriter = csv.writer(datacsv)
     
     hw_rpt(datawriter, task)
