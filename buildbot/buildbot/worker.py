@@ -321,7 +321,9 @@ def stage_hls(db, config):
             timeout=3000,
             cwd=CODE_DIR,
         )
-        
+
+        # Run data extraction after synthesis
+        data_extract.synth_data(task)
 
 def stage_fpga_execute(db, config):
     """Work stage: upload bitstream to the FPGA controller, run the

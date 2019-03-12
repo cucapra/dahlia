@@ -7,7 +7,10 @@ import os
 import sys
 import csv
 
-def synth_data():
+def test_extract(task):
+    task.log('Testing extract script worker access')
+
+def synth_data(task):
 
 	################ Open CSV files to write results to ##########################
 	hwfcsv = open('hwperf.csv','w') #overwrite existing
@@ -18,12 +21,12 @@ def synth_data():
 	# write headers
 	
 	################ Open hardware module file ###################################
-	print("--hardware preformance data--")
+	task.log("--hardware preformance data--")
 	if os.path.isfile("_sds/reports/sds_gemm.rpt"):
 		hwf = open("_sds/reports/sds_gemm.rpt", "r+")
 	else:
-		print("sds_gemm does not exit!!")
-		sys.exit()
+		task.log("sds_gemm does not exit!!")
+		#sys.exit()
 	
 	lines = []
 	for line in hwf:
@@ -40,8 +43,8 @@ def synth_data():
 	TIMING  = re.split("\|",''.join(lines[LAT+7].split()))
 	LATENCY = re.split("\|",''.join(lines[LAT+16].split()))
 	
-	print ('Target Clock, Estimated Clock, Min Latency, Max Latency, Pipelining')
-	print (TIMING[2],TIMING[3],LATENCY[1],LATENCY[2],LATENCY[5])
+	task.log ('Target Clock, Estimated Clock, Min Latency, Max Latency, Pipelining')
+	task.log (TIMING[2],TIMING[3],LATENCY[1],LATENCY[2],LATENCY[5])
 	
 	hwfwriter.writerow(['Target Clock','Estimated Clock','Min latency','Max latency','Pipelining'])
 	hwfwriter.writerow([TIMING[2],TIMING[3],LATENCY[1],LATENCY[2],LATENCY[5]])
@@ -63,7 +66,7 @@ def synth_data():
 	
 	items = len(NAMES)
 	for num in range(1,items-1):
-		print (NAMES[num],'-',TOTAL[num],'of',AVAIL[num],'->',UTIL[num],'%')
+		task.log (NAMES[num],'-',TOTAL[num],'of',AVAIL[num],'->',UTIL[num],'%')
 		hwfwriter.writerow([NAMES[num],TOTAL[num],AVAIL[num],UTIL[num]])
 	hwfwriter.writerow([ ])
 	
@@ -72,18 +75,18 @@ def synth_data():
 	
 	
 	################ Open data motion network file ###############################
-	print('')
-	print("--data motion network--")
+	task.log('')
+	task.log("--data motion network--")
 	if os.path.isfile("_sds/reports/data_motion.html"):
 		dmn = open("_sds/reports/data_motion.html", "r+")
 	else:
-		print("data_motion does not exit!!")
-		sys.exit()
+		task.log("data_motion does not exit!!")
+		#sys.exit()
 	
 	lines = []
 	for line in dmn:
 		if 'li' in line:
-			print(line)
+			task.log(line)
 		else:
 			lines.append(line)
 	
@@ -98,7 +101,7 @@ def synth_data():
 	
 	items = items//2 # IP Port appears twice in the report for the two tables
 	
-	print ('IP port- Connection- Transfer size- Mem layout- Data mover setup time- Transfer time')
+	task.log ('IP port- Connection- Transfer size- Mem layout- Data mover setup time- Transfer time')
 	
 	dmnwriter.writerow(['IP port','Connection','Transfer size','Mem layout','Data mover setup time','Transfer time'])
 	
@@ -110,7 +113,7 @@ def synth_data():
 		MemL = re.findall('(?<=>).*(?=<)',lines[ACS+15+8*item])
 		DMst = re.findall('(?<=>).*(?=<)',lines[ACS+16+8*item])
 		Trft = re.findall('(?<=>).*(?=<)',lines[ACS+17+8*item])
-		print(IP[0],Conn[0],TSiz[0],MemL[0],DMst[0],Trft[0])
+		task.log(IP[0],Conn[0],TSiz[0],MemL[0],DMst[0],Trft[0])
 		dmnwriter.writerow([IP[0],Conn[0],TSiz[0],MemL[0],DMst[0],Trft[0]])
 	
 	# Close file
