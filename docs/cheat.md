@@ -44,12 +44,12 @@ decl marr: bit<32>[10 bank 2][8 bank 4] // multi-dimensional arrays are supporte
 // Cannot contain arrays
 record point {
   x: bit<32>;
-  y: bit<32>;
+  y: bit<32>
 }
 // Can contain other records
 record rect {
   lb: point;
-  rt: point;
+  rt: point
 }
 ```
 
@@ -148,6 +148,29 @@ def foo(a: bit<32>[10], b: bit<32>[10]) {
 ```C
 foo(arr, barr)
 ```
+
+## Externs
+
+Externs are similar to function declarations. An extern is simply a function
+header without the body:
+
+```
+def extern foo(a: bool, x: bit<32>);
+```
+
+Usually, you'll want to use `extern`s with `import` statements.
+
+## Import statements
+
+Import statements can be used to add `#include`s to files and import `extern`
+definitions. The imported functions can only be externs.
+
+```C
+import "printer.h" {
+  def extern print_vector(a: bit<32>[10]);
+}
+```
+
 
 ## Views
 
