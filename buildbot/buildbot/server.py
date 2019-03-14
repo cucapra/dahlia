@@ -185,6 +185,7 @@ def show_job(name):
         new_state = request.form['state']
         log(job, 'manual state change')
         db.set_state(job, new_state)
+        notify_workers(job['name'])
 
     # Find all the job's files.
     job_dir = db.job_dir(name)
