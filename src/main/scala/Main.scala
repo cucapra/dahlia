@@ -53,16 +53,23 @@ object Main {
 
   def main(args: Array[String]): Unit = {
 
+    type ErrString = String
+
     parser.parse(args, Config(null)) match {
       case Some(conf) => {
-        val prog = new String(Files.readAllBytes(conf.srcFile.toPath))
+        val path = conf.srcFile.toPath
 
-        val cppPath: Either[String, Option[Path]] = conf.output match {
-          case Some(out) => Compiler.compileStringToFile(prog, conf, out).map(path => Some(path))
-          case None => Compiler.compileString(prog, conf).map(res => { println(res); None })
+        val prog = Files.exists(path) match {
+          case true => Right(new String(Files.readAllBytes(path)))
+          case false => Left(s"$path: No such file in working directory")
         }
 
-        val status: Either[String, Int] = cppPath.flatMap(pathOpt => conf.mode match {
+        val cppPath: Either[ErrString, Option[Path]] = prog.flatMap(prog => conf.output match {
+          case Some(out) => Compiler.compileStringToFile(prog, conf, out).map(path => Some(path))
+          case None => Compiler.compileString(prog, conf).map(res => { println(res); None })
+        })
+
+        val status: Either[ErrString, Int] = cppPath.flatMap(pathOpt => conf.mode match {
           case Run =>
             GenerateExec.generateExec(pathOpt.get, s"${conf.output.get}.o", conf.compilerOpts)
           case _ => Right(0)
