@@ -1001,7 +1001,7 @@ class TypeCheckerSpec extends FunSpec {
     }
   }
 
-  describe("subtyping relations") {
+  describe("Subtyping relations") {
     it("static ints are always subtypes") {
       typeCheck("1 == 2")
     }
@@ -1027,6 +1027,15 @@ class TypeCheckerSpec extends FunSpec {
         decl x: bit<32>;
         for (let i = 0..12) {
           i == x
+        }
+        """ )
+    }
+
+    it("index types get upcast to sized int with log2(maxVal)") {
+      typeCheck("""
+        decl arr:bit<32>[10];
+        for (let i = 0..33) {
+          arr[5] := i * 1;
         }
         """ )
     }

@@ -35,7 +35,9 @@ import Syntax._
  *
  *  Joins: t1 and t2 have a join T if t1 < T and t2 < T. Informally, this is
  *  described as descending down the trees of t1 and t2 to find a common ancestor.
- *  Canonically, we call this type the "least upper bound"
+ *  Canonically, we call this type an "upper bound" and a "least upper bound"
+ *  if there is no type T' statisfying T' < T and is an upper bound for t1 and
+ *  t2.
  */
 object Subtyping {
   def bitsNeeded(n: Int) = n match {
@@ -55,7 +57,7 @@ object Subtyping {
     case (_:IntType, _:TSizedInt) => true
     case (_:TStaticInt, _:TIndex) => true
     case (TArray(tsub, _), TArray(tsup, _)) => {
-      // Arrays are mutable so we are conservative and disallow subtyping.
+      // Arrays are invariant
       areEqual(tsup, tsub)
     }
     case _ => areEqual(sub, sup)
@@ -74,10 +76,10 @@ object Subtyping {
     case (TSizedInt(s), TStaticInt(v)) => {
       Some(TSizedInt(max(s, bitsNeeded(v))))
     }
-    case (idx@TIndex(_, _), TStaticInt(v)) =>
-      Some(TSizedInt(max(idx.maxVal, bitsNeeded(v))))
-    case (TStaticInt(v), idx@TIndex(_, _)) =>
-      Some(TSizedInt(max(idx.maxVal, bitsNeeded(v))))
+    case (idx:TIndex, st:TStaticInt) =>
+      Some(TSizedInt(bitsNeeded(max(idx.maxVal, st.v))))
+    case (st:TStaticInt, idx:TIndex) =>
+      Some(TSizedInt(bitsNeeded(max(idx.maxVal, st.v))))
     case (_: TIndex, t2@TSizedInt(_)) => Some(t2)
     case (t2@TSizedInt(_), _:TIndex) => Some(t2)
     case (_:TFloat, _:TFloat) => Some(TFloat())
