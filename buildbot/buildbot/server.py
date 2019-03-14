@@ -4,7 +4,7 @@ import os
 from io import StringIO
 import csv
 from . import workproc
-from .db import JobDB, ARCHIVE_NAME, CODE_DIR, NotFoundError
+from .db import JobDB, ARCHIVE_NAME, CODE_DIR, NotFoundError, log
 from datetime import datetime
 import re
 from . import state
@@ -176,9 +176,15 @@ def live_html():
     return flask.render_template('live.html')
 
 
-@app.route('/jobs/<name>.html')
+@app.route('/jobs/<name>.html', methods=['GET', 'POST'])
 def show_job(name):
     job = _get(name)
+
+    # Possibly update the job.
+    if request.method == 'POST':
+        new_state = request.form['state']
+        log(job, 'manual state change')
+        db.set_state(job, new_state)
 
     # Find all the job's files.
     job_dir = db.job_dir(name)
