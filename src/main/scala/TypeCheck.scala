@@ -360,9 +360,10 @@ object TypeChecker {
     case CExpr(e) => checkE(e)._2
     case CEmpty => env
     case CSeq(c1, c2) => {
-      val _ = checkC(c1)
-      val e2 = checkC(c2)(env, rres)
-      // FIXME(rachit): This should probably be intersection of e1 and e2
+      val newscope = env.addScope
+      val e1 = checkC(c1)(newscope, rres)
+      val (_, binds, _) = e1.endScope
+      val e2 = checkC(c2)(env ++ binds, rres)
       e2
     }
   }

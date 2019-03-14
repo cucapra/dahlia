@@ -69,7 +69,7 @@ object Main {
         })
 
         sys.exit(
-          status.left.map(compileErr => { sys.error(compileErr); 1 }).merge)
+          status.left.map(compileErr => { System.err.println(compileErr); 1 }).merge)
       }
       case None => {
         sys.exit(1)

@@ -394,6 +394,25 @@ class TypeCheckerSpec extends FunSpec {
           """ )
       }
     }
+
+    it("allow declarations in first statement to be used in second") {
+      typeCheck("""
+              let bucket_idx = 10;
+              ---
+              bucket_idx := 20;
+         """)
+    }
+
+    it("check for declarations used in both branches") {
+      typeCheck("""
+              let test_var = 10;
+              {
+                test_var := 50;
+                ---
+                test_var := 30;
+              }
+         """)
+    }
   }
 
   describe("Parallel composition") {
@@ -406,6 +425,30 @@ class TypeCheckerSpec extends FunSpec {
           let y = a[i];
         }
         """ )
+    }
+
+    it("allows same banks to be used with reassignment") {
+      typeCheck("""
+        decl a: bit<10>[20 bank 10];
+        for (let i = 0..20) unroll 10 {
+          a[i] := 5;
+          ---
+          a[i] := 2;
+        }
+      """)
+    }
+
+    it("reuses banks of multidimensional array") {
+      typeCheck("""
+        decl a: bit<10>[20 bank 10][10 bank 5];
+        for (let i = 0..20) unroll 10 {
+          for (let j = 0..10) unroll 5 {
+            a[i][j] := 5;
+            ---
+            a[i][j] := 3;
+          }
+        }
+      """)
     }
   }
 
@@ -501,8 +544,6 @@ class TypeCheckerSpec extends FunSpec {
               }
           """ )
     }
-
-
   }
 
   describe("Capabilities in unrolled context") {
@@ -960,7 +1001,7 @@ class TypeCheckerSpec extends FunSpec {
     }
   }
 
-  describe("subtyping relations") {
+  describe("Subtyping relations") {
     it("static ints are always subtypes") {
       typeCheck("1 == 2")
     }
@@ -986,6 +1027,15 @@ class TypeCheckerSpec extends FunSpec {
         decl x: bit<32>;
         for (let i = 0..12) {
           i == x
+        }
+        """ )
+    }
+
+    it("index types get upcast to sized int with log2(maxVal)") {
+      typeCheck("""
+        decl arr:bit<32>[10];
+        for (let i = 0..33) {
+          arr[5] := i * 1;
         }
         """ )
     }

@@ -4,7 +4,7 @@ import os
 from io import StringIO
 import csv
 from . import workproc
-from .db import JobDB, ARCHIVE_NAME, CODE_DIR, NotFoundError
+from .db import JobDB, ARCHIVE_NAME, CODE_DIR, NotFoundError, log
 from datetime import datetime
 import re
 from . import state
@@ -33,8 +33,9 @@ STATUS_STRINGS = {
     state.HLS_FINISH: "Synthesized",
     state.RUN: "Running",
     state.DONE: "Done",
-    state.FAIL: "Failed"
+    state.FAIL: "Failed",
 }
+
 
 def _get(job_name):
     """Get a job by name, or raise a 404 error."""
@@ -166,7 +167,8 @@ def jobs_html():
     return flask.render_template(
         'joblist.html',
         jobs=db._all(),
-        status_strings=STATUS_STRINGS)
+        status_strings=STATUS_STRINGS,
+    )
 
 
 @app.route('/live.html')
@@ -174,9 +176,16 @@ def live_html():
     return flask.render_template('live.html')
 
 
-@app.route('/jobs/<name>.html')
+@app.route('/jobs/<name>.html', methods=['GET', 'POST'])
 def show_job(name):
     job = _get(name)
+
+    # Possibly update the job.
+    if request.method == 'POST':
+        new_state = request.form['state']
+        log(job, 'manual state change')
+        db.set_state(job, new_state)
+        notify_workers(job['name'])
 
     # Find all the job's files.
     job_dir = db.job_dir(name)
@@ -187,7 +196,12 @@ def show_job(name):
             if not fn.startswith('.'):
                 paths.append(os.path.join(dp, fn))
 
-    return flask.render_template('job.html', job=job, files=paths)
+    return flask.render_template(
+        'job.html',
+        job=job,
+        files=paths,
+        status_strings=STATUS_STRINGS,
+    )
 
 
 @app.route('/jobs/<name>')

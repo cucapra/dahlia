@@ -8,7 +8,19 @@
     </li>
     <li>
         <b>state:</b>
-        {{ job.state }}
+        {{ status_strings[job.state] }}
+
+        <form action="" method="post" class="inline">
+            <select name="state">
+                {% for state, name in status_strings.items() -%}
+                <option value="{{ state }}"
+                    {%- if state == job.state %}selected{% endif %}>
+                    {{ name }}
+                </option>
+                {%- endfor %}
+            </select>
+            <input type="submit" value="Set">
+        </form>
     </li>
     {% for key, value in job.items() %}
     {% if key not in ('started', 'state', 'name', 'log') %}
