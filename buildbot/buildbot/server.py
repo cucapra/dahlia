@@ -189,7 +189,12 @@ def show_job(name):
             if not fn.startswith('.'):
                 paths.append(os.path.join(dp, fn))
 
-    return flask.render_template('job.html', job=job, files=paths)
+    return flask.render_template(
+        'job.html',
+        job=job,
+        files=paths,
+        status_strings=STATUS_STRINGS,
+    )
 
 
 @app.route('/jobs/<name>')
