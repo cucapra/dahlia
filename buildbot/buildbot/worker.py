@@ -8,7 +8,7 @@ import shlex
 import time
 from . import state
 
-SEASHELL_EXT = '.sea'
+SEASHELL_EXT = '.fuse'
 C_EXT = '.cpp'
 OBJ_EXT = '.o'
 SDS_PLATFORM = 'zed'
@@ -229,9 +229,11 @@ def stage_seashell(db, config):
                     c_name = name
                     break
             else:
-                raise WorkError('no C source file found')
+                raise WorkError(
+                    'No hardware source file found. Expected a file with extension {} and basename not `main`.'.format(C_EXT)
+                )
 
-            task.log('skipping Seashell compilation stage')
+            task.log('skipping Fuse compilation stage')
             task['hw_basename'] = base
             return
 
@@ -242,7 +244,7 @@ def stage_seashell(db, config):
                 source_name = name
                 break
         else:
-            raise WorkError('no source file found')
+            raise WorkError('No Fuse source file found. Expected a file with extension {}'.format(SEASHELL_EXT))
         task['seashell_main'] = name
 
         # Run the Seashell compiler.
