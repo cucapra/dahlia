@@ -13,9 +13,6 @@ object TypeEnv {
 
   val emptyEnv: Environment = Env()(1)
 
-  // Product of all unroll factors enclosing the current context.
-  type ReqResources = Int
-
   /**
    * An environment keep tracks of information for type checking:
    * - The typedefs bound at the start of the program.
@@ -54,18 +51,26 @@ object TypeEnv {
     def resolveType(typ: Type): Type
 
     /**
-     * Methods to manipulate the scopes with the environment.
-     * INVARIANT: There is at least one scope in the environment.
+     * Open a new scope and run commands in it. When the scope ends, the
+     * bindings and capabilities bound in this scope are returned
+     *
+     * @param inScope Commands executed with the inner scope.
+     * @param resources Amount of resources required inside new scope.
+     * @returns A new environment without the topmost scope and a Scope
+     *          containing all bindings in the topmost scope.
      */
-    /** Create a new binding scope in the environment. */
-    def addScope: Environment
+    def withScope
+      (resources: Int)
+      (inScope: Environment => Environment): (Environment, Scope[Id, Info])
+
     /**
      *  Remove the topmost scope from the environment. The bindings and capabilities
-     *  bound in this scope are removed from the context.
+     *  bound in this scope are removed from the context. This method is
+     *  only used for interface implementation and should not be used directly.
      *  @returns A new environment without the topmost scope, A Scope containing
      *           all bindings in the topmost scope, A scope containing capability mappings.
      */
-    def endScope: (Environment, Scope[Id, Info], Scope[Expr, Capability])
+    def endScope: (Environment, Scope[Id, Info])
 
     /**
      * Type binding manipulation
@@ -148,29 +153,45 @@ object TypeEnv {
      */
     def getBoundIds: Set[Id]
 
+    /**
+     * @returns The total amount of resources required by the environment
+     */
+    def getResources: Int
+
+    /**
+     * @param newRes Amount of resources required by environment
+     * @returns A new environment with resources set to newRes
+     */
+    def setResources(newRes: Int): Environment
   }
 
   private case class Env(
     typeMap: ScopedMap[Id, Info] = ScopedMap(),
     capMap: ScopedMap[Expr, Capability] = ScopedMap(),
     typeDefMap: Map[Id, Type] = Map())
-    (implicit val rres: Int) extends Environment {
+    (implicit val res: Int) extends Environment {
 
     type TypeScope = Map[Id, Info]
     type CapScope = Map[Expr, Capability]
 
     /** Scope management */
-    def addScope = Env(typeMap.addScope, capMap.addScope, typeDefMap)
     def endScope = {
       val scopes = for {
         (tScope, tMap) <- typeMap.endScope;
-        (cScope, cMap) <- capMap.endScope
-      } yield (Env(tMap, cMap, typeDefMap), tScope, cScope)
+        (_, cMap) <- capMap.endScope
+      } yield (Env(tMap, cMap, typeDefMap), tScope)
 
       scopes match {
         case None => throw Impossible("Removed topmost scope")
         case Some(res) => res
       }
+    }
+
+    def withScope(resources: Int)(inScope: Environment => Environment) = {
+      val newScope =
+        Env(typeMap.addScope, capMap.addScope, typeDefMap)(res * resources)
+      val (e1, binds) = inScope(newScope).endScope
+      (e1.setResources(e1.getResources/resources), binds)
     }
 
     /** Capability methods */
@@ -214,5 +235,9 @@ object TypeEnv {
     }
 
     lazy val getBoundIds = typeMap.keys
+
+    def getResources = res
+
+    def setResources(newRes: Int) = Env(typeMap, capMap, typeDefMap)(newRes)
   }
 }
