@@ -8,7 +8,9 @@ const siteConfig = {
   organizationName: 'cucapra',
   headerLinks: [
     {doc: 'installation', label: 'Docs'},
-    {href: 'https://capra.cs.cornell.edu/seashell/docs', label: 'Notes'}
+    {label: 'Notes', href: 'https://capra.cs.cornell.edu/seashell/docs'},
+    {label: 'Github', href: 'https://github.com/cucapra/seashell'},
+    {search: true}
   ],
 
   /* path to images for header/footer */
@@ -65,6 +67,12 @@ const siteConfig = {
 
   // Show documentation's last update time.
    enableUpdateTime: true,
+
+  // Enable search powered by Aloglia
+  algolia: {
+    apiKey: '988f78fca045e0c0158986e788012d9c',
+    indexName: 'cornell_fuse',
+  }
 
 };
 
