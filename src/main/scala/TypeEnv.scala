@@ -51,6 +51,11 @@ object TypeEnv {
      *           containing all bindings in the topmost scope.
      */
     def endScope(resources: Int): (T, Scope[Id, Info])
+
+    /**
+     * @returns The total amount of resources required by the environment
+     */
+    def getResources: Int
   }
 
   /**
@@ -167,11 +172,6 @@ object TypeEnv {
      * @returns a set with all the bound Ids in this environment
      */
     def getBoundIds: Set[Id]
-
-    /**
-     * @returns The total amount of resources required by the environment
-     */
-    def getResources: Int
   }
 
   private case class Env(
