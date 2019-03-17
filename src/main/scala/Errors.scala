@@ -30,6 +30,9 @@ object Errors {
   case class InvalidIndex(id: Id, actual: Type) extends TypeError(
     s"Invalid indexing type for $id. Expected: TIndex or TSizedInt, actual: $actual", id.pos)
 
+  case class IndexOutOfBounds(id : Id) extends TypeError(
+    s"Index out of bounds for $id", id.pos)
+
   case class IncorrectAccessDims(id: Id, exp: Int, actual: Int) extends TypeError(
     s"Incorrect number of dimensions used to access $id. Expected: $exp, actual: $actual.", id.pos)
 

@@ -82,11 +82,14 @@ object TypeChecker {
         case (TIndex((s, e), _), env2) =>
           env2.update(id, env2(id).consumeDim(i, e - s)) -> bres * (e - s)
         case (TStaticInt(v), env2) =>
+          if (v > size) throw IndexOutOfBounds(id);
           env2.update(id, env(id).consumeBank(i, v % dims(i)._2)) -> bres * 1
-        case (TSizedInt(_), env2) =>
+        case (TSizedInt(n), env2) =>
+          if (math.pow(2, n) > size)
+            // XXX(Change this to a warning)
+            println(s"Warning! A SizedInt is used for an array access! This could be unsafe.");
           if (dims(i)._2 != 1) throw InvalidDynamicIndex(id, dims(i)._2)
           else env2.update(id, env(id).consumeBank(i, 0)) -> bres * 1
-
         case (t, _) => throw InvalidIndex(id, t)
       }
     })
@@ -98,6 +101,7 @@ object TypeChecker {
         if (dims.length != idxs.length) {
           throw IncorrectAccessDims(id, dims.length, idxs.length)
         }
+        // println(idxs.map(ex => ex.typ) mkString ", ");
         // Bind the type of to Id
         id.typ = Some(env(id).typ);
         // Capability check
