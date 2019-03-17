@@ -1,13 +1,3 @@
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- */
-
-// See https://docusaurus.io/docs/site-config for all the possible
-// site configuration options.
-
 const baseUrl = '/fuse/'
 const siteConfig = {
   title: 'Fuse',
@@ -18,7 +8,9 @@ const siteConfig = {
   organizationName: 'cucapra',
   headerLinks: [
     {doc: 'installation', label: 'Docs'},
-    {href: 'https://capra.cs.cornell.edu/seashell/docs', label: 'Notes'}
+    {label: 'Notes', href: 'https://capra.cs.cornell.edu/seashell/docs'},
+    {label: 'Github', href: 'https://github.com/cucapra/seashell'},
+    {search: true}
   ],
 
   /* path to images for header/footer */
@@ -76,19 +68,11 @@ const siteConfig = {
   // Show documentation's last update time.
    enableUpdateTime: true,
 
-  /* Custom fonts for website */
-  /*
-  fonts: {
-    myFont: [
-      "Times New Roman",
-      "Serif"
-    ],
-    myOtherFont: [
-      "-apple-system",
-      "system-ui"
-    ]
-  },
-  */
+  // Enable search powered by Aloglia
+  algolia: {
+    apiKey: '988f78fca045e0c0158986e788012d9c',
+    indexName: 'cornell_fuse',
+  }
 
 };
 
