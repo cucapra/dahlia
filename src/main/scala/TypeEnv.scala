@@ -14,20 +14,57 @@ object TypeEnv {
   val emptyEnv: Environment = Env()(1)
 
   /**
+   * An Environment that keeps tracks of Lexical Scopes.
+   */
+  trait ScopeManager[T <: ScopeManager[T]] {
+    /**
+     * A Scope in the environment. A scope is a collection of bindings in the
+     * current lexical scope.
+     */
+    type Scope[K, V] = Map[K, V]
+
+    /**
+     * Open a new scope and run commands in it. When the scope ends, the
+     * bindings and capabilities bound in this scope are returned
+     *
+     * @param inScope Commands executed with the inner scope.
+     * @param resources Amount of resources required inside new scope.
+     * @returns A new environment without the topmost scope and a Scope
+     *          containing all bindings in the topmost scope.
+     */
+    def withScope(resources: Int)(inScope: T => T): (T, Scope[Id, Info]) =
+      inScope(this.addScope(resources)).endScope(resources)
+
+    /**
+     * Add a new scope which consumes [[resources]].
+     * @param resources Amount of resources the new Scope consumes
+     */
+    def addScope(resources: Int): T
+
+    /**
+     *  Remove the topmost scope from the environment. The bindings and capabilities
+     *  bound in this scope are removed from the context.
+     *  This method is only used for interface implementation and should not be
+     *  used directly.
+     *  @param resources Number of resources to be removed from the scope.
+     *  @returns A new environment without the topmost scope and a Scope
+     *           containing all bindings in the topmost scope.
+     */
+    def endScope(resources: Int): (T, Scope[Id, Info])
+  }
+
+  /**
    * An environment keep tracks of information for type checking:
    * - The typedefs bound at the start of the program.
    * - The association of Identifiers to corresponding types.
    * - The association of Expressions to the capabilities acquired.
    * - Number of resources nested unrolled contexts imply.
+   *
    * The environment structure is built using a chain of scope over the
    * last two associations. A scope is a logical grouping of assoication
    * corresponding to lexical scope in programs.
    */
-  trait Environment {
-
-    // A Scope in the environment. A scope is a collection of bindings in the
-    // current lexical scope.
-    private type Scope[K, V] = Map[K, V]
+  trait Environment extends ScopeManager[Environment] {
 
     /**
      * Methods to manipulate type defs. Since the typedefs are top level,
@@ -49,28 +86,6 @@ object TypeEnv {
      * Returns a type with recursively resolved TAlias.
      */
     def resolveType(typ: Type): Type
-
-    /**
-     * Open a new scope and run commands in it. When the scope ends, the
-     * bindings and capabilities bound in this scope are returned
-     *
-     * @param inScope Commands executed with the inner scope.
-     * @param resources Amount of resources required inside new scope.
-     * @returns A new environment without the topmost scope and a Scope
-     *          containing all bindings in the topmost scope.
-     */
-    def withScope
-      (resources: Int)
-      (inScope: Environment => Environment): (Environment, Scope[Id, Info])
-
-    /**
-     *  Remove the topmost scope from the environment. The bindings and capabilities
-     *  bound in this scope are removed from the context. This method is
-     *  only used for interface implementation and should not be used directly.
-     *  @returns A new environment without the topmost scope, A Scope containing
-     *           all bindings in the topmost scope, A scope containing capability mappings.
-     */
-    def endScope: (Environment, Scope[Id, Info])
 
     /**
      * Type binding manipulation
@@ -137,8 +152,8 @@ object TypeEnv {
       // Sanity check: The same set of ids are bound by both environments
       if (this.getBoundIds != that.getBoundIds) {
         throw Impossible(
-          s"Trying to merge two environments which bind different sets of ids." +
-          " Intersection of bind set: ${this.getBoundIds & that.getBoundIds}")
+          "Trying to merge two environments which bind different sets of ids." +
+          s" Intersection of bind set: ${this.getBoundIds & that.getBoundIds}")
       }
 
       // For each bound id, set consumed banks to the union of consumed bank sets
@@ -157,12 +172,6 @@ object TypeEnv {
      * @returns The total amount of resources required by the environment
      */
     def getResources: Int
-
-    /**
-     * @param newRes Amount of resources required by environment
-     * @returns A new environment with resources set to newRes
-     */
-    def setResources(newRes: Int): Environment
   }
 
   private case class Env(
@@ -174,24 +183,21 @@ object TypeEnv {
     type TypeScope = Map[Id, Info]
     type CapScope = Map[Expr, Capability]
 
+    def addScope(resources: Int) = {
+      Env(typeMap.addScope, capMap.addScope, typeDefMap)(res * resources)
+    }
+
     /** Scope management */
-    def endScope = {
+    def endScope(resources: Int) = {
       val scopes = for {
         (tScope, tMap) <- typeMap.endScope;
         (_, cMap) <- capMap.endScope
-      } yield (Env(tMap, cMap, typeDefMap), tScope)
+      } yield (Env(tMap, cMap, typeDefMap)(res / resources), tScope)
 
       scopes match {
         case None => throw Impossible("Removed topmost scope")
         case Some(res) => res
       }
-    }
-
-    def withScope(resources: Int)(inScope: Environment => Environment) = {
-      val newScope =
-        Env(typeMap.addScope, capMap.addScope, typeDefMap)(res * resources)
-      val (e1, binds) = inScope(newScope).endScope
-      (e1.setResources(e1.getResources/resources), binds)
     }
 
     /** Capability methods */
@@ -237,7 +243,5 @@ object TypeEnv {
     lazy val getBoundIds = typeMap.keys
 
     def getResources = res
-
-    def setResources(newRes: Int) = Env(typeMap, capMap, typeDefMap)(newRes)
   }
 }
