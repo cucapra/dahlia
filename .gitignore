@@ -13,6 +13,7 @@ docs/*pdf
 ensime.sbt
 .ensime_cache
 .ensime
+.sbt-hydra-history
 
 node_modules/
 
