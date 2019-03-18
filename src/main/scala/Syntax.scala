@@ -112,12 +112,15 @@ object Syntax {
       case _:EVar | _:EArrAccess => true
       case _ => false
     }
+    var typ: Option[Type] = None
   }
   case class EInt(v: Int, base: Int = 10) extends Expr
   case class EFloat(f: Float) extends Expr
   case class EBool(v: Boolean) extends Expr
   case class EBinop(op: BOp, e1: Expr, e2: Expr) extends Expr
-  case class EArrAccess(id: Id, idxs: List[Expr]) extends Expr
+  case class EArrAccess(id: Id, idxs: List[Expr]) extends Expr {
+    var dims: Option[List[(Int, Int)]] = None
+  }
   case class ERecAccess(rec: Expr, fieldName: Id) extends Expr
   case class ERecLiteral(fields: Map[Id, Expr]) extends Expr
   case class EApp(func: Id, args: List[Expr]) extends Expr
