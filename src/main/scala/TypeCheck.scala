@@ -97,7 +97,6 @@ object TypeChecker {
         if (dims.length != idxs.length) {
           throw IncorrectAccessDims(id, dims.length, idxs.length)
         }
-        e.dims = Some(dims);
         // println(idxs.map(ex => ex.typ) mkString ", ");
         // Bind the type of to Id
         id.typ = Some(env(id).typ);
@@ -195,13 +194,12 @@ object TypeChecker {
       }
       case (t, _) => throw UnexpectedType(expr.pos, "record access", "record type", t)
     }
-    case e@EArrAccess(id, idxs) => env(id).typ match {
+    case EArrAccess(id, idxs) => env(id).typ match {
       // This only triggers for r-values. l-values are checked in checkLVal
       case TArray(typ, dims) => {
         if (dims.length != idxs.length) {
           throw IncorrectAccessDims(id, dims.length, idxs.length)
         }
-        e.dims = Some(dims);
         // Bind the type of to Id
         id.typ = Some(env(id).typ);
         // Check capabilities

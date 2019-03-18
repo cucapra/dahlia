@@ -9,23 +9,21 @@ object BoundsChecker {
     checkC(p.cmd)
   }
 
-  private def checkE(e: Expr) : Unit = {
-    e match {
-      case e@EArrAccess(id, idxs) => e.dims match {
-        case Some(dims) => (idxs.map(_.typ) zip dims).foldLeft(())((_, ele) => ele match {
-          case ((t, (size, _))) => t match {
-            case Some(TSizedInt(n)) =>
-              if (math.pow(2, n) >= size)
-                println("Warning! A SizedInt is used for an array access! This could be unsafe.")
-            case Some(TStaticInt(v)) => if (v >= size) throw IndexOutOfBounds(id)
-            case Some(t@TIndex(_, _)) => if (t.maxVal > size) throw IndexOutOfBounds(id)
-            case _ => ()
-          }
-        })
-        case None => ()
-      }
-      case _ => ()
-    }
+  private def checkE(e: Expr) : Unit = e match {
+    case EArrAccess(id, idxs) => id.typ.map({
+      case TArray(_, dims) => (idxs.map(_.typ) zip dims).foldLeft(())({
+        case ((_, (t, (size, _)))) => t.map({
+          case TSizedInt(n) =>
+            if (math.pow(2, n) >= size)
+              println("Warning! A SizedInt is used for an array access! This could be unsafe.")
+          case TStaticInt(v) => if (v >= size) throw IndexOutOfBounds(id)
+          case t@TIndex(_, _) => if (t.maxVal > size) throw IndexOutOfBounds(id)
+          case t => throw UnexpectedType(id.pos, "array access", s"[$t]", t)
+        }); ()
+      })
+      case t => throw UnexpectedType(id.pos, "array access", s"$t[]", t)
+    }); ()
+    case _ => ()
   }
 
   private def checkC(c: Command) : Unit = c match {
