@@ -79,7 +79,12 @@ vector<vector<T>> to_order_2_tensor(picojson::array &arr, unsigned int row_dim, 
 }
 
 template <typename T>
-vector<T> flatten_matrix(vector<vector<T>> mat) {
+vector<T> flatten_order_1_tensor(vector<T> vect) {
+  return vect;
+}
+
+template <typename T>
+vector<T> flatten_order_2_tensor(vector<vector<T>> mat) {
   vector<T> ret = {};
 
   for (auto vect: mat) {

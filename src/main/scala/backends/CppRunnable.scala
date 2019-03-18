@@ -76,7 +76,7 @@ private class CppRunnable extends CppLike {
       case arr@TArray(_:IntType | _:TFloat | _:TBool, dims) => {
         val funcName = s"to_order_${dims.length}_tensor"
         cBind(s"$id",
-          cCall("flatten_matrix", Some(emitType(arr.typ)),
+          cCall(s"flatten_order_${dims.length}_tensor", Some(emitType(arr.typ)),
             List(cCall(
               funcName,
               Some(emitType(arr.typ)),
