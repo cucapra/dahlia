@@ -16,5 +16,4 @@ object TestUtils {
     TypeChecker.typeCheck(ast);
     BoundsChecker.check(ast);
   }
-
 }

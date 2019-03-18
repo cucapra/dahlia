@@ -1068,7 +1068,7 @@ class TypeCheckerSpec extends FunSpec {
 
   describe("Bound Checking") {
     it("static ints smaller than array size are valid") {
-      boundsCheck("""
+      typeCheck("""
         decl a: bit<32>[10];
         let v = a[9];
         """)
@@ -1076,7 +1076,7 @@ class TypeCheckerSpec extends FunSpec {
 
     it("static ints larger than array size fail") {
       assertThrows[IndexOutOfBounds] {
-        boundsCheck("""
+        typeCheck("""
           decl a: bit<32>[10];
           let v = a[10];
           """)
@@ -1084,7 +1084,7 @@ class TypeCheckerSpec extends FunSpec {
     }
 
     it("array access with index types is valid when maxVal <= array length") {
-      boundsCheck("""
+      typeCheck("""
         decl a: bit<32>[10];
 
         for (let i = 0..10) {
@@ -1095,7 +1095,7 @@ class TypeCheckerSpec extends FunSpec {
 
     it("array access with index types fails when maxVal > array length") {
       assertThrows[IndexOutOfBounds] {
-        boundsCheck("""
+        typeCheck("""
           decl a: bit<32>[10];
 
           for (let i = 0..11) {
