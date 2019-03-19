@@ -1,6 +1,7 @@
 package fuselang
 
 import java.io.File
+import scribe.Level
 
 import backend.{VivadoBackend, CppRunnable, Backend}
 
@@ -26,7 +27,8 @@ object Utils {
     output: Option[String] = None, // Name of output file.
     backend: Backend = VivadoBackend,
     mode: Mode = Compile,
-    compilerOpts: List[String] = List()
+    compilerOpts: List[String] = List(),
+    logLevel: Level = Level.Info
   )
 
 }
