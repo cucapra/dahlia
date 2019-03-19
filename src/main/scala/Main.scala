@@ -2,6 +2,8 @@ package fuselang
 
 import java.nio.file.{Files, Path}
 import java.io.File
+import scribe.{Logger, Level}
+import scribe.format._
 
 import Utils._
 
@@ -36,6 +38,10 @@ object Main {
       .action((b, c) => c.copy(backend = toBackend(b)))
       .text("Name of the backend to use. Default backed is vivado.")
 
+    opt[Unit]('d', "debug")
+      .action((_, c) => c.copy(logLevel = Level.Debug))
+      .text("Enables debug output")
+
     cmd("run")
       .action((_, c) => c.copy(mode = Run, backend = toBackend("c++")))
       .text("Generate a runnable object file. Assumes GCC and required headers are available. Implies mode=c++.")
@@ -53,10 +59,15 @@ object Main {
 
   def main(args: Array[String]): Unit = {
 
+
     type ErrString = String
 
     parser.parse(args, Config(null)) match {
       case Some(conf) => {
+        val myFormatter: Formatter = formatter"[$levelColored] $message$newLine"
+        Logger.root.clearHandlers().withHandler(formatter = myFormatter,
+          minimumLevel = Some(conf.logLevel)).replace()
+
         val path = conf.srcFile.toPath
 
         val prog = Files.exists(path) match {
