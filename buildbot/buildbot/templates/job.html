@@ -43,9 +43,13 @@
 {% endfor %}
 </ul>
 
-<h3>Log</h3>
+<h3><a href="{{ url_for('job_log', name=job.name) }}">Log</a></h3>
+<p>
+    See <a href="{{ url_for('job_log', name=job.name) }}">the full log</a>
+    ({{ job.log | length }} messages).
+</p>
 <ul class="log">
-{% for time, text in job.log %}
+{% for time, text in job.log[-4:] %}
     <li>
         <time>{{ time | dt }}</time><br>
         <pre>{{ text }}</pre>
