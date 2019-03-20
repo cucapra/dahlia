@@ -32,16 +32,10 @@
     {% endfor %}
 </ul>
 
-<h3>Files</h3>
-<ul>
-{% for path in files %}
-    <li>
-        <a href="{{ url_for('job_file', name=job.name, filename=path) }}">
-            {{ path }}
-        </a>
-    </li>
-{% endfor %}
-</ul>
+<p>
+    List
+    <a href="{{ url_for('job_files', name=job.name) }}">the job’s files</a>.
+</p>
 
 <h3><a href="{{ url_for('job_log', name=job.name) }}">Log</a></h3>
 <p>

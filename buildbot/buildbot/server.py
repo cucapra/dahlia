@@ -187,19 +187,9 @@ def show_job(name):
         db.set_state(job, new_state)
         notify_workers(job['name'])
 
-    # Find all the job's files.
-    job_dir = db.job_dir(name)
-    paths = []
-    for dirpath, dirnames, filenames in os.walk(job_dir):
-        dp = os.path.relpath(dirpath, job_dir)
-        for fn in filenames:
-            if not fn.startswith('.'):
-                paths.append(os.path.join(dp, fn))
-
     return flask.render_template(
         'job.html',
         job=job,
-        files=paths,
         status_strings=STATUS_STRINGS,
     )
 
@@ -211,6 +201,26 @@ def job_log(name):
     return flask.render_template(
         'log.html',
         job=job,
+    )
+
+
+@app.route('/jobs/<name>/files.html')
+def job_files(name):
+    job = _get(name)
+
+    # Find all the job's files.
+    job_dir = db.job_dir(name)
+    paths = []
+    for dirpath, dirnames, filenames in os.walk(job_dir):
+        dp = os.path.relpath(dirpath, job_dir)
+        for fn in filenames:
+            if not fn.startswith('.'):
+                paths.append(os.path.join(dp, fn))
+
+    return flask.render_template(
+        'files.html',
+        job=job,
+        files=paths,
     )
 
 
