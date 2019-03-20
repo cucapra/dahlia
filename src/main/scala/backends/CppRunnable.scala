@@ -67,7 +67,7 @@ private class CppRunnable extends CppLike {
             Some("picojson::array"),
             List(quote(id), quote(s"${arr.typ}[]"), "v")))
       }
-      case t => throw Impossible(s"Cannot parse type `$t' with CppRunnable backend.")
+      case t => throw NotImplemented(s"Cannot parse type `$t' with CppRunnable backend.")
     }
 
     val alignType = typ match {
@@ -84,7 +84,7 @@ private class CppRunnable extends CppLike {
               Some(emitType(arr.typ)),
               s"${id}_t" :: dims.map(t => value(t._1))))))
       }
-      case t => throw Impossible(s"Cannot parse type `$t' with CppRunnable backend.")
+      case t => throw NotImplemented(s"Cannot parse type `$t' with CppRunnable backend.")
     }
 
     comment <@> parseStmt <@> alignType

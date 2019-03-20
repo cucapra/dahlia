@@ -14,19 +14,24 @@ object Compiler {
     c.backend.emitProg(rast, c)
   }
 
+  // Outputs red text to the console
+  def red(txt: String): String = {
+    Console.RED + txt + Console.RESET
+  }
+
   def compileString(prog: String, c: Config): Either[String, String] = Try {
     compileStringWithError(prog, c)
   } match {
     case Success(out) => Right(out)
     case Failure(f: Errors.TypeError) =>
-      Left("[" + Console.RED + "Type error" + Console.RESET + "] " + f.getMessage)
+      Left(s"[${red("Type error")}] ${f.getMessage}")
     case Failure(f: Errors.ParserError) =>
-      Left("[" + Console.RED + "Parsing error" + Console.RESET + "] " + f.getMessage)
+      Left(s"[${red("Parsing error")}] ${f.getMessage}")
     case Failure(f: Errors.Impossible) =>
-      Left("[" + Console.RED + "Impossible" + Console.RESET + "] " + f.getMessage +
+      Left(s"[${red("Impossible")}] ${f.getMessage}. " +
         " This should never trigger. Please report this as a bug.")
     case Failure(f: RuntimeException) =>
-      Left("[" + Console.RED + "Error" + Console.RESET + "] " + f.getMessage)
+      Left(s"[${red("Error")}] ${f.getMessage}")
     case Failure(f) => Left(f.getMessage)
   }
 

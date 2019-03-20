@@ -120,5 +120,8 @@ object Errors {
   // Used when a branch should be impossible at runtime.
   case class Impossible(msg: String) extends RuntimeException(s"$msg")
 
+  // Used when a feature is not yet implemented
+  case class NotImplemented(msg: String) extends RuntimeException(s"$msg This feature is not yet implemented. Please open a feature request for it.")
+
 }
 
