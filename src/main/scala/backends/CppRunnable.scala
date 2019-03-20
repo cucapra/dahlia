@@ -49,7 +49,9 @@ private class CppRunnable extends CppLike {
    * - Primitives are cast to primitive type from `double`. (All numbers in JSON
    *   are initially parsed as doubles.)
    */
-  def emitParseDecl: Decl => Doc = { case Decl(id, typ) => {
+  def emitParseDecl: Decl => Doc = { case Decl(id, _) => {
+    // Use the type decoration for id since it's guaranteed to be resolved.
+    val typ = id.typ.get
     val comment = value(s"// parsing parameter $id")
 
     val parseStmt = typ match {
@@ -65,7 +67,7 @@ private class CppRunnable extends CppLike {
             Some("picojson::array"),
             List(quote(id), quote(s"${arr.typ}[]"), "v")))
       }
-      case t => throw Impossible(s"Cannot parse type $t with CppRunnable backend.")
+      case t => throw Impossible(s"Cannot parse type `$t' with CppRunnable backend.")
     }
 
     val alignType = typ match {
@@ -82,7 +84,7 @@ private class CppRunnable extends CppLike {
               Some(emitType(arr.typ)),
               s"${id}_t" :: dims.map(t => value(t._1))))))
       }
-      case t => throw Impossible(s"Cannot parse type $t with CppRunnable backend.")
+      case t => throw Impossible(s"Cannot parse type `$t' with CppRunnable backend.")
     }
 
     comment <@> parseStmt <@> alignType
