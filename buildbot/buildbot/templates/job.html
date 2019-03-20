@@ -37,7 +37,6 @@
     <a href="{{ url_for('job_files', name=job.name) }}">the job’s files</a>.
 </p>
 
-<h3><a href="{{ url_for('job_log', name=job.name) }}">Log</a></h3>
 <p>
     See <a href="{{ url_for('job_log', name=job.name) }}">the full log</a>
     ({{ job.log | length }} messages).
