@@ -204,6 +204,16 @@ def show_job(name):
     )
 
 
+@app.route('/jobs/<name>/log.html')
+def job_log(name):
+    job = _get(name)
+
+    return flask.render_template(
+        'log.html',
+        job=job,
+    )
+
+
 @app.route('/jobs/<name>')
 def get_job(name):
     job = _get(name)
