@@ -24,7 +24,6 @@ src/main/resources/headers/*.hpp
 ## Testing dir
 _test
 
-## Object files
 *.o
 
 # Racket
