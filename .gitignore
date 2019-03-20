@@ -26,3 +26,5 @@ _test
 
 ## Object files
 *.o
+#racket
+*.bak
