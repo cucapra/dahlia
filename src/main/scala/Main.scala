@@ -2,7 +2,6 @@ package fuselang
 
 import java.nio.file.{Files, Path}
 import java.io.File
-import scribe.{Logger, Level}
 
 import Utils._
 
@@ -37,9 +36,9 @@ object Main {
       .action((b, c) => c.copy(backend = toBackend(b)))
       .text("Name of the backend to use. Default backed is vivado.")
 
-    opt[Unit]('d', "debug")
-      .action((_, c) => c.copy(logLevel = Level.Debug))
-      .text("Enables debug output")
+    opt[String]('l', "log-level")
+      .action((s, c) => c.copy(logLevel = Logger.stringToLevel(s)))
+      .text("Set logging level for the compiler. Defaults to 'info'.")
 
     cmd("run")
       .action((_, c) => c.copy(mode = Run, backend = toBackend("c++")))
@@ -62,8 +61,8 @@ object Main {
 
     parser.parse(args, Config(null)) match {
       case Some(conf) => {
-        Logger.root.clearHandlers().withHandler(formatter = Log.format,
-          minimumLevel = Some(conf.logLevel)).replace()
+        // Setup logging configuration
+        Logger.setLogLevel(conf.logLevel)
 
         val path = conf.srcFile.toPath
 
