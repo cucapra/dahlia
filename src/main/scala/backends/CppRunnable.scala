@@ -14,9 +14,10 @@ import Cpp._
  */
 private class CppRunnable extends CppLike {
 
-  def emitType(typ: Type) = typ match {
+  def emitType(typ: Type): Doc = typ match {
     case _:TVoid => "void"
-    case _:TBool | _:TIndex | _:TStaticInt | _:TSizedInt => "int"
+    case _:TBool => "bool"
+    case _:TIndex | _:TStaticInt | _:TSizedInt => "int"
     case _:TFloat => "float"
     case TArray(typ, _) => "vector" <> angles(emitType(typ))
     case TRecType(n, _) => n
@@ -60,15 +61,9 @@ private class CppRunnable extends CppLike {
     val typ = id.typ.get
 
     val (typeName, cTyp): (Doc, Doc) = typ match {
-      case _:TBool | _:IntType | _:TFloat => {
+      case _:TAlias | _:TRecType | _:TBool | _:IntType | _:TFloat => {
         val typeName = emitType(typ)
         (quote(typeName), typeName)
-      }
-      case TAlias(name) => {
-        (quote(name.toString), name)
-      }
-      case TRecType(name, _) => {
-        (quote(name.toString), name)
       }
       case arr@TArray(_, dims) => {
         val typeName = quote(s"${arr.typ}${dims.map(_ => "[]").mkString}")

@@ -23,7 +23,7 @@ object Cpp {
 
     override val defaultIndent = 2
 
-    def quote(id: Any) = dquotes(id.toString)
+    def quote(id: Doc) = dquotes(id)
 
     /**
      * Helper to generate a variable declaration with an initial value.
