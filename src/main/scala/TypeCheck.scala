@@ -301,7 +301,7 @@ object TypeChecker {
       // Check if the explicit type is bound in scope. Also, if the type is
       // a static int, upcast it to sized int. We do not allow variables to
       // have static types.
-      val rTyp = typ.map(env.resolveType(_)).map(t => t match {
+      val rTyp = typ.map(env.resolveType(_) match {
         case TStaticInt(v) => TSizedInt(bitsNeeded(v))
         case t => t
       })
