@@ -105,10 +105,8 @@ private class CppRunnable extends CppLike {
     val startHelpers = value("/***************** Parse helpers  ******************/")
     val endHelpers = value("/***************************************************/")
     val includes = Include("parser.cpp", List()) :: p.includes
-    val parseHelpers = vsep(
-      p.defs
-        .withFilter(d => d.isInstanceOf[RecordDef])
-        .map(d => recordHelpers(d.asInstanceOf[RecordDef])))
+    val parseHelpers =
+      vsep(p.defs.collect({ case rec: RecordDef => recordHelpers(rec)}))
     val kernel =
       vsep(includes.map(emitInclude)) <@>
       vsep(p.defs.map(emitDef)) <@>

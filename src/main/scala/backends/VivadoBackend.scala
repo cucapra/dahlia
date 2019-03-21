@@ -19,8 +19,7 @@ private class VivadoBackend extends CppLike {
   }
 
   def bankPragmas(decls: List[Decl]) = decls
-    .withFilter(d => d.typ.isInstanceOf[TArray])
-    .map(d => bank(d.id, d.typ.asInstanceOf[TArray].dims.map(_._2)))
+    .collect({ case Decl(id, typ: TArray) => bank(id, typ.dims.map(_._2)) })
     .withFilter(s => s != "")
     .map(s => value(s))
 
