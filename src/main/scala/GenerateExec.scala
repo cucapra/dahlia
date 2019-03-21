@@ -11,7 +11,8 @@ import Errors.HeaderMissing
  * by the CppRunnable backend.
  */
 object GenerateExec {
-  val headers = List("parser.cpp", "picojson.h")
+  // TODO(rachit): Move this to build.sbt
+  val headers = List("parser.cpp", "json.hpp")
 
   var headerLocation = Paths.get("src/main/resources/headers")
   val headerFallbackLocation = Paths.get("_headers/")

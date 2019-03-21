@@ -19,6 +19,7 @@ node_modules/
 
 ## Ignore run headers
 src/main/resources/headers/*.h
+src/main/resources/headers/*.hpp
 
 ## Testing dir
 _test
