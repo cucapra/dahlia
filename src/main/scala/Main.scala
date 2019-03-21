@@ -3,7 +3,6 @@ package fuselang
 import java.nio.file.{Files, Path}
 import java.io.File
 import scribe.{Logger, Level}
-import scribe.format._
 
 import Utils._
 
@@ -59,13 +58,11 @@ object Main {
 
   def main(args: Array[String]): Unit = {
 
-
     type ErrString = String
 
     parser.parse(args, Config(null)) match {
       case Some(conf) => {
-        val myFormatter: Formatter = formatter"[$levelColored] $message$newLine"
-        Logger.root.clearHandlers().withHandler(formatter = myFormatter,
+        Logger.root.clearHandlers().withHandler(formatter = Log.format,
           minimumLevel = Some(conf.logLevel)).replace()
 
         val path = conf.srcFile.toPath

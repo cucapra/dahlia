@@ -1,18 +1,10 @@
 package fuselang
 
 import scala.util.parsing.input.Positional
-import scribe._
 
 object Syntax {
 
   import Errors._
-
-  /** Makes all positionals logable by scribe */
-  implicit object PositionalLoggable extends Loggable[(String,Positional)] {
-    override def apply(value: (String, Positional)) = {
-      new output.TextOutput(s"${value._1}\n${value._2.pos.longString}")
-    }
-  }
 
   case class Id(v: String) extends Positional {
     var typ: Option[Type] = None;
