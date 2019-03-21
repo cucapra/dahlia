@@ -57,32 +57,27 @@ private class CppRunnable extends CppLike {
     val parseStmt = typ match {
       case _:TBool | _:IntType | _:TFloat => {
         cBind(s"${id}_t",
-          cCall("get_arg", Some("double"),
+          cCall("get_arg", Some(emitType(typ)),
             List(quote(id), quote("int"), "v")))
       }
-      case arr@TArray(_:IntType | _:TFloat | _:TBool, _) => {
+      case arr@TArray(_:IntType | _:TFloat | _:TBool, dims) => {
         cBind(s"${id}_t",
           cCall(
             "get_arg",
-            Some("picojson::array"),
-            List(quote(id), quote(s"${arr.typ}[]"), "v")))
+            Some("n_dim_vec_t" <> angles(emitType(arr.typ) <> comma <+> dims.length.toString)),
+            List(quote(id), quote(s"${arr.typ}${dims.map(_ => "[]").mkString}"), "v")))
       }
       case t => throw NotImplemented(s"Cannot parse type `$t' with CppRunnable backend.")
     }
 
     val alignType = typ match {
       case _:TBool | _:IntType | _:TFloat => {
-        cBind(s"$id",
-          cCall("to_num", Some(emitType(typ)), List(s"${id}_t")))
+        cBind(s"$id", s"${id}_t")
       }
       case arr@TArray(_:IntType | _:TFloat | _:TBool, dims) => {
-        val funcName = s"to_order_${dims.length}_tensor"
         cBind(s"$id",
-          cCall(s"flatten_order_${dims.length}_tensor", Some(emitType(arr.typ)),
-            List(cCall(
-              funcName,
-              Some(emitType(arr.typ)),
-              s"${id}_t" :: dims.map(t => value(t._1))))))
+          cCall(s"flatten_tensor", Some(emitType(arr.typ) <> comma <+> dims.length.toString),
+              List(s"${id}_t")))
       }
       case t => throw NotImplemented(s"Cannot parse type `$t' with CppRunnable backend.")
     }
@@ -100,6 +95,7 @@ private class CppRunnable extends CppLike {
 
     val modProg = "#include" <+> dquotes("parser.cpp") <@> prog <@>
     value("int main(int argc, char** argv)") <+> scope {
+      "using namespace details;" <@>
       cBind("v", cCall("parse_data", None, List("argc", "argv"))) <> semi <@>
       getArgs <@>
       cCall(c.kernelName, None, p.decls.map(decl => value(decl.id.v))) <> semi <@>
