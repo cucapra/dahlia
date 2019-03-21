@@ -4,12 +4,27 @@ import scala.util.parsing.input.Positional
 import scribe._
 import scribe.format._
 
-object Log {
+object Logger {
   /** Makes all positionals logable by scribe */
   implicit object PositionalLoggable extends Loggable[(String,Positional)] {
     override def apply(value: (String, Positional)) = {
       new output.TextOutput(s"${value._1}\n${value._2.pos.longString}")
     }
+  }
+
+  def stringToLevel(str: String): Level = str match {
+    case "warn" => Level.Warn
+    case "info" => Level.Info
+    case "debug" => Level.Debug
+    case _ => throw new RuntimeException(s"Unknown level: $str")
+  }
+
+  /**
+   * Stateful function to set the logging level in the compiler.
+   */
+  def setLogLevel(level: Level) = {
+    scribe.Logger.root.clearHandlers().withHandler(formatter = format,
+      minimumLevel = Some(level)).replace()
   }
 
   val format: Formatter = formatter"[$levelColored] $message$newLine"
