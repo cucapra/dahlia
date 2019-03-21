@@ -78,17 +78,19 @@ object TypeChecker {
     (id: Id, idxs: List[Expr], dims: List[(Int, Int)])
     (implicit env: Environment) =
     idxs.zipWithIndex.foldLeft((env, 1))({
-      case ((env1, bres), (e, i)) => checkE(e)(env1) match {
-        case (TIndex((s, e), _), env2) =>
-          env2.update(id, env2(id).consumeDim(i, e - s)) -> bres * (e - s)
-        case (TStaticInt(v), env2) =>
-          env2.update(id, env(id).consumeBank(i, v % dims(i)._2)) -> bres * 1
-        case (TSizedInt(_), env2) =>
-          if (dims(i)._2 != 1) throw InvalidDynamicIndex(id, dims(i)._2)
-          else env2.update(id, env(id).consumeBank(i, 0)) -> bres * 1
-
-        case (t, _) => throw InvalidIndex(id, t)
-      }
+      case ((env1, bres), (e, i)) =>
+        val t = checkE(e)(env1);
+        e.typ = Some(t._1);
+        t match {
+          case (TIndex((s, e), _), env2) =>
+            env2.update(id, env2(id).consumeDim(i, e - s)) -> bres * (e - s)
+          case (TStaticInt(v), env2) =>
+            env2.update(id, env(id).consumeBank(i, v % dims(i)._2)) -> bres * 1
+          case (TSizedInt(_), env2) =>
+            if (dims(i)._2 != 1) throw InvalidDynamicIndex(id, dims(i)._2)
+            else env2.update(id, env(id).consumeBank(i, 0)) -> bres * 1
+          case (t, _) => throw InvalidIndex(id, t)
+        }
     })
 
   private def checkLVal(e: Expr)(implicit env: Environment) = e match {

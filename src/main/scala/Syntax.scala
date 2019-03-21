@@ -109,6 +109,7 @@ object Syntax {
       case _:EVar | _:EArrAccess => true
       case _ => false
     }
+    var typ: Option[Type] = None
   }
   case class EInt(v: Int, base: Int = 10) extends Expr
   case class EFloat(f: Float) extends Expr

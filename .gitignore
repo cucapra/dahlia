@@ -13,6 +13,7 @@ docs/*pdf
 ensime.sbt
 .ensime_cache
 .ensime
+.sbt-hydra-history
 
 node_modules/
 
@@ -22,3 +23,6 @@ src/main/resources/headers/*.hpp
 
 ## Testing dir
 _test
+
+## Object files
+*.o
