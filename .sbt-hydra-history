@@ -1,1 +1,0 @@
-(setq sbt-hydra:hydra-previous-commands '("seashell/test:test" "assembly" "assemblyq" "seashell/compile" "seashell/test:testQuick"))

@@ -2,6 +2,7 @@ package fuselang
 
 import Syntax._
 import Errors._
+import Logger._
 
 object BoundsChecker {
 
@@ -15,7 +16,7 @@ object BoundsChecker {
         case ((_, (t, (size, _)))) => t.map({
           case TSizedInt(n) =>
             if (math.pow(2, n) >= size)
-              println("Warning! A SizedInt is used for an array access! This could be unsafe.")
+              scribe.warn(("A SizedInt is used for an array access! This could be unsafe.", e))
           case TStaticInt(v) => if (v >= size) throw IndexOutOfBounds(id)
           case t@TIndex(_, _) => if (t.maxVal > size) throw IndexOutOfBounds(id)
           case t => throw UnexpectedType(id.pos, "array access", s"[$t]", t)

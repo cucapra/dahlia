@@ -10,10 +10,10 @@ object TestUtils {
   }
 
   def parseAst(s: String) = FuseParser.parse(s)
-  def typeCheck(s: String) = TypeChecker.typeCheck(FuseParser.parse(s))
-  def boundsCheck(s: String) = {
+  def typeCheck(s: String) = {
     val ast = FuseParser.parse(s);
-    TypeChecker.typeCheck(ast);
+    val env = TypeChecker.typeCheck(ast);
     BoundsChecker.check(ast);
+    env
   }
 }
