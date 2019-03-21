@@ -23,7 +23,9 @@ object GenerateExec {
     headerLocation = headerFallbackLocation
 
     if (Files.exists(headerFallbackLocation) == false)  {
-      println(s"Missing required headers for `fuse run`. Unpacking from JAR file into $headerFallbackLocation.")
+      scribe.warn(
+        s"Missing headers required for `fuse run`." +
+        s" Unpacking from JAR file into $headerFallbackLocation.")
 
       val dir = Files.createDirectory(headerFallbackLocation)
       for (header <- headers) {
