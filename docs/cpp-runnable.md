@@ -12,10 +12,10 @@ The backend is meant to be used for functional testing and as such has a few
 important limitations.
 
 1. Exact bitwidth integer computation is not supported. Sized integers get
-   compiled to C++ `int`.
+   compiled to C++ `int`. This affects the semantics of programs that relay on wrap around behavior for sized ints.
 2. `unroll`s do not create any form of parallelism. The annotation is compiled
-   away after typechecking.
-3. Functions are not inlined.
+   away after typechecking. This does not affect the semantics, only the performance.
+3. Functions are not inlined. This does not affect the semantics, only the performance.
 
 ## Example
 
