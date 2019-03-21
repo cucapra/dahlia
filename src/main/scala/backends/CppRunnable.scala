@@ -34,75 +34,105 @@ private class CppRunnable extends CppLike {
 
   def emitFuncHeader(func: FuncDef) = value("")
 
+  def alignType(t: Type): Doc => Doc = t match {
+    case arr@TArray(_, dims) => {
+      doc => cCall(
+        s"flatten_tensor",
+        Some(emitType(arr.typ) <> comma <+> dims.length.toString),
+        List(doc))
+    }
+    case _ => doc => doc
+  }
+
   /**
    * Emit code to parse the value for declaration `d`. Assumes that the
-   * program has already created a value `v` of the type picojson::value to
+   * program has already created a value `v` of the type json to
    * store the data. Each parameter generates two statements:
    *
-   * auto id_t = get_arg<type>("id", "type", v); // v is the picojson value parsed earlier.
-   * auto id = `transform`(id_t);
+   * auto id = <align>(get_arg<type>("id", "type", v)); // v is the json value parsed earlier.
    *
-   * For the second statement, `transform` is generated based on the type of the
-   * param:
+   * <align> is generated based on the type of the param:
    *
-   * - Arrays are turned in n-dimensional vectors and then flattened.
-   * - Primitives are cast to primitive type from `double`. (All numbers in JSON
-   *   are initially parsed as doubles.)
+   * - n-dimensional arrays are flattened.
    */
   def emitParseDecl: Decl => Doc = { case Decl(id, _) => {
     // Use the type decoration for id since it's guaranteed to be resolved.
     val typ = id.typ.get
-    val comment = value(s"// parsing parameter $id")
 
-    val parseStmt = typ match {
+    val (typeName, cTyp): (Doc, Doc) = typ match {
       case _:TBool | _:IntType | _:TFloat => {
-        cBind(s"${id}_t",
-          cCall("get_arg", Some(emitType(typ)),
-            List(quote(id), quote("int"), "v")))
+        val typeName = emitType(typ)
+        (quote(typeName), typeName)
       }
-      case arr@TArray(_:IntType | _:TFloat | _:TBool, dims) => {
-        cBind(s"${id}_t",
-          cCall(
-            "get_arg",
-            Some("n_dim_vec_t" <> angles(emitType(arr.typ) <> comma <+> dims.length.toString)),
-            List(quote(id), quote(s"${arr.typ}${dims.map(_ => "[]").mkString}"), "v")))
+      case TAlias(name) => {
+        (quote(name.toString), name)
+      }
+      case TRecType(name, _) => {
+        (quote(name.toString), name)
+      }
+      case arr@TArray(_, dims) => {
+        val typeName = quote(s"${arr.typ}${dims.map(_ => "[]").mkString}")
+        val cType = "n_dim_vec_t" <> angles(emitType(arr.typ) <> comma <+> dims.length.toString)
+        (typeName, cType)
       }
       case t => throw NotImplemented(s"Cannot parse type `$t' with CppRunnable backend.")
     }
 
-    val alignType = typ match {
-      case _:TBool | _:IntType | _:TFloat => {
-        cBind(s"$id", s"${id}_t")
-      }
-      case arr@TArray(_:IntType | _:TFloat | _:TBool, dims) => {
-        cBind(s"$id",
-          cCall(s"flatten_tensor", Some(emitType(arr.typ) <> comma <+> dims.length.toString),
-              List(s"${id}_t")))
-      }
-      case t => throw NotImplemented(s"Cannot parse type `$t' with CppRunnable backend.")
-    }
+    val parseStmt =
+      cBind(s"${id}",
+        alignType(typ)(
+          cCall("get_arg", Some(cTyp), List(quote(id), typeName, "v"))))
 
-    comment <@> parseStmt <@> alignType
+    parseStmt
   }}
 
+  /**
+   * Generates [[from_json]] and [[to_json]] for a given record. Used by the
+   * json library to extract records from json.
+   * See: https://github.com/nlohmann/json#basic-usage
+   */
+  private def recordHelpers: RecordDef => Doc = { case RecordDef(name, fields) =>
+    "void to_json" <> parens(s"nlohmann::json& j, const ${name}& r") <+> scope {
+      "j =" <+> "nlohmann::json" <> braces(hsep({
+        fields.map({ case (id, _) => braces(quote(id) <> comma <+> s"r.$id")}).toList
+      }, comma)) <> semi
+    } <@>
+    "void from_json" <> parens(s"const nlohmann::json& j, ${name}& r") <+> scope {
+      vsep({
+        fields.map({ case (id, _) =>
+          "j.at" <> parens(quote(id)) <> ".get_to" <> parens(s"r.$id") <> semi
+        }).toList
+      })
+    }
+  }
+
   def emitProg(p: Prog, c: Config) = {
-    val prog =
-      vsep(p.includes.map(emitInclude)) <@>
+    val startHelpers = value("/***************** Parse helpers  ******************/")
+    val endHelpers = value("/***************************************************/")
+    val includes = Include("parser.cpp", List()) :: p.includes
+    val parseHelpers = vsep(
+      p.defs
+        .withFilter(d => d.isInstanceOf[RecordDef])
+        .map(d => recordHelpers(d.asInstanceOf[RecordDef])))
+    val kernel =
+      vsep(includes.map(emitInclude)) <@>
       vsep(p.defs.map(emitDef)) <@>
+      startHelpers <@>
+      parseHelpers <@>
+      endHelpers <@>
       emitFunc(FuncDef(Id(c.kernelName), p.decls, Some(p.cmd)))
 
     val getArgs: Doc = vsep(p.decls.map(emitParseDecl), line)
 
-    val modProg = "#include" <+> dquotes("parser.cpp") <@> prog <@>
-    value("int main(int argc, char** argv)") <+> scope {
-      "using namespace details;" <@>
+    val main = value("int main(int argc, char** argv)") <+> scope {
+      "using namespace flattening;" <@>
       cBind("v", cCall("parse_data", None, List("argc", "argv"))) <> semi <@>
       getArgs <@>
       cCall(c.kernelName, None, p.decls.map(decl => value(decl.id.v))) <> semi <@>
       "return 0" <> semi
     }
 
-    super.pretty(modProg).layout
+    super.pretty(kernel <@> main).layout
   }
 }
 

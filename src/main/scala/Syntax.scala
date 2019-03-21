@@ -22,10 +22,7 @@ object Syntax {
         s"$t" + dims.foldLeft("")({ case (acc, (d, b)) => s"$acc[$d bank $b]" })
       case TIndex(s, d) => s"idx($s, $d)"
       case TFun(args) => s"${args.mkString("->")} -> void"
-      case TRecType(n, fs) => {
-        val fields = fs.toList.map({ case (id, typ) => s"$id: $typ"}).mkString("; ")
-        s"$n($fields)"
-      }
+      case TRecType(n, _) => s"$n"
       case TAlias(n) => n.toString
     }
   }
