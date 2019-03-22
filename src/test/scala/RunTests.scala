@@ -2,33 +2,49 @@ package fuselang
 
 import sys.process._
 import scala.concurrent._
+import org.scalatest.Tag
 
 import java.nio.file.{Files, Paths, Path}
 import collection.JavaConverters._
 
-import org.scalatest.Tag
+import Utils._
 
 object SlowTest extends Tag("fuselang.tag.SlowTest")
 
 object AsyncRun {
 
-  def asyncProcRun(proc: Seq[String])(implicit ec: ExecutionContext, logger: ProcessLogger) =
-    Future { proc ! logger }
+  def asyncProcRun
+  (proc: Seq[String])(implicit ec: ExecutionContext): Future[Either[String, Int]] = {
+    val err = new StringBuilder
+    implicit val logger = ProcessLogger(_ => (), e => err ++= (e + "\n"))
+
+    Future {
+      val status = proc ! logger
+      if (status != 0) Left(err.toString)
+      else Right(status)
+    }
+  }
 
   def compileAndEval
-  (srcFile: Path, dataFile: Path, outFile: Path)
-  (implicit ec: ExecutionContext, logger: ProcessLogger): Future[Int] = {
-    // Assumes that `fuse run` creates outFile.o
-    val compileCmd = Seq("./fuse", "run", srcFile.toString, "-o", outFile.toString)
+  (src: Path, data: Path, out: Path)
+  (implicit ec: ExecutionContext): Future[Either[String, Int]] = {
 
-    asyncProcRun(compileCmd).flatMap(status => {
-      if (status == 0) {
-        val toExec = Paths.get(outFile.toString + ".o")
-        val runCmd = Seq(s"${toExec}", dataFile.toString)
+    val conf = Config(
+      srcFile = src.toFile(),
+      mode = Run,
+      backend = backend.CppRunnable,
+      output = Some(out.toString))
+
+    val compileToC = Future { Main.runWithConfig(conf) }
+
+    compileToC.flatMap(s => s match {
+      case Left(_) => Future.successful(s)
+      case Right(status) => {
+        assert(status == 0, s"Status after running fuse was $status")
+        val toExec = Paths.get(out.toString + ".o")
+        val runCmd = Seq(s"${toExec}", data.toString)
         toExec.toFile.setExecutable(true)
         asyncProcRun(runCmd)
-      } else {
-        Future(status)
       }
     })
   }
@@ -44,7 +60,6 @@ class RunTests extends org.scalatest.AsyncFunSuite {
 
   for (file <- Files.newDirectoryStream(shouldRun).asScala
        if file.toString.matches(srcFilePattern)) {
-
          test(file.toString, SlowTest) {
            val dataPath = Paths.get(file + ".data.json")
            val outFile = tmpDir.resolve(file.getFileName + ".cpp")
@@ -54,13 +69,9 @@ class RunTests extends org.scalatest.AsyncFunSuite {
              Files.exists(dataPath),
              s"Data file ${dataPath} missing. Run tests require data files.")
 
-           val stdout = new StringBuilder
-           val stderr = new StringBuilder
-           implicit val logger = ProcessLogger(line => stdout ++= (line + "\n"),
-                                               err => stderr ++= (err + "\n"))
-
-           AsyncRun.compileAndEval(file, dataPath, outFile).map({ case status =>
-             assert(status == 0, stderr.toString)
+           AsyncRun.compileAndEval(file, dataPath, outFile).map(_ match {
+             case Left(err) => assert(false, err)
+             case Right(status) => Files.delete(outFile); assert(status == 0)
            })
          }
   }

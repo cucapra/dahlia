@@ -55,33 +55,35 @@ object Main {
           .text("Option to be passed to the C++ compiler. Can be repeated."))
   }
 
-  def main(args: Array[String]): Unit = {
-
+  def runWithConfig(conf: Config): Either[String, Int] = {
     type ErrString = String
+
+    val path = conf.srcFile.toPath
+    val prog = Files.exists(path) match {
+      case true => Right(new String(Files.readAllBytes(path)))
+      case false => Left(s"$path: No such file in working directory")
+    }
+
+    val cppPath: Either[ErrString, Option[Path]] = prog.flatMap(prog => conf.output match {
+      case Some(out) => Compiler.compileStringToFile(prog, conf, out).map(path => Some(path))
+      case None => Compiler.compileString(prog, conf).map(res => { println(res); None })
+    })
+
+    val status: Either[ErrString, Int] = cppPath.flatMap(pathOpt => conf.mode match {
+      case Run =>
+        GenerateExec.generateExec(pathOpt.get, s"${conf.output.get}.o", conf.compilerOpts)
+      case _ => Right(0)
+    })
+
+    status
+  }
+
+  def main(args: Array[String]): Unit = {
 
     parser.parse(args, Config(null)) match {
       case Some(conf) => {
-        // Setup logging configuration
         Logger.setLogLevel(conf.logLevel)
-
-        val path = conf.srcFile.toPath
-
-        val prog = Files.exists(path) match {
-          case true => Right(new String(Files.readAllBytes(path)))
-          case false => Left(s"$path: No such file in working directory")
-        }
-
-        val cppPath: Either[ErrString, Option[Path]] = prog.flatMap(prog => conf.output match {
-          case Some(out) => Compiler.compileStringToFile(prog, conf, out).map(path => Some(path))
-          case None => Compiler.compileString(prog, conf).map(res => { println(res); None })
-        })
-
-        val status: Either[ErrString, Int] = cppPath.flatMap(pathOpt => conf.mode match {
-          case Run =>
-            GenerateExec.generateExec(pathOpt.get, s"${conf.output.get}.o", conf.compilerOpts)
-          case _ => Right(0)
-        })
-
+        val status = runWithConfig(conf)
         sys.exit(
           status.left.map(compileErr => { System.err.println(compileErr); 1 }).merge)
       }

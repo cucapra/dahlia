@@ -49,9 +49,6 @@ object GenerateExec {
    */
   def generateExec(src: Path, out: String, compilerOpts: List[String]): Either[String, Int] = {
 
-    val CXX =
-      Seq("g++", "--std=c++11", "-Wall", "-I", headerLocation.toString) ++ compilerOpts
-
     // Make sure all headers are downloaded.
     for (header <- headers) {
       if (Files.exists(headerLocation.resolve(header)) == false) {
@@ -59,14 +56,21 @@ object GenerateExec {
       }
     }
 
+    val CXX =
+      Seq("g++", "--std=c++11", "-Wall", "-I", headerLocation.toString) ++ compilerOpts
+
+    val stderr = new StringBuilder
+    val logger = ProcessLogger(l => println(l),
+                               l => stderr ++= (l + "\n"))
+
     // Generate [[out]]. `!` is defined by sys.process:
     // https://www.scala-lang.org/api/2.12.8/scala/sys/process/index.html
     val cmd = CXX ++ Seq(src.toString, "-o", out)
     println(cmd.mkString(" "))
-    val status = cmd.!
+    val status = cmd ! logger
 
     if (status != 0) {
-      Left(s"Failed to generate the executable $out")
+      Left(s"Failed to generate the executable $out.\n${stderr}")
     } else {
       Right(status)
     }
