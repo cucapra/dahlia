@@ -27,5 +27,8 @@
      (let variable assgn e)
      (if e e e)
      (while (e) c))
+ ;------------------------------
+  (loc number)
+  (store ((loc v) ...))
  )
-     
+    
