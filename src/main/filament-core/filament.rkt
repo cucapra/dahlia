@@ -23,5 +23,9 @@
      (bop e e)
      (deref e)
      (alloc e))
+  (c (c semi c)
+     (let variable assgn e)
+     (if e e e)
+     (while (e) c))
  )
      
