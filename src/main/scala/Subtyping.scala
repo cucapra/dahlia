@@ -83,6 +83,6 @@ object Subtyping {
     case (_: TIndex, t2@TSizedInt(_)) => Some(t2)
     case (t2@TSizedInt(_), _:TIndex) => Some(t2)
     case (_:TFloat, _:TFloat) => Some(TFloat())
-    case _ => None
+    case (t1, t2) => if (t1 == t2) Some(t1) else None
   }
 }
