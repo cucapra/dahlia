@@ -1052,6 +1052,18 @@ class TypeCheckerSpec extends FunSpec {
           """ )
       }
     }
+
+    it("equal types have joins") {
+      typeCheck("""
+        let x = true;
+        let y = false;
+        x == y;
+
+        let i1: bit<32> = 10;
+        let i2: bit<32> = 11;
+        i1 == i2;
+        """ )
+    }
   }
 
   describe("Imports") {
