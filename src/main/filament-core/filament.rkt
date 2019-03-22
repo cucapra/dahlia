@@ -20,6 +20,8 @@
        bitwise-or
        bitwise-and)
   (e v
-     (bop e e))
+     (bop e e)
+     (deref e)
+     (alloc e))
  )
      
