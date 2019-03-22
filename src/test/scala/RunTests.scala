@@ -16,7 +16,7 @@ object AsyncRun {
   def asyncProcRun
   (proc: Seq[String])(implicit ec: ExecutionContext): Future[Either[String, Int]] = {
     val err = new StringBuilder
-    implicit val logger = ProcessLogger(_ => (), e => err ++= (e + "\n"))
+    val logger = ProcessLogger(_ => (), e => err ++= (e + "\n"))
 
     Future {
       val status = proc ! logger

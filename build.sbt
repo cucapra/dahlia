@@ -23,6 +23,7 @@ scalacOptions ++= Seq(
 
 testOptions in Test += Tests.Argument("-oD")
 parallelExecution in Test := false
+logBuffered in Test := false
 
 assemblyJarName in assembly := "fuse.jar"
 test in assembly := {}
