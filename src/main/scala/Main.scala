@@ -4,6 +4,7 @@ import java.nio.file.{Files, Path}
 import java.io.File
 
 import Utils._
+import Compiler._
 
 object Main {
 
@@ -65,8 +66,8 @@ object Main {
     }
 
     val cppPath: Either[ErrString, Option[Path]] = prog.flatMap(prog => conf.output match {
-      case Some(out) => Compiler.compileStringToFile(prog, conf, out).map(path => Some(path))
-      case None => Compiler.compileString(prog, conf).map(res => { println(res); None })
+      case Some(out) => compileStringToFile(prog, conf, out).map(path => Some(path))
+      case None => compileString(prog, conf).map(res => { println(res); None })
     })
 
     val status: Either[ErrString, Int] = cppPath.flatMap(pathOpt => conf.mode match {
