@@ -23,8 +23,8 @@ object Logger {
    * Stateful function to set the logging level in the compiler.
    */
   def setLogLevel(level: Level) = {
-    scribe.Logger.root.clearHandlers().withHandler(formatter = format,
-      minimumLevel = Some(level)).replace()
+    scribe.Logger.root.clearHandlers().withHandler(
+      formatter = format, minimumLevel = Some(level)).replace()
   }
 
   val format: Formatter = formatter"[$levelColored] $message$newLine"
