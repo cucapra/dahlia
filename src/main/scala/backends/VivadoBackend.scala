@@ -10,7 +10,7 @@ private class VivadoBackend extends CppLike {
 
   def unroll(n: Int) = n match {
     case 1 => ""
-    case n => s"#pragma HLS UNROLL factor=$n"
+    case n => s"#pragma HLS UNROLL factor=$n skip_exit_check"
   }
 
   def bank(id: Id, n: List[Int]): String = n.foldLeft(1)(_ * _) match {
@@ -27,7 +27,8 @@ private class VivadoBackend extends CppLike {
     "for" <> emitRange(cmd.range) <+> scope {
       unroll(cmd.range.u) <@>
       cmd.par <@>
-      (if (cmd.combine != CEmpty) text("// combiner:") <@> cmd.combine else value(""))
+      (if (cmd.combine != CEmpty) text("// combiner:") <@> cmd.combine
+       else value(""))
     }
 
   def emitFuncHeader(func: FuncDef): Doc = {
