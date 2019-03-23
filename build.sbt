@@ -50,9 +50,3 @@ assembly := {
   getHeaders.value
   assembly.value
 }
-
-/* Running full test suite requires latest ./fuse build */
-test := {
-  assembly.value
-  (test in Test).value
-}
