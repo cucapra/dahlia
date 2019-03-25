@@ -30,3 +30,4 @@ _test
 # Racket
 *.bak
 *.1
+filament-core/compiled

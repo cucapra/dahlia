@@ -1,7 +1,7 @@
 #lang racket
 (require redex)
 (define-language fuse
-  (v variable
+  (v variable-not-otherwise-mentioned
      number
      boolean
   )
@@ -27,11 +27,12 @@
      (deref e)
      (alloc e))
   (c (c semi c)
-     (let variable = e)
+     (let variable-not-otherwise-mentioned = e)
      (if e e e)
      (while (e) c))
  ;------------------------------
   (loc number)
   (store ((loc v) ...))
  )
+;---------------------------------------------
     
