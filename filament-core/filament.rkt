@@ -35,6 +35,7 @@
   (store ((loc v) ...))
  )
 ;---------------------------------------------
+<<<<<<< HEAD
 (define-extended-language Ev fuse
   (pair (store e))
   )
@@ -49,3 +50,6 @@
         "+")
    )
   )
+=======
+    
+>>>>>>> fixing overly generous variable bindings
