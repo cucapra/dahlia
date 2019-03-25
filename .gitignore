@@ -26,7 +26,7 @@ _test
 
 *.o
 
-# Racket
 *.bak
 *.1
 filament-core/compiled
+
