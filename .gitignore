@@ -26,5 +26,7 @@ _test
 
 ## Object files
 *.o
-#racket
+
+# Racket
 *.bak
+*.1

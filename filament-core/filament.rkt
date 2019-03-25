@@ -9,16 +9,19 @@
        -
        /
        *
-       modulo
-       =
+       %
+       ==
+       !=
        <
        <=
        >
        >=
-       arithmetic-shift
-       bitwise-not
-       bitwise-or
-       bitwise-and)
+       >>
+       <<
+       and
+       or
+       b-and
+       b-or)
   (e v
      (bop e e)
      (deref e)
