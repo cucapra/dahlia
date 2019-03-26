@@ -200,9 +200,9 @@ def should_make(task):
     """Run stage_make if make was specified in the task config.
     """
     if task['config'].get('make'):
-        state.MAKE
+        return state.MAKE
     else:
-        state.UNPACK_FINISH
+        return state.UNPACK_FINISH
 
 def stage_unpack(db, config):
     """Work stage: unpack source code.
