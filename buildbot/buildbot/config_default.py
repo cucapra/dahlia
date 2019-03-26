@@ -5,6 +5,8 @@ UPLOAD_EXTENSIONS = ['zip']
 SEASHELL_COMPILER = 'fuse'
 
 # A prefix command to use *before* the invocations of Xilinx tools.
+# NOTE(rachit): This is configured by a deployed instance of buildbot and
+# should be used whenever a command needs to be executed in the Xilinx container.
 HLS_COMMAND_PREFIX = []
 
 # Spawn threads inside the server process for the workers (instead of

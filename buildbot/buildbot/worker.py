@@ -228,13 +228,14 @@ def stage_make(db, config):
     work equivalent to the stage_hls is done, i.e., either estimation data has
     been generated or a bitstrem has been generated.
     """
+    prefix = config["HLS_COMMAND_PREFIX"]
     with work(db, state.MAKE, state.MAKE_PROGRESS, state.HLS_FINISH) as task:
         sdsflags = ''
         # If estimation is requested, pass in estimation flag
         if task['config'].get('estimate'):
             sdsflags += '-perf-est-hw-only'
 
-        task.run(['make', 'SDSFLAGS={}'.format(sdsflags)],
+        task.run([prefix, 'make', 'SDSFLAGS={}'.format(sdsflags)],
                  timeout=120,
                  cwd=CODE_DIR)
 

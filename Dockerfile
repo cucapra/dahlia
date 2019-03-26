@@ -16,7 +16,7 @@ RUN cd /opt && \
 # Add Python, pipenv, and node for buildbot. The buildbot also needs OpenSSH
 # and the sshpass utility for its Zynq execution stage.
 RUN apk add python3 py3-pip nodejs-current yarn \
-    openssh sshpass git make g++
+    openssh sshpass
 RUN pip3 install pipenv
 
 # Volume, port, and command for buildbot.
