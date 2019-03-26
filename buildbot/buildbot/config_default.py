@@ -30,4 +30,5 @@ TEXT_EXTENSIONS = [
 CONFIG_OPTIONS = [
     'skipseashell',
     'estimate',
+    'make',
 ]

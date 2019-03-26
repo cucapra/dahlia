@@ -31,6 +31,8 @@ STATUS_STRINGS = {
     state.COMPILE_FINISH: "Compiled",
     state.HLS: "Synthesis",
     state.HLS_FINISH: "Synthesized",
+    state.MAKE: "MAKE"
+    state.MAKE_PROGRESS: "MAKE-ing"
     state.RUN: "Running",
     state.DONE: "Done",
     state.FAIL: "Failed",
