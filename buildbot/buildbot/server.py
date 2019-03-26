@@ -121,16 +121,6 @@ def add_job():
             file.save(ARCHIVE_NAME + ext)
         notify_workers(name)
 
-    elif 'code' in request.values:
-        code = request.values['code']
-
-        # Create a job and save the code to a file.
-        with db.create(state.UNPACK_FINISH, config) as name:
-            os.mkdir(CODE_DIR)
-            with open(os.path.join(CODE_DIR, 'main.ss'), 'w') as f:
-                f.write(code)
-        notify_workers(name)
-
     else:
         return 'missing code or file', 400
 
