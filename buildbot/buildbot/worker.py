@@ -235,7 +235,7 @@ def stage_make(db, config):
         if task['config'].get('estimate'):
             sdsflags += '-perf-est-hw-only'
 
-        task.run([prefix, 'make', 'SDSFLAGS={}'.format(sdsflags)],
+        task.run(prefix + ['make', 'SDSFLAGS={}'.format(sdsflags)],
                  timeout=120,
                  cwd=CODE_DIR)
 
