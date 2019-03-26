@@ -232,7 +232,7 @@ def stage_make(db, config):
         sdsflags = ''
         # If estimation is requested, pass in estimation flag
         if task['config'].get('estimate'):
-            conf += '-perf-est-hw-only'
+            sdsflags += '-perf-est-hw-only'
 
         task.run(['make', 'SDSFLAGS={}'.format(sdsflags)],
                  timeout=120,
