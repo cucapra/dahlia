@@ -207,9 +207,11 @@ def stage_make(db, config):
 
         # NOTE(rachit): The timeout here is really high because
         # synthesis takes a real long time.
-        task.run(prefix + ['make', 'SDSFLAGS={}'.format(sdsflags)],
-                 timeout=3600,
-                 cwd=CODE_DIR)
+        task.run(
+            prefix + ['make', 'SDSFLAGS={}'.format(sdsflags)],
+            timeout=3600,
+            cwd=CODE_DIR,
+        )
 
 
 def stage_seashell(db, config):
