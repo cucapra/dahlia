@@ -69,36 +69,44 @@ class JobTask:
         """
         self.db.set_state(self.job, state)
 
-    def proc_log(self, cmd, proc, stdout=True, stderr=True):
-        """Log the output of a command run on behalf of a job.
-
-        Provide the command (a list of arguments), and the process
-        (e.g., returned from `run`. Specify whether to include the
-        stdout and stderr streams.
-        """
-        out = '$ ' + _cmd_str(cmd)
-        streams = []
-        if stdout:
-            streams.append(proc.stdout)
-        if stderr:
-            streams.append(proc.stderr)
-        out += _stream_text(*streams)
-        self.log(out)
-
-    def run(self, cmd, log_stdout=True, timeout=60, cwd='', **kwargs):
+    def run(self, cmd, capture=False, timeout=60, cwd='', **kwargs):
         """Run a command and log its output.
 
-        Return an exited process object, with output captured (in `stdout`
-        and `stderr`). The `log_stdout` flag determines whether the stdout
-        stream is included in the log; set this to False if the point of
-        running the command is to collect data from stdout. Additional
-        arguments are forwarded to `subprocess.run`.
+        Return an exited process object. If `capture`, then  the
+        standard output is *not* logged and is instead available as the return
+        value's `stdout` field. Additional arguments are forwarded to
+        `subprocess.run`.
+
+        Raise an appropriate `WorkError` if the command fails.
         """
-        kwargs['timeout'] = timeout
-        kwargs['cwd'] = os.path.normpath(os.path.join(self.dir, cwd))
-        proc = run(cmd, **kwargs)
-        self.proc_log(cmd, proc, stdout=log_stdout)
-        return proc
+        full_cwd = os.path.normpath(os.path.join(self.dir, cwd))
+        self.log('$ {}'.format(_cmd_str(cmd)))
+
+        log_filename = self.db._log_path(self.job['name'])
+        with open(log_filename, 'ab') as f:
+            try:
+                print(cmd, kwargs)
+                return subprocess.run(
+                    cmd,
+                    check=True,
+                    stdout=subprocess.PIPE if capture else f,
+                    stderr=f,
+                    timeout=timeout,
+                    cwd=full_cwd,
+                    **kwargs,
+                )
+            except subprocess.CalledProcessError as exc:
+                raise WorkError('command failed ({})'.format(
+                    exc.returncode,
+                ))
+            except FileNotFoundError as exc:
+                raise WorkError('command {} not found'.format(
+                    exc.filename,
+                ))
+            except subprocess.TimeoutExpired as exc:
+                raise WorkError('timeout after {} seconds{}'.format(
+                    exc.timeout,
+                ))
 
 
 @contextmanager
@@ -128,57 +136,11 @@ def work(db, old_state, temp_state, done_state_or_func):
         task.set_state(done_func(task))
 
 
-def _stream_text(*args):
-    """Given some bytes objects, return a string listing all the
-    non-empty ones, delimited by a separator and starting with a
-    newline (if any part is nonempty).
-    """
-    out = '\n---\n'.join(b.decode('utf8', 'ignore')
-                         for b in args if b)
-    if out:
-        return '\n' + out
-    else:
-        return ''
-
-
 def _cmd_str(cmd):
     """Given a list of command-line arguments, return a human-readable
     string for logging.
     """
     return ' '.join(shlex.quote(p) for p in cmd)
-
-
-def run(cmd, **kwargs):
-    """Run a command, like `subprocess.run`, while capturing output.
-    Raise an appropriate `WorkError` if the command fails.
-
-    `cmd` must be a list of arguments.
-    """
-    try:
-        return subprocess.run(
-            cmd,
-            check=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            **kwargs
-        )
-    except subprocess.CalledProcessError as exc:
-        raise WorkError('$ {}\ncommand failed ({}){}'.format(
-            _cmd_str(cmd),
-            exc.returncode,
-            _stream_text(exc.stdout, exc.stderr),
-        ))
-    except FileNotFoundError as exc:
-        raise WorkError('$ {}\ncommand {} not found'.format(
-            _cmd_str(cmd),
-            exc.filename,
-        ))
-    except subprocess.TimeoutExpired as exc:
-        raise WorkError('$ {}\ntimeout after {} seconds{}'.format(
-            _cmd_str(cmd),
-            exc.timeout,
-            _stream_text(exc.stdout, exc.stderr),
-        ))
 
 
 class WorkThread(threading.Thread):
@@ -289,7 +251,7 @@ def stage_seashell(db, config):
 
         # Run the Seashell compiler.
         source_path = os.path.join(task.code_dir, source_name)
-        hls_code = task.run([compiler, source_path], log_stdout=False).stdout
+        hls_code = task.run([compiler, source_path], capture=True).stdout
 
         # A filename for the translated C code.
         base, _ = os.path.splitext(source_name)
