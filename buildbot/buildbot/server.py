@@ -4,7 +4,7 @@ import os
 from io import StringIO
 import csv
 from . import workproc
-from .db import JobDB, ARCHIVE_NAME, CODE_DIR, NotFoundError, log
+from .db import JobDB, ARCHIVE_NAME, CODE_DIR, NotFoundError, BadJobError, log
 from datetime import datetime
 import re
 from . import state
@@ -43,6 +43,8 @@ def _get(job_name):
         return db.get(job_name)
     except NotFoundError:
         flask.abort(404, 'Job {} not found.'.format(job_name))
+    except BadJobError:
+        flask.abort(410, 'Job {} is malformed.'.format(job_name))
 
 
 def _unpad(s):
