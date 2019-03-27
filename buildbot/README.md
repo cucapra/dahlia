@@ -62,11 +62,13 @@ For example, you can zip up a directory and submit it like this:
 
     $ zip -r - . | curl -F file='@-;filename=code.zip' $BUILDBOT/jobs
 
-You can also specify configuration options as further parameters. They can be enabled in `curl` with `-F <option>=1`
+You can also specify job configuration options as further POST parameters:
 
 - `skipseashell`, which lets you supply plain HLS C code as input.
-- `estimate`, run sdsoc with estimation instead of synthesis.
-- `make`, Use the provided makefile to build the hardware design.
+- `estimate`, to use the Xilinx toolchain's resource estimation facility. The job will skip synthesis and execution on the FPGA.
+- `make`, to use a Makefile instead of the built-in compilation workflow (see below).
+
+Use `-F <option>=1` to enable these options with `curl`.
 
 To see a list of the current jobs, get `/jobs.csv`:
 
