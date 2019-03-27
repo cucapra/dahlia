@@ -22,7 +22,14 @@ def chdir(path):
 
 
 class NotFoundError(Exception):
+    """The job indicated could not be found.
+    """
     pass
+
+
+class BadJobError(Exception):
+    """The requested job is corrupted and unusable.
+    """
 
 
 def log(job, message):
@@ -56,7 +63,10 @@ class JobDB:
         path = self._info_path(name)
         if os.path.isfile(path):
             with open(path) as f:
-                return json.load(f)
+                try:
+                    return json.load(f)
+                except json.JSONDecodeError:
+                    raise BadJobError()
         else:
             raise NotFoundError()
 
@@ -69,14 +79,18 @@ class JobDB:
     def _all(self):
         """Read all the jobs.
 
-        This is probably pretty slow, and its O(n) where n is the total
-        number of jobs in the system.
+        Corrupted/unreadable jobs are not included in the list. This is
+        probably pretty slow, and it's O(n) where n is the total number
+        of jobs in the system.
         """
         for name in os.listdir(os.path.join(self.base_path, JOBS_DIR)):
             path = self._info_path(name)
             if os.path.isfile(path):
                 with open(path) as f:
-                    yield json.load(f)
+                    try:
+                        yield json.load(f)
+                    except json.JSONDecodeError:
+                        continue
 
     def _acquire(self, old_state, new_state):
         """Look for a job in `old_state`, update it to `new_state`, and
