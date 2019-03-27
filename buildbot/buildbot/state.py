@@ -13,9 +13,9 @@
 #         |                MAKE_PROGRESS
 #        HLS                 |
 #         |                  |
-#      HLS_FINISH            |
-#         |                  |
-#        RUN-----------------+
+#      HLS_FINISH -----------+
+#         |
+#        RUN
 #         |
 #   +-----+-----+
 #   |           |

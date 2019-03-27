@@ -102,13 +102,16 @@ class JobTask:
 
 
 @contextmanager
-def work_with_func(db, old_state, temp_state, done_state_func):
+def work(db, old_state, temp_state, done_state):
     """A context manager for acquiring a job temporarily in an
-    exclusive way to work on it. Produce a `JobTask`. done_state_func is called
-    on the Task object and should return a valid next state
+    exclusive way to work on it. Produce a `JobTask`.
+    Done state can either be a valid state string or a function that
+    accepts a Task object and returns a valid state string.
     """
     job = db.acquire(old_state, temp_state)
     task = JobTask(db, job)
+    if isinstance(done_state, str):
+        done_state = lambda _: done_state
     try:
         yield task
     except WorkError as exc:
@@ -118,10 +121,7 @@ def work_with_func(db, old_state, temp_state, done_state_func):
         task.log(traceback.format_exc())
         task.set_state(state.FAIL)
     else:
-        task.set_state(done_state_func(task))
-
-def work(db, old_state, temp_state, done_state):
-    return work_with_func(db, old_state, temp_state, lambda task: done_state)
+        task.set_state(done_state(task))
 
 def _stream_text(*args):
     """Given some bytes objects, return a string listing all the
@@ -207,7 +207,7 @@ def should_make(task):
 def stage_unpack(db, config):
     """Work stage: unpack source code.
     """
-    with work_with_func(db, state.UPLOAD, state.UNPACK, should_make) as task:
+    with work(db, state.UPLOAD, state.UNPACK, should_make) as task:
         # Unzip the archive into the code directory.
         os.mkdir(task.code_dir)
         task.run(["unzip", "-d", task.code_dir, "{}.zip".format(ARCHIVE_NAME)])
@@ -226,7 +226,7 @@ def stage_unpack(db, config):
 def stage_make(db, config):
     """Work stage: run make command. Assumes that at the end of the make command,
     work equivalent to the stage_hls is done, i.e., either estimation data has
-    been generated or a bitstrem has been generated.
+    been generated or a bitstream has been generated.
     """
     prefix = config["HLS_COMMAND_PREFIX"]
     with work(db, state.MAKE, state.MAKE_PROGRESS, state.HLS_FINISH) as task:
@@ -258,7 +258,7 @@ def stage_seashell(db, config):
                     break
             else:
                 raise WorkError(
-                    'No hardware source file found.' +
+                    'No hardware source file found.'
                     ' Expected a file with extension {} and basename not `main`.'.format(C_EXT)
                 )
 
@@ -273,7 +273,7 @@ def stage_seashell(db, config):
                 source_name = name
                 break
         else:
-            raise WorkError('No Fuse source file found.' +
+            raise WorkError('No Fuse source file found.'
                             ' Expected a file with extension {}'.format(SEASHELL_EXT))
         task['seashell_main'] = name
 
