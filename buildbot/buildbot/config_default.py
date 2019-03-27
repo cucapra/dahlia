@@ -4,7 +4,10 @@ UPLOAD_EXTENSIONS = ['zip']
 # The executable name for the Seashell compiler (seac).
 SEASHELL_COMPILER = 'fuse'
 
-# A prefix command to use *before* the invocations of Xilinx tools.
+# A prefix command to use *before* the invocations of Xilinx tools. For
+# example, if your deployment needs to execute the Xilinx tools on a different
+# machine or a different Docker container, a deployment could use this prefix
+# to send these commands there.
 HLS_COMMAND_PREFIX = []
 
 # Spawn threads inside the server process for the workers (instead of
@@ -30,4 +33,5 @@ TEXT_EXTENSIONS = [
 CONFIG_OPTIONS = [
     'skipseashell',
     'estimate',
+    'make',
 ]
