@@ -62,9 +62,11 @@ For example, you can zip up a directory and submit it like this:
 
     $ zip -r - . | curl -F file='@-;filename=code.zip' $BUILDBOT/jobs
 
-It's also possible to provide Seashell code as an ordinary POST string instead of as a file attachment using the `code` parameter.
-You can also specify configuration options as further parameters; the only current configuration option is `skipseashell`, which lets you supply plain HLS C code as input.
-(With curl, use `-F skipseashell=1`.)
+You can also specify configuration options as further parameters. They can be enabled in `curl` with `-F <option>=1`
+
+- `skipseashell`, which lets you supply plain HLS C code as input.
+- `estimate`, run sdsoc with estimation instead of synthesis.
+- `make`, Use the provided makefile to build the hardware design.
 
 To see a list of the current jobs, get `/jobs.csv`:
 
@@ -77,5 +79,17 @@ To get details about a specific job, request `/jobs/<name>`:
 You can also download output files from a job:
 
     $ curl -O $BUILDBOT/jobs/d988ruiuAk4/files/code/compiled.o
+    
+Makefiles
+---------
+
+Larger projects that use multiple sources and need them to linked in a particular fashion should use the `make` configuration option. With this option, buildbot will run the provided Makefile instead of running it's own commands and assume that the artifact is built when the command terminates successfully.
+
+For estimation, buildbot supplies flags for `sds++` using the `SDSFLAGS` variable. In your makefile, make sure that you pass in this option when building hardware targets:
+
+```make
+%.o: %.c
+sds++ $(SDSFLAGS) $< -o $@
+```
 
 [curl]: https://curl.haxx.se
