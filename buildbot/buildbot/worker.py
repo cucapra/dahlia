@@ -1,7 +1,7 @@
 import threading
 import subprocess
 import os
-from .db import ARCHIVE_NAME, CODE_DIR, log
+from .db import ARCHIVE_NAME, CODE_DIR
 from contextlib import contextmanager
 import traceback
 import shlex
@@ -62,7 +62,7 @@ class JobTask:
     def log(self, message):
         """Add an entry to the job's log.
         """
-        log(self.job, message)
+        self.db.log(self.job['name'], message)
 
     def set_state(self, state):
         """Set the job's state.

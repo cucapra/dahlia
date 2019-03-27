@@ -4,11 +4,13 @@ import time
 import os
 from contextlib import contextmanager
 import json
+from datetime import datetime
 
 JOBS_DIR = 'jobs'
 ARCHIVE_NAME = 'code'
 CODE_DIR = 'code'
 INFO_FILENAME = 'info.json'
+LOG_FILENAME = 'log.txt'
 
 
 @contextmanager
@@ -32,12 +34,6 @@ class BadJobError(Exception):
     """
 
 
-def log(job, message):
-    """Add a message to the job's log.
-    """
-    job['log'].append((time.time(), message))
-
-
 class JobDB:
     def __init__(self, base_path):
         self.base_path = base_path
@@ -54,6 +50,10 @@ class JobDB:
     def _info_path(self, name):
         """Get the path to a job's info JSON file."""
         return os.path.join(self.job_dir(name), INFO_FILENAME)
+
+    def _log_path(self, name):
+        """Get the path to a job's log file."""
+        return os.path.join(self.job_dir(name), LOG_FILENAME)
 
     def _read(self, name):
         """Read a job from its info file.
@@ -105,7 +105,7 @@ class JobDB:
             raise NotFoundError()
 
         job['state'] = new_state
-        log(job, 'acquired in state {}'.format(new_state))
+        self.log(job['name'], 'acquired in state {}'.format(new_state))
         with open(self._info_path(job['name']), 'w') as f:
             json.dump(job, f)
 
@@ -121,7 +121,6 @@ class JobDB:
             'started': time.time(),
             'state': state,
             'config': config,
-            'log': [],
         }
         self._write(job)
         return job
@@ -145,6 +144,14 @@ class JobDB:
             self.cv.notify_all()
         return job
 
+    def log(self, name, message):
+        """Add a message to the named job's log.
+        """
+        fn = self._log_path(name)
+        timestamp = datetime.now().isoformat()
+        with open(fn, 'a') as f:
+            print(timestamp, message, file=f)
+
     @contextmanager
     def create(self, state, config={}):
         """A context manager for creating a new job. A directory is
@@ -166,7 +173,7 @@ class JobDB:
         """
         with self.cv:
             job['state'] = state
-            log(job, 'state changed to {}'.format(state))
+            self.log(job['name'], 'state changed to {}'.format(state))
             self._write(job)
             self.cv.notify_all()
 

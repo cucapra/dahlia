@@ -38,15 +38,7 @@
 </p>
 
 <p>
-    See <a href="{{ url_for('job_log', name=job.name) }}">the full log</a>
-    ({{ job.log | length }} messages).
+    See <a href="{{ url_for('job_log', name=job.name) }}">the full log</a>.
 </p>
-<ul class="log">
-{% for time, text in job.log[-4:] %}
-    <li>
-        <time>{{ time | dt }}</time><br>
-        <pre>{{ text }}</pre>
-    </li>
-{% endfor %}
-</ul>
+<pre class="log">{{ log }}</pre>
 {% endblock %}
