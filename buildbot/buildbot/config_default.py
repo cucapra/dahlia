@@ -38,3 +38,9 @@ CONFIG_OPTIONS = [
 
 # The number of (recent) lines of the log to show on job pages.
 LOG_PREVIEW_LINES = 5
+
+# The timeouts for running the initial compilation step and for running
+# the synthesis step (or running an opaque Makefile), the latter of
+# which has to be really long because synthesis is so slow.
+COMPILE_TIMEOUT = 120
+SYNTHESIS_TIMEOUT = 3000

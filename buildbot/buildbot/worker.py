@@ -205,11 +205,9 @@ def stage_make(db, config):
         if task['config'].get('estimate'):
             sdsflags += '-perf-est-hw-only'
 
-        # NOTE(rachit): The timeout here is really high because
-        # synthesis takes a real long time.
         task.run(
             prefix + ['make', 'SDSFLAGS={}'.format(sdsflags)],
-            timeout=3600,
+            timeout=config["SYNTHESIS_TIMEOUT"],
             cwd=CODE_DIR,
         )
 
@@ -301,7 +299,7 @@ def stage_hls(db, config):
                 '-c',
                 hw_c, '-o', hw_o,
             ],
-            timeout=120,
+            timeout=config["COMPILE_TIMEOUT"],
             cwd=CODE_DIR,
         )
 
@@ -322,7 +320,7 @@ def stage_hls(db, config):
             _sds_cmd(prefix, hw_basename, hw_c) + [
                 xflags, hw_o, HOST_O, '-o', EXECUTABLE,
             ],
-            timeout=3000,
+            timeout=config["SYNTHESIS_TIMEOUT"],
             cwd=CODE_DIR,
         )
 
