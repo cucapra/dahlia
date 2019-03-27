@@ -4,7 +4,7 @@ import os
 from io import StringIO
 import csv
 from . import workproc
-from .db import JobDB, ARCHIVE_NAME, CODE_DIR, NotFoundError, BadJobError
+from .db import JobDB, ARCHIVE_NAME, NotFoundError, BadJobError
 from datetime import datetime
 import re
 from . import state
