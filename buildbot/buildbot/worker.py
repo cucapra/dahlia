@@ -102,16 +102,20 @@ class JobTask:
 
 
 @contextmanager
-def work(db, old_state, temp_state, done_state):
+def work(db, old_state, temp_state, done_state_or_func):
     """A context manager for acquiring a job temporarily in an
     exclusive way to work on it. Produce a `JobTask`.
     Done state can either be a valid state string or a function that
     accepts a Task object and returns a valid state string.
     """
+    done_state = None
+    if isinstance(done_state_or_func, str):
+        done_state = lambda _: done_state_or_func
+    else:
+        done_state = done_state_or_func
+
     job = db.acquire(old_state, temp_state)
     task = JobTask(db, job)
-    if isinstance(done_state, str):
-        done_state = lambda _: done_state
     try:
         yield task
     except WorkError as exc:
