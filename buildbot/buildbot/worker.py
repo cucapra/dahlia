@@ -102,10 +102,18 @@ class JobTask:
 
 
 @contextmanager
-def work(db, old_state, temp_state, done_state):
+def work(db, old_state, temp_state, done_state_or_func):
     """A context manager for acquiring a job temporarily in an
     exclusive way to work on it. Produce a `JobTask`.
+    Done state can either be a valid state string or a function that
+    accepts a Task object and returns a valid state string.
     """
+    done_func = None
+    if isinstance(done_state_or_func, str):
+        done_func = lambda _: done_state_or_func
+    else:
+        done_func = done_state_or_func
+
     job = db.acquire(old_state, temp_state)
     task = JobTask(db, job)
     try:
@@ -117,8 +125,7 @@ def work(db, old_state, temp_state, done_state):
         task.log(traceback.format_exc())
         task.set_state(state.FAIL)
     else:
-        task.set_state(done_state)
-
+        task.set_state(done_func(task))
 
 def _stream_text(*args):
     """Given some bytes objects, return a string listing all the
@@ -193,10 +200,18 @@ class WorkThread(threading.Thread):
             self.func(self.db, self.config)
 
 
+def should_make(task):
+    """Run stage_make if make was specified in the task config.
+    """
+    if task['config'].get('make'):
+        return state.MAKE
+    else:
+        return state.UNPACK_FINISH
+
 def stage_unpack(db, config):
     """Work stage: unpack source code.
     """
-    with work(db, state.UPLOAD, state.UNPACK, state.UNPACK_FINISH) as task:
+    with work(db, state.UPLOAD, state.UNPACK, should_make) as task:
         # Unzip the archive into the code directory.
         os.mkdir(task.code_dir)
         task.run(["unzip", "-d", task.code_dir, "{}.zip".format(ARCHIVE_NAME)])
@@ -212,6 +227,23 @@ def stage_unpack(db, config):
                               os.path.join(task.code_dir, fn))
                 task.log('collapsed directory {}'.format(code_contents[0]))
 
+def stage_make(db, config):
+    """Work stage: run make command. Assumes that at the end of the make command,
+    work equivalent to the stage_hls is done, i.e., either estimation data has
+    been generated or a bitstream has been generated.
+    """
+    prefix = config["HLS_COMMAND_PREFIX"]
+    with work(db, state.MAKE, state.MAKE_PROGRESS, state.HLS_FINISH) as task:
+        sdsflags = ''
+        # If estimation is requested, pass in estimation flag
+        if task['config'].get('estimate'):
+            sdsflags += '-perf-est-hw-only'
+
+        # NOTE(rachit): The timeout here is really high because synthesis takes
+        # a real long time.
+        task.run(prefix + ['make', 'SDSFLAGS={}'.format(sdsflags)],
+                 timeout=3600,
+                 cwd=CODE_DIR)
 
 def stage_seashell(db, config):
     """Work stage: compile Seashell code to HLS C.
@@ -230,7 +262,8 @@ def stage_seashell(db, config):
                     break
             else:
                 raise WorkError(
-                    'No hardware source file found. Expected a file with extension {} and basename not `main`.'.format(C_EXT)
+                    'No hardware source file found.'
+                    ' Expected a file with extension {} and basename not `main`.'.format(C_EXT)
                 )
 
             task.log('skipping Fuse compilation stage')
@@ -244,7 +277,8 @@ def stage_seashell(db, config):
                 source_name = name
                 break
         else:
-            raise WorkError('No Fuse source file found. Expected a file with extension {}'.format(SEASHELL_EXT))
+            raise WorkError('No Fuse source file found.'
+                            ' Expected a file with extension {}'.format(SEASHELL_EXT))
         task['seashell_main'] = name
 
         # Run the Seashell compiler.
@@ -259,7 +293,6 @@ def stage_seashell(db, config):
         # Write the C code.
         with open(os.path.join(task.code_dir, c_name), 'wb') as f:
             f.write(hls_code)
-
 
 def _sds_cmd(prefix, func_hw, c_hw):
     """Make a sds++ command with all our standard arguments.
@@ -367,6 +400,6 @@ def work_threads(db, config):
     """Get a list of (unstarted) Thread objects for processing tasks.
     """
     out = []
-    for stage in (stage_unpack, stage_seashell, stage_hls, stage_fpga_execute):
+    for stage in (stage_unpack, stage_make, stage_seashell, stage_hls, stage_fpga_execute):
         out.append(WorkThread(db, config, stage))
     return out
