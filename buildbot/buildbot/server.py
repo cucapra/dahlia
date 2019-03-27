@@ -4,7 +4,7 @@ import os
 from io import StringIO
 import csv
 from . import workproc
-from .db import JobDB, ARCHIVE_NAME, CODE_DIR, NotFoundError, BadJobError, log
+from .db import JobDB, ARCHIVE_NAME, CODE_DIR, NotFoundError, BadJobError
 from datetime import datetime
 import re
 from . import state
@@ -177,25 +177,31 @@ def show_job(name):
     # Possibly update the job.
     if request.method == 'POST':
         new_state = request.form['state']
-        log(job, 'manual state change')
+        db.log(job['name'], 'manual state change')
         db.set_state(job, new_state)
         notify_workers(job['name'])
+
+    # Get the last few lines in the log.
+    log_filename = db._log_path(name)
+    lines = app.config['LOG_PREVIEW_LINES']
+    try:
+        with open(log_filename) as f:
+            log_lines = list(f)[-lines:]
+    except IOError:
+        log_lines = []
 
     return flask.render_template(
         'job.html',
         job=job,
         status_strings=STATUS_STRINGS,
+        log=''.join(log_lines),
     )
 
 
-@app.route('/jobs/<name>/log.html')
+@app.route('/jobs/<name>/log.txt')
 def job_log(name):
-    job = _get(name)
-
-    return flask.render_template(
-        'log.html',
-        job=job,
-    )
+    filename = db._log_path(name)
+    return flask.send_file(filename)
 
 
 @app.route('/jobs/<name>/files.html')

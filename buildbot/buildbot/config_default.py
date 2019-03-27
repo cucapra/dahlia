@@ -35,3 +35,6 @@ CONFIG_OPTIONS = [
     'estimate',
     'make',
 ]
+
+# The number of (recent) lines of the log to show on job pages.
+LOG_PREVIEW_LINES = 5
