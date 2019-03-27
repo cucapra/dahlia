@@ -108,11 +108,11 @@ def work(db, old_state, temp_state, done_state_or_func):
     Done state can either be a valid state string or a function that
     accepts a Task object and returns a valid state string.
     """
-    done_state = None
+    done_func = None
     if isinstance(done_state_or_func, str):
-        done_state = lambda _: done_state_or_func
+        done_func = lambda _: done_state_or_func
     else:
-        done_state = done_state_or_func
+        done_func = done_state_or_func
 
     job = db.acquire(old_state, temp_state)
     task = JobTask(db, job)
@@ -125,7 +125,7 @@ def work(db, old_state, temp_state, done_state_or_func):
         task.log(traceback.format_exc())
         task.set_state(state.FAIL)
     else:
-        task.set_state(done_state(task))
+        task.set_state(done_func(task))
 
 def _stream_text(*args):
     """Given some bytes objects, return a string listing all the
