@@ -79,17 +79,18 @@ To get details about a specific job, request `/jobs/<name>`:
 You can also download output files from a job:
 
     $ curl -O $BUILDBOT/jobs/d988ruiuAk4/files/code/compiled.o
-    
+
+
 Makefiles
 ---------
 
-Larger projects that use multiple sources and need them to linked in a particular fashion should use the `make` configuration option. With this option, buildbot will run the provided Makefile instead of running it's own commands and assume that the artifact is built when the command terminates successfully.
+Larger projects that use multiple sources and need them to linked in a particular fashion should use the `make` configuration option. With this option, buildbot will run the provided Makefile instead of running its own commands and assume that the artifact is built when the command terminates successfully.
 
-For estimation, buildbot supplies flags for `sds++` using the `SDSFLAGS` variable. In your makefile, make sure that you pass in this option when building hardware targets:
+For estimation, buildbot supplies flags for `sds++` using the `SDSFLAGS` variable. In your Makefile, make sure that you pass in this option when building hardware targets:
 
 ```make
 %.o: %.c
-sds++ $(SDSFLAGS) $< -o $@
+    sds++ $(SDSFLAGS) $< -o $@
 ```
 
 [curl]: https://curl.haxx.se
