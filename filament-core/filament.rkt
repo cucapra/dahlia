@@ -35,4 +35,17 @@
   (store ((loc v) ...))
  )
 ;---------------------------------------------
-    
+(define-extended-language Ev fuse
+  (pair (store e))
+  )
+
+
+(define red
+  (reduction-relation
+   fuse
+   #:domain e
+   (--> (+ num1 num2)
+        ,(apply + (term (num1 num2)))
+        "+")
+   )
+  )
