@@ -47,3 +47,6 @@ LOG_PREVIEW_LINES = 32
 # which has to be really long because synthesis is so slow.
 COMPILE_TIMEOUT = 120
 SYNTHESIS_TIMEOUT = 3000
+
+# Default Xilinx target platform.
+DEFAULT_PLATFORM = 'zed'
