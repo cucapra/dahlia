@@ -304,7 +304,7 @@ def stage_hls(db, config):
 
         # Run Xilinx SDSoC compiler for hardware functions.
         task.run(
-            _sds_cmd(prefix, hw_basename, hw_c, platform) + [
+            _sds_cmd(prefix, hw_basename, hw_c, platform) + xflags + [
                 '-c',
                 hw_c, '-o', hw_o,
             ],
@@ -314,7 +314,7 @@ def stage_hls(db, config):
 
         # Run the Xilinx SDSoC compiler for host function.
         task.run(
-            _sds_cmd(prefix, hw_basename, hw_c, platform) + [
+            _sds_cmd(prefix, hw_basename, hw_c, platform) + xflags + [
                 '-c',
                 C_MAIN, '-o', HOST_O,
             ],
