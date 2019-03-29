@@ -208,7 +208,11 @@ def stage_make(db, config):
             sdsflags += ' -perf-est-hw-only'
 
         task.run(
-            prefix + ['make', 'SDSFLAGS={} PLATFORM={}'.format(sdsflags, platform)],
+            prefix + [
+                'make',
+                'SDSFLAGS={}'.format(sdsflags),
+                'PLATFORM={}'.format(platform),
+            ],
             timeout=config["SYNTHESIS_TIMEOUT"],
             cwd=CODE_DIR,
         )
@@ -294,7 +298,7 @@ def stage_hls(db, config):
     with work(db, state.COMPILE_FINISH, state.HLS, state.HLS_FINISH) as task:
         hw_basename, hw_c, hw_o = _hw_filenames(task)
 
-        xflags = task['config'].get('sdsflags') or ''
+        xflags = shlex.split(task['config'].get('sdsflags') or '')
         platform = task['config'].get('platform') or \
             config['DEFAULT_PLATFORM']
 
@@ -318,12 +322,12 @@ def stage_hls(db, config):
         )
 
         if task['config'].get('estimate'):
-            xflags += ' -perf-est-hw-only'
+            xflags += ['-perf-est-hw-only']
 
         # Run Xilinx SDSoC compiler for created objects.
         task.run(
-            _sds_cmd(prefix, hw_basename, hw_c) + [
-                xflags, hw_o, HOST_O, '-o', EXECUTABLE,
+            _sds_cmd(prefix, hw_basename, hw_c) + xflags + [
+                hw_o, HOST_O, '-o', EXECUTABLE,
             ],
             timeout=config["SYNTHESIS_TIMEOUT"],
             cwd=CODE_DIR,
