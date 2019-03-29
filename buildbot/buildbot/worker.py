@@ -84,7 +84,6 @@ class JobTask:
         log_filename = self.db._log_path(self.job['name'])
         with open(log_filename, 'ab') as f:
             try:
-                print(cmd, kwargs)
                 return subprocess.run(
                     cmd,
                     check=True,
