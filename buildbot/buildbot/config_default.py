@@ -29,13 +29,14 @@ TEXT_EXTENSIONS = [
     'dat',
 ]
 
-# Configuration options allowed during job creation.
+# Configuration options allowed during job creation. Each option has a
+# conversion function (i.e., type) used to translate the request value.
 CONFIG_OPTIONS = {
-    'skipseashell': 'bool',
-    'estimate': 'bool',
-    'make': 'bool',
-    'sdsflags': 'str',
-    'platform': 'str',
+    'skipseashell': bool,
+    'estimate': bool,
+    'make': bool,
+    'sdsflags': str,
+    'platform': str,
 }
 
 # The number of (recent) lines of the log to show on job pages.
