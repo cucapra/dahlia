@@ -11,7 +11,7 @@ from . import state
 SEASHELL_EXT = '.fuse'
 C_EXT = '.cpp'
 OBJ_EXT = '.o'
-SDS_PLATFORM = 'zed'
+DEFAULT_PLATFORM = 'zed'
 C_MAIN = 'main.cpp'  # Currently, the host code *must* be named this.
 HOST_O = 'main.o'  # The .o file for host code.
 EXECUTABLE = 'sdsoc'
@@ -200,13 +200,15 @@ def stage_make(db, config):
     """
     prefix = config["HLS_COMMAND_PREFIX"]
     with work(db, state.MAKE, state.MAKE_PROGRESS, state.HLS_FINISH) as task:
-        sdsflags = ''
+        sdsflags = task['config'].get('sdsflags') or ''
+        platform = task['config'].get('platform') or DEFAULT_PLATFORM
+
         # If estimation is requested, pass in estimation flag
         if task['config'].get('estimate'):
-            sdsflags += '-perf-est-hw-only'
+            sdsflags += ' -perf-est-hw-only'
 
         task.run(
-            prefix + ['make', 'SDSFLAGS={}'.format(sdsflags)],
+            prefix + ['make', 'SDSFLAGS={} PLATFORM={}'.format(sdsflags, platform)],
             timeout=config["SYNTHESIS_TIMEOUT"],
             cwd=CODE_DIR,
         )
@@ -263,12 +265,12 @@ def stage_seashell(db, config):
             f.write(hls_code)
 
 
-def _sds_cmd(prefix, func_hw, c_hw):
+def _sds_cmd(prefix, func_hw, c_hw, platform):
     """Make a sds++ command with all our standard arguments.
     """
     return prefix + [
         'sds++',
-        '-sds-pf', SDS_PLATFORM,
+        '-sds-pf', platform,
         '-sds-hw', func_hw, c_hw, '-sds-end',
         '-clkid', '3',
         '-poll-mode', '1',
@@ -291,11 +293,13 @@ def stage_hls(db, config):
     prefix = config["HLS_COMMAND_PREFIX"]
     with work(db, state.COMPILE_FINISH, state.HLS, state.HLS_FINISH) as task:
         hw_basename, hw_c, hw_o = _hw_filenames(task)
-        xflags = ''
+
+        xflags = task['config'].get('sdsflags') or ''
+        platform = task['config'].get('platform') or DEFAULT_PLATFORM
 
         # Run Xilinx SDSoC compiler for hardware functions.
         task.run(
-            _sds_cmd(prefix, hw_basename, hw_c) + [
+            _sds_cmd(prefix, hw_basename, hw_c, platform) + [
                 '-c',
                 hw_c, '-o', hw_o,
             ],
@@ -305,7 +309,7 @@ def stage_hls(db, config):
 
         # Run the Xilinx SDSoC compiler for host function.
         task.run(
-            _sds_cmd(prefix, hw_basename, hw_c) + [
+            _sds_cmd(prefix, hw_basename, hw_c, platform) + [
                 '-c',
                 C_MAIN, '-o', HOST_O,
             ],
@@ -313,7 +317,7 @@ def stage_hls(db, config):
         )
 
         if task['config'].get('estimate'):
-            xflags = '-perf-est-hw-only'
+            xflags += ' -perf-est-hw-only'
 
         # Run Xilinx SDSoC compiler for created objects.
         task.run(

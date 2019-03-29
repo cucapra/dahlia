@@ -102,8 +102,13 @@ def get_config(values):
     form values.
     """
     config = {}
-    for key in app.config['CONFIG_OPTIONS']:
-        config[key] = bool(values.get(key))
+    for key, typ in app.config['CONFIG_OPTIONS']:
+        v = values.get(key)
+        if typ == 'bool':
+            v = bool(v)
+        elif typ == 'str':
+            v = str(v)
+        config[key] = v
     return config
 
 

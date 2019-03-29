@@ -30,11 +30,13 @@ TEXT_EXTENSIONS = [
 ]
 
 # Configuration options allowed during job creation.
-CONFIG_OPTIONS = [
-    'skipseashell',
-    'estimate',
-    'make',
-]
+CONFIG_OPTIONS = {
+    'skipseashell': 'bool',
+    'estimate': 'bool',
+    'make': 'bool',
+    'sdsflags': 'str',
+    'platform': 'str',
+}
 
 # The number of (recent) lines of the log to show on job pages.
 LOG_PREVIEW_LINES = 32
