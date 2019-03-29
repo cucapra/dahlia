@@ -141,6 +141,20 @@ def _cmd_str(cmd):
     return ' '.join(shlex.quote(p) for p in cmd)
 
 
+def _task_config(task, config):
+    """Interpret some configuration options on a task, and assign the
+    task's `sdsflags` and `platform` fields so they can be used
+    directly.
+    """
+    flags = task['config'].get('sdsflags') or ''
+    if task['config'].get('estimate'):
+        flags += ' -perf-est-hw-only'
+    task['sdsflags'] = flags
+
+    task['platform'] = task['config'].get('platform') or \
+        config['DEFAULT_PLATFORM']
+
+
 class WorkThread(threading.Thread):
     """A base class for all our worker threads, which run indefinitely
     to process tasks in an appropriate state.
@@ -198,19 +212,13 @@ def stage_make(db, config):
     """
     prefix = config["HLS_COMMAND_PREFIX"]
     with work(db, state.MAKE, state.MAKE_PROGRESS, state.HLS_FINISH) as task:
-        sdsflags = task['config'].get('sdsflags') or ''
-        platform = task['config'].get('platform') or \
-            config['DEFAULT_PLATFORM']
-
-        # If estimation is requested, pass in estimation flag
-        if task['config'].get('estimate'):
-            sdsflags += ' -perf-est-hw-only'
+        _task_config(task, config)
 
         task.run(
             prefix + [
                 'make',
-                'SDSFLAGS={}'.format(sdsflags),
-                'PLATFORM={}'.format(platform),
+                'SDSFLAGS={}'.format(task['sdsflags']),
+                'PLATFORM={}'.format(task['platform']),
             ],
             timeout=config["SYNTHESIS_TIMEOUT"],
             cwd=CODE_DIR,
@@ -296,14 +304,12 @@ def stage_hls(db, config):
     prefix = config["HLS_COMMAND_PREFIX"]
     with work(db, state.COMPILE_FINISH, state.HLS, state.HLS_FINISH) as task:
         hw_basename, hw_c, hw_o = _hw_filenames(task)
-
-        xflags = shlex.split(task['config'].get('sdsflags') or '')
-        platform = task['config'].get('platform') or \
-            config['DEFAULT_PLATFORM']
+        _task_config(task, config)
+        flags = shlex.split(task['sdsflags'])
 
         # Run Xilinx SDSoC compiler for hardware functions.
         task.run(
-            _sds_cmd(prefix, hw_basename, hw_c, platform) + xflags + [
+            _sds_cmd(prefix, hw_basename, hw_c, task['platform']) + flags + [
                 '-c',
                 hw_c, '-o', hw_o,
             ],
@@ -313,19 +319,16 @@ def stage_hls(db, config):
 
         # Run the Xilinx SDSoC compiler for host function.
         task.run(
-            _sds_cmd(prefix, hw_basename, hw_c, platform) + xflags + [
+            _sds_cmd(prefix, hw_basename, hw_c, task['platform']) + flags + [
                 '-c',
                 C_MAIN, '-o', HOST_O,
             ],
             cwd=CODE_DIR,
         )
 
-        if task['config'].get('estimate'):
-            xflags += ['-perf-est-hw-only']
-
         # Run Xilinx SDSoC compiler for created objects.
         task.run(
-            _sds_cmd(prefix, hw_basename, hw_c) + xflags + [
+            _sds_cmd(prefix, hw_basename, hw_c, task['platform']) + flags + [
                 hw_o, HOST_O, '-o', EXECUTABLE,
             ],
             timeout=config["SYNTHESIS_TIMEOUT"],
