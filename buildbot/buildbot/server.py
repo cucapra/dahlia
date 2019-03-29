@@ -103,7 +103,7 @@ def get_config(values):
     """
     config = {}
     for key, typ in app.config['CONFIG_OPTIONS'].items():
-        config[key] = typ(values.get(key))
+        config[key] = typ(values.get(key, ''))
     return config
 
 
