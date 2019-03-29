@@ -11,7 +11,6 @@ from . import state
 SEASHELL_EXT = '.fuse'
 C_EXT = '.cpp'
 OBJ_EXT = '.o'
-DEFAULT_PLATFORM = 'zed'
 C_MAIN = 'main.cpp'  # Currently, the host code *must* be named this.
 HOST_O = 'main.o'  # The .o file for host code.
 EXECUTABLE = 'sdsoc'
@@ -201,7 +200,8 @@ def stage_make(db, config):
     prefix = config["HLS_COMMAND_PREFIX"]
     with work(db, state.MAKE, state.MAKE_PROGRESS, state.HLS_FINISH) as task:
         sdsflags = task['config'].get('sdsflags') or ''
-        platform = task['config'].get('platform') or DEFAULT_PLATFORM
+        platform = task['config'].get('platform') or \
+            config['DEFAULT_PLATFORM']
 
         # If estimation is requested, pass in estimation flag
         if task['config'].get('estimate'):
@@ -295,7 +295,8 @@ def stage_hls(db, config):
         hw_basename, hw_c, hw_o = _hw_filenames(task)
 
         xflags = task['config'].get('sdsflags') or ''
-        platform = task['config'].get('platform') or DEFAULT_PLATFORM
+        platform = task['config'].get('platform') or \
+            config['DEFAULT_PLATFORM']
 
         # Run Xilinx SDSoC compiler for hardware functions.
         task.run(
