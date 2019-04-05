@@ -147,12 +147,16 @@ def _task_config(task, config):
     directly.
     """
     flags = task['config'].get('sdsflags') or ''
+    est = 0
     if task['config'].get('estimate'):
         flags += ' -perf-est-hw-only'
+        est = 1
     task['sdsflags'] = flags
+    task['estimate'] = est
 
     task['platform'] = task['config'].get('platform') or \
         config['DEFAULT_PLATFORM']
+
 
 
 class WorkThread(threading.Thread):
@@ -214,11 +218,15 @@ def stage_make(db, config):
     with work(db, state.MAKE, state.MAKE_PROGRESS, state.HLS_FINISH) as task:
         _task_config(task, config)
 
+        if task['platform']:
+            task.log('WARNING: make stage is ignoring platform={}'.format(task['platform']))
+        if task['sdsflags']:
+            task.log('WARNING: make stage is ignoring sdsflags={}'.format(task['sdsflags']))
+
         task.run(
             prefix + [
                 'make',
-                'SDSFLAGS={}'.format(task['sdsflags']),
-                'PLATFORM={}'.format(task['platform']),
+                'ESTIMATE={}'.format(task['estimate']),
             ],
             timeout=config["SYNTHESIS_TIMEOUT"],
             cwd=CODE_DIR,
