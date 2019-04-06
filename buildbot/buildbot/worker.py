@@ -158,7 +158,6 @@ def _task_config(task, config):
         config['DEFAULT_PLATFORM']
 
 
-
 class WorkThread(threading.Thread):
     """A base class for all our worker threads, which run indefinitely
     to process tasks in an appropriate state.
@@ -218,10 +217,14 @@ def stage_make(db, config):
     with work(db, state.MAKE, state.MAKE_PROGRESS, state.HLS_FINISH) as task:
         _task_config(task, config)
 
-        if task['platform']:
-            task.log('WARNING: make stage is ignoring platform={}'.format(task['platform']))
-        if task['sdsflags']:
-            task.log('WARNING: make stage is ignoring sdsflags={}'.format(task['sdsflags']))
+        if task.get('platform'):
+            task.log('WARNING: make stage ignoring platform={}'.format(
+                task['platform']
+            ))
+        if task.get('sdsflags'):
+            task.log('WARNING: make stage is ignoring sdsflags={}'.format(
+                task['sdsflags']
+            ))
 
         task.run(
             prefix + [
