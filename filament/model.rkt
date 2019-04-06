@@ -12,10 +12,11 @@
      (bop op e e)
      (if0 e e e)
      (seq e e ...)
-     (par e e ...))
+     (par e e ...)
+     (while e e))
   (x ::= variable-not-otherwise-mentioned)
   (n ::= natural)
-  (op ::= +))
+  (op ::= + - / * % == != < <= > >= >> << and or b-and b-or))
 
 ;; Recognize terms in the Filament language
 (define filament?
@@ -44,7 +45,8 @@
      (bop op v E)
      (if0 E e e)
      (par e ... E e ...) ;; This is non-determinstic!!
-     (seq E e ...)))
+     (seq E e ...))
+     (while E e))
 
 ;; Helper functions for stores
 ;; Lookup : sto -> x -> index -> v
@@ -112,7 +114,14 @@
          "seq-step")
     (--> [(in-hole E (seq v)) sto]
          [(in-hole E v) sto]
-         "seq-end")))
+         "seq-end")
+    (--> [(in-hole E (while 0 e)) sto]
+         [(in-hole E void) sto]
+         "while-false")
+    (--> [(in-hole E (while n e)) sto]
+         [(in-hole E (seq e (while n e)) sto)]
+         (where #false ,(= (term n) 0))
+         "while-true")))
   
 ;; Helper function to show the trace of a program
 ;; starting with the empty store.
