@@ -322,40 +322,6 @@ object TypeChecker {
         }
       }
     }
-    case CView(id, k@Shrink(arrId, vdims)) => env(arrId).typ match {
-      case arrTyp@TArray(t, dims) => {
-        // Annotate arrId with type
-        arrId.typ = Some(arrTyp)
-        // Cannot create shrink views in unrolled contexts
-        if (env.getResources != 1) {
-          throw ViewInsideUnroll(cmd.pos, k, arrId)
-        }
-        // Check if view has the same dimensions as underlying array.
-        if (vdims.length != dims.length) {
-          throw IncorrectAccessDims(arrId, dims.length, vdims.length)
-        }
-        // Foreach dimension, check if bankingFactor % shrinkFactor == 0
-        // and the offset variable is a constant or a simple iterator.
-        val env1 = dims.zip(vdims).zipWithIndex.foldLeft(env)({ case (env, (zdim, idx)) => {
-          val ((_, bank), (e, width, _)) = zdim
-          if (bank % width != 0) {
-            throw InvalidShrinkWidth(e.pos, bank, width)
-          }
-          // Completely conumse the current dimension
-          val env2 = env.update(arrId, env(arrId).consumeDim(idx, bank))
-          val (accessType, env3) = checkE(e)(env2)
-          accessType match {
-            case _: TStaticInt | _: TIndex => true
-            case t => throw InvalidIndex(arrId, t)
-          }
-          env3
-        }})
-        // Add view into scope
-        val typ = TArray(t, vdims.map({ case (_, w, _) => (w, w) }))
-        env1.add(id, typ)
-      }
-      case t => throw UnexpectedType(cmd.pos, "shrink view", "array", t)
-    }
     case CFor(range, par, combine) => {
       val iter = range.iter
       val (e1, binds) = env.withScope(range.u) { newScope =>
@@ -372,6 +338,16 @@ object TypeChecker {
         })
 
       e1.withScope(1)(e2 => checkC(combine)(e2 ++ vecBinds))._1
+    }
+    case CView(ids, arrId, kinds) => env(arrId) match {
+      case TArray(typ, dims) => {
+        if(dims.length != kinds.length) {
+          throw MsgError(
+            s"Underlying array has ${dims.length} dimensions but view requires ${kinds.length} dimensions.")
+        }
+
+        (dims zip kinds).foldLeft()
+      }
     }
     case CExpr(e) => checkE(e)._2
     case CEmpty => env

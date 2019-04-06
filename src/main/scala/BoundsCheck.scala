@@ -6,14 +6,14 @@ import Logger._
 
 object BoundsChecker {
 
-  def check(p: Prog) : Unit = {
+  def check(p: Prog): Unit = {
     checkC(p.cmd)
   }
 
-  private def checkE(e: Expr) : Unit = e match {
+  private def checkE(e: Expr): Unit = e match {
     case EArrAccess(id, idxs) => id.typ.map({
-      case TArray(_, dims) => (idxs.map(_.typ) zip dims).foldLeft(())({
-        case ((_, (t, (size, _)))) => t.map({
+      case TArray(_, dims) => (idxs.map(_.typ) zip dims).foreach({
+        case (t, (size, _)) => t.map({
           case idx@TSizedInt(n) =>
             if (math.pow(2, n) >= size) {
               scribe.warn(
@@ -29,11 +29,11 @@ object BoundsChecker {
     case _ => ()
   }
 
-  private def checkC(c: Command) : Unit = c match {
+  private def checkC(c: Command): Unit = c match {
     case CPar(c1, c2) => checkC(c1) ; checkC(c2)
     case CSeq(c1, c2) => checkC(c1) ; checkC(c2)
     case CLet(_, _, exp) => checkE(exp)
-    case CView(_, _) => ()
+    case _:CView => ()
     case CIf(cond, tbranch, fbranch) => checkE(cond) ; checkC(tbranch) ; checkC(fbranch)
     case CFor(_, par, combine) => checkC(par) ; checkC(combine)
     case CWhile(cond, body) => checkE(cond) ; checkC(body)
