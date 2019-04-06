@@ -119,7 +119,7 @@
          [(in-hole E void) sto]
          "while-false")
     (--> [(in-hole E (while n e)) sto]
-         [(in-hole E (seq e (while n e)) sto)]
+         [(in-hole E (seq e (while n e))) sto]
          (where #false ,(= (term n) 0))
          "while-true")))
   
