@@ -25,7 +25,8 @@ src/main/resources/headers/*.hpp
 _test
 
 *.o
-
+<
+# Racket
 *.bak
 *.1
 filament-core/compiled
