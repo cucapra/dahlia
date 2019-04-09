@@ -217,11 +217,11 @@ def stage_make(db, config):
     with work(db, state.MAKE, state.MAKE_PROGRESS, state.HLS_FINISH) as task:
         _task_config(task, config)
 
-        if task.get('platform'):
+        if task['platform']:
             task.log('WARNING: make stage ignoring platform={}'.format(
                 task['platform']
             ))
-        if task.get('sdsflags'):
+        if task['sdsflags']:
             task.log('WARNING: make stage is ignoring sdsflags={}'.format(
                 task['sdsflags']
             ))
