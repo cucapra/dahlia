@@ -3,7 +3,7 @@ package fuselang
 import java.io.File
 import scribe.Level
 
-import backend.{VivadoBackend, CppRunnable, Backend}
+import backend.{VivadoBackend, CppRunnable, VizBackend, Backend}
 
 object Utils {
 
@@ -13,11 +13,12 @@ object Utils {
 
   val emptyConf = Config(null)
 
-  val validBackends = Set("vivado", "c++")
+  val validBackends = Set("vivado", "c++", "viz")
 
   def toBackend(str: String): Backend = str match {
     case "vivado" => VivadoBackend
     case "c++" => CppRunnable
+    case "viz" => VizBackend
     case b => throw Errors.Impossible(s"Unknown backend $b")
   }
 
