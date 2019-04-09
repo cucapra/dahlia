@@ -217,10 +217,6 @@ def stage_make(db, config):
     with work(db, state.MAKE, state.MAKE_PROGRESS, state.HLS_FINISH) as task:
         _task_config(task, config)
 
-        if task['platform']:
-            task.log('WARNING: make stage ignoring platform={}'.format(
-                task['platform']
-            ))
         if task['sdsflags']:
             task.log('WARNING: make stage is ignoring sdsflags={}'.format(
                 task['sdsflags']
@@ -230,6 +226,7 @@ def stage_make(db, config):
             prefix + [
                 'make',
                 'ESTIMATE={}'.format(task['estimate']),
+                'PLATFORM={}'.format(task['platform']),
             ],
             timeout=config["SYNTHESIS_TIMEOUT"],
             cwd=CODE_DIR,
