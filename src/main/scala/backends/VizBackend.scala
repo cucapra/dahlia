@@ -24,9 +24,19 @@ private object Dot {
       s"  $name [$str];\n"
     }
   }
-  case class EdgeNode(src: Name, tar: Name) extends Node
+  case class EdgeNode(src: Name, tar: Name) extends Node {
+    override def emit(): String = s"$src -- $tar";
+  }
   case class DirectedEdgeNode(src: Name, tar: Name) extends Node {
     override def emit(): String = s"$src -> $tar;"
+  }
+  case class RangeNode(name: String, range: CRange) extends Node {
+    val i = range.iter
+    val start = range.s
+    val end = range.e
+    val unroll = range.u
+    override def emit(): String =
+      s"""$name [shape=invhouse, label="$i=$start..$end unroll $unroll"]"""
   }
 
   class Table(width: Int) extends Emittable {
@@ -83,10 +93,10 @@ private object Dot {
 
 private object Vizualization {
 
-  def preamble = {
-    """
-digraph G {
-  node [shape=plain];
+  def preamble(file: String) = {
+    s"""
+digraph "$file" {
+node [shape=plain];
 """
   }
 
@@ -115,22 +125,42 @@ digraph G {
     p.emit
   }
 
-  def emitExpr(expr: Expr, target: String): (String, Option[String]) = {
+  def concatOpts(o1: Option[String], o2: Option[String]) = (o1, o2) match {
+    case (Some(s1), Some(s2)) => Some(s"$s1\n$s2")
+    case (Some(x), _) => Some(x)
+    case (None, Some(x)) => Some(x)
+    case (None, None) => None
+  }
+
+  def emitExpr(expr: Expr, target: String, lhs: Boolean = false): String = {
     def exprNode(expr: Expr): Option[String] = expr match {
       case EInt(_, _) | EFloat(_) | EBool(_) => None
-      case EBinop(_, e1, e2) => (exprNode(e1), exprNode(e2)) match {
-        case (Some(s1), Some(s2)) => Some(s"$s1\n$s2")
-        case (Some(x), _) => Some(x)
-        case (None, Some(x)) => Some(x)
-        case (None, None) => None
+      case EBinop(_, e1, e2) => concatOpts(exprNode(e1), exprNode(e2))
+      case EArrAccess(id, idxs) => {
+        val name = id.toString()
+        val idx = idxs.foldLeft(0)((acc, _) => acc + 1)
+        if (lhs)
+          Some(Dot.DirectedEdgeNode(target, s"$name:bank$idx").emit) // something fancier here
+        else
+          Some(Dot.DirectedEdgeNode(s"$name:bank$idx", target).emit)
       }
-      case EArrAccess(_, _) => None
       case ERecAccess(_, _) => None
       case ERecLiteral(_) => None
       case EApp(_, _) => None
-      case EVar(x) => Some(Dot.DirectedEdgeNode(x.toString(), target).emit)
+      case EVar(x) =>
+        if (lhs)
+          Some(Dot.DirectedEdgeNode(target, x.toString()).emit)
+        else
+          Some(Dot.DirectedEdgeNode(x.toString(), target).emit)
     }
-    (s"$expr", exprNode(expr))
+    val table = Dot.Table.mkVarTable(
+      target,
+      "type nyi",
+      Some(s"$expr"))
+    exprNode(expr) match {
+      case Some(node) => Dot.PropNode(target, List(Dot.Label(table))).emit() concat node
+      case None => Dot.PropNode(target, List(Dot.Label(table))).emit()
+    }
   }
 
   private var exprIdx = 0
@@ -140,40 +170,51 @@ digraph G {
     s
   }
 
+  // private var rangeIdx = 0
+  // def newRangeName() = {
+  //   val s = s"range$rangeIdx"
+  //   rangeIdx += 1
+  //   s
+  // }
+
   def emitCmd(cmd: Command): String = cmd match {
     case CPar(c1, c2) => emitCmd(c1) concat emitCmd(c2)
     case CSeq(_, _) => ""
     case CLet(id, _, e) => {
-      val typString = e.typ match {
-        case None => "no type"
-        case Some(t) => t.toString()
-      }
-      val (exprSt, node) = emitExpr(e, id.toString()) match {
-        case (s, None) => (s, "")
-        case (s, Some(node)) => (s, node)
-      }
-      val table = Dot.Table.mkVarTable(
-        id.toString(),
-        typString,
-        Some(exprSt))
-      Dot.PropNode(id.toString(), List(Dot.Label(table))).emit() concat node
+      // val typString = e.typ match {
+      //   case None => "no type"
+      //   case Some(t) => t.toString()
+      // }
+      // val (exprSt, node) = emitExpr(e, id.toString()) match {
+      //   case (s, None) => (s, "")
+      //   case (s, Some(node)) => (s, node)
+      // }
+      emitExpr(e, id.toString())
+      // val table = Dot.Table.mkVarTable(
+      //   id.toString(),
+      //   typString,
+      //   Some(exprSt))
+      // Dot.PropNode(id.toString(), List(Dot.Label(table))).emit() concat node
     }
     case CView(_, _) => ""
     case CIf(_, _, _) => ""
-    case CFor(_, _, _) => ""
-    case CWhile(_, _) => ""
-    case CUpdate(_, _) => ""
-    case CReduce(_, _, _) => ""
-    case CExpr(e) => emitExpr(e, newExprName()) match {
-      case (_, None) => ""
-      case (_, Some(node)) => node
+    case CFor(range, par, _) => { // what to do if $i shows up multiple times
+      Dot.RangeNode(range.iter.toString(), range).emit concat "\n" concat
+      emitCmd(par)
     }
+    case CWhile(_, _) => ""
+    case CUpdate(lhs, rhs) => {
+      val node1 = emitExpr(lhs, newExprName(), true)
+      val node2 = emitExpr(rhs, newExprName())
+      s"$node1\n$node2"
+    }
+    case CReduce(_, _, _) => ""
+    case CExpr(e) => emitExpr(e, newExprName())
     case CEmpty => ""
   }
 
   def emit(p: Prog, c: Config): String = {
-    if (c.srcFile == "cat") println("cat") // this is just to get rid of a warning
-    preamble concat
+    preamble(c.srcFile.toString()) concat
     p.defs.foldLeft("")((str, defn) => str concat emitDefn(defn)) concat
     p.decls.foldLeft("")((str, decl) => str concat emitDecl(decl)) concat
     emitCmd(p.cmd) concat
