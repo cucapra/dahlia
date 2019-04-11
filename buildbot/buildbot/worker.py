@@ -13,7 +13,6 @@ C_EXT = '.cpp'
 OBJ_EXT = '.o'
 C_MAIN = 'main.cpp'  # Currently, the host code *must* be named this.
 HOST_O = 'main.o'  # The .o file for host code.
-EXECUTABLE = 'sdsoc'
 
 # For executing on a Xilinx Zynq board.
 ZYNQ_SSH_PREFIX = ['sshpass', '-p', 'root']  # Provide Zynq SSH password.
@@ -337,7 +336,7 @@ def stage_hls(db, config):
         # Run Xilinx SDSoC compiler for created objects.
         task.run(
             _sds_cmd(prefix, hw_basename, hw_c, task['platform']) + flags + [
-                hw_o, HOST_O, '-o', EXECUTABLE,
+                hw_o, HOST_O, '-o', config['EXECUTABLE_NAME'],
             ],
             timeout=config["SYNTHESIS_TIMEOUT"],
             cwd=CODE_DIR,
@@ -379,7 +378,8 @@ def stage_fpga_execute(db, config):
 
         # Run the FPGA program and collect results
         task.run(
-            ZYNQ_SSH_PREFIX + ['ssh', ZYNQ_HOST, '/mnt/' + EXECUTABLE],
+            ZYNQ_SSH_PREFIX + ['ssh', ZYNQ_HOST, '/mnt/' +
+                               config['EXECUTABLE_NAME']],
             timeout=120
         )
 

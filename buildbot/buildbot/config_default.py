@@ -39,6 +39,9 @@ CONFIG_OPTIONS = {
     'platform': str,
 }
 
+# The name to use for compiled executables.
+EXECUTABLE_NAME = 'sdsoc'
+
 # The number of (recent) lines of the log to show on job pages.
 LOG_PREVIEW_LINES = 32
 
