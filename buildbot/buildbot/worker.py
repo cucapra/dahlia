@@ -226,6 +226,7 @@ def stage_make(db, config):
                 'make',
                 'ESTIMATE={}'.format(task['estimate']),
                 'PLATFORM={}'.format(task['platform']),
+                'TARGET={}'.format(config['EXECUTABLE_NAME']),
             ],
             timeout=config["SYNTHESIS_TIMEOUT"],
             cwd=CODE_DIR,
