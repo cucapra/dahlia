@@ -30,6 +30,8 @@
   [(let* ([x n e]) e_b)
    (let (x n e) e_b)])
 
+;==================EXTENSION: VALUES, EVAL CONTEXT, STORES============
+
 ;; Define extended language for values, evaluation contexts, and stores.
 (define-extended-language Filament-ev Filament
   (e ::= .... v)
@@ -57,7 +59,6 @@
    (side-condition (not (member (term (x n)) (term ((x_1 n_1) ...)))))]
   [(lookup any_1 x n)
    ,(error 'lookup "not found: ~e in: ~e" (term (x n)) (term any_1))])
-
 ;; add : sto -> x -> index -> v -> sto
 ;; Errors out if the declaration is already in the store
 (define-metafunction Filament-ev
@@ -122,7 +123,17 @@
          [(in-hole E (seq e (while n e))) sto]
          (where #false ,(= (term n) 0))
          "while-true")))
-  
+
+;==============================================
+
+;==============FILAMENT-ERR====================
+(define-extended-language Filament-ev-err Filament-ev
+  (stuck ::= (st string)))
+
+
+
+;=================HELPERS=======================
+
 ;; Helper function to show the trace of a program
 ;; starting with the empty store.
 (define (filament-apply-reduction reducer prog)
