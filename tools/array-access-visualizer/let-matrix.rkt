@@ -43,9 +43,8 @@
     [(_ [(id rows cols) ...] body ...)
      ;; Generate temporary names for structures that keep track of array accesses.
      (with-syntax ([(id-access ...) (generate-temporaries #'(id ...))])
-       #'(begin
-           ;; Define structures to keep track to accesses into matrices
-           (define id-access (list (mutable-set))) ...
+       ;; Define structures to keep track to accesses into matrices
+       #'(let ([id-access (list (mutable-set))] ...)
            ;; Define --- operator for this let/matrix context
            (syntax-parameterize ([--- (syntax-rules () [(_) (seq-arr id-access ...)])])
              ;; Define syntactic sugar M[i][j]... for array accesses
