@@ -14,7 +14,8 @@
       "cpp-runnable"
     ],
     "Tools": [
-      "text-editors"
+      "text-editors",
+      "access-visualizer"
     ],
     "Development": [
       "testing"

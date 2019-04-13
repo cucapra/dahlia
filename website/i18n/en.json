@@ -5,6 +5,9 @@
     "previous": "Previous",
     "tagline": "A typed programming language for safe high-level synthesis",
     "docs": {
+      "access-visualizer": {
+        "title": "Array Access Visualizer"
+      },
       "binders": {
         "title": "Variable Binders"
       },
