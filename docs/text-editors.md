@@ -12,7 +12,7 @@ We have a syntax highlighting plugin called `vim-fuse`.
 - If you're using [Pathogen](https://github.com/tpope/vim-pathogen), install
   `vim-fuse` by running this in the `seashell/` directory:
     - `cp -r tools/vim ~/.vim/bundle/vim-fuse`
-    
+
 ## Emacs
 
 We have a mode that provides syntax highlighting and indentation.
