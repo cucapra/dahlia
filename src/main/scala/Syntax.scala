@@ -111,15 +111,35 @@ object Syntax {
     }
     var typ: Option[Type] = None
   }
-  case class EInt(v: Int, base: Int = 10) extends Expr
-  case class EFloat(f: Float) extends Expr
-  case class EBool(v: Boolean) extends Expr
-  case class EBinop(op: BOp, e1: Expr, e2: Expr) extends Expr
-  case class EArrAccess(id: Id, idxs: List[Expr]) extends Expr
-  case class ERecAccess(rec: Expr, fieldName: Id) extends Expr
-  case class ERecLiteral(fields: Map[Id, Expr]) extends Expr
-  case class EApp(func: Id, args: List[Expr]) extends Expr
-  case class EVar(id: Id) extends Expr
+  case class EInt(v: Int, base: Int = 10) extends Expr {
+    override def toString() = s"$v"
+  }
+  case class EFloat(f: Float) extends Expr {
+    override def toString() = s"$f"
+  }
+  case class EBool(v: Boolean) extends Expr {
+    override def toString() = s"$v"
+  }
+  case class EBinop(op: BOp, e1: Expr, e2: Expr) extends Expr {
+    override def toString() = s"$e1 $op $e2"
+  }
+  case class EArrAccess(id: Id, idxs: List[Expr]) extends Expr {
+    override def toString() = {
+      s"$id" + idxs.map(e => s"[$e]").mkString("")
+    }
+  }
+  case class ERecAccess(rec: Expr, fieldName: Id) extends Expr {
+    override def toString() = s"$rec.$fieldName"
+  }
+  case class ERecLiteral(fields: Map[Id, Expr]) extends Expr {
+    override def toString() = s"$fields"
+  }
+  case class EApp(func: Id, args: List[Expr]) extends Expr {
+    override def toString() = s"$func(" + args.map(e => s"$e").mkString(",") + ")"
+  }
+  case class EVar(id: Id) extends Expr {
+    override def toString() = s"$id"
+  }
 
   case class CRange(iter: Id, s: Int, e: Int, u: Int) extends Positional {
     def idxType: TIndex = {
