@@ -68,17 +68,21 @@ private object Dot {
   object Table {
     def mkVarTable(name: String, typ: String, value: Option[String]) = {
       val t = new Table(1)
-      t.addFullRow((name, name))
-      t.addFullRow((typ, typ))
+      t.addFullRow(("id", s"$name:$typ"))
       value.map { s => t.addFullRow(("value", s)) }
       t.emit
     }
 
     def mkArrTable(name: String, typ: String, nbanks: Int) = {
       val t = new Table(nbanks)
-      t.addFullRow((name, name))
-      t.addFullRow((typ, typ))
+      t.addFullRow(("id", s"$name:$typ"))
       t.addRow((0 until nbanks).map { i => (s"bank$i", s"$i") }.toList)
+      t.emit
+    }
+
+    def mkExprTable(expr: String) = {
+      val t = new Table(1)
+      t.addFullRow(("expr", s"$expr"))
       t.emit
     }
   }
@@ -97,6 +101,7 @@ private object Vizualization {
     s"""
 digraph "$file" {
 node [shape=plain];
+graph [dpi=400];
 """
   }
 
@@ -132,35 +137,40 @@ node [shape=plain];
     case (None, None) => None
   }
 
-  def emitExpr(expr: Expr, target: String, lhs: Boolean = false): String = {
-    def exprNode(expr: Expr): Option[String] = expr match {
-      case EInt(_, _) | EFloat(_) | EBool(_) => None
-      case EBinop(_, e1, e2) => concatOpts(exprNode(e1), exprNode(e2))
+  def emitExpr(expr: Expr, nodeName: String, lhs: Boolean = false): String = {
+    def exprNode(expr: Expr, nodeName: String, lhs: Boolean): String = expr match {
+      case EInt(_, _) | EFloat(_) | EBool(_) => ""
+      case EBinop(_, e1, e2) => exprNode(e1, nodeName, lhs) concat exprNode(e2, nodeName, lhs)
       case EArrAccess(id, idxs) => {
+        val dims = id.typ match {
+          case Some(TArray(_, dims)) =>
+            dims.foldLeft(0)((acc, e) => acc + e._1)
+          case _ => 0
+        }
         val name = id.toString()
-        val idx = idxs.foldLeft(0)((acc, _) => acc + 1)
-        if (lhs)
-          Some(Dot.DirectedEdgeNode(target, s"$name:bank$idx").emit) // something fancier here
-        else
-          Some(Dot.DirectedEdgeNode(s"$name:bank$idx", target).emit)
+        val accessEdges = if (lhs) {
+          (0 until dims).foldLeft(""){
+            (acc, i) => acc concat Dot.DirectedEdgeNode(nodeName, s"$name:bank$i").emit
+          }
+        } else {
+          (0 until dims).foldLeft(""){
+            (acc, i) => acc concat Dot.DirectedEdgeNode(s"$name:bank$i", nodeName).emit
+          }
+        }
+        val indexEdges = idxs.foldLeft("")((acc, e) => acc concat exprNode(e, nodeName, false))
+        s"$accessEdges\n$indexEdges"
       }
-      case ERecAccess(_, _) => None
-      case ERecLiteral(_) => None
-      case EApp(_, _) => None
+      case ERecAccess(_, _) => ""
+      case ERecLiteral(_) => ""
+      case EApp(_, _) => ""
       case EVar(x) =>
         if (lhs)
-          Some(Dot.DirectedEdgeNode(target, x.toString()).emit)
+          Dot.DirectedEdgeNode(nodeName, x.toString()).emit
         else
-          Some(Dot.DirectedEdgeNode(x.toString(), target).emit)
+          Dot.DirectedEdgeNode(x.toString(), nodeName).emit
     }
-    val table = Dot.Table.mkVarTable(
-      target,
-      "type nyi",
-      Some(s"$expr"))
-    exprNode(expr) match {
-      case Some(node) => Dot.PropNode(target, List(Dot.Label(table))).emit() concat node
-      case None => Dot.PropNode(target, List(Dot.Label(table))).emit()
-    }
+    val table = Dot.Table.mkExprTable(s"$expr")
+    Dot.PropNode(nodeName, List(Dot.Label(table))).emit() concat exprNode(expr, nodeName, lhs)
   }
 
   private var exprIdx = 0
@@ -204,9 +214,12 @@ node [shape=plain];
     }
     case CWhile(_, _) => ""
     case CUpdate(lhs, rhs) => {
-      val node1 = emitExpr(lhs, newExprName(), true)
-      val node2 = emitExpr(rhs, newExprName())
-      s"$node1\n$node2"
+      val lhsName = newExprName()
+      val rhsName = newExprName()
+      val node1 = emitExpr(lhs, lhsName, true)
+      val node2 = emitExpr(rhs, rhsName)
+      val conn = Dot.DirectedEdgeNode(rhsName, lhsName).emit
+      s"$conn\n$node1\n$node2"
     }
     case CReduce(_, _, _) => ""
     case CExpr(e) => emitExpr(e, newExprName())
@@ -218,6 +231,7 @@ node [shape=plain];
     p.defs.foldLeft("")((str, defn) => str concat emitDefn(defn)) concat
     p.decls.foldLeft("")((str, decl) => str concat emitDecl(decl)) concat
     emitCmd(p.cmd) concat
+    "\n" concat
     postamble
   }
 }
