@@ -39,7 +39,7 @@ private object Dot {
       s"""$name [shape=invhouse, label="$i=$start..$end unroll $unroll"]"""
   }
 
-  class Table(width: Int) extends Emittable {
+  class Table(width: Int, rev: Boolean = false) extends Emittable {
 
     private case class Item(name: String, value: String, width: Int)
     private var table: List[List[Item]] = Nil
@@ -54,7 +54,7 @@ private object Dot {
     }
 
     override def emit(): String = {
-      val rows = table.reverseMap { row =>
+      val rows = (if (rev) table else table.reverse).map { row =>
         val s = row.map {
           case Item(name, value, w) =>
             s"<td port='$name' colspan='$w'>$value</td>"
@@ -128,13 +128,6 @@ graph [dpi=400];
     p.append(
       Dot.PropNode(decl.id.toString(), List(Dot.Label(table))))
     p.emit
-  }
-
-  def concatOpts(o1: Option[String], o2: Option[String]) = (o1, o2) match {
-    case (Some(s1), Some(s2)) => Some(s"$s1\n$s2")
-    case (Some(x), _) => Some(x)
-    case (None, Some(x)) => Some(x)
-    case (None, None) => None
   }
 
   def emitExpr(expr: Expr, nodeName: String, lhs: Boolean = false): String = {
