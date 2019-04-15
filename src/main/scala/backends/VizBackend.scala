@@ -16,6 +16,9 @@ private object Dot {
   case class Label(str: String) extends Prop {
     override def emit(): String = s"label=$str"
   }
+  case class Shape(str: String) extends Prop {
+    override def emit(): String = s"shape=$str"
+  }
 
   sealed trait Node extends Emittable
   case class PropNode(name: Name, props: List[Prop]) extends Node {
@@ -29,6 +32,9 @@ private object Dot {
   }
   case class DirectedEdgeNode(src: Name, tar: Name) extends Node {
     override def emit(): String = s"$src -> $tar;"
+  }
+  case class TwoEdgeNode(src: Name, tar: Name) extends Node {
+    override def emit(): String = s"$src -> $tar;\n$tar -> $src;"
   }
   case class RangeNode(name: String, range: CRange) extends Node {
     val i = range.iter
@@ -130,46 +136,49 @@ graph [dpi=400];
     p.emit
   }
 
-  def emitExpr(expr: Expr, nodeName: String, lhs: Boolean = false): String = {
-    def exprNode(expr: Expr, nodeName: String, lhs: Boolean): String = expr match {
-      case EInt(_, _) | EFloat(_) | EBool(_) => ""
-      case EBinop(_, e1, e2) => exprNode(e1, nodeName, lhs) concat exprNode(e2, nodeName, lhs)
-      case EArrAccess(id, idxs) => {
-        val dims = id.typ match {
-          case Some(TArray(_, dims)) =>
-            dims.foldLeft(0)((acc, e) => acc + e._1)
-          case _ => 0
-        }
-        val name = id.toString()
-        val accessEdges = if (lhs) {
-          (0 until dims).foldLeft(""){
-            (acc, i) => acc concat Dot.DirectedEdgeNode(nodeName, s"$name:bank$i").emit
-          }
-        } else {
-          (0 until dims).foldLeft(""){
-            (acc, i) => acc concat Dot.DirectedEdgeNode(s"$name:bank$i", nodeName).emit
-          }
-        }
-        val indexEdges = idxs.foldLeft("")((acc, e) => acc concat exprNode(e, nodeName, false))
-        s"$accessEdges\n$indexEdges"
+  def emitExpr(expr: Expr, nodeName: String,
+    ctx: Map[Id, String], lhs: Boolean = false): String = expr match {
+    // def exprNode(expr: Expr, nodeName: String,
+    //   ctx: Map[Id, String], lhs: Boolean): String = expr match {
+    case EInt(_, _) | EFloat(_) | EBool(_) => ""
+    case EBinop(_, e1, e2) =>
+      emitExpr(e1, nodeName, ctx, lhs) concat emitExpr(e2, nodeName, ctx, lhs)
+    case EArrAccess(id, idxs) => {
+      val dims = id.typ match {
+        case Some(TArray(_, dims)) =>
+          dims.foldLeft(0)((acc, e) => acc + e._2)
+        case _ => 0
       }
-      case ERecAccess(_, _) => ""
-      case ERecLiteral(_) => ""
-      case EApp(_, _) => ""
-      case EVar(x) =>
-        if (lhs)
-          Dot.DirectedEdgeNode(nodeName, x.toString()).emit
-        else
-          Dot.DirectedEdgeNode(x.toString(), nodeName).emit
+      val pre = ctx getOrElse (id, "")
+      val accessEdges = if (lhs) {
+        (0 until dims).foldLeft(""){
+          (acc, i) => acc concat Dot.DirectedEdgeNode(nodeName, s"$pre$id:bank$i").emit
+        }
+      } else {
+        (0 until dims).foldLeft(""){
+          (acc, i) => acc concat Dot.DirectedEdgeNode(s"$pre$id:bank$i", nodeName).emit
+        }
+      }
+      val indexEdges = idxs.foldLeft("")((acc, e) =>
+        acc concat emitExpr(e, nodeName, ctx, false))
+      s"$accessEdges\n$indexEdges"
     }
-    val table = Dot.Table.mkExprTable(s"$expr")
-    Dot.PropNode(nodeName, List(Dot.Label(table))).emit() concat exprNode(expr, nodeName, lhs)
+    case ERecAccess(_, _) => ""
+    case ERecLiteral(_) => ""
+    case EApp(_, _) => ""
+    case EVar(x) =>
+      val pre = ctx getOrElse (x, "")
+      if (lhs)
+        Dot.DirectedEdgeNode(nodeName, s"$pre$x").emit
+      else
+        Dot.DirectedEdgeNode(s"$pre$x", nodeName).emit
   }
+  // }
 
-  private var exprIdx = 0
-  def newExprName() = {
-    val s = s"expr$exprIdx"
-    exprIdx += 1
+  private var nameIdx = 0
+  def newName(name: String = "var") = {
+    val s = s"$name$nameIdx"
+    nameIdx += 1
     s
   }
 
@@ -180,42 +189,52 @@ graph [dpi=400];
   //   s
   // }
 
-  def emitCmd(cmd: Command): String = cmd match {
-    case CPar(c1, c2) => emitCmd(c1) concat emitCmd(c2)
-    case CSeq(_, _) => ""
+  // val table = Dot.Table.mkExprTable(s"$expr")
+  // Dot.PropNode(nodeName, List(Dot.Label(table))).emit() concat
+  // exprNode(expr, nodeName, ctx, lhs)
+
+  def emitCmd(cmd: Command, ctx: Map[Id, String]): String = cmd match {
+    case CPar(c1, c2) => List(emitCmd(c1, ctx), emitCmd(c2, ctx)).mkString("\n")
+    case CSeq(c1, c2) => List(emitCmd(c1, ctx), emitCmd(c2, ctx)).mkString("\n")
     case CLet(id, _, e) => {
-      // val typString = e.typ match {
-      //   case None => "no type"
-      //   case Some(t) => t.toString()
-      // }
-      // val (exprSt, node) = emitExpr(e, id.toString()) match {
-      //   case (s, None) => (s, "")
-      //   case (s, Some(node)) => (s, node)
-      // }
-      emitExpr(e, id.toString())
-      // val table = Dot.Table.mkVarTable(
-      //   id.toString(),
-      //   typString,
-      //   Some(exprSt))
-      // Dot.PropNode(id.toString(), List(Dot.Label(table))).emit() concat node
+      val t = new Dot.Table(2)
+      t.addRow(List(("name", s"$id"), ("expr", s"$e")))
+      Dot.PropNode(s"$id", List(Dot.Label(t.emit()))).emit concat emitExpr(e, s"$id", ctx)
     }
     case CView(_, _) => ""
     case CIf(_, _, _) => ""
-    case CFor(range, par, _) => { // what to do if $i shows up multiple times
-      Dot.RangeNode(range.iter.toString(), range).emit concat "\n" concat
-      emitCmd(par)
+    case CFor(range, par, combine) => { // what to do if $i shows up multiple times
+      val name = newName("iter")
+      val rangeNode = Dot.RangeNode(s"$name${range.iter}", range).emit
+      val parNode = emitCmd(par, ctx + (range.iter -> name))
+      val combineNode = emitCmd(combine, ctx + (range.iter -> name))
+      val subgraph = s"""subgraph cluster_${newName("subgraph")} {
+graph[style="dotted"]"""
+      List(rangeNode, subgraph, parNode, combineNode, "}").mkString("\n")
     }
     case CWhile(_, _) => ""
     case CUpdate(lhs, rhs) => {
-      val lhsName = newExprName()
-      val rhsName = newExprName()
-      val node1 = emitExpr(lhs, lhsName, true)
-      val node2 = emitExpr(rhs, rhsName)
+      val lhsName = newName("expr")
+      val rhsName = newName("expr")
+      val t1 = Dot.PropNode(lhsName, List(Dot.Label(Dot.Table.mkExprTable(s"$lhs")))).emit()
+      val t2 = Dot.PropNode(rhsName, List(Dot.Label(Dot.Table.mkExprTable(s"$rhs")))).emit()
+      val node1 = emitExpr(lhs, lhsName, ctx, true)
+      val node2 = emitExpr(rhs, rhsName, ctx)
       val conn = Dot.DirectedEdgeNode(rhsName, lhsName).emit
-      s"$conn\n$node1\n$node2"
+      List(conn, t1, t2, node1, node2).mkString("\n")
     }
-    case CReduce(_, _, _) => ""
-    case CExpr(e) => emitExpr(e, newExprName())
+    case CReduce(op: ROp, lhs: Expr, rhs: Expr) => {
+      val name = newName("expr")
+      val opNode = Dot.PropNode(name, List(Dot.Label(s""""$op""""), Dot.Shape("diamond"))).emit
+      val lEdge = lhs match {
+        case EVar(id) => Dot.TwoEdgeNode(id.toString(), name).emit
+        case EArrAccess(id, _) => Dot.TwoEdgeNode(id.toString(), name).emit;
+        case _ => ""
+      }
+      val rEdge = emitExpr(rhs, name, ctx)
+      s"$rEdge\n$lEdge\n$opNode"
+    }
+    case CExpr(e) => emitExpr(e, newName("expr"), ctx)
     case CEmpty => ""
   }
 
@@ -223,7 +242,7 @@ graph [dpi=400];
     preamble(c.srcFile.toString()) concat
     p.defs.foldLeft("")((str, defn) => str concat emitDefn(defn)) concat
     p.decls.foldLeft("")((str, decl) => str concat emitDecl(decl)) concat
-    emitCmd(p.cmd) concat
+    emitCmd(p.cmd, Map.empty) concat
     "\n" concat
     postamble
   }
