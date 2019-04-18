@@ -62,7 +62,17 @@
     ...
     (---)))
 
+;; Simple while loops without support for break or continue.
+(define-syntax-rule (while test body ...)
+  (begin
+    (define (loop)
+      (cond
+        [test body ... (loop)]
+        [else #f]))
+    (loop)))
+
 (provide let/matrix
          for
+         while
          ---
          (all-from-out "matrix-visualizer.rkt"))
