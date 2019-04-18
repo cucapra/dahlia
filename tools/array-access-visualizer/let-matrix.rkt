@@ -37,7 +37,7 @@
 ;; Define wrapper context that can tracks accesses into matrices and
 ;; generates a visualization for them. The matrice identifiers bound by the
 ;; context can only be used with the get syntax and are defined to be an
-;; error everywhere else (TODO).
+;; error everywhere else.
 (define-syntax (let/matrix stx)
   (syntax-case stx ()
     [(_ [(id rows cols) ...] body ...)
