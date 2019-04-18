@@ -172,6 +172,12 @@ private class FuseParser extends RegexParsers with PackratParsers {
       case idx ~ _ ~ width => (EInt(idx), width, width)
     }
 
+  lazy val view: P[ViewType] = positioned {
+    "shrink" ~> iden ~ rep1(brackets(viewParam)) ^^ {
+      case arrId ~ params => Shrink(arrId, params)
+    }
+  }
+
   // If
   lazy val conditional: P[Command] = positioned {
     "if" ~> parens(expr) ~ block ~ ("else" ~> block).?  ^^ {
@@ -183,6 +189,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
     "let" ~> iden ~ (":" ~> typ).? ~ ("=" ~> expr) ^^ {
       case id ~ t ~ exp => CLet(id, t, exp)
     } |
+    "view" ~> iden ~ "=" ~ view ^^ { case arrId ~ _ ~ vt => CView(arrId, vt) } |
     expr ~ ":=" ~ expr ^^ { case l ~ _ ~ r => CUpdate(l, r) } |
     expr ~ rop ~ expr ^^ { case l ~ rop ~ r => CReduce(rop, l, r) } |
     expr ^^ { case e => CExpr(e) }

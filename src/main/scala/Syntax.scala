@@ -144,19 +144,20 @@ object Syntax {
   case class RSub() extends ROp
   case class RDiv() extends ROp
 
-  sealed trait Suffix
-  case class Aligned(e: Expr) extends Suffix
-  case class Rotation(e: Expr) extends Suffix
-
   sealed trait ViewType extends Positional
-  case class SimpleView(suffix: Suffix, prefix: Expr, shrink: Option[Int]) extends ViewType
-  case class SplitView(num: Int) extends ViewType
+  case class Shrink(arrId: Id, dims: List[(Expr,Int,Int)]) extends ViewType {
+    dims.foreach({ case (_, w, s) => {
+      if (w != s) {
+        throw MalformedShrink(this, w, s)
+      }
+    }})
+  }
 
   sealed trait Command extends Positional
   case class CPar(c1: Command, c2: Command) extends Command
   case class CSeq(c1: Command, c2: Command) extends Command
   case class CLet(id: Id, var typ: Option[Type], e: Expr) extends Command
-  case class CView(id: List[Id], arrId: Id, kinds: List[ViewType]) extends Command
+  case class CView(id: Id, kind: ViewType) extends Command
   case class CIf(cond: Expr, cons: Command, alt: Command) extends Command
   case class CFor(range: CRange, par: Command, combine: Command) extends Command
   case class CWhile(cond: Expr, body: Command) extends Command

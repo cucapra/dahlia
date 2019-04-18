@@ -1,7 +1,7 @@
 package fuselang
 
 import Syntax._
-//import CodeGenHelpers._
+import CodeGenHelpers._
 
 /**
  * AST pass to rewrite views into simple array accesses. Should be used after
@@ -52,13 +52,6 @@ object RewriteView {
   }
 
   private def rewriteC(c: Command): State[Env, Command] = c match {
-    case _:CView => ???
-    /*case CView(id, Shrink(arrId, dims)) => State { env =>
-      val f = (es: List[Expr]) => EArrAccess(arrId, es.zip(dims).map({
-        case (e, (idx, _, s)) => e + (idx * EInt(s))
-      }))
-      (CEmpty, env + (id -> f))
-    }*/
     case CPar(c1, c2) => for {
       c1n <- rewriteC(c1)
       c2n <- rewriteC(c2)
@@ -70,6 +63,12 @@ object RewriteView {
     case l@CLet(_, _, e) => for {
       en <- rewriteExpr(e)
     } yield l.copy(e = en)
+    case CView(id, Shrink(arrId, dims)) => State { env =>
+      val f = (es: List[Expr]) => EArrAccess(arrId, es.zip(dims).map({
+        case (e, (idx, _, s)) => e + (idx * EInt(s))
+      }))
+      (CEmpty, env + (id -> f))
+    }
     case CIf(e1, c1, c2) => for {
       e1n <- rewriteExpr(e1)
       c1n <- rewriteC(c1)
