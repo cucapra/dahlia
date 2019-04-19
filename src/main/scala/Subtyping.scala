@@ -83,6 +83,8 @@ object Subtyping {
     case (_: TIndex, t2@TSizedInt(_)) => Some(t2)
     case (t2@TSizedInt(_), _:TIndex) => Some(t2)
     case (_:TFloat, _:TFloat) => Some(TFloat())
+    case (ti1:TIndex, ti2:TIndex) =>
+      Some(TSizedInt(max(bitsNeeded(ti1.maxVal), bitsNeeded(ti2.maxVal))))
     case (t1, t2) => if (t1 == t2) Some(t1) else None
   }
 }

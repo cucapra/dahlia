@@ -1053,6 +1053,16 @@ class TypeCheckerSpec extends FunSpec {
       }
     }
 
+    it("join of index types is dynamic") {
+      typeCheck("""
+        for (let i = 0..10) {
+          for (let j = 0..2) {
+              let x = i + j;
+            }
+        }
+        """)
+    }
+
     it("equal types have joins") {
       typeCheck("""
         let x = true;
