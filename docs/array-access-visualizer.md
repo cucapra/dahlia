@@ -18,8 +18,8 @@ images that corresponds to the two examples.
 
 For the first example, we have:
 
-```
-(let/matrix ([A 2 4])
+```scheme
+(let/matrix [ (A[2][4]) ]
   (A[0][1])
   (---)
   (A[1][2]))
@@ -32,9 +32,9 @@ Try removing it to see the visualization generated.
 
 The second example is a bit more interesting:
 
-```
-(let/matrix ([A 2 4]
-             [B 1 8])
+```scheme
+(let/matrix [ (A[2][4])
+              (B[1][8]) ]
  (for ([i (in-range 1)]
        [j (in-range 4)])
    (A[i][j])
@@ -53,10 +53,21 @@ Also note that this `let/matrix` generates *two* images. In general, for
 `n` matrix declarations, the visualizer will generate `n` sequences of array
 accesses.
 
+In the `let/matrix` form's array definitions, we can also specify the banking
+factor for each dimension:
+
+```scheme
+(let/matrix [ (A[1][8 #:bank 4])) ])
+```
+
+which generates the array:
+
+![1 dimensional banked array](assets/banked-1d.png)
+
 The values produced by `let/matrix` are first class racket lists that can be
 manipulated like other values:
 
-```
+```scheme
 (define-value (A-access B-access)
   (let/matrix ([A 2 2]
                [B 2 2])

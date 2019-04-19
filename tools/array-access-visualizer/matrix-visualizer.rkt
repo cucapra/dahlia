@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require racket/set)
+(require racket/set
+         racket/match)
 (require pict)
 
 ;; Define a sickly orange color for visualizing array accesses.
@@ -27,7 +28,7 @@
 
 ;; Two dimensional version of bank
 (define (matrix-bank row col row-bank col-bank)
-  (+ (bank col col-bank) (* row-bank (bank row row-bank))))
+  (+ (bank col col-bank) (* col-bank (bank row row-bank))))
 
 ;; Two dimensional array with dimensions [[rows]] and [[cols]] and
 ;; mark element in the list [[marks]].
@@ -44,16 +45,21 @@
        (hc-append
         col-canvas
         (cc-superimpose
-        (if (set-member? marks (list cur-row cur-col))
-            (mark-elem arr-elem)
-            arr-elem)
-        (scale (text (number->string (matrix-bank cur-row cur-col row-banks col-banks))) 0.6)))))))
+         (if (set-member? marks (list cur-row cur-col))
+             (mark-elem arr-elem)
+             arr-elem)
+         (scale (text (number->string (matrix-bank cur-row cur-col row-banks col-banks))) 0.6)))))))
 
 ;; Generate a sequence of [[marked-matrix]] using the given paramter
 ;; [[seq]] which is a list of sets.
-(define (matrix-seq row col seq)
-  (map
-   (lambda (marks) (marked-matrix-with-banks row col
-                                  #:marks marks)) seq))
+(define (matrix-seq dims banks seq)
+  (match (list dims banks)
+    [(list (list row-len col-len) (list row-bank col-bank))
+     (map
+      (lambda (marks) (marked-matrix-with-banks row-len col-len
+                                                #:row-banks row-bank
+                                                #:col-banks col-bank
+                                                #:marks marks)) seq)]
+    [_ raise-argument-error 'matrix-seq "list with two elements" (list dims banks)]))
 
 (provide matrix-seq)

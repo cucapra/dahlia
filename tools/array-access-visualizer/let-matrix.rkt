@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require (for-syntax racket/base)
+(require (for-syntax racket/base
+                     syntax/parse)
          racket/syntax
          racket/stxparam
          racket/contract
@@ -39,8 +40,20 @@
 ;; context can only be used with the get syntax and are defined to be an
 ;; error everywhere else.
 (define-syntax (let/matrix stx)
-  (syntax-case stx ()
-    [(_ [(id rows cols) ...] body ...)
+
+  ;; Syntax class for array dimension specification for arrays.
+  ;; If the optional parameter #:bank is not specified, the default
+  ;; is set to 1.
+  ;; Fails if the bank factor does not divide the length.
+  (define-syntax-class array-dimension
+    #:description "array dimension in definiton"
+    (pattern (len:expr (~optional (~seq #:bank bank-opt:expr)))
+             #:with bank (if (attribute bank-opt) #'bank-opt #'1)
+             #:fail-when (not (= 0 (modulo (syntax->datum #'len) (syntax->datum #'bank))))
+             "banking factor does not divide dimension length"))
+
+  (syntax-parse stx
+    [(_ [(id:id dims:array-dimension ...) ...] body:expr ...)
      ;; Generate temporary names for structures that keep track of array accesses.
      (with-syntax ([(id-access ...) (generate-temporaries #'(id ...))])
        ;; Define structures to keep track to accesses into matrices
@@ -52,7 +65,7 @@
              ;; Run the body
              body ...
              ;; Generate visualization for all accesses
-             (values (matrix-seq rows cols (reverse id-access)) ...))))]))
+             (values (matrix-seq (list dims.len ...) (list dims.bank ...) (reverse id-access)) ...))))]))
 
 ;; Wrapper around for* that terminates each execution of the body with
 ;; a ---.
@@ -67,7 +80,7 @@
   (begin
     (define (loop)
       (cond
-        [test body ... (loop)]
+        [test body ... (---) (loop)]
         [else #f]))
     (loop)))
 
