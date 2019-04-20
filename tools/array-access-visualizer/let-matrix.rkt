@@ -48,9 +48,7 @@
   (define-syntax-class array-dimension
     #:description "array dimension in definiton"
     (pattern (len:expr (~optional (~seq #:bank bank-opt:expr)))
-             #:with bank (if (attribute bank-opt) #'bank-opt #'1)
-             #:fail-when (not (= 0 (modulo (syntax->datum #'len) (syntax->datum #'bank))))
-             "banking factor does not divide dimension length"))
+             #:with bank (if (attribute bank-opt) #'bank-opt #'1)))
 
   (syntax-parse stx
     [(_ [(id:id dims:array-dimension ...) ...] body:expr ...)
