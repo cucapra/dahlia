@@ -726,14 +726,6 @@ class TypeCheckerSpec extends FunSpec {
   }
 
   describe("Simple views") {
-    it("width must be factor of banking factor") {
-      assertThrows[InvalidAlignFactor] {
-        typeCheck("""
-          decl a: bit<10>[10 bank 5];
-          view v = a[3 * i :]
-          """ )
-      }
-    }
     it("must have dimensions equal to array") {
       assertThrows[IncorrectAccessDims] {
         typeCheck("""
@@ -788,6 +780,36 @@ class TypeCheckerSpec extends FunSpec {
           a[0][0]
           """ )
       }
+    }
+  }
+
+  describe("Simple aligned views") {
+    it("width must be factor of banking factor") {
+      assertThrows[InvalidAlignFactor] {
+        typeCheck("""
+          decl a: bit<10>[10 bank 5];
+          view v = a[3 * i :]
+          """ )
+      }
+    }
+
+    it("width must be statically known") {
+      assertThrows[ParserError] {
+        typeCheck("""
+          decl a: bit<10>[10 bank 5];
+          view v = a[i * i :]
+          """ )
+      }
+    }
+  }
+
+  describe("Simple rotation views") {
+    it("can describe arbitrary, unrestricted rotations") {
+      typeCheck("""
+        decl a: bit<10>[10 bank 5];
+        decl i: bit<32>;
+        view v = a[i * i ! :]
+        """ )
     }
   }
 
