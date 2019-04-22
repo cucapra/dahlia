@@ -56,9 +56,9 @@ object Subtyping {
     case (TSizedInt(v1), TSizedInt(v2)) => v1 <= v2
     case (_:IntType, _:TSizedInt) => true
     case (_:TStaticInt, _:TIndex) => true
-    case (TArray(tsub, _), TArray(tsup, _)) => {
+    case (TArray(tsub, subDims), TArray(tsup, supDims)) => {
       // Arrays are invariant
-      areEqual(tsup, tsub)
+      areEqual(tsup, tsub) && subDims == supDims
     }
     case _ => areEqual(sub, sup)
   }

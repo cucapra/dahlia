@@ -701,6 +701,17 @@ class TypeCheckerSpec extends FunSpec {
           """ )
       }
     }
+
+    it("Require exact match for array dimensions and banks") {
+      assertThrows[UnexpectedSubtype] {
+        typeCheck("""
+          def foo(a: bit<32>[10 bank 5]) {
+          }
+          decl b: bit<32>[5 bank 5];
+          foo(b)
+          """ )
+      }
+    }
   }
 
   describe("Function applications w/ externs") {
