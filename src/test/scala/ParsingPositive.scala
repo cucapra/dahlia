@@ -138,12 +138,6 @@ class ParsingTests extends org.scalatest.FunSuite {
       """ )
   }
 
-  test("views") {
-    parseAst("""
-      view v_a = shrink a[4 * i : 4]
-      """ )
-  }
-
   test("records definitions") {
     parseAst("""
       record Point {
@@ -179,6 +173,40 @@ class ParsingTests extends org.scalatest.FunSuite {
       import "print.h" {
         def extern foo(a: bit<32>);
       }
+      """ )
+  }
+
+  test("simple views") {
+    parseAst("""
+      view v = a[4 * i :];
+      """ )
+
+    parseAst("""
+      view v = a[i + 1! :];
+      """ )
+
+    parseAst("""
+      view v = a[4 * i : +3];
+      """ )
+
+    parseAst("""
+      view v = a[i + 1! : +3];
+      """ )
+
+    parseAst("""
+      view v = a[4 * i : bank 5];
+      """ )
+
+    parseAst("""
+      view v = a[i + 1! : bank 5];
+      """ )
+
+    parseAst("""
+      view v = a[4*i:+3 bank 5];
+      """ )
+
+    parseAst("""
+      view v = a[i + 1! : +3 bank 5];
       """ )
   }
 

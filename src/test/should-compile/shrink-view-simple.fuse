@@ -1,7 +1,0 @@
-decl a: bit<10>[16 bank 8];
-decl b: bit<10>[8];
-
-for (let i = 0..8) {
-  view v_a = shrink a[2*i:2];
-  b[i] := v_a[0] + 2*v_a[1]
-}

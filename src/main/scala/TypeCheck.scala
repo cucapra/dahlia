@@ -341,24 +341,24 @@ object TypeChecker {
     }
     case view@CView(id, arrId, vdims) => env(arrId).typ match {
       case TArray(typ, adims) => {
+        if (env.getResources != 1) {
+          throw ViewInsideUnroll(view.pos, arrId)
+        }
         val (vlen, alen) = (vdims.length, adims.length)
         if(vlen != alen) {
-          throw MsgError(
-            s"Underlying array has ${alen} dimensions but $view requires ${vlen} dimensions.")
+          throw IncorrectAccessDims(arrId, alen, vlen)
         }
 
         val (env1, ndims) = (adims zip vdims).foldLeft(env -> List[(Int, Int)]())({
-          case ((env, dims), ((len, bank), View(suf, pre, shrink))) =>
+          case ((env, dims), ((len, bank), view@View(suf, pre, shrink))) =>
             // Shrinking factor must be a factor of banking for the dimension
             if (shrink.isDefined && (shrink.get > bank || bank % shrink.get != 0)) {
-              throw MsgError(
-                s"Invalid shrinking factor for view $view. Shrink factor $shrink does not divide banking factor $bank")
+              throw InvalidShrinkWidth(view.pos, bank, shrink.get)
             }
 
             val idx = suf match {
-              case Aligned(fac, idx) => if (fac < bank || fac % bank != 0) {
-                throw MsgError(
-                  s"Aligned suffix factor $fac is not divided by the banking factor $bank.")
+              case Aligned(fac, idx) => if (bank < fac || bank % fac != 0) {
+                throw InvalidAlignFactor(suf.pos, fac, bank)
               } else {
                 idx
               }
@@ -368,8 +368,6 @@ object TypeChecker {
             // Check the index is non-index int type
             val (typ, nEnv) = checkE(idx)(env)
             typ match {
-              case _:TIndex => throw MsgError(
-                s"Cannot use an index type when creating a simple view. Use split views to parallelize iteration code.")
               case _:IntType => () // IntTypes are valid
               case t => throw UnexpectedType(idx.pos, "view", "integer type", t)
             }
@@ -388,6 +386,9 @@ object TypeChecker {
     }
     case view@CSplit(id, arrId, dims) => env(arrId).typ match {
       case TArray(typ, adims) => {
+        if (env.getResources != 1) {
+          throw ViewInsideUnroll(view.pos, arrId)
+        }
         val (vlen, alen) = (dims.length, adims.length)
         if(vlen != alen) {
           throw MsgError(
