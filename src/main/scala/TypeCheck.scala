@@ -322,40 +322,6 @@ object TypeChecker {
         }
       }
     }
-    case CView(id, k@Shrink(arrId, vdims)) => env(arrId).typ match {
-      case arrTyp@TArray(t, dims) => {
-        // Annotate arrId with type
-        arrId.typ = Some(arrTyp)
-        // Cannot create shrink views in unrolled contexts
-        if (env.getResources != 1) {
-          throw ViewInsideUnroll(cmd.pos, k, arrId)
-        }
-        // Check if view has the same dimensions as underlying array.
-        if (vdims.length != dims.length) {
-          throw IncorrectAccessDims(arrId, dims.length, vdims.length)
-        }
-        // Foreach dimension, check if bankingFactor % shrinkFactor == 0
-        // and the offset variable is a constant or a simple iterator.
-        val env1 = dims.zip(vdims).zipWithIndex.foldLeft(env)({ case (env, (zdim, idx)) => {
-          val ((_, bank), (e, width, _)) = zdim
-          if (bank % width != 0) {
-            throw InvalidShrinkWidth(e.pos, bank, width)
-          }
-          // Completely conumse the current dimension
-          val env2 = env.update(arrId, env(arrId).consumeDim(idx, bank))
-          val (accessType, env3) = checkE(e)(env2)
-          accessType match {
-            case _: TStaticInt | _: TIndex => true
-            case t => throw InvalidIndex(arrId, t)
-          }
-          env3
-        }})
-        // Add view into scope
-        val typ = TArray(t, vdims.map({ case (_, w, _) => (w, w) }))
-        env1.add(id, typ)
-      }
-      case t => throw UnexpectedType(cmd.pos, "shrink view", "array", t)
-    }
     case CFor(range, par, combine) => {
       val iter = range.iter
       val (e1, binds) = env.withScope(range.u) { newScope =>
@@ -373,13 +339,87 @@ object TypeChecker {
 
       e1.withScope(1)(e2 => checkC(combine)(e2 ++ vecBinds))._1
     }
-    case CExpr(e) => checkE(e)._2
-    case CEmpty => env
+    case view@CView(id, arrId, vdims) => env(arrId).typ match {
+      case TArray(typ, adims) => {
+        val (vlen, alen) = (vdims.length, adims.length)
+        if(vlen != alen) {
+          throw MsgError(
+            s"Underlying array has ${alen} dimensions but $view requires ${vlen} dimensions.")
+        }
+
+        val (env1, ndims) = (adims zip vdims).foldLeft(env -> List[(Int, Int)]())({
+          case ((env, dims), ((len, bank), View(suf, pre, shrink))) =>
+            // Shrinking factor must be a factor of banking for the dimension
+            if (shrink.isDefined && (shrink.get > bank || bank % shrink.get != 0)) {
+              throw MsgError(
+                s"Invalid shrinking factor for view $view. Shrink factor $shrink does not divide banking factor $bank")
+            }
+
+            val idx = suf match {
+              case Aligned(fac, idx) => if (fac < bank || fac % bank != 0) {
+                throw MsgError(
+                  s"Aligned suffix factor $fac is not divided by the banking factor $bank.")
+              } else {
+                idx
+              }
+              case Rotation(idx) => idx
+            }
+
+            // Check the index is non-index int type
+            val (typ, nEnv) = checkE(idx)(env)
+            typ match {
+              case _:TIndex => throw MsgError(
+                s"Cannot use an index type when creating a simple view. Use split views to parallelize iteration code.")
+              case _:IntType => () // IntTypes are valid
+              case t => throw UnexpectedType(idx.pos, "view", "integer type", t)
+            }
+
+            (nEnv, (pre.getOrElse(len) -> shrink.getOrElse(bank)) :: dims)
+        })
+
+        // Fully consume the array
+        val nEnv = env1.update(arrId, env(arrId).consumeAll)
+
+        // Add binding for the new array. The dimensions are reversed because
+        // we used foldLeft above.
+        nEnv.add(id, TArray(typ, ndims.reverse))
+      }
+      case t => throw UnexpectedType(cmd.pos, "view", "array", t)
+    }
+    case view@CSplit(id, arrId, dims) => env(arrId).typ match {
+      case TArray(typ, adims) => {
+        val (vlen, alen) = (dims.length, adims.length)
+        if(vlen != alen) {
+          throw MsgError(
+            s"Underlying array has $alen dimensions but split $view requires $vlen dimensions.")
+        }
+        // Fully consume the array
+        val nEnv = env.update(arrId, env(arrId).consumeAll)
+
+        // Create a type for the view array
+        val viewDims = (adims zip dims).flatMap({
+          case ((dim, bank), 1) => List((dim, bank))
+          case ((dim, bank), n) if n > 1 => {
+            if (bank % n == 0) {
+              List((n, n), (dim / bank * (bank / n), bank / n))
+            } else {
+              throw MsgError(s"Cannot create $view. Split factor $n does not divide banking factor $bank for $arrId")
+            }
+          }
+          case (_, n) => throw MsgError(s"Cannot create $view. Split factor $n less than 0.")
+        })
+
+        nEnv.add(id, TArray(typ, viewDims))
+      }
+      case t => throw UnexpectedType(cmd.pos, "split", "array", t)
+    }
     case CSeq(c1, c2) => {
       val (_, binds) = env.withScope(1) { newScope =>
         checkC(c1)(newScope)
       }
       checkC(c2)(env ++ binds)
     }
+    case CExpr(e) => checkE(e)._2
+    case CEmpty => env
   }
 }

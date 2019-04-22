@@ -80,7 +80,7 @@ object Errors {
   // View errors
   case class InvalidShrinkWidth(pos: Position, bf: Int, width: Int) extends TypeError(
     s"Invalid width for shrink view. Expected factor of $bf (banking factor), received: $width", pos)
-  case class ViewInsideUnroll(pos: Position, vt: ViewType, arrId: Id) extends TypeError(
+  case class ViewInsideUnroll(pos: Position, vt: View, arrId: Id) extends TypeError(
     s"Cannot create $vt view for $arrId inside an unrolled context.", pos)
 
   // Type definition errors
@@ -108,8 +108,6 @@ object Errors {
   // Malformed AST Errors
   case class UnexpectedLVal(e: Expr, construct: String) extends RuntimeException(
     withPos(s"Expected L-value in $construct.", Some(e.pos)))
-  case class MalformedShrink(vt: Shrink, w: Int, step: Int) extends RuntimeException(
-    withPos(s"shrink view expects step size == width. Received $step (step), $w (width)", Some(vt.pos)))
   case class ArrayInRecord(name: Id, field: Id, typ: Type) extends RuntimeException(
     withPos(s"Records can only contain primitive types and other structs. Found field $field with $typ in record definition for `$name'.", Some(field.pos)))
 

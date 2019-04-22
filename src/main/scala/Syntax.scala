@@ -144,20 +144,29 @@ object Syntax {
   case class RSub() extends ROp
   case class RDiv() extends ROp
 
-  sealed trait ViewType extends Positional
-  case class Shrink(arrId: Id, dims: List[(Expr,Int,Int)]) extends ViewType {
-    dims.foreach({ case (_, w, s) => {
-      if (w != s) {
-        throw MalformedShrink(this, w, s)
-      }
-    }})
-  }
+  /** Views **/
+  sealed trait Suffix
+  case class Aligned(factor: Int, e: Expr) extends Suffix
+  case class Rotation(e: Expr) extends Suffix
+
+  /**
+   * Represents the view configuration over one dimension. Prefixes can only
+   * be specified as +n where `n` is a number added to the suffix.
+   *
+   * If the suffix is missing, it is assumed to be 0.
+   * If the shrink is None, then the original banking factor of the array is
+   * retained.
+   */
+  case class View(suffix: Suffix,
+                  prefix: Option[Int],
+                  shrink: Option[Int]) extends Positional
 
   sealed trait Command extends Positional
   case class CPar(c1: Command, c2: Command) extends Command
   case class CSeq(c1: Command, c2: Command) extends Command
   case class CLet(id: Id, var typ: Option[Type], e: Expr) extends Command
-  case class CView(id: Id, kind: ViewType) extends Command
+  case class CView(id: Id, arrId: Id, dims: List[View]) extends Command
+  case class CSplit(id: Id, arrId: Id, dims: List[Int]) extends Command
   case class CIf(cond: Expr, cons: Command, alt: Command) extends Command
   case class CFor(range: CRange, par: Command, combine: Command) extends Command
   case class CWhile(cond: Expr, body: Command) extends Command
@@ -194,4 +203,7 @@ object Syntax {
     defs: List[Definition],
     decls: List[Decl],
     cmd: Command) extends Positional
+}
+
+object Operators {
 }

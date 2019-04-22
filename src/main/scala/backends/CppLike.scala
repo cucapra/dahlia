@@ -122,6 +122,7 @@ object Cpp {
         case CExpr(e) => e <> semi
         case CEmpty => ""
         case _:CView => throw Impossible("Views should not exist during codegen.")
+        case _:CSplit => throw Impossible("Views should not exist during codegen.")
     }
 
     def emitDecl(d: Decl): Doc = d.typ match {
