@@ -145,7 +145,7 @@ object Syntax {
   case class RDiv() extends ROp
 
   /** Views **/
-  sealed trait Suffix
+  sealed trait Suffix extends Positional
   case class Aligned(factor: Int, e: Expr) extends Suffix
   case class Rotation(e: Expr) extends Suffix
 

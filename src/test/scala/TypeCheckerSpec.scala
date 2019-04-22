@@ -725,20 +725,12 @@ class TypeCheckerSpec extends FunSpec {
     }
   }
 
-  describe("Shrink views") {
-    it("width must be equal to step") {
-      assertThrows[MalformedShrink] {
-        typeCheck("""
-          decl a: bit<10>[10];
-          view v = shrink a[3 * i : 1]
-          """ )
-      }
-    }
+  describe("Simple views") {
     it("width must be factor of banking factor") {
-      assertThrows[InvalidShrinkWidth] {
+      assertThrows[InvalidAlignFactor] {
         typeCheck("""
           decl a: bit<10>[10 bank 5];
-          view v = shrink a[3 * i : 3]
+          view v = a[3 * i :]
           """ )
       }
     }
@@ -746,17 +738,7 @@ class TypeCheckerSpec extends FunSpec {
       assertThrows[IncorrectAccessDims] {
         typeCheck("""
           decl a: bit<10>[10 bank 5][10 bank 5];
-          view v = shrink a[5 * i : 5]
-          """ )
-      }
-    }
-    it("cannot be inside unrolled context") {
-      assertThrows[ViewInsideUnroll] {
-        typeCheck("""
-          decl a: bit<10>[16 bank 8];
-          for (let i = 0..4) unroll 4 {
-            view v = shrink a[4 * i : 4]
-          }
+          view v = a[5 * i :]
           """ )
       }
     }
@@ -766,17 +748,25 @@ class TypeCheckerSpec extends FunSpec {
           decl a: bit<10>[16 bank 8];
           for (let i = 0..4) unroll 4 {
             for (let j = 0..4) {
-              view v = shrink a[4 * j : 4]
+              view v = a[4 * j :]
             }
           }
           """ )
       }
     }
+    it("can use loop iterator if not unrolled") {
+        typeCheck("""
+          decl a: bit<10>[16 bank 8];
+          for (let i = 0..4) {
+            view v = a[4 * i :]
+          }
+          """ )
+    }
     it("has the same type as the underlying array") {
       assertThrows[NoJoin] {
         typeCheck("""
           decl a: bool[10 bank 5];
-          view v = shrink a[0 : 5];
+          view v = a[0!:];
           v[3] + 1;
           """ )
       }
@@ -785,7 +775,7 @@ class TypeCheckerSpec extends FunSpec {
       assertThrows[IncorrectAccessDims] {
         typeCheck("""
           decl a: bool[10 bank 5][10 bank 5];
-          view v = shrink a[0 : 5][0 : 5];
+          view v = a[0!:][0!:];
           v[1]
           """ )
       }
@@ -794,7 +784,7 @@ class TypeCheckerSpec extends FunSpec {
       assertThrows[AlreadyConsumed] {
         typeCheck("""
           decl a: bool[10 bank 5][10 bank 5];
-          view v = shrink a[0 : 5][0 : 5];
+          view v = a[0!:][0!:];
           a[0][0]
           """ )
       }

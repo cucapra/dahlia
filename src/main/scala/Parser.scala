@@ -163,20 +163,22 @@ private class FuseParser extends RegexParsers with PackratParsers {
     "/=" ^^ { _ => RAdd() }
   }
 
-  // Some ugly validation for shrink step size = width
-  lazy val viewParam: P[(Expr, Int, Int)] =
-    number ~ "*" ~ expr ~ ":" ~ number ^^ {
-      case step ~ _ ~ idx ~ _ ~ width => (idx, width, step)
-    } |
-    number ~ ":" ~ number ^^ {
-      case idx ~ _ ~ width => (EInt(idx), width, width)
-    }
+  lazy val viewSuffix: P[Suffix] = positioned {
+    expr <~ "!" ^^ { case e => Rotation(e) } |
+    number ~ "*" ~ expr ^^ { case fac ~ _ ~ e => Aligned(fac, e) }
+  }
 
-  //lazy val view: P[ViewType] = positioned {
-    //"shrink" ~> iden ~ rep1(brackets(viewParam)) ^^ {
-      //case arrId ~ params => Shrink(arrId, params)
-    //}
-  //}
+  lazy val viewParam: P[View] = positioned {
+    viewSuffix ~ ":" ~ ("+" ~> number).? ~ ("bank" ~> number).? ^^ {
+      case suf ~ _ ~ prefixOpt ~ shrinkOpt => View(suf, prefixOpt, shrinkOpt)
+    }
+  }
+
+  lazy val view: P[Command] = positioned {
+    "view" ~> iden ~ "=" ~ iden ~ rep1(brackets(viewParam)) ^^ {
+      case id ~ _ ~ arrId ~ params => CView(id, arrId, params)
+    }
+  }
 
   // If
   lazy val conditional: P[Command] = positioned {
@@ -189,7 +191,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
     "let" ~> iden ~ (":" ~> typ).? ~ ("=" ~> expr) ^^ {
       case id ~ t ~ exp => CLet(id, t, exp)
     } |
-    //"view" ~> iden ~ "=" ~ view ^^ { case arrId ~ _ ~ vt => CView(arrId, vt) } |
+    view |
     expr ~ ":=" ~ expr ^^ { case l ~ _ ~ r => CUpdate(l, r) } |
     expr ~ rop ~ expr ^^ { case l ~ rop ~ r => CReduce(rop, l, r) } |
     expr ^^ { case e => CExpr(e) }

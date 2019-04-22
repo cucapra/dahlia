@@ -79,9 +79,11 @@ object Errors {
 
   // View errors
   case class InvalidShrinkWidth(pos: Position, bf: Int, width: Int) extends TypeError(
-    s"Invalid width for shrink view. Expected factor of $bf (banking factor), received: $width", pos)
-  case class ViewInsideUnroll(pos: Position, vt: View, arrId: Id) extends TypeError(
-    s"Cannot create $vt view for $arrId inside an unrolled context.", pos)
+    s"Invalid shrinking factor for view. Expected factor of $bf (banking factor), received: $width", pos)
+  case class InvalidAlignFactor(pos: Position, afac: Int, bank: Int) extends TypeError(
+    s"Aligned suffix factor $afac does not divide the banking factor $bank.", pos)
+  case class ViewInsideUnroll(pos: Position, arrId: Id) extends TypeError(
+    s"Cannot create view for $arrId inside an unrolled context.", pos)
 
   // Type definition errors
   case class AlreadyBoundType(id: Id) extends TypeError(
