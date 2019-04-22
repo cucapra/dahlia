@@ -393,17 +393,27 @@ object TypeChecker {
           throw MsgError(
             s"Underlying array has $alen dimensions but split $view requires $vlen dimensions.")
         }
-        // Fully consume the array
+        // Fully consume the underlying array
         val nEnv = env.update(arrId, env(arrId).consumeAll)
 
-        // Create a type for the view array
+        /**
+         * Create a type for the split view. For the following split view:
+         * ```
+         * a[d0 bank b0][d1 bank b1]...
+         * split s = a[by k0][by k1]...
+         * ```
+         * [[s]] gets the type t[k0 bank k0][(d0 / k0) bank (b0 / k0)] ....
+         *
+         * When ki = 1, we do not generate a new dimension.
+         */
         val viewDims = (adims zip dims).flatMap({
           case ((dim, bank), 1) => List((dim, bank))
           case ((dim, bank), n) if n > 1 => {
             if (bank % n == 0) {
-              List((n, n), (dim / bank * (bank / n), bank / n))
+              List((n, n), (dim / n, bank / n))
             } else {
-              throw MsgError(s"Cannot create $view. Split factor $n does not divide banking factor $bank for $arrId")
+              throw MsgError(
+                s"Cannot create $view. Split factor $n does not divide banking factor $bank for $arrId")
             }
           }
           case (_, n) => throw MsgError(s"Cannot create $view. Split factor $n less than 0.")
