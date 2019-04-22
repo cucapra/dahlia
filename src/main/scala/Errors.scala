@@ -28,25 +28,25 @@ object Errors {
     s"Cannot unroll range of size $rSize by factor $uFactor.", pos)
 
   case class InvalidIndex(id: Id, actual: Type) extends TypeError(
-    s"Invalid indexing type for $id. Expected: TIndex or TSizedInt, actual: $actual", id.pos)
+    s"Invalid indexing type for `$id'. Expected: TIndex or TSizedInt, actual: $actual", id.pos)
 
   case class IndexOutOfBounds(id : Id) extends TypeError(
-    s"Index out of bounds for $id", id.pos)
+    s"Index out of bounds for `$id'", id.pos)
 
   case class IncorrectAccessDims(id: Id, exp: Int, actual: Int) extends TypeError(
-    s"Incorrect number of dimensions used to access $id. Expected: $exp, actual: $actual.", id.pos)
+    s"Incorrect number of dimensions used to access `$id'. Expected: $exp, actual: $actual.", id.pos)
 
   case class UnknownDim(id: Id, dim: Int) extends TypeError(
-    s"$id does not have dimension $dim", id.pos)
+    s"`$id' does not have dimension $dim", id.pos)
 
   case class BankUnrollInvalid(bf: Int, uf: Int) extends TypeError(
-    s"Banking factor ($bf) not equal to ($uf).")
+    s"Banking factor ($bf) not equal to unrolling factor ($uf).")
 
   case class AlreadyConsumed(id: Id, dim: Int, bank: Int) extends TypeError(
-    s"Bank $bank in dimension $dim of $id already consumed.")
+    s"Bank $bank in dimension $dim of `$id' already consumed.")
 
   case class InvalidDynamicIndex(id:Id, bf:Int) extends TypeError(
-    s"Dynamic access of array $id requires unbanked array. Actual banking factor: $bf. Use a shrink view to create unbanked array.", id.pos)
+    s"Dynamic access of array `$id' requires unbanked array. Actual banking factor: $bf. Use a shrink view to create unbanked array.", id.pos)
 
   // Invalid Capability error
   case class InvalidCap(expr: Expr, exp: Capability, actual: Capability) extends TypeError(
@@ -68,10 +68,10 @@ object Errors {
 
   // Binding errors
   case class UnboundVar(id: Id) extends TypeError(
-    s"Variable $id not defined.", id.pos)
+    s"Variable `$id' not defined.", id.pos)
 
   case class AlreadyBound(id: Id) extends TypeError(
-    s"Variable $id already bound in scope", id.pos)
+    s"Variable `$id' already bound in scope", id.pos)
 
   // Reduction errors
   case class ReductionInvalidRHS(p: Position, rop: ROp, tl: Type, tr: Type) extends TypeError(
@@ -87,10 +87,10 @@ object Errors {
 
   // Type definition errors
   case class AlreadyBoundType(id: Id) extends TypeError(
-    s"Type alias $id already bound in scope.", id.pos)
+    s"Type alias `$id' already bound in scope.", id.pos)
 
   case class UnboundType(id: Id) extends TypeError(
-    s"Type alias $id not bound in scope.", id.pos)
+    s"Type alias `$id' not bound in scope.", id.pos)
 
   // Record Errors
   case class UnknownRecordField(pos: Position, recType: Id, field: Id) extends TypeError(
