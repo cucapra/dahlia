@@ -1,5 +1,7 @@
 package fuselang
 
+import scala.math.log10
+
 object CodeGenHelpers {
   import Syntax._
 
@@ -9,6 +11,29 @@ object CodeGenHelpers {
 
     def *(e2: Expr) =
       binop(OpMul(), e1, e2)
+
+    def /(e2: Expr) =
+      binop(OpDiv(), e1, e2)
+
+    def >>(e2: Expr) =
+      binop(OpRsh(), e1, e2)
+  }
+
+  // Using the trick defined here: https://www.geeksforgeeks.org/program-to-find-whether-a-no-is-power-of-two/
+  def isPowerOfTwo(x: Int) =
+    x != 0 && ((x & (x - 1)) == 0)
+
+  def fastDiv(l: Expr, r: Expr) = r match {
+    case EInt(n, _) => if (isPowerOfTwo(n)) {
+      l >> EInt((log10(n) / log10(2)).toInt, 10)
+    } else {
+      scribe.warn(s"Failed to generate fast division for factor $n")
+      l / r
+    }
+    case e => {
+      scribe.warn(s"Cannot generate fast division for dynamic expression $e")
+      l / r
+    }
   }
 
   // Simple peephole optimization to turn: 1 * x => x, 0 + x => x, 0 * x => 0

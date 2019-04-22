@@ -17,8 +17,8 @@ object Errors {
   case class MsgError(msg: String, pos: Option[Position] = None) extends TypeError(msg, pos)
 
   // Type mismatch
-  case class UnexpectedType(pos: Position, con: String, exp: String, actual: Type) extends TypeError(
-    s"Expected type $exp in $con, received: $actual.", pos)
+  case class UnexpectedType(pos: Position, construct: String, exp: String, actual: Type) extends TypeError(
+    s"Expected type $exp in $construct, received: $actual.", pos)
 
   case class UnexpectedSubtype(pos: Position, con: String, exp: Type, actual: Type) extends TypeError(
     s"Expected subtype of $exp in $con, received: $actual.", pos)
