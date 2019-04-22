@@ -1138,5 +1138,15 @@ class TypeCheckerSpec extends FunSpec {
         """ )
       }
     }
+
+    it("simple views with prefixes have their bounds checked") {
+      assertThrows[IndexOutOfBounds] {
+        typeCheck("""
+          decl a: bit<32>[10];
+          view v_a = a[0!:+3];
+          v_a[3];
+          """ )
+      }
+    }
   }
 }
