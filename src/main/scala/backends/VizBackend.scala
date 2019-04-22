@@ -57,7 +57,7 @@ graph [dpi=400, rankdir=LR, newrank=true];
     case ERecAccess(_, _) => Graph.empty
     case ERecLiteral(_) => Graph.empty
     case EApp(fname, args) => {
-      val g = Graph.singleton[Expr](s"$fname", expr)
+      val g = Graph.singleton(s"$fname", expr)
       args.foldLeft(g) {
         (acc, e) => {
           acc merge emitExpr(e, s"$fname", ctx)
@@ -95,8 +95,10 @@ graph [dpi=400, rankdir=LR, newrank=true];
       val name = newName("iter")
       val parNode = emitCmd(par, ctx + (range.iter -> name))
       val combineNode = emitCmd(combine, ctx + (range.iter -> name))
-      parNode merge combineNode merge
-      Graph.singleton[CmdTag](name, (name, cmd))
+      Console.err.println(s"${parNode.nodeSet()}")
+      val cl = Cluster(Set(s"$name${range.iter}") ++ parNode.nodeSet(), parNode.clusters)
+      val g = parNode merge combineNode merge Graph.singleton[CmdTag](name, (name, cmd))
+      g.newCluster(cl)
     }
     case CWhile(_, _) => Graph.empty
     case CUpdate(lhs, rhs) => {
