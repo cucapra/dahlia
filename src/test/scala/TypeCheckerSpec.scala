@@ -400,7 +400,7 @@ class TypeCheckerSpec extends FunSpec {
               let bucket_idx = 10;
               ---
               bucket_idx := 20;
-         """)
+         """ )
     }
 
     it("check for declarations used in both branches") {
@@ -411,7 +411,7 @@ class TypeCheckerSpec extends FunSpec {
                 ---
                 test_var := 30;
               }
-         """)
+         """ )
     }
   }
 
@@ -435,7 +435,7 @@ class TypeCheckerSpec extends FunSpec {
           ---
           a[i] := 2;
         }
-      """)
+      """ )
     }
 
     it("reuses banks of multidimensional array") {
@@ -448,7 +448,7 @@ class TypeCheckerSpec extends FunSpec {
             a[i][j] := 3;
           }
         }
-      """)
+      """ )
     }
   }
 
@@ -1060,7 +1060,7 @@ class TypeCheckerSpec extends FunSpec {
               let x = i + j;
             }
         }
-        """)
+        """ )
     }
 
     it("equal types have joins") {
@@ -1093,7 +1093,7 @@ class TypeCheckerSpec extends FunSpec {
       typeCheck("""
         decl a: bit<32>[10];
         let v = a[9];
-        """)
+        """ )
     }
 
     it("static ints larger than array size fail") {
@@ -1101,7 +1101,7 @@ class TypeCheckerSpec extends FunSpec {
         typeCheck("""
           decl a: bit<32>[10];
           let v = a[10];
-          """)
+          """ )
       }
     }
 
@@ -1112,7 +1112,7 @@ class TypeCheckerSpec extends FunSpec {
         for (let i = 0..10) {
           a[i] := 0;
         }
-        """)
+        """ )
     }
 
     it("array access with index types fails when maxVal > array length") {
@@ -1123,7 +1123,7 @@ class TypeCheckerSpec extends FunSpec {
           for (let i = 0..11) {
             a[i] := 0;
           }
-        """)
+        """ )
       }
     }
   }
