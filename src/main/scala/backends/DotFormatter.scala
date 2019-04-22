@@ -96,15 +96,25 @@ object DotFormatter {
 
   import VizGraph._
 
-  trait EdgeFormatter {
+  trait DefaultFormatter {
     def formatEdge(s: String, t: String): String = Dot.DirectedEdgeNode(s, t).emit
+    def formatCluster(name: String, nodes: Set[String], subCluster: String): String = {
+      val nodeStr = nodes.foldLeft("")((acc, e) => s"$e; $acc")
+      s"""
+subgraph cluster_$name {
+graph [style="dashed"];
+$nodeStr
+$subCluster
+}
+"""
+    }
   }
 
-  object DefnFormatter extends Format[Definition] with EdgeFormatter {
+  object DefnFormatter extends Format[Definition] with DefaultFormatter {
     def formatNode(defn: Definition) = ""
   }
 
-  object DeclFormatter extends Format[Decl] with EdgeFormatter {
+  object DeclFormatter extends Format[Decl] with DefaultFormatter {
     def formatNode(decl: Decl) = {
       val table = decl.typ match {
         case TArray(typ, dims) => Dot.Table.mkArrTable(
@@ -121,7 +131,7 @@ object DotFormatter {
     }
   }
 
-  object ExprFormatter extends Format[Expr] with EdgeFormatter {
+  object ExprFormatter extends Format[Expr] with DefaultFormatter {
     def formatNode(expr: Expr) = expr match {
       case EApp(fname, _) => {
         val t = new Dot.Table(1)
@@ -132,7 +142,7 @@ object DotFormatter {
     }
   }
 
-  object CmdFormatter extends Format[(String, Command)] with EdgeFormatter {
+  object CmdFormatter extends Format[(String, Command)] with DefaultFormatter {
     def formatNode(p: (String, Command)) = {
       val (name, cmd) = p
       cmd match {
