@@ -3,7 +3,6 @@ package fuselang.backend
 import org.bitbucket.inkytonik.kiama.output._
 import fuselang.Syntax._
 import fuselang.Errors._
-import fuselang.CodeGenHelpers._
 
 object Cpp {
   /**
@@ -58,19 +57,13 @@ object Cpp {
     def emitFor(cmd: CFor): Doc
 
     /**
-     * Used to emit function headers. All C++ backend will convert the function
-     * bodies in the same way but might require different pragrams for arguments\
+     * Used to emit function headers. All C++ backends will convert the function
+     * bodies in the same way but might require different pragrams for arguments
      * or setup code.
      */
     def emitFuncHeader(func: FuncDef): Doc
 
     implicit def IdToString(id: Id): Doc = value(id.v)
-
-    // FIXME(rachit): This is probably incorrect.
-    def flattenIdx(idxs: List[Expr], dimSizes: List[Int]) =
-      idxs.zip(dimSizes).foldRight[Expr](EInt(0))({
-        case ((idx, dim), acc) => idx + (EInt(dim) * acc)
-      })
 
     def scope(doc: Doc): Doc =
       lbrace <@> indent(doc) <@> rbrace
@@ -88,11 +81,7 @@ object Cpp {
       case EBool(b) => value(if(b) 1 else 0)
       case EVar(id) => value(id)
       case EBinop(op, e1, e2) => parens(e1 <+> op.toString <+> e2)
-      case EArrAccess(id, idxs) => id.typ match {
-        case Some(TArray(_, dims)) => id <> brackets(flattenIdx(idxs, dims.map(_._1)))
-        case Some(_) => throw Impossible("array access doesnt use array")
-        case None => throw Impossible("type information missing in exprToDoc")
-      }
+      case EArrAccess(id, idxs) => id <> ssep(idxs.map(idx => brackets(emitExpr(idx))), "")
       case ERecAccess(rec, field) => rec <> dot <> field
       case ERecLiteral(fs) => scope {
         hsep(fs.toList.map({ case (id, expr) => "." <> id <+> "=" <+> expr }), comma)

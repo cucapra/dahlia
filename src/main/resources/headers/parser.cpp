@@ -25,25 +25,6 @@ namespace flattening {
     struct n_dim_vec<T, 0>:tag<T>{};
   template<class T, size_t n>
     using n_dim_vec_t = type<n_dim_vec<T,n>>;
-
-  template <class T, int N = 1, class I=vector<T>>
-    vector<T> flatten_tensor(vector<T> vect) {
-      return vect;
-    }
-
-  template<class T, int N, class I=n_dim_vec_t<T, N>>
-    vector<T> flatten_tensor(I tensor) {
-      vector<T> ret = {};
-
-      for (auto vect: tensor) {
-        auto res = flatten_tensor<T, N - 1>(vect);
-        for (auto elem: res) {
-          ret.push_back(elem);
-        }
-      }
-
-      return ret;
-    }
 }
 
 /**
