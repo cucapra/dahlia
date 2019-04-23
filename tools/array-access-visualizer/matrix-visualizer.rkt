@@ -1,11 +1,14 @@
 #lang racket/base
 
 (require racket/set
-         racket/match)
+         racket/match
+         racket/class
+         racket/draw)
 (require pict)
 
 ;; Define a sickly orange color for visualizing array accesses.
-(define creamsicle (list 255 153 83))
+(define creamsicle
+  (make-object color% 255 153 83))
 
 ;; Define what a bare array element looks like
 (define elem-size 12)
@@ -14,8 +17,8 @@
 
 ;; Define what a marking for an array element looks like
 (define marking
-  (let ([small-elem (- elem-size 2)])
-    (colorize (rectangle small-elem small-elem) creamsicle)))
+  (let ([elem-size (- elem-size 2)])
+    (rectangle elem-size elem-size #:border-color creamsicle #:border-width 1.5)))
 
 ;; Marks the given element
 (define (mark-elem elem)
