@@ -3,6 +3,7 @@ package fuselang
 import Syntax._
 import Errors._
 import Logger._
+import Utils.RichOption
 
 object BoundsChecker {
 
@@ -10,22 +11,22 @@ object BoundsChecker {
     checkC(p.cmd)
   }
 
-  private def checkE(e: Expr) : Unit = e match {
-    case EArrAccess(id, idxs) => id.typ.map({
-      case TArray(_, dims) => (idxs.map(_.typ) zip dims).foldLeft(())({
-        case ((_, (t, (size, _)))) => t.map({
-          case idx@TSizedInt(n) =>
-            if (math.pow(2, n) >= size) {
+  private def checkE(e: Expr): Unit = e match {
+    case EArrAccess(id, idxs) =>
+      id.typ.getOrThrow(Impossible(s"$id missing type in $e")) match {
+        case TArray(_, dims) => idxs.map(_.typ).zip(dims).foreach({
+          case (t, (size, _)) => t.foreach({
+            case idx@TSizedInt(n) => if (math.pow(2, n) >= size) {
               scribe.warn(
                 (s"$idx is used for an array access. This could be unsafe.", e))
             }
-          case TStaticInt(v) => if (v >= size) throw IndexOutOfBounds(id)
-          case t@TIndex(_, _) => if (t.maxVal > size) throw IndexOutOfBounds(id)
-          case t => throw UnexpectedType(id.pos, "array access", s"[$t]", t)
-        }); ()
-      })
-      case t => throw UnexpectedType(id.pos, "array access", s"$t[]", t)
-    }); ()
+            case TStaticInt(v) => if (v >= size) throw IndexOutOfBounds(id)
+            case t@TIndex(_, _) => if (t.maxVal > size) throw IndexOutOfBounds(id)
+            case t => throw UnexpectedType(id.pos, "array access", s"[$t]", t)
+          })
+        })
+            case t => throw UnexpectedType(id.pos, "array access", s"$t[]", t)
+      }
     case _ => ()
   }
 

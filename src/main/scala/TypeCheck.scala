@@ -5,6 +5,7 @@ import Errors._
 import TypeInfo._
 import Subtyping._
 import TypeEnv._
+import Utils.RichOption
 
 /**
  * Type checker implementation for Fuse. Apart from normal typechecking, such as
@@ -138,10 +139,7 @@ object TypeChecker {
       case (_:TFloat, _:TFloat) => TBool()
       case _ => throw BinopError(op, t1, t2)
     }
-    case _:NumOp => joinOf(t1, t2, op) match {
-      case Some(t) => t
-      case None => throw NoJoin(op.pos, op.toString, t1, t2)
-    }
+    case _:NumOp => joinOf(t1, t2, op).getOrThrow(NoJoin(op.pos, op.toString, t1, t2))
     case _:BitOp => (t1, t2) match {
       case (_:TSizedInt, _:IntType) => t1
       case (TStaticInt(v), _:IntType) => TSizedInt(bitsNeeded(v))
@@ -260,8 +258,9 @@ object TypeChecker {
           throw ReductionInvalidRHS(r.pos, rop, t1, ta)
       }
     }
-    case l@CLet(id, typ, exp@ERecLiteral(fs)) => typ match {
-      case Some(typ) => env.resolveType(typ) match {
+    case l@CLet(id, typ, exp@ERecLiteral(fs)) => {
+      val expTyp = typ.getOrThrow(ExplicitRecTypeMissing(l.pos, id))
+      env.resolveType(expTyp) match {
         case recTyp@TRecType(name, expTypes) => {
           // Typecheck expressions in the literal and generate a new id to type map.
           val (env1, actualTypes) = fs.foldLeft((env, Map[Id, Type]()))({
@@ -295,7 +294,6 @@ object TypeChecker {
         }
         case t => throw UnexpectedType(exp.pos, "let", "record type", t)
       }
-      case None => throw ExplicitRecTypeMissing(l.pos, id)
     }
     case l@CLet(id, typ, exp) => {
       // Check if the explicit type is bound in scope. Also, if the type is
