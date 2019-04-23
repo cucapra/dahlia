@@ -9,8 +9,8 @@
   (+ (* i B_v) (modulo j B_v) (* B_a (floor (/ j B_v)))))
 
 (define-values (A V)
-  (let* ([B-a 10]
-         [B-v ]
+  (let* ([B-a 6]
+         [B-v 3]
          [L-a (* B-a 2)])
     (let/matrix [ (A[1][L-a #:bank B-a] )
                   (V[B-v #:bank B-v][(/ L-a B-v) #:bank (/ B-a B-v)]) ]
