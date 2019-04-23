@@ -2,18 +2,15 @@ package fuselang
 
 import Syntax._
 import CodeGenHelpers._
+import Errors._
+
+import Utils.RichOption
 
 /**
  * AST pass to rewrite views into simple array accesses. Should be used after
  * type checking.
  *
- * For `shrink` views, we rewrite them as:
- *
- * view v_a = shrink a[4 * i : 4];
- * v_a[k];
- * ==>
- * // remove the view decl
- * a[4*i + k]
+ * TODO(rachit): Update description.
  *
  * If `a` itself is a view, we keep rewriting it until we reach a true array.
  *
@@ -28,11 +25,6 @@ object RewriteView {
    * expressions returns a new array access expression
    */
   type Env = Map[Id, List[Expr] => Expr]
-
-  def pr[A](v: A): A = {
-    println(v)
-    v
-  }
 
   private def rewriteExpr(e: Expr): State[Env, Expr] = e match {
     case EVar(_) | EInt(_, _) | EFloat(_) | EBool(_) | _:ERecAccess => State.unit(e)
@@ -61,6 +53,11 @@ object RewriteView {
     case Rotation(e) => e + idx
   }
 
+  private def splitAccessExpr(i: Expr, j: Expr, arrBank: Int, viewBank: Int): Expr =
+    (i * EInt(viewBank)) +
+    ((j / EInt(viewBank)) * EInt(arrBank)) +
+    (j % EInt(viewBank))
+
   private def rewriteC(c: Command): State[Env, Command] = c match {
     case CPar(c1, c2) => for {
       c1n <- rewriteC(c1)
@@ -79,7 +76,27 @@ object RewriteView {
       }))
       (CEmpty, env + (id -> f))
     }
-    case _:CSplit => ???
+    case CSplit(id, arrId, factors) => State { env =>
+      val arrBanks = arrId.typ.getOrThrow(Impossible(s"$arrId is missing type $c")) match {
+        case TArray(_, dims) => dims.map(_._2)
+        case t => throw Impossible(s"Array has type $t in $c")
+      }
+      val f = (es: List[Expr]) => {
+        val it = es.iterator
+        // For each dimension, if it was split by more than 1, group the next
+        // two accessors.
+        val groups = factors.map({
+          case 1 => List(it.next) -> 1
+          case factor => List(it.next, it.next) -> factor
+        })
+        val idxs = groups.zip(arrBanks).map({
+          case ((List(i), _), _) => i
+          case ((List(i, j), factor), arrBank) => splitAccessExpr(i, j, arrBank, arrBank / factor)
+        })
+        EArrAccess(arrId, idxs)
+      }
+      (CEmpty, env + (id -> f))
+    }
     case CIf(e1, c1, c2) => for {
       e1n <- rewriteExpr(e1)
       c1n <- rewriteC(c1)

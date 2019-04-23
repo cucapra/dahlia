@@ -40,7 +40,13 @@ object Syntax {
   case class TFun(args: List[Type]) extends Type
   case class TRecType(name: Id, fields: Map[Id, Type]) extends Type
   case class TAlias(name: Id) extends Type
-  case class TArray(typ: Type, dims: List[(Int, Int)]) extends Type
+  case class TArray(typ: Type, dims: List[(Int, Int)]) extends Type {
+    dims.zipWithIndex.foreach({ case ((len, bank), dim) =>
+      if (bank > len || len % bank != 0) {
+        throw MalformedType(s"Dimension $dim of TArray is malformed. Length $len, banking factor $bank. Full type $this")
+      }
+    })
+  }
 
   sealed trait BOp extends Positional {
     override def toString = this match {
