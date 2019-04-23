@@ -84,7 +84,8 @@ object Errors {
     s"Aligned suffix factor $afac does not divide the banking factor $bank.", pos)
   case class ViewInsideUnroll(pos: Position, arrId: Id) extends TypeError(
     s"Cannot create view for $arrId inside an unrolled context.", pos)
-
+  case class InvalidSplitFactor(id: Id, arrId: Id, split: Int, bank: Int) extends TypeError(
+    s"Cannot create split view $id: split factor $split does not divide banking factor $bank for $arrId", id.pos)
   // Type definition errors
   case class AlreadyBoundType(id: Id) extends TypeError(
     s"Type alias `$id' already bound in scope.", id.pos)

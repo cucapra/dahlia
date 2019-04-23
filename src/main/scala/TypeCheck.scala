@@ -389,8 +389,7 @@ object TypeChecker {
         }
         val (vlen, alen) = (dims.length, adims.length)
         if(vlen != alen) {
-          throw MsgError(
-            s"Underlying array has $alen dimensions but split $view requires $vlen dimensions.")
+          throw IncorrectAccessDims(arrId, alen, vlen)
         }
         // Fully consume the underlying array
         val nEnv = env.update(arrId, env(arrId).consumeAll)
@@ -405,14 +404,13 @@ object TypeChecker {
          *
          * When ki = 1, we do not generate a new dimension.
          */
-        val viewDims = (adims zip dims).flatMap({
+        val viewDims = adims.zip(dims).flatMap({
           case ((dim, bank), 1) => List((dim, bank))
           case ((dim, bank), n) if n > 1 => {
             if (bank % n == 0) {
               List((n, n), (dim / n, bank / n))
             } else {
-              throw MsgError(
-                s"Cannot create $view. Split factor $n does not divide banking factor $bank for $arrId")
+              throw InvalidSplitFactor(id, arrId, n, bank)
             }
           }
           case (_, n) => throw MsgError(s"Cannot create $view. Split factor $n less than 0.")
