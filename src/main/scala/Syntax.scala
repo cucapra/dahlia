@@ -172,7 +172,7 @@ object Syntax {
   case class CSeq(c1: Command, c2: Command) extends Command
   case class CLet(id: Id, var typ: Option[Type], e: Expr) extends Command
   case class CView(id: Id, arrId: Id, dims: List[View]) extends Command
-  case class CSplit(id: Id, arrId: Id, dims: List[Int]) extends Command
+  case class CSplit(id: Id, arrId: Id, factors: List[Int]) extends Command
   case class CIf(cond: Expr, cons: Command, alt: Command) extends Command
   case class CFor(range: CRange, par: Command, combine: Command) extends Command
   case class CWhile(cond: Expr, body: Command) extends Command

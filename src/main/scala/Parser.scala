@@ -86,10 +86,11 @@ private class FuseParser extends RegexParsers with PackratParsers {
   lazy val and: P[BOp] = positioned("&&" ^^ { _ => OpAnd() })
   lazy val or: P[BOp] = positioned("||" ^^ { _ => OpOr() })
 
-  // Expressions
-  // The bin* parsers implement the precedence order of operators described
-  // for C/C++: https://en.cppreference.com/w/c/language/operator_precedence
-  // The tower-like structure is required to implement precedence correctly.
+  /** Expressions
+   * The bin* parsers implement the precedence order of operators described
+   * for C/C++: https://en.cppreference.com/w/c/language/operator_precedence
+   * The tower-like structure is required to implement precedence correctly.
+   */
   lazy val binMul: P[Expr] = positioned {
     recAccess ~ mulOps ~ binMul ^^ { case l ~ op ~ r => EBinop(op, l, r)} |
     recAccess
@@ -163,6 +164,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
     "/=" ^^ { _ => RAdd() }
   }
 
+  // Simple views
   lazy val viewSuffix: P[Suffix] = positioned {
     expr <~ "!" ^^ { case e => Rotation(e) } |
     number ~ "*" ~ expr ^^ { case fac ~ _ ~ e => Aligned(fac, e) }
@@ -180,6 +182,13 @@ private class FuseParser extends RegexParsers with PackratParsers {
     }
   }
 
+  // split views
+  lazy val splitView: P[Command] = positioned {
+    "split" ~> iden ~ "=" ~ iden ~ rep1(brackets("by" ~> number)) ^^ {
+      case id ~ _ ~ arrId ~ factors => CSplit(id, arrId, factors)
+    }
+  }
+
   // If
   lazy val conditional: P[Command] = positioned {
     "if" ~> parens(expr) ~ block ~ ("else" ~> block).?  ^^ {
@@ -191,7 +200,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
     "let" ~> iden ~ (":" ~> typ).? ~ ("=" ~> expr) ^^ {
       case id ~ t ~ exp => CLet(id, t, exp)
     } |
-    view |
+    view | splitView |
     expr ~ ":=" ~ expr ^^ { case l ~ _ ~ r => CUpdate(l, r) } |
     expr ~ rop ~ expr ^^ { case l ~ rop ~ r => CReduce(rop, l, r) } |
     expr ^^ { case e => CExpr(e) }

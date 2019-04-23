@@ -794,6 +794,50 @@ class TypeCheckerSpec extends FunSpec {
     }
   }
 
+  describe("Split views") {
+    it("requires the same dimesions as the underlying array") {
+      assertThrows[IncorrectAccessDims] {
+        typeCheck("""
+          decl a: bit<32>[10 bank 5][2];
+          split v = a[by 5];
+          """ )
+      }
+    }
+    it("cannot be created inside an unrolled loop") {
+      assertThrows[ViewInsideUnroll] {
+        typeCheck("""
+          decl a: bit<32>[10 bank 5];
+          for (let i = 0 .. 8) unroll 2 {
+            split v = a[by 5];
+          }
+          """ )
+      }
+    }
+    it("requires split factor to divide banking factor") {
+      assertThrows[InvalidSplitFactor] {
+        typeCheck("""
+          decl a: bit<32>[10];
+          split v = a[by 5];
+          """ )
+      }
+    }
+    it("add another dimension for each non-zero split") {
+      assertThrows[IncorrectAccessDims] {
+        typeCheck("""
+          decl a: bit<32>[10 bank 5];
+          split v = a[by 5];
+          v[0]
+          """ )
+      }
+    }
+    it("can be created inside an normal loop") {
+      typeCheck("""
+        decl a: bit<32>[10 bank 5];
+        split v = a[by 5];
+        """ )
+    }
+  }
+
   describe("Simple aligned views") {
     it("width must be factor of banking factor") {
       assertThrows[InvalidAlignFactor] {

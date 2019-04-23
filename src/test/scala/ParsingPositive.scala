@@ -210,4 +210,14 @@ class ParsingTests extends org.scalatest.FunSuite {
       """ )
   }
 
+  test("split views") {
+    parseAst("""
+      split b = a[by 10];
+      """ )
+
+    parseAst("""
+      split b = a[by 10][by 20];
+      """ )
+  }
+
 }
