@@ -50,34 +50,6 @@
      (seq E e ...))
      (while E e))
 
-;; Helper functions for stores
-;; Lookup : sto -> x -> index -> v
-(define-metafunction Filament-ev
-  lookup : any x n -> any
-  [(lookup ((x_1 n_1 any_1) ... (x n any_t) (x_2 n_2 any_2) ...) x n)
-   any_t
-   (side-condition (not (member (term (x n)) (term ((x_1 n_1) ...)))))]
-  [(lookup any_1 x n)
-   ,(error 'lookup "not found: ~e in: ~e" (term (x n)) (term any_1))])
-;; add : sto -> x -> index -> v -> sto
-;; Errors out if the declaration is already in the store
-(define-metafunction Filament-ev
-  add : sto x n v -> sto
-  [(add ((x_1 n_1 any_1) ... (x n v) (x_2 n_2 any_2) ...) x n v)
-   ,(error 'add "~e already in: ~e" (term (x n)) (term sto))]
-  [(add ((x_1 n_1 any_1) ...) x n v)
-   ((x n v) (x_1 n_1 any_1) ...)
-   (side-condition (not (member (term (x n)) (term ((x_1 n_1) ...)))))])
-
-;; update : sto -> x -> index -> v -> sto
-;; Errors out if the declaration is not in the store
-(define-metafunction Filament-ev
-  update : sto x n v -> sto
-  [(update ((x_1 n_1 any_1) ... (x n any_2) (x_2 n_2 any_3) ...) x n v)
-   ((x_1 n_1 any_1) ... (x n v) (x_2 n_2 any_3) ...)]
-  [(update ((x_1 n_1 any_1) ...) x n v)
-   ,(error 'update "not found: ~e in: ~e" (term (x n)) (term sto))])
-
 ;; Metafunction to help apply operators
 (define-metafunction Filament-ev
   binop-app : op n n -> n
@@ -128,7 +100,49 @@
 
 ;==============FILAMENT-ERR====================
 (define-extended-language Filament-ev-err Filament-ev
-  (stuck ::= (st string)))
+  (v ::= .... (stuck string)))
+
+(define filament-with-err->>
+  (extend-reduction-relation
+   filament-->>
+   Filament-ev-err
+   (--> [(in-hole E (get x n)) sto]
+        [(in-hole E (lookup sto x n)) sto]
+         "get")
+   (--> [(in-hole E (set! x n v)) sto]
+        [(in-hole E void) (update sto x n v)]
+        "set!")
+   (--> [(in-hole E (let (x n v) e)) sto]
+        [(in-hole E e) (add sto x n v)]
+        "let-add")))
+
+;; Helper functions for stores
+;; Lookup : sto -> x -> index -> v
+(define-metafunction Filament-ev-err
+  lookup : any x n -> any
+  [(lookup ((x_1 n_1 any_1) ... (x n any_t) (x_2 n_2 any_2) ...) x n)
+   any_t
+   (side-condition (not (member (term (x n)) (term ((x_1 n_1) ...)))))]
+  [(lookup any_1 x n)
+   (stuck "Lookup failed: could not find term in store.")])
+;; add : sto -> x -> index -> v -> sto
+;; Errors out if the declaration is already in the store
+(define-metafunction Filament-ev-err
+  add : sto x n v -> any
+  [(add ((x_1 n_1 any_1) ... (x n v) (x_2 n_2 any_2) ...) x n v)
+   (stuck "Could not add: term already in store.")]
+  [(add ((x_1 n_1 any_1) ...) x n v)
+   ((x n v) (x_1 n_1 any_1) ...)
+   (side-condition (not (member (term (x n)) (term ((x_1 n_1) ...)))))])
+
+;; update : sto -> x -> index -> v -> sto
+;; Errors out if the declaration is not in the store
+(define-metafunction Filament-ev-err
+  update : sto x n v -> any
+  [(update ((x_1 n_1 any_1) ... (x n any_2) (x_2 n_2 any_3) ...) x n v)
+   ((x_1 n_1 any_1) ... (x n v) (x_2 n_2 any_3) ...)]
+  [(update ((x_1 n_1 any_1) ...) x n v)
+   (stuck "Update failed: term not found in store.")])
 
 
 
@@ -139,7 +153,7 @@
 (define (filament-apply-reduction reducer prog)
   (if (not (filament? prog))
       (error 'filament-trace "~e is not a valid Filament program" prog)
-  (reducer filament-->>
+  (reducer filament-with-err->>
           (term (,prog ())))))
 
 (define (filament-trace prog)
@@ -171,6 +185,12 @@
       (par
         (set! A 0 10)
         ,add-A-0))))
+
+(define bad-seq
+  (term
+   (let [A 0 0]
+     (seq
+      (set! A 1 10)))))
 
 
 ;; Playing with the language
