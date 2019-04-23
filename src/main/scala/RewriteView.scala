@@ -29,6 +29,11 @@ object RewriteView {
    */
   type Env = Map[Id, List[Expr] => Expr]
 
+  def pr[A](v: A): A = {
+    println(v)
+    v
+  }
+
   private def rewriteExpr(e: Expr): State[Env, Expr] = e match {
     case EVar(_) | EInt(_, _) | EFloat(_) | EBool(_) | _:ERecAccess => State.unit(e)
     case eb@EBinop(_, e1, e2) => for {
