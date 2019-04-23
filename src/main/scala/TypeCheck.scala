@@ -44,7 +44,7 @@ object TypeChecker {
    * (`checkC`).
    */
   def typeCheck(p: Prog) = {
-    val defs = p.defs ++ p.includes.flatMap(_.defs)
+    val defs = p.includes.flatMap(_.defs) ++ p.defs
     val funcsEnv = defs.foldLeft(emptyEnv)({ case (e, d) => checkDef(d, e) })
     val initEnv = p.decls.foldLeft(funcsEnv)({ case (env, Decl(id, typ)) =>
       val rTyp = env.resolveType(typ);
