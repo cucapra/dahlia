@@ -19,7 +19,8 @@ private class CppRunnable extends CppLike {
     case _:TBool => "bool"
     case _:TIndex | _:TStaticInt | _:TSizedInt => "int"
     case _:TFloat => "float"
-    case TArray(typ, _) => "vector" <> angles(emitType(typ))
+    case TArray(typ, dims) =>
+      dims.foldLeft(emitType(typ))({ case (acc, _) => "vector" <> angles(acc) })
     case TRecType(n, _) => n
     case _:TFun => throw Impossible("Cannot emit function types")
     case TAlias(n) => n
@@ -35,16 +36,6 @@ private class CppRunnable extends CppLike {
 
   def emitFuncHeader(func: FuncDef) = value("")
 
-  def alignType(t: Type): Doc => Doc = t match {
-    case arr@TArray(_, dims) => {
-      doc => cCall(
-        s"flatten_tensor",
-        Some(emitType(arr.typ) <> comma <+> dims.length.toString),
-        List(doc))
-    }
-    case _ => doc => doc
-  }
-
   /**
    * Emit code to parse the value for declaration `d`. Assumes that the
    * program has already created a value `v` of the type json to
@@ -53,8 +44,6 @@ private class CppRunnable extends CppLike {
    * auto id = <align>(get_arg<type>("id", "type", v)); // v is the json value parsed earlier.
    *
    * <align> is generated based on the type of the param:
-   *
-   * - n-dimensional arrays are flattened.
    */
   def emitParseDecl: Decl => Doc = { case Decl(id, _) => {
     // Use the type decoration for id since it's guaranteed to be resolved.
@@ -75,8 +64,7 @@ private class CppRunnable extends CppLike {
 
     val parseStmt =
       cBind(s"${id}",
-        alignType(typ)(
-          cCall("get_arg", Some(cTyp), List(quote(id), typeName, "v"))))
+        cCall("get_arg", Some(cTyp), List(quote(id), typeName, "v")))
 
     parseStmt
   }}
