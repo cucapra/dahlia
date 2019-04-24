@@ -1,6 +1,6 @@
 package fuselang
 
-import scala.util.parsing.input.Positional
+import scala.util.parsing.input.{Positional, Position}
 
 object Syntax {
 
@@ -25,13 +25,23 @@ object Syntax {
       case TRecType(n, _) => s"$n"
       case TAlias(n) => n.toString
     }
+
+    def matchOrError[A](pos: Position, construct: String, exp: String)
+                                  (andThen: PartialFunction[Type, A]): A = {
+      val mismatchError: PartialFunction[Type, A] = {
+        case _ => throw UnexpectedType(pos, construct, exp, this)
+      }
+      andThen.orElse(mismatchError)(this)
+    }
   }
   // Types that can be upcast to Ints
   sealed trait IntType
   case class TSizedInt(len: Int) extends Type with IntType
   case class TStaticInt(v: Int) extends Type with IntType
   case class TIndex(static: (Int, Int), dynamic: (Int, Int)) extends Type with IntType {
-    val maxVal: Int = static._2 * dynamic._2
+    // Our ranges are represented as s..e with e excluded from the range.
+    // Therefore, the maximum value is one than the product of the interval ends.
+    val maxVal: Int = static._2 * dynamic._2 - 1
   }
   // Use case class instead of case object to get unique positions
   case class TVoid() extends Type

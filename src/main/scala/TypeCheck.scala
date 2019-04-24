@@ -148,11 +148,25 @@ object TypeChecker {
     }
   }
 
+  /**
+   * Wrapper for checkE that annotates each expression with it's full type.
+   * Type checking code is in _checkE.
+   */
+  private def checkE(e: Expr)
+                    (implicit env: Environment): (Type, Environment) = {
+    val (typ, nEnv) = _checkE(e)
+    if (e.typ.isDefined) {
+      throw Impossible(s"$e was type checked multiple times.")
+    }
+    e.typ = Some(typ)
+    typ -> nEnv
+  }
+
   // Implicit parameters can be elided when a recursive call is reusing the
   // same env and its. See EBinop case for an example.
-  private def checkE
+  private def _checkE
     (expr: Expr)
-    (implicit env:Environment): (Type, Environment) = expr match {
+    (implicit env: Environment): (Type, Environment) = expr match {
     case EFloat(_) => TFloat() -> env
     case EInt(v, _) => TStaticInt(v) -> env
     case EBool(_) => TBool() -> env
@@ -194,7 +208,7 @@ object TypeChecker {
       }
       case (t, _) => throw UnexpectedType(expr.pos, "record access", "record type", t)
     }
-    case EArrAccess(id, idxs) => env(id).typ match {
+    case EArrAccess(id, idxs) => env(id).typ.matchOrError(expr.pos, "array access", s"array type"){
       // This only triggers for r-values. l-values are checked in checkLVal
       case TArray(typ, dims) => {
         if (dims.length != idxs.length) {
@@ -212,13 +226,44 @@ object TypeChecker {
           }
         }
       }
-      case t => throw UnexpectedType(expr.pos, "array access", s"$t[]", t)
     }
   }
 
-  private def checkC
-    (cmd: Command)
-    (implicit env:Environment): Environment = cmd match {
+  /**
+   * Checks a given simple view and returns the dimensions for the view along
+   * with an updated environment.
+   */
+  private def checkView(view: View, arrDim: (Int, Int))
+                       (implicit env: Environment): (Environment, (Int, Int)) = {
+
+    val View(suf, pre, shrink) = view
+    val (len, bank) = arrDim
+
+    // Shrinking factor must be a factor of banking for the dimension
+    if (shrink.isDefined && (shrink.get > bank || bank % shrink.get != 0)) {
+      throw InvalidShrinkWidth(view.pos, bank, shrink.get)
+    }
+
+    val idx = suf match {
+      case Aligned(fac, idx) => if (bank < fac || bank % fac != 0) {
+        throw InvalidAlignFactor(suf.pos, fac, bank)
+      } else {
+        idx
+      }
+      case Rotation(idx) => idx
+    }
+
+    // Check the index is non-index int type
+    val (typ, nEnv) = checkE(idx)(env)
+    typ.matchOrError(idx.pos, "view", "integer type") {
+      case _:IntType => () // IntTypes are valid
+    }
+
+    nEnv -> (pre.getOrElse(len) -> shrink.getOrElse(bank))
+  }
+
+  private def checkC(cmd: Command)
+                    (implicit env:Environment): Environment = cmd match {
     case CPar(c1, c2) => checkC(c2)(checkC(c1))
     case CIf(cond, cons, alt) => {
       val (cTyp, e1) = checkE(cond)(env)
@@ -339,46 +384,34 @@ object TypeChecker {
     }
     case view@CView(id, arrId, vdims) => env(arrId).typ match {
       case TArray(typ, adims) => {
+        // Check if the view is defined inside an unroll
         if (env.getResources != 1) {
           throw ViewInsideUnroll(view.pos, arrId)
         }
+
         val (vlen, alen) = (vdims.length, adims.length)
         if(vlen != alen) {
           throw IncorrectAccessDims(arrId, alen, vlen)
         }
 
-        val (env1, ndims) = (adims zip vdims).foldLeft(env -> List[(Int, Int)]())({
-          case ((env, dims), ((len, bank), view@View(suf, pre, shrink))) =>
-            // Shrinking factor must be a factor of banking for the dimension
-            if (shrink.isDefined && (shrink.get > bank || bank % shrink.get != 0)) {
-              throw InvalidShrinkWidth(view.pos, bank, shrink.get)
-            }
-
-            val idx = suf match {
-              case Aligned(fac, idx) => if (bank < fac || bank % fac != 0) {
-                throw InvalidAlignFactor(suf.pos, fac, bank)
-              } else {
-                idx
-              }
-              case Rotation(idx) => idx
-            }
-
-            // Check the index is non-index int type
-            val (typ, nEnv) = checkE(idx)(env)
-            typ match {
-              case _:IntType => () // IntTypes are valid
-              case t => throw UnexpectedType(idx.pos, "view", "integer type", t)
-            }
-
-            (nEnv, (pre.getOrElse(len) -> shrink.getOrElse(bank)) :: dims)
+        // Check all dimensions in the view are well formed.
+        val (env1, ndims) = adims.zip(vdims).foldLeft(env -> List[(Int, Int)]())({
+          case ((env, dims), (arrDim, view)) =>
+            val (nEnv, dim) = checkView(view, arrDim)(env)
+            (nEnv, dim :: dims)
         })
 
         // Fully consume the array
         val nEnv = env1.update(arrId, env(arrId).consumeAll)
 
+        // Annotate the ids in the expressions
+        val viewTyp = TArray(typ, ndims.reverse)
+        id.typ = Some(viewTyp)
+        arrId.typ = Some(env(arrId).typ)
+
         // Add binding for the new array. The dimensions are reversed because
         // we used foldLeft above.
-        nEnv.add(id, TArray(typ, ndims.reverse))
+        nEnv.add(id, viewTyp)
       }
       case t => throw UnexpectedType(cmd.pos, "view", "array", t)
     }

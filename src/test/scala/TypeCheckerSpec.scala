@@ -1203,5 +1203,16 @@ class TypeCheckerSpec extends FunSpec {
           """ )
       }
     }
+
+    it("creation of simple views is bounds checked") {
+      assertThrows[IndexOutOfBounds] {
+        typeCheck("""
+          decl a: bit<32>[10];
+          for (let i = 0..10) {
+            view v_a = a[i!:+3];
+          }
+          """ )
+      }
+    }
   }
 }
