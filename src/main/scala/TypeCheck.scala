@@ -442,10 +442,10 @@ object TypeChecker {
             if (bank % n == 0) {
               List((n, n), (dim / n, bank / n))
             } else {
-              throw InvalidSplitFactor(id, arrId, n, bank)
+              throw InvalidSplitFactor(id, arrId, n, bank, dim)
             }
           }
-          case (_, n) => throw MsgError(s"Cannot create $view. Split factor $n less than 0.")
+          case ((dim, bank), n) => throw InvalidSplitFactor(id, arrId, n, bank, dim)
         })
 
         nEnv.add(id, TArray(typ, viewDims))
