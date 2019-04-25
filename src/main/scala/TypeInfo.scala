@@ -1,5 +1,7 @@
 package fuselang
 
+import scala.util.parsing.input.Position
+
 object TypeInfo {
   import Syntax._
   import Errors._
@@ -20,7 +22,8 @@ object TypeInfo {
     avBanks: Map[Int, Set[Int]],
     conBanks: Map[Int, Set[Int]]) {
 
-    def consumeBank(dim: Int, bank: Int): Info = avBanks.contains(dim) match {
+    def consumeBank(dim: Int, bank: Int)
+                   (implicit pos: Position): Info = avBanks.contains(dim) match {
       case true => if (avBanks(dim).contains(bank)) {
         Info(
           id,
@@ -30,7 +33,7 @@ object TypeInfo {
       } else if (conBanks(dim).contains(bank)){
         throw AlreadyConsumed(id, dim, bank)
       } else {
-        throw MsgError(s"Bank $bank does not exist for dimension $dim of $id.")
+        throw UnknownBank(id, bank)
       }
       case false => throw UnknownDim(id, dim)
     }
