@@ -1,10 +1,12 @@
 package fuselang
 
+import scala.util.parsing.input.Position
+
 import Syntax._
 import Errors._
-import TypeInfo._
 import Subtyping._
 import TypeEnv._
+import TypeEnvImplementation._
 import Utils.RichOption
 
 /**
@@ -77,41 +79,40 @@ object TypeChecker {
 
   private def consumeBanks
     (id: Id, idxs: List[Expr], dims: List[(Int, Int)])
-    (implicit env: Environment) =
+    (implicit env: Environment, pos: Position) =
     idxs.zipWithIndex.foldLeft((env, 1))({
       case ((env1, bres), (e, i)) =>
         val t = checkE(e)(env1);
         e.typ = Some(t._1);
         t match {
           case (TIndex((s, e), _), env2) =>
-            env2.update(id, env2(id).consumeDim(i, e - s)) -> bres * (e - s)
+            env2.consumeDim(id, i, e - s) -> bres * (e - s)
           case (TStaticInt(v), env2) =>
-            env2.update(id, env(id).consumeBank(i, v % dims(i)._2)) -> bres * 1
+            env2.consumeBank(id, i, v % dims(i)._2) -> bres * 1
           case (TSizedInt(_), env2) =>
             if (dims(i)._2 != 1) throw InvalidDynamicIndex(id, dims(i)._2)
-            else env2.update(id, env(id).consumeBank(i, 0)) -> bres * 1
+            else env2.consumeBank(id, i, 0) -> bres * 1
           case (t, _) => throw InvalidIndex(id, t)
         }
     })
 
   private def checkLVal(e: Expr)(implicit env: Environment) = e match {
-    case EArrAccess(id, idxs) => env(id).typ match {
+    case EArrAccess(id, idxs) => env(id) match {
       // This only triggers for r-values. l-values are checked in checkLVal
       case TArray(typ, dims) => {
         if (dims.length != idxs.length) {
           throw IncorrectAccessDims(id, dims.length, idxs.length)
         }
         // Bind the type of to Id
-        id.typ = Some(env(id).typ);
+        id.typ = Some(env(id));
         // Capability check
         env.getCap(e) match {
           case Some(Write) => throw AlreadyWrite(e)
           case Some(Read) => throw InvalidCap(e, Write, Read)
           case None => {
-            val (e1, bres) = consumeBanks(id, idxs, dims)
+            val (e1, bres) = consumeBanks(id, idxs, dims)(env, e.pos)
             if (bres != env.getResources)
-              throw InsufficientResourcesInUnrollContext(
-                env.getResources, bres, e)
+              throw InsufficientResourcesInUnrollContext(env.getResources, bres, e)
             typ -> e1.addCap(e, Write)
           }
         }
@@ -173,15 +174,15 @@ object TypeChecker {
     case ERecLiteral(_) => throw RecLiteralNotInBinder(expr.pos)
     case EVar(id) => {
       // Add type information to variable
-      id.typ = Some(env(id).typ);
-      env(id).typ -> env
+      id.typ = Some(env(id));
+      env(id) -> env
     }
     case EBinop(op, e1, e2) => {
       val (t1, env1) = checkE(e1)
       val (t2, env2) = checkE(e2)(env1)
       checkB(t1, t2, op) -> env2
     }
-    case EApp(f, args) => env(f).typ match {
+    case EApp(f, args) => env(f) match {
       case TFun(argTypes) => {
         // All functions return `void`.
         TVoid() -> args.zip(argTypes).foldLeft(env)({ case (e, (arg, expectedTyp)) => {
@@ -193,7 +194,7 @@ object TypeChecker {
           // If an array id is used as a parameter, consume it completely.
           // This works correctly with capabilties.
           (typ, arg) match {
-            case (_:TArray, EVar(id)) => e1.update(id, e1(id).consumeAll)
+            case (_:TArray, EVar(id)) => e1.consumeAll(id)(expr.pos)
             case (_:TArray, expr) => throw Impossible(s"Type of $expr is $typ")
             case _ => e1
           }
@@ -208,20 +209,20 @@ object TypeChecker {
       }
       case (t, _) => throw UnexpectedType(expr.pos, "record access", "record type", t)
     }
-    case EArrAccess(id, idxs) => env(id).typ.matchOrError(expr.pos, "array access", s"array type"){
+    case EArrAccess(id, idxs) => env(id).matchOrError(expr.pos, "array access", s"array type"){
       // This only triggers for r-values. l-values are checked in checkLVal
       case TArray(typ, dims) => {
         if (dims.length != idxs.length) {
           throw IncorrectAccessDims(id, dims.length, idxs.length)
         }
         // Bind the type of to Id
-        id.typ = Some(env(id).typ);
+        id.typ = Some(env(id));
         // Check capabilities
         env.getCap(expr) match {
           case Some(Write) => throw InvalidCap(expr, Read, Write)
           case Some(Read) => typ -> env
           case None => {
-            val e1 = consumeBanks(id, idxs, dims)._1
+            val e1 = consumeBanks(id, idxs, dims)(env, expr.pos)._1
             typ -> e1.addCap(expr, Read)
           }
         }
@@ -267,9 +268,7 @@ object TypeChecker {
     case CPar(c1, c2) => checkC(c2)(checkC(c1))
     case CIf(cond, cons, alt) => {
       val (cTyp, e1) = checkE(cond)(env)
-      if (cTyp != TBool()) {
-        throw UnexpectedType(cond.pos, "if condition", TBool().toString, cTyp)
-      }
+      cTyp.matchOrError(cond.pos, "if condition", "bool"){ case _:TBool => () }
       val (e2, _) = e1.withScope(1)(e => checkC(cons)(e))
       val (e3, _) = e1.withScope(1)(e => checkC(alt)(e))
       e2 merge e3
@@ -376,13 +375,13 @@ object TypeChecker {
       // arrays. Remove the iterator binding.
       val vecBinds = binds
         .withFilter({ case (id, _) => id != iter })
-        .map({ case (id, inf) =>
-          id -> Info(id, TArray(inf.typ, List((range.u, range.u))))
+        .map({ case (id, typ) =>
+          id -> TArray(typ, List((range.u, range.u)))
         })
 
       e1.withScope(1)(e2 => checkC(combine)(e2 ++ vecBinds))._1
     }
-    case view@CView(id, arrId, vdims) => env(arrId).typ match {
+    case view@CView(id, arrId, vdims) => env(arrId) match {
       case TArray(typ, adims) => {
         // Check if the view is defined inside an unroll
         if (env.getResources != 1) {
@@ -402,12 +401,12 @@ object TypeChecker {
         })
 
         // Fully consume the array
-        val nEnv = env1.update(arrId, env(arrId).consumeAll)
+        val nEnv = env1.consumeAll(arrId)(view.pos)
 
         // Annotate the ids in the expressions
         val viewTyp = TArray(typ, ndims.reverse)
         id.typ = Some(viewTyp)
-        arrId.typ = Some(env(arrId).typ)
+        arrId.typ = Some(env(arrId))
 
         // Add binding for the new array. The dimensions are reversed because
         // we used foldLeft above.
@@ -415,7 +414,7 @@ object TypeChecker {
       }
       case t => throw UnexpectedType(cmd.pos, "view", "array", t)
     }
-    case view@CSplit(id, arrId, dims) => env(arrId).typ match {
+    case view@CSplit(id, arrId, dims) => env(arrId) match {
       case TArray(typ, adims) => {
         if (env.getResources != 1) {
           throw ViewInsideUnroll(view.pos, arrId)
@@ -425,7 +424,7 @@ object TypeChecker {
           throw IncorrectAccessDims(arrId, alen, vlen)
         }
         // Fully consume the underlying array
-        val nEnv = env.update(arrId, env(arrId).consumeAll)
+        val nEnv = env.consumeAll(arrId)(view.pos)
 
         /**
          * Create a type for the split view. For the following split view:

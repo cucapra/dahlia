@@ -11,6 +11,11 @@ object Syntax {
     override def toString = s"$v"
   }
 
+  // Capabilities for read/write
+  sealed trait Capability
+  case object Read extends Capability
+  case object Write extends Capability
+
   sealed trait Type extends Positional {
     override def toString = this match {
       case _: TVoid => "void"
@@ -219,7 +224,4 @@ object Syntax {
     defs: List[Definition],
     decls: List[Decl],
     cmd: Command) extends Positional
-}
-
-object Operators {
 }

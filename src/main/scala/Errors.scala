@@ -2,7 +2,6 @@ package fuselang
 
 object Errors {
   import Syntax._
-  import TypeEnv.Capability
   import scala.util.parsing.input.Position
 
   def withPos(s: String, pos: Option[Position]) =
