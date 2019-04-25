@@ -13,12 +13,12 @@
 ;; Define what a bare array element looks like
 (define elem-size 12)
 (define arr-elem
-  (rectangle elem-size elem-size))
+  (filled-rectangle elem-size elem-size #:color "white"))
 
 ;; Define what a marking for an array element looks like
 (define marking
   (let ([elem-size (- elem-size 2)])
-    (rectangle elem-size elem-size #:border-color creamsicle #:border-width 1.5)))
+    (rectangle elem-size elem-size #:border-color creamsicle #:border-width 2)))
 
 ;; Marks the given element
 (define (mark-elem elem)
@@ -65,4 +65,6 @@
                                                 #:marks marks)) seq)]
     [_ raise-argument-error 'matrix-seq "list with two elements" (list dims banks)]))
 
-(provide matrix-seq)
+(provide matrix-seq
+         arr-elem ;; Used by smart layout.
+         )
