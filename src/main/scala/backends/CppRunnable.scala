@@ -30,11 +30,11 @@ private class CppRunnable extends CppLike {
 
   def emitFor(cmd: CFor): Doc =
     "for" <> emitRange(cmd.range) <+> scope {
-      cmd.par <@>
-      (if (cmd.combine != CEmpty) text("// combiner:") <@> cmd.combine else value(""))
+      cmd.par <>
+      (if (cmd.combine != CEmpty) line <> text("// combiner:") <@> cmd.combine else emptyDoc)
     }
 
-  def emitFuncHeader(func: FuncDef) = value("")
+  def emitFuncHeader(func: FuncDef) = emptyDoc
 
   /**
    * Emit code to parse the value for declaration `d`. Assumes that the
@@ -62,11 +62,9 @@ private class CppRunnable extends CppLike {
       case t => throw NotImplemented(s"Cannot parse type `$t' with CppRunnable backend.")
     }
 
-    val parseStmt =
-      cBind(s"${id}",
-        cCall("get_arg", Some(cTyp), List(quote(id), typeName, "v")))
+    cBind(s"${id}",
+      cCall("get_arg", Some(cTyp), List(quote(id), typeName, "v")))
 
-    parseStmt
   }}
 
   /**
@@ -103,7 +101,7 @@ private class CppRunnable extends CppLike {
       endHelpers <@>
       emitFunc(FuncDef(Id(c.kernelName), p.decls, Some(p.cmd)))
 
-    val getArgs: Doc = vsep(p.decls.map(emitParseDecl), line)
+    val getArgs: Doc = vsep(p.decls.map(emitParseDecl))
 
     val main = value("int main(int argc, char** argv)") <+> scope {
       "using namespace flattening;" <@>
