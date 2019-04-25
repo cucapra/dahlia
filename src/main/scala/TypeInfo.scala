@@ -4,6 +4,16 @@ object TypeInfo {
   import Syntax._
   import Errors._
 
+  trait InfoLike {
+    val id: Id
+    val typ: Type
+
+    def consumeBank(dim: Int, bank: Int): Info
+    def consumeDim(dim: Int, unrollFactor: Int): Info
+    def consumeAll: Info
+    def merge(that: Info): Info
+  }
+
   case class Info(
     id: Id,
     typ: Type,
@@ -23,25 +33,6 @@ object TypeInfo {
         throw MsgError(s"Bank $bank does not exist for dimension $dim of $id.")
       }
       case false => throw UnknownDim(id, dim)
-    }
-    def consumeDim(dim: Int, unrollFactor: Int) = typ match {
-      case TArray(_, dims) => dims.lift(dim) match {
-        case Some((_, bank)) => {
-          if (unrollFactor != bank) {
-            throw BankUnrollInvalid(bank, unrollFactor)
-          }
-          val banks = 0.until(bank)
-          banks.foldLeft(this)({ case (info, bank) => info.consumeBank(dim, bank) })
-        }
-        case None => throw UnknownDim(id, dim)
-      }
-      case t => throw Impossible(s"consumeDim called on non-array type $t")
-    }
-    def consumeAll = typ match {
-      case TArray(_, dims) => dims.zipWithIndex.foldLeft(this)({
-        case (info, ((_, bank), dim)) => info.consumeDim(dim, bank)
-      })
-      case _ => throw Impossible("consumeAll called on non-array")
     }
 
     /**
