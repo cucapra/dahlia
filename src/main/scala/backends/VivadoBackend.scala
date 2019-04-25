@@ -8,9 +8,9 @@ import Cpp._
 
 private class VivadoBackend extends CppLike {
 
-  def unroll(n: Int) = n match {
-    case 1 => ""
-    case n => s"#pragma HLS UNROLL factor=$n skip_exit_check"
+  def unroll(n: Int): Doc = n match {
+    case 1 => emptyDoc
+    case n => value(s"#pragma HLS UNROLL factor=$n skip_exit_check") <@> line
   }
 
   def bank(id: Id, banks: List[Int]): String = banks.zipWithIndex.foldLeft(""){
@@ -18,17 +18,17 @@ private class VivadoBackend extends CppLike {
       s"${acc}\n#pragma HLS ARRAY_PARTITION variable=$id factor=$bank dim=$dim"
   }
 
-  def bankPragmas(decls: List[Decl]) = decls
+  def bankPragmas(decls: List[Decl]): List[Doc] = decls
     .collect({ case Decl(id, typ: TArray) => bank(id, typ.dims.map(_._2)) })
     .withFilter(s => s != "")
     .map(s => value(s))
 
   def emitFor(cmd: CFor): Doc =
     "for" <> emitRange(cmd.range) <+> scope {
-      unroll(cmd.range.u) <@>
-      cmd.par <@>
-      (if (cmd.combine != CEmpty) text("// combiner:") <@> cmd.combine
-       else value(""))
+      unroll(cmd.range.u) <>
+      cmd.par <>
+      (if (cmd.combine != CEmpty) line <> text("// combiner:") <@> cmd.combine
+       else emptyDoc)
     }
 
   def emitFuncHeader(func: FuncDef): Doc = {

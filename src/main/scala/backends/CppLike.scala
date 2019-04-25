@@ -35,7 +35,7 @@ object Cpp {
      * Helper to generate a function call that might have a type parameter
      */
     def cCall(f: Doc, tParam: Option[Doc], args: List[Doc]): Doc = {
-      f <> (if (tParam.isDefined) angles(tParam.get) else value("")) <>
+      f <> (if (tParam.isDefined) angles(tParam.get) else emptyDoc) <>
       parens(hsep(args, ","))
     }
 
@@ -125,7 +125,7 @@ object Cpp {
       bodyOpt.map(body => "void" <+> id <> parens(as) <+> scope {
         emitFuncHeader(func) <@>
         body
-      }).getOrElse(value(""))
+      }).getOrElse(emptyDoc)
     }
 
     def emitDef(defi: Definition): Doc = defi match {
