@@ -10,19 +10,19 @@ class TypeCheckerSpec extends FunSpec {
   describe("Let without type") {
     it("infers dynamic type for static numbers") {
       val e1 = typeCheck("let x = 1")
-      assert(e1("x").typ === TSizedInt(1))
+      assert(e1("x") === TSizedInt(1))
     }
   }
 
   describe("Let with explicit type") {
     it("assigns explicit type") {
       val e1 = typeCheck("let x: bit<16> = 1;")
-      assert(e1("x").typ === TSizedInt(16))
+      assert(e1("x") === TSizedInt(16))
     }
 
     it("allows using larger sized int in assignment") {
       val e2 = typeCheck("decl a: bit<8>; let x: bit<16> = a;")
-      assert(e2("x").typ === TSizedInt(16))
+      assert(e2("x") === TSizedInt(16))
     }
 
     it("disallows using smaller sized int in assignment") {
@@ -74,23 +74,27 @@ class TypeCheckerSpec extends FunSpec {
     }
 
     it("consumes bank without unroll") {
-      val e1 = typeCheck("""
-        decl a: bit<64>[10];
-        for (let i = 0..10) {
-          let x = a[i]
-        }
-        """ )
-      assert(e1("a").conBanks(0) === Set(0))
+      assertThrows[AlreadyConsumed] {
+        typeCheck("""
+          decl a: bit<64>[10];
+          for (let i = 0..10) {
+            let x = a[i]
+          }
+          a[0]
+          """ )
+      }
     }
 
     it("consumes all banks with unroll") {
-      val e2 = typeCheck("""
-        decl a: bit<64>[10 bank 5];
-        for (let i = 0..10) unroll 5 {
-          let x = a[i]
-        }
-        """ )
-      assert(e2("a").conBanks(0) === 0.until(5).toSet)
+      assertThrows[AlreadyConsumed] {
+        typeCheck("""
+          decl a: bit<64>[10 bank 5];
+          for (let i = 0..10) unroll 5 {
+            let x = a[i]
+          }
+          a[0]
+          """ )
+      }
     }
 
   }
@@ -186,11 +190,11 @@ class TypeCheckerSpec extends FunSpec {
     }
     it("adding static ints does NOT perform type level computation") {
       val e1 = typeCheck("let x = 1; let y = 2; let z = x + y;")
-      assert(e1("z").typ === TSizedInt(2))
+      assert(e1("z") === TSizedInt(2))
     }
     it("result of addition upcast to subtype join") {
       val e3 = typeCheck("decl x: bit<32>; decl y: bit<16>; let z = x + y")
-      assert(e3("z").typ === TSizedInt(32))
+      assert(e3("z") === TSizedInt(32))
     }
   }
 
@@ -203,8 +207,8 @@ class TypeCheckerSpec extends FunSpec {
 
     it("can reassign decl") {
       val e3 = typeCheck("decl x: bit<32>; decl y: bit<16>; x := y")
-      assert(e3("x").typ === TSizedInt(32), "assigning dynamic := dynamic")
-      assert(e3("y").typ === TSizedInt(16), "assigning dynamic := dynamic")
+      assert(e3("x") === TSizedInt(32), "assigning dynamic := dynamic")
+      assert(e3("y") === TSizedInt(16), "assigning dynamic := dynamic")
     }
   }
 

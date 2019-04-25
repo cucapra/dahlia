@@ -1,17 +1,13 @@
 package fuselang
 
+import scala.util.parsing.input.Position
+
 import Syntax._
 import Errors._
-import ScopeMap._
 import TypeInfo._
+import Utils.RichOption
 
 object TypeEnv {
-  // Capabilities for read/write
-  sealed trait Capability
-  case object Read extends Capability
-  case object Write extends Capability
-
-  val emptyEnv: Environment = Env()(1)
 
   /**
    * An Environment that keeps tracks of Lexical Scopes.
@@ -32,7 +28,7 @@ object TypeEnv {
      * @returns A new environment without the topmost scope and a Scope
      *          containing all bindings in the topmost scope.
      */
-    def withScope(resources: Int)(inScope: T => T): (T, Scope[Id, Info]) =
+    def withScope(resources: Int)(inScope: T => T): (T, Scope[Id, Type]) =
       inScope(this.addScope(resources)).endScope(resources)
 
     /**
@@ -50,12 +46,42 @@ object TypeEnv {
      *  @returns A new environment without the topmost scope and a Scope
      *           containing all bindings in the topmost scope.
      */
-    def endScope(resources: Int): (T, Scope[Id, Info])
+    def endScope(resources: Int): (T, Scope[Id, Type])
 
     /**
      * @returns The total amount of resources required by the environment
      */
     def getResources: Int
+  }
+
+  trait Mergable[T <: Mergable[T]] {
+
+    val getBoundIds: Set[Id]
+
+    def getInfo(id: Id): Info
+
+    def update(id: Id, info: Info): T
+
+    /**
+     * Merge this environment with [[that]] to create e' such that for each
+     * identifier id, e'.banks(id) <= this.banks(id) and e'.banks(id) <=
+     * that.banks(id).
+     * @assumes: this.getBoundIds == that.getBoundIds
+     */
+    def merge(that: T): T = {
+      // Sanity check: The same set of ids are bound by both environments
+      if (this.getBoundIds != that.getBoundIds) {
+        throw Impossible(
+          "Trying to merge two environments which bind different sets of ids." +
+          s" Intersection of bind set: ${this.getBoundIds & that.getBoundIds}")
+      }
+
+      // For each bound id, set consumed banks to the union of consumed bank sets
+      // from both environments
+      this.getBoundIds.foldLeft[T](that)({ case (env, id) => {
+        env.update(id, env.getInfo(id) merge this.getInfo(id))
+      }})
+    }
   }
 
   /**
@@ -69,7 +95,9 @@ object TypeEnv {
    * last two associations. A scope is a logical grouping of assoication
    * corresponding to lexical scope in programs.
    */
-  trait Environment extends ScopeManager[Environment] {
+  trait Environment
+    extends ScopeManager[Environment]
+    with Mergable[Environment] {
 
     /**
      * Methods to manipulate type defs. Since the typedefs are top level,
@@ -98,29 +126,52 @@ object TypeEnv {
     /**
      * Use application syntax to get a type bindings for [[id]].
      * @param id The id whose binding is needed
-     * @returns Information associated with the id
+     * @returns The [[Type]] associated to the id
      * @throws [[UnboundVar]] If there is no bindings for id
      */
-    def apply(id: Id): Info
+    def apply(id: Id): Type
 
     /**
      * Add a new type binding in the current scope. If the type being added is
      * an alias type, instead add the resolved underlying type.
      * @param id The identifier to which the type is mapped.
-     * @param typ The [[Info]] associated with the identifier.
+     * @param typ The [[Type]] associated with the identifier.
      * @return A new environment which contains the mapping.
      * @throws [[AlreadyBound]] if a bindings for Id already exists.
      */
     def add(id: Id, typ: Type): Environment
 
     /**
-     * Update bindings associated with Id. Method traverses the entire scope chain.
-     * @param id The identifier whose type is being updated.
-     * @param typ The new type associated with the identifier.
-     * @return A new environment where Id is bound to this Type.
-     * @throw [[UnboundVar]] If the Id doesn't already have a binding
+     * Returns a new Environment where the [[bank]] in [[dim]] is consumed.
+     * @param id The name of the TArray that is being updated
+     * @param dim The dimension of the of array.
+     * @param bank The bank of the array to be consumed.
+     * @throws [[AlreadyConsumed]] If the [[bank]] in [[dim]] of [[id]] has
+     *                             already been consumed.
+     * @throws [[UnknownDim]] If the dimension for the array doesn't exist.
      */
-    def update(id: Id, typ: Info): Environment
+    def consumeBank(id: Id, dim: Int, bank: Int)(implicit pos: Position): Environment
+
+    /**
+     * Convinience methods for fully consuming dimensions or arrays.
+     */
+    def consumeDim(id: Id, dim: Int, unrollFactor: Int)
+                  (implicit pos: Position): Environment =
+      this(id).matchOrError(pos, "array access", "array type"){ case TArray(_, dims) =>
+        val (_, bank) = dims.lift(dim).getOrThrow(UnknownDim(id, dim))
+        // TODO(rachit): This check should be in TypeCheck
+        if (unrollFactor != bank) {
+          throw BankUnrollInvalid(bank, unrollFactor)
+        }
+        val banks = 0.until(bank)
+
+        banks.foldLeft(this)({ case (env, bank) => env.consumeBank(id, dim, bank)})
+      }
+
+    def consumeAll(id: Id)(implicit pos: Position): Environment =
+      this(id).matchOrError(pos, "array access", "array type"){ case TArray(_, dims) =>
+        dims.zipWithIndex.foldLeft(this)({ case (env, ((_, bank), dim)) => env.consumeDim(id, dim, bank) })
+      }
 
     /**
      * Capability manipulation
@@ -144,104 +195,8 @@ object TypeEnv {
      * @param binds A scope with bindings to be added to the environment.
      * @returns A new environment with all the bindings in the environment.
      */
-    def ++(binds: Scope[Id, Info]): Environment =
-      binds.foldLeft[Environment](this)({ case (e, b) => e.add(b._1, b._2.typ) })
-
-    /**
-     * Merge this environment with [[that]] to create e' such that for each
-     * identifier id, e'.banks(id) <= this.banks(id) and e'.banks(id) <=
-     * that.banks(id).
-     * @assumes: this.getBoundIds == that.getBoundIds
-     */
-    def merge(that: Environment): Environment = {
-      // Sanity check: The same set of ids are bound by both environments
-      if (this.getBoundIds != that.getBoundIds) {
-        throw Impossible(
-          "Trying to merge two environments which bind different sets of ids." +
-          s" Intersection of bind set: ${this.getBoundIds & that.getBoundIds}")
-      }
-
-      // For each bound id, set consumed banks to the union of consumed bank sets
-      // from both environments
-      this.getBoundIds.foldLeft[Environment](this)({ case (env, id) => {
-        env.update(id, env(id) merge that(id))
-      }})
-    }
-
-    /**
-     * @returns a set with all the bound Ids in this environment
-     */
-    def getBoundIds: Set[Id]
+    def ++(binds: Scope[Id, Type]): Environment =
+      binds.foldLeft[Environment](this)({ case (e, b) => e.add(b._1, b._2) })
   }
 
-  private case class Env(
-    typeMap: ScopedMap[Id, Info] = ScopedMap(),
-    capMap: ScopedMap[Expr, Capability] = ScopedMap(),
-    typeDefMap: Map[Id, Type] = Map())
-    (implicit val res: Int) extends Environment {
-
-    type TypeScope = Map[Id, Info]
-    type CapScope = Map[Expr, Capability]
-
-    def addScope(resources: Int) = {
-      Env(typeMap.addScope, capMap.addScope, typeDefMap)(res * resources)
-    }
-
-    /** Scope management */
-    def endScope(resources: Int) = {
-      val scopes = for {
-        (tScope, tMap) <- typeMap.endScope;
-        (_, cMap) <- capMap.endScope
-      } yield (Env(tMap, cMap, typeDefMap)(res / resources), tScope)
-
-      scopes match {
-        case None => throw Impossible("Removed topmost scope")
-        case Some(res) => res
-      }
-    }
-
-    /** Capability methods */
-    def getCap(expr: Expr): Option[Capability] = capMap(expr)
-    def addCap(expr: Expr, cap: Capability): Environment = capMap.add(expr, cap) match {
-      case Some(cMap) => this.copy(capMap = cMap)
-      case None => throw Impossible(s"Capability for $expr already exists.")
-    }
-
-    /** Type defintions */
-    def resolveType(typ: Type): Type = typ match {
-      case TAlias(n) => getType(n)
-      case TFun(args) => TFun(args.map(resolveType(_)))
-      case arr@TArray(t, _) => arr.copy(typ = resolveType(t))
-      case t => t
-    }
-
-    def addType(alias: Id, typ: Type) = typeDefMap.get(alias) match {
-      case Some(_) => throw AlreadyBoundType(alias)
-      case None => this.copy(typeDefMap = typeDefMap + (alias -> typ))
-    }
-    def getType(alias: Id) = typeDefMap.get(alias) match {
-      case Some(t) => t
-      case None => throw UnboundType(alias)
-    }
-
-    /** Type binding methods */
-    def apply(id: Id): Info = typeMap(id) match {
-      case Some(info) => info
-      case None => throw UnboundVar(id)
-    }
-
-    def add(id: Id, typ: Type) = typeMap.add(id, Info(id, resolveType(typ))) match {
-      case None => throw AlreadyBound(id)
-      case Some(tMap) => this.copy(typeMap = tMap)
-    }
-
-    def update(id: Id, typ: Info) = typeMap.update(id, typ) match {
-      case None => throw UnboundVar(id)
-      case Some(tMap) => this.copy(typeMap = tMap)
-    }
-
-    lazy val getBoundIds = typeMap.keys
-
-    def getResources = res
-  }
 }
