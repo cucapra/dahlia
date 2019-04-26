@@ -110,8 +110,10 @@ object Cpp {
         case CReduce(rop, lhs, rhs) => lhs <+> rop.toString <+> rhs <> semi
         case CExpr(e) => e <> semi
         case CEmpty => ""
-        case _:CView => throw Impossible("Views should not exist during codegen.")
-        case _:CSplit => throw Impossible("Views should not exist during codegen.")
+        case _:CView =>
+          throw Impossible("emitCmd", "Views should not exist during codegen.")
+        case _:CSplit =>
+          throw Impossible("emitCmd", "Views should not exist during codegen.")
     }
 
     def emitDecl(d: Decl): Doc = d.typ match {

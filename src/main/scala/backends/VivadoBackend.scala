@@ -48,7 +48,7 @@ private class VivadoBackend extends CppLike {
     case TSizedInt(s) => s"ap_int<$s>"
     case TArray(typ, _) => typ.toString
     case TRecType(n, _) => n
-    case _:TFun => throw Impossible("Cannot emit function types")
+    case _:TFun => throw Impossible("emitType", "Cannot emit function types")
     case TAlias(n) => n
   }
 
