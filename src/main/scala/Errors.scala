@@ -39,8 +39,8 @@ object Errors {
   case class UnknownBank(id: Id, bank: Int)(implicit pos: Position) extends TypeError(
     s"`$id' does not have dimension $bank", pos)
 
-  case class BankUnrollInvalid(bf: Int, uf: Int)(implicit pos: Position) extends TypeError(
-    s"Banking factor ($bf) not equal to unrolling factor ($uf).", pos)
+  case class BankUnrollInvalid(arrId: Id, bf: Int, uf: Int)(implicit pos: Position) extends TypeError(
+    s"Invalid parallel access on `$arrId`. Banking factor ($bf) not equal to unrolling factor ($uf). Create a shrink view `view v_$arrId = $arrId[_ : bank $uf]' and use it instead.", pos)
 
   case class AlreadyConsumed(id: Id, dim: Int, bank: Int)(implicit pos: Position) extends TypeError(
     s"Bank $bank in dimension $dim of `$id' already consumed.", pos)
