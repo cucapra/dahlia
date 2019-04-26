@@ -17,6 +17,9 @@ object CodeGenHelpers {
 
     def /(e2: Expr) = fastDiv(e1, e2)
 
+    def <<(e2: Expr) =
+      binop(OpLsh(), e1, e2)
+
     def >>(e2: Expr) =
       binop(OpRsh(), e1, e2)
 
@@ -45,7 +48,7 @@ object CodeGenHelpers {
 
   // Using the trick defined here: http://mziccard.me/2015/05/08/modulo-and-division-vs-bitwise-operations/
   def fastMod(l: Expr, r: Expr) = r match {
-    case EInt(n, _) if (isPowerOfTwo(n)) => l & EInt(log2(n).toInt - 1, 10)
+    case EInt(n, _) if (isPowerOfTwo(n)) => l & EInt(n - 1, 10)
     case e => {
       scribe.warn(s"Cannot generate fast division for dynamic expression $e")
       l mod r

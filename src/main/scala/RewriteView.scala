@@ -79,7 +79,7 @@ object RewriteView {
     case CSplit(id, arrId, factors) => State { env =>
       val arrBanks = arrId
         .typ
-        .getOrThrow(Impossible("rewriteC", s"$arrId is missing type $c")) match {
+        .getOrThrow(Impossible("rewriteC", s"$arrId is missing type in $c")) match {
           case TArray(_, dims) => dims.map(_._2)
           case t => throw Impossible("rewriteC", s"Array has type $t in $c")
         }

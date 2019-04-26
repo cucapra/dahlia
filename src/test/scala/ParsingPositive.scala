@@ -178,6 +178,14 @@ class ParsingTests extends org.scalatest.FunSuite {
 
   test("simple views") {
     parseAst("""
+      view v = a[_ :];
+      """ )
+
+    parseAst("""
+      view v = a[_ : bank 2];
+      """ )
+
+    parseAst("""
       view v = a[4 * i :];
       """ )
 
