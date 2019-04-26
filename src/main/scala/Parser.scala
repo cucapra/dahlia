@@ -167,7 +167,8 @@ private class FuseParser extends RegexParsers with PackratParsers {
   // Simple views
   lazy val viewSuffix: P[Suffix] = positioned {
     expr <~ "!" ^^ { case e => Rotation(e) } |
-    number ~ "*" ~ expr ^^ { case fac ~ _ ~ e => Aligned(fac, e) }
+    number ~ "*" ~ expr ^^ { case fac ~ _ ~ e => Aligned(fac, e) } |
+    "_" ^^ { case _ => Rotation(EInt(0)) }
   }
 
   lazy val viewParam: P[View] = positioned {

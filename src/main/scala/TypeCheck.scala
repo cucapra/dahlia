@@ -448,7 +448,12 @@ object TypeChecker {
           case ((dim, bank), n) => throw InvalidSplitFactor(id, arrId, n, bank, dim)
         })
 
-        nEnv.add(id, TArray(typ, viewDims))
+        // Annotate the ids in the expressions
+        val viewTyp = TArray(typ, viewDims)
+        id.typ = Some(viewTyp)
+        arrId.typ = Some(env(arrId))
+
+        nEnv.add(id, viewTyp)
       }
       case t => throw UnexpectedType(cmd.pos, "split", "array", t)
     }
