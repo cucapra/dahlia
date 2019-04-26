@@ -156,14 +156,10 @@ object TypeEnv {
     /**
      * Convinience methods for fully consuming dimensions or arrays.
      */
-    def consumeDim(id: Id, dim: Int, unrollFactor: Int)
+    def consumeDim(id: Id, dim: Int)
                   (implicit pos: Position): Environment =
       this(id).matchOrError(pos, "array access", "array type"){ case TArray(_, dims) =>
         val (_, bank) = dims.lift(dim).getOrThrow(UnknownDim(id, dim))
-        // TODO(rachit): This check should be in TypeCheck
-        if (unrollFactor != bank) {
-          throw BankUnrollInvalid(bank, unrollFactor)
-        }
         val banks = 0.until(bank)
 
         banks.foldLeft(this)({ case (env, bank) => env.consumeBank(id, dim, bank)})
@@ -171,7 +167,7 @@ object TypeEnv {
 
     def consumeAll(id: Id)(implicit pos: Position): Environment =
       this(id).matchOrError(pos, "array access", "array type"){ case TArray(_, dims) =>
-        dims.zipWithIndex.foldLeft(this)({ case (env, ((_, bank), dim)) => env.consumeDim(id, dim, bank) })
+        dims.zipWithIndex.foldLeft(this)({ case (env, (_, dim)) => env.consumeDim(id, dim) })
       }
 
     /**

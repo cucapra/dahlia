@@ -81,17 +81,19 @@ object TypeChecker {
     (id: Id, idxs: List[Expr], dims: List[(Int, Int)])
     (implicit env: Environment, pos: Position) =
     idxs.zipWithIndex.foldLeft((env, 1))({
-      case ((env1, bres), (e, i)) =>
-        val t = checkE(e)(env1);
-        e.typ = Some(t._1);
+      case ((env1, bres), (idx, dim)) =>
+        val t = checkE(idx)(env1);
         t match {
           case (TIndex((s, e), _), env2) =>
-            env2.consumeDim(id, i, e - s) -> bres * (e - s)
+            if (dims(dim)._2 != e - s)
+              throw BankUnrollInvalid(id, dims(dim)._2, e - s)
+            else
+              env2.consumeDim(id, dim) -> bres * (e - s)
           case (TStaticInt(v), env2) =>
-            env2.consumeBank(id, i, v % dims(i)._2) -> bres * 1
+            env2.consumeBank(id, dim, v % dims(dim)._2) -> bres * 1
           case (TSizedInt(_), env2) =>
-            if (dims(i)._2 != 1) throw InvalidDynamicIndex(id, dims(i)._2)
-            else env2.consumeBank(id, i, 0) -> bres * 1
+            if (dims(dim)._2 != 1) throw InvalidDynamicIndex(id, dims(dim)._2)
+            else env2.consumeBank(id, dim, 0) -> bres * 1
           case (t, _) => throw InvalidIndex(id, t)
         }
     })
