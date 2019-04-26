@@ -26,7 +26,7 @@ object TypeEnvImplementation {
     def getCap(expr: Expr): Option[Capability] = capMap(expr)
     def addCap(expr: Expr, cap: Capability): Environment = capMap.add(expr, cap) match {
       case Some(cMap) => this.copy(capMap = cMap)
-      case None => throw Impossible(s"Capability for $expr already exists.")
+      case None => throw Impossible("addCap", s"Capability for $expr already exists.")
     }
 
     /** Type defintions */
@@ -83,7 +83,7 @@ object TypeEnvImplementation {
       } yield (Env(tMap, cMap, typeDefMap)(res / resources), tScope)
 
       scopes match {
-        case None => throw Impossible("Removed topmost scope")
+        case None => throw Impossible("endScope", "Removed topmost scope")
         case Some((env, map)) => env -> map.map({ case (id, info) => id -> info.typ })
       }
     }

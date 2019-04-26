@@ -72,6 +72,7 @@ object TypeEnv {
       // Sanity check: The same set of ids are bound by both environments
       if (this.getBoundIds != that.getBoundIds) {
         throw Impossible(
+          "merge",
           "Trying to merge two environments which bind different sets of ids." +
           s" Intersection of bind set: ${this.getBoundIds & that.getBoundIds}")
       }

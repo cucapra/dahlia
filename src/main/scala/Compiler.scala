@@ -29,7 +29,7 @@ object Compiler {
       Left(s"[${red("Parsing error")}] ${f.getMessage}")
     case Failure(f: Errors.Impossible) =>
       Left(s"[${red("Impossible")}] ${f.getMessage}. " +
-        " This should never trigger. Please report this as a bug.")
+        "This should never trigger. Please report this as a bug.")
     case Failure(f: RuntimeException) =>
       Left(s"[${red("Error")}] ${f.getMessage}")
     case Failure(f) => Left(f.getMessage)
