@@ -4,7 +4,7 @@ import sys.process._
 import scala.io.Source
 import java.nio.file.{Files, Paths, Path, StandardOpenOption}
 
-import Errors.HeaderMissing
+import CompilerError.HeaderMissing
 
 /**
  * Provides utilities to compile a program and link it with headers required

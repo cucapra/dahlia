@@ -6,6 +6,7 @@ import TypeInfo._
 import ScopeMap._
 import Syntax._
 import Errors._
+import CompilerError._
 import Utils.RichOption
 import TypeEnv.Environment
 
