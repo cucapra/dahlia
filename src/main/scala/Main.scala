@@ -41,6 +41,10 @@ object Main {
       .action((s, c) => c.copy(logLevel = Logger.stringToLevel(s)))
       .text("Set logging level for the compiler. Defaults to 'info'.")
 
+    opt[Unit]('h', "header")
+      .action((_, c) => c.copy(header = true))
+      .text("Generate header file instead of code. Defaults to false")
+
     cmd("run")
       .action((_, c) => c.copy(mode = Run, backend = toBackend("c++")))
       .text("Generate a runnable object file. Assumes GCC and required headers are available. Implies mode=c++.")

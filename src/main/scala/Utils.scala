@@ -18,17 +18,18 @@ object Utils {
   def toBackend(str: String): Backend = str match {
     case "vivado" => VivadoBackend
     case "c++" => CppRunnable
-    case b => throw Errors.Impossible("toBackend", s"Unknown backend $b")
+    case b => throw CompilerError.Impossible("toBackend", s"Unknown backend $b")
   }
 
   case class Config(
     srcFile: File, // Required: Name of the source file
     kernelName: String = "kernel", // Name of the kernel to emit
     output: Option[String] = None, // Name of output file.
-    backend: Backend = VivadoBackend,
-    mode: Mode = Compile,
+    backend: Backend = VivadoBackend, // Backend used for code generation
+    mode: Mode = Compile, // Compilation mode
     compilerOpts: List[String] = List(),
-    logLevel: Level = Level.Info
+    logLevel: Level = Level.Info,
+    header: Boolean = false
   )
 
   implicit class RichOption[A](opt: Option[A]) {

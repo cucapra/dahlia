@@ -11,7 +11,7 @@ object Compiler {
     TypeChecker.typeCheck(ast)
     BoundsChecker.check(ast);
     val rast = RewriteView.rewriteProg(ast)
-    c.backend.emitProg(rast, c)
+    c.backend.emit(rast, c)
   }
 
   // Outputs red text to the console
@@ -27,7 +27,7 @@ object Compiler {
       Left(s"[${red("Type error")}] ${f.getMessage}")
     case Failure(f: Errors.ParserError) =>
       Left(s"[${red("Parsing error")}] ${f.getMessage}")
-    case Failure(f: Errors.Impossible) =>
+    case Failure(f: CompilerError.Impossible) =>
       Left(s"[${red("Impossible")}] ${f.getMessage}. " +
         "This should never trigger. Please report this as a bug.")
     case Failure(f: RuntimeException) =>

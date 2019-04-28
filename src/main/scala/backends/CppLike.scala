@@ -2,7 +2,7 @@ package fuselang.backend
 
 import org.bitbucket.inkytonik.kiama.output._
 import fuselang.Syntax._
-import fuselang.Errors._
+import fuselang.CompilerError._
 
 object Cpp {
   /**
