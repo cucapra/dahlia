@@ -2,6 +2,7 @@ package fuselang
 
 import Syntax._
 import Errors._
+import CompilerError._
 import Logger._
 import Utils.RichOption
 

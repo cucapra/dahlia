@@ -2,7 +2,7 @@ package fuselang.backend
 
 import org.bitbucket.inkytonik.kiama.output._
 import fuselang.Syntax._
-import fuselang.Errors._
+import fuselang.CompilerError._
 
 object Cpp {
   /**
@@ -82,7 +82,7 @@ object Cpp {
       case EBool(b) => value(if(b) 1 else 0)
       case EVar(id) => value(id)
       case EBinop(op, e1, e2) => parens(e1 <+> op.toString <+> e2)
-      case EArrAccess(id, idxs) => id <> ssep(idxs.map(idx => brackets(emitExpr(idx))), "")
+      case EArrAccess(id, idxs) => id <> ssep(idxs.map(idx => brackets(emitExpr(idx))), emptyDoc)
       case ERecAccess(rec, field) => rec <> dot <> field
       case ERecLiteral(fs) => scope {
         hsep(fs.toList.map({ case (id, expr) => "." <> id <+> "=" <+> expr }), comma)
@@ -110,7 +110,7 @@ object Cpp {
         case CUpdate(lhs, rhs) => lhs <+> "=" <+> rhs <> semi
         case CReduce(rop, lhs, rhs) => lhs <+> rop.toString <+> rhs <> semi
         case CExpr(e) => e <> semi
-        case CEmpty => ""
+        case CEmpty => emptyDoc
         case _:CView =>
           throw Impossible("emitCmd", "Views should not exist during codegen.")
         case _:CSplit =>

@@ -1,8 +1,8 @@
 package fuselang.backend
 
 import fuselang.Syntax._
-import fuselang.Errors._
 import fuselang.Utils._
+import fuselang.CompilerError._
 
 import Cpp._
 
@@ -63,7 +63,27 @@ private class VivadoBackend extends CppLike {
 
 }
 
+private class VivadoBackendHeader extends VivadoBackend {
+  override def emitCmd(c: Command): Doc = emptyDoc
+
+  override def emitFunc = { case FuncDef(id, args, _) =>
+    val as = hsep(args.map(emitDecl), comma)
+    "void" <+> id <> parens(as) <> semi
+  }
+
+  override def emitProg(p: Prog, c: Config) = {
+    val declarations =
+      vsep(p.includes.map(emitInclude) ++ p.defs.map(emitDef)) <@>
+      emitFunc(FuncDef(Id(c.kernelName), p.decls, None))
+
+    super.pretty(declarations).layout
+  }
+}
+
 case object VivadoBackend extends Backend {
-  private val emitter = new VivadoBackend()
-  def emitProg(p: Prog, c: Config) = emitter.emitProg(p, c)
+  def emitProg(p: Prog, c: Config) = c.header match {
+    case true => (new VivadoBackendHeader()).emitProg(p, c)
+    case false => (new VivadoBackend()).emitProg(p, c)
+  }
+  val canGenerateHeader = true
 }
