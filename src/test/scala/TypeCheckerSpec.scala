@@ -1219,4 +1219,21 @@ class TypeCheckerSpec extends FunSpec {
       }
     }
   }
+
+  describe("Explicit casting") {
+    it("safe to cast integer types to float") {
+      typeCheck("""
+        decl x: float;
+        decl y: bit<32>;
+        (y as float) + x;
+        """ )
+    }
+    it("warning when casting float to bit type") {
+      typeCheck("""
+        decl x: float;
+        decl y: bit<32>;
+        (x as bit<32>) + y
+        """ )
+    }
+  }
 }

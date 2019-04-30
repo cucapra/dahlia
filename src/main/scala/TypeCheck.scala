@@ -9,6 +9,7 @@ import Subtyping._
 import TypeEnv._
 import TypeEnvImplementation._
 import Utils.RichOption
+import Logger.PositionalLoggable
 
 /**
  * Type checker implementation for Fuse. Apart from normal typechecking, such as
@@ -175,6 +176,15 @@ object TypeChecker {
     case EInt(v, _) => TStaticInt(v) -> env
     case EBool(_) => TBool() -> env
     case ERecLiteral(_) => throw RecLiteralNotInBinder(expr.pos)
+    case ECast(e, castType) => {
+      val (typ, nEnv) = checkE(e)
+      if (safeCast(typ, castType) == false) {
+        scribe.warn {
+          (s"Casting expression of type $typ to $castType which might not be safe", expr)
+        }
+      }
+      castType -> nEnv
+    }
     case EVar(id) => {
       // Add type information to variable
       id.typ = Some(env(id));

@@ -75,6 +75,7 @@ object Cpp {
     }
 
     implicit def emitExpr(e: Expr): Doc = e match {
+      case ECast(e, typ) => parens(emitType(typ)) <> emitExpr(e)
       case EApp(fn, args) => fn <> parens(hsep(args.map(emitExpr), comma))
       case EInt(v, base) => value(emitBaseInt(v, base))
       case EFloat(f) => value(f)

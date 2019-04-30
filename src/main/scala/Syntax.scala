@@ -141,6 +141,7 @@ object Syntax {
   case class ERecLiteral(fields: Map[Id, Expr]) extends Expr
   case class EApp(func: Id, args: List[Expr]) extends Expr
   case class EVar(id: Id) extends Expr
+  case class ECast(e: Expr, castType: Type) extends Expr
 
   case class CRange(iter: Id, s: Int, e: Int, u: Int) extends Positional {
     def idxType: TIndex = {
