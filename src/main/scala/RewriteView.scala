@@ -28,6 +28,9 @@ object RewriteView {
 
   private def rewriteExpr(e: Expr): State[Env, Expr] = e match {
     case EVar(_) | EInt(_, _) | EFloat(_) | EBool(_) | _:ERecAccess => State.unit(e)
+    case ec@ECast(e, _) => for {
+      en <- rewriteExpr(e)
+    } yield ec.copy(e = en)
     case eb@EBinop(_, e1, e2) => for {
       e1n <- rewriteExpr(e1)
       e2n <- rewriteExpr(e2)

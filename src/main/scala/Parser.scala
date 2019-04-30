@@ -40,6 +40,8 @@ private class FuseParser extends RegexParsers with PackratParsers {
     braces(repsep(recLiteralField, ";")) ^^ { case fs => ERecLiteral(fs.toMap) }
   }
 
+  lazy val exprCast: P[Expr] = parens(expr ~ "as" ~ atyp) ^^ { case e ~ _ ~ t => ECast(e, t)}
+
   lazy val simpleAtom: P[Expr] = positioned {
     eaa |
     recLiteral |
@@ -50,6 +52,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
     boolean ^^ { case b => EBool(b) } |
     iden ~ parens(repsep(expr, ",")) ^^ { case f ~ args => EApp(f, args) } |
     iden ^^ { case id => EVar(id) } |
+    exprCast |
     parens(expr)
   }
 

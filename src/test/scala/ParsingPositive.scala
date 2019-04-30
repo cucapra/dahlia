@@ -228,4 +228,12 @@ class ParsingTests extends org.scalatest.FunSuite {
       """ )
   }
 
+  test("casting") {
+    parseAst("""
+      let x = (y as bit<32>)
+      """ )
+    parseAst("""
+      let x = (y as float)
+      """ )
+  }
 }

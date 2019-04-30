@@ -87,4 +87,12 @@ object Subtyping {
       Some(TSizedInt(max(bitsNeeded(ti1.maxVal), bitsNeeded(ti2.maxVal))))
     case (t1, t2) => if (t1 == t2) Some(t1) else None
   }
+
+  def safeCast(originalType: Type, castType: Type) = (originalType, castType) match {
+    case (t1:IntType, t2:TSizedInt) =>  isSubtype(t1, t2)
+    case (_:TFloat, _:TSizedInt) => false
+    case (_:IntType, _:TFloat) => true
+    case (_:TFloat, _:TFloat) => true
+    case _ => false
+  }
 }
