@@ -3,17 +3,17 @@ package fuselang.backend
 import fuselang.Syntax._
 import fuselang.Utils._
 
-
-
 private object Vizualization {
 
   import VizGraph._
 
   def preamble(file: String) = {
+    // splines=ortho
     s"""
 digraph "$file" {
 node [shape=plain];
 graph [dpi=400, rankdir=LR, newrank=true];
+edge [arrowsize=0.4];
 """
   }
 
@@ -32,7 +32,7 @@ graph [dpi=400, rankdir=LR, newrank=true];
     ctx: Map[Id, String], lhs: Boolean = false): Graph[Expr] = expr match {
     case EInt(_, _) | EFloat(_) | EBool(_) => Graph.empty
     case EBinop(_, e1, e2) =>
-      emitExpr(e1, nodeName, ctx, lhs) merge emitExpr(e2, nodeName, ctx, lhs)
+      emitExpr(e1, nodeName, ctx, lhs) flatMerge emitExpr(e2, nodeName, ctx, lhs)
     case EArrAccess(id, idxs) => {
       // get the dimensions of the array
       val g = Graph.empty[Expr]
@@ -52,7 +52,7 @@ graph [dpi=400, rankdir=LR, newrank=true];
         }
       }
       idxs.foldLeft(accessEdges)((acc, e) =>
-        acc merge emitExpr(e, nodeName, ctx, false))
+        acc flatMerge emitExpr(e, nodeName, ctx, false))
     }
     case ERecAccess(_, _) => Graph.empty
     case ERecLiteral(_) => Graph.empty
@@ -60,7 +60,7 @@ graph [dpi=400, rankdir=LR, newrank=true];
       val g = Graph.singleton(s"$fname", expr)
       args.foldLeft(g) {
         (acc, e) => {
-          acc merge emitExpr(e, s"$fname", ctx)
+          acc flatMerge emitExpr(e, s"$fname", ctx)
         }
       }
     }
@@ -82,23 +82,32 @@ graph [dpi=400, rankdir=LR, newrank=true];
 
   private type CmdTag = (String, Command)
   def emitCmd(cmd: Command, ctx: Map[Id, String]): Graph[CmdTag] = cmd match {
-    case CPar(c1, c2) => emitCmd(c1, ctx) merge emitCmd(c2, ctx)
-    case CSeq(c1, c2) => emitCmd(c1, ctx) merge emitCmd(c2, ctx) //TODO: make some viz diff here
+    case CPar(c1, c2) => emitCmd(c1, ctx) flatMerge emitCmd(c2, ctx)
+    case CSeq(c1, c2) => emitCmd(c1, ctx) flatMerge emitCmd(c2, ctx) //TODO: make some viz diff here
     case CLet(id, _, e) => {
       //XXX: add prefix
-      emitExpr(e, s"$id", ctx).map[CmdTag](x => ("", CExpr(x))) merge
+      emitExpr(e, s"$id", ctx).map[CmdTag](x => ("", CExpr(x))) flatMerge
       Graph.singleton[CmdTag](s"$id", (s"$id", cmd))
     }
     case CView(_, _) => Graph.empty
-    case CIf(_, _, _) => Graph.empty
+    case CIf(cond@_, tCmd@_, fCmd@_) => {
+      // val name = newName("cond")
+      // val tBranch = emitCmd(tCmd, ctx)
+      // val fBranch = emitCmd(fCmd, ctx)
+      // // Graph.empty[CmdTag].addEdge(name, t: String)
+      // Graph.singleton[CmdTag](name, (name, cmd)) merge
+      // tBranch merge fBranch
+      Graph.empty
+    }
     case CFor(range, par, combine) => {
       val name = newName("iter")
       val parNode = emitCmd(par, ctx + (range.iter -> name))
       val combineNode = emitCmd(combine, ctx + (range.iter -> name))
-      Console.err.println(s"${parNode.nodeSet()}")
-      val cl = Cluster(Set(s"$name${range.iter}") ++ parNode.nodeSet(), parNode.clusters)
-      val g = parNode merge combineNode merge Graph.singleton[CmdTag](name, (name, cmd))
-      g.newCluster(cl)
+      val g = {
+        Graph.singleton[CmdTag](s"$name${range.iter}", (name, cmd)) flatMerge
+        combineNode
+      }
+      g subMerge parNode
     }
     case CWhile(_, _) => Graph.empty
     case CUpdate(lhs, rhs) => {
@@ -107,11 +116,10 @@ graph [dpi=400, rankdir=LR, newrank=true];
       val rhsName = s"rhs$name"
       val node1 = emitExpr(lhs, lhsName, ctx, true).map[CmdTag](x => ("", CExpr(x)))
       val node2 = emitExpr(rhs, rhsName, ctx).map[CmdTag](x => ("", CExpr(x)))
-      Graph.empty[CmdTag].addEdge(rhsName, lhsName) merge
-      Graph.singleton(s"viz$name", (name, cmd)) merge
-      Graph.singleton[CmdTag](lhsName, ("", CEmpty)) merge
-      Graph.singleton[CmdTag](rhsName, ("", CEmpty)) merge
-      node1 merge
+      Graph.empty[CmdTag].addEdge(rhsName, lhsName) flatMerge
+      Graph.singleton[CmdTag](lhsName, (lhsName, CExpr(lhs))) flatMerge
+      Graph.singleton[CmdTag](rhsName, (rhsName, CExpr(rhs))) flatMerge
+      node1 flatMerge
       node2
     }
     case CReduce(_, lhs, rhs) => {
@@ -122,7 +130,7 @@ graph [dpi=400, rankdir=LR, newrank=true];
         case EArrAccess(id, _) => g.addEdge(s"$id", name).addEdge(name, s"$id")
         case _ => g
       }
-      g2 merge emitExpr(rhs, name, ctx).map[CmdTag](x => ("", CExpr(x)))
+      g2 flatMerge emitExpr(rhs, name, ctx).map[CmdTag](x => ("", CExpr(x)))
     }
     case CExpr(e) => emitExpr(e, newName("expr"), ctx).map[CmdTag](x => ("", CExpr(x)))
     case CEmpty => Graph.empty
@@ -130,10 +138,10 @@ graph [dpi=400, rankdir=LR, newrank=true];
 
   def emit(p: Prog, c: Config): String = {
     val gDefs = p.defs.foldLeft(Graph.empty[Definition]) {
-      (acc, defn) => acc merge emitDefn(defn)
+      (acc, defn) => acc flatMerge emitDefn(defn)
     }
     val gDecls = p.decls.foldLeft(Graph.empty[Decl]) {
-      (acc, decl) => acc merge emitDecl(decl)
+      (acc, decl) => acc flatMerge emitDecl(decl)
     }
     val gCmd = emitCmd(p.cmd, Map.empty)
 

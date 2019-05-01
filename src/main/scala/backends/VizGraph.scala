@@ -2,42 +2,65 @@ package fuselang.backend
 
 object VizGraph {
 
+  trait Cluster[T] {
+    this: Cluster[T] =>
+    def ++(cl: Cluster[T]): Cluster[T] = this match {
+      case a@ClusterNode(_) => cl match {
+        case b@ClusterNode(_) => ClusterSet(Set(a, b))
+        case ClusterSet(bs) => ClusterSet(bs + a)
+      }
+      case ClusterSet(as) => cl match {
+        case b@ClusterNode(_) => ClusterSet(as + b)
+        case ClusterSet(bs) => ClusterSet(as ++ bs)
+      }
+    }
+
+    def **(cl: Cluster[T]): Cluster[T] = this match {
+      case ClusterNode(_) => this ++ cl
+      case as@ClusterSet(set) => if (set.isEmpty) cl else ClusterSet(Set(as, cl))
+    }
+
+    def +(t: T): Cluster[T] = this ++ ClusterNode(t)
+    def subCluster(cl: Cluster[T]): Cluster[T] = this ++ ClusterSet(Set(cl))
+  }
+  case class ClusterNode[T](node: T) extends Cluster[T]
+  case class ClusterSet[T](children: Set[Cluster[T]]) extends Cluster[T]
+  object Cluster {
+    def empty[T]: Cluster[T] = ClusterSet(Set())
+    def fromSet[T](s: Set[T]): Cluster[T] = {
+      ClusterSet(s.map((x) => ClusterNode(x)))
+    }
+  }
+
   trait Format[T] {
     def formatNode(g: T): String
     def formatEdge(s: String, t: String): String
     def formatCluster(name: String, nodes: Set[String], subCluster: String): String
   }
 
-  case class Cluster(nodes: Set[String], children: Set[Cluster]) {
-    def ++(cl: Cluster) = {
-      Cluster(nodes ++ cl.nodes, children ++ cl.children)
-    }
-  }
-
   case class Graph[T](
     nodes: Map[String, T],
     edges: Map[String, Set[String]],
-    clusters: Set[Cluster]) {
+    cluster: Cluster[String]) {
     def addNode(id: String, node: T) =
-      Graph(nodes + (id -> node), edges, clusters)
+      Graph(nodes + (id -> node), edges, cluster)
 
     def addEdge(s: String, t: String) = {
       edges get s match {
-        case None => Graph(nodes, edges + (s -> Set(t)), clusters)
-        case Some(ed) => Graph(nodes, edges + (s -> (ed + t)), clusters)
+        case None => Graph(nodes, edges + (s -> Set(t)), cluster)
+        case Some(ed) => Graph(nodes, edges + (s -> (ed + t)), cluster)
       }
     }
 
-    def newCluster(cl: Cluster) = {
-      Graph(nodes, edges, Set(cl))
+    def subMerge(sg: Graph[T]) = {
+      val oldCl = Cluster.fromSet(nodes.keySet)
+      val newG = Graph(nodes, edges, cluster) flatMerge sg
+      val res = Graph(newG.nodes, newG.edges, oldCl.subCluster(Cluster.fromSet(sg.nodes.keySet)))
+      // Console.err.println(s"$cluster + ${sg.cluster} =\n\t ${res.cluster}")
+      res
     }
 
-    def nodeSet() = {
-      nodes.keySet
-    }
-
-
-    def merge(g: Graph[T]) = {
+    def flatMerge(g: Graph[T]) = {
       val newNodes = g.nodes.foldLeft(nodes) {
         (acc, e) =>
         val (id, node) = e
@@ -51,7 +74,7 @@ object VizGraph {
           case Some(ed) => acc + (source -> (tars ++ ed))
         }
       }
-      Graph(newNodes, newEdges, clusters ++ g.clusters)
+      Graph(newNodes, newEdges, cluster ** g.cluster)
     }
 
     def foldNodes[Acc](acc: Acc)(f: (Acc, T) => Acc) = {
@@ -72,7 +95,7 @@ object VizGraph {
       val newG = nodes.foldLeft(Graph.empty[B]) {
         case (acc, (id, t)) => acc.addNode(id, f(t))
       }
-      Graph(newG.nodes, edges, clusters)
+      Graph(newG.nodes, edges, cluster)
     }
 
     def format(f: Format[T]) = {
@@ -85,22 +108,37 @@ object VizGraph {
         s"$acc$es\n"
       }
 
-      Console.err.println(s"cl: ${clusters.zipWithIndex}")
-      def fmtCl(childs: Set[Cluster]): String = {
-        childs.zipWithIndex.foldLeft("") {
-          (acc, e) =>
-          val (cl, idx) = e
-          acc + f.formatCluster(s"cl$idx", cl.nodes, fmtCl(cl.children))
-        }
+      def fmtCl(cl: Cluster[String], i: Int): String = cl match {
+        case ClusterNode(a) => a
+        case ClusterSet(as) =>
+          if (as.isEmpty)
+            ""
+          else {
+            s"\nsubgraph cluster_cl$i {" +
+            as.foldLeft((i, ""))((acc, e) =>
+              if (fmtCl(e, acc._1+1) == "")
+                (acc._1+1, s"${acc._2}")
+               else
+                 (acc._1+1, s"${fmtCl(e, acc._1+1)}; ${acc._2}"))._2 +
+            "}\n"
+          }
       }
 
-      val clusterStr = fmtCl(clusters)
+      // val clusterStr = cluster match {
+      //   case ClusterNode(_) => ""
+      //   case ClusterSet(as) =>
+      //     as.foldLeft((0, ""))((acc, e) =>
+      //       (acc._1+1, s"${fmtCl(e, acc._1+1)}; ${acc._2}"))._2
+      // }
+      val clusterStr = fmtCl(cluster, 0)
+      Console.err.println(cluster)
+      Console.err.println(clusterStr)
       s"$nodeStr\n$edgeStr\n$clusterStr"
     }
   }
 
   object Graph {
-    def empty[T]: Graph[T] = Graph(Map.empty, Map.empty, Set.empty)
-    def singleton[T](id: String, node: T) = Graph(Map(id -> node), Map.empty, Set.empty)
+    def empty[T]: Graph[T] = Graph(Map.empty, Map.empty, Cluster.empty)
+    def singleton[T](id: String, node: T) = Graph(Map(id -> node), Map.empty, Cluster.empty)
   }
 }
