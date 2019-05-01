@@ -131,14 +131,18 @@ $subCluster
     }
   }
 
-  object ExprFormatter extends Format[Expr] with DefaultFormatter {
-    def formatNode(expr: Expr) = expr match {
-      case EApp(fname, _) => {
-        val t = new Dot.Table(1)
-        t.addFullRow(("func", s"$expr"))
-        Dot.PropNode(s"$fname", List(Dot.Label(t.emit))).emit
+  object ExprFormatter extends Format[(String, Expr)] with DefaultFormatter {
+    def formatNode(p: (String, Expr)) = {
+      val (name, expr) = p
+      expr match {
+        case EApp(fname, _) => {
+          val t = new Dot.Table(1)
+          t.addFullRow(("func", s"$expr"))
+          Dot.PropNode(s"$fname", List(Dot.Label(t.emit))).emit
+        }
+        case e =>
+          Dot.PropNode(s"$name", List(Dot.Label(Dot.Table.mkExprTable(s"$e")))).emit
       }
-      case _ => ""
     }
   }
 
@@ -151,15 +155,13 @@ $subCluster
           t.addRow(List(("name", s"$id"), ("expr", s"$e")))
           Dot.PropNode(s"$id", List(Dot.Label(t.emit))).emit
         }
-        case CFor(range, _, _) => Dot.RangeNode(s"$name${range.iter}", range).emit
-        case CUpdate(lhs, rhs) => {
-          val t1 = Dot.PropNode(s"lhs$name", List(Dot.Label(Dot.Table.mkExprTable(s"$lhs")))).emit
-          val t2 = Dot.PropNode(s"rhs$name", List(Dot.Label(Dot.Table.mkExprTable(s"$rhs")))).emit
-          s"$t1\n$t2\n"
+        case CIf(cond, _, _) => {
+          Dot.PropNode(s"$name", List(Dot.Label(Dot.Table.mkExprTable(s"$cond")))).emit
         }
+        case CFor(range, _, _) => Dot.RangeNode(s"$name${range.iter}", range).emit
         case CReduce(op, _, _) =>
           Dot.PropNode(name, List(Dot.Label(s""""$op""""), Dot.Shape("diamond"))).emit
-        case CExpr(e) => ExprFormatter.formatNode(e)
+        case CExpr(e) => ExprFormatter.formatNode((name, e)
         case _ => ""
       }
     }
