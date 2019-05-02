@@ -49,6 +49,7 @@ private class VivadoBackend extends CppLike {
     case _:TVoid => "void"
     case _:TBool | _:TIndex | _:TStaticInt => "int"
     case _:TFloat => "float"
+    case _:TDouble => "double"
     case TSizedInt(s) => s"ap_int<$s>"
     case TArray(typ, _) => typ.toString
     case TRecType(n, _) => n

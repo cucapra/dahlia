@@ -21,6 +21,7 @@ object Syntax {
       case _: TVoid => "void"
       case _: TBool => "bool"
       case _: TFloat => "float"
+      case _: TDouble => "double"
       case TSizedInt(l) => s"bit<$l>"
       case TStaticInt(s) => s"static($s)"
       case TArray(t, dims) =>
@@ -44,6 +45,7 @@ object Syntax {
   case class TVoid() extends Type
   case class TBool() extends Type
   case class TFloat() extends Type
+  case class TDouble() extends Type
   case class TFun(args: List[Type]) extends Type
   case class TRecType(name: Id, fields: Map[Id, Type]) extends Type
   case class TAlias(name: Id) extends Type

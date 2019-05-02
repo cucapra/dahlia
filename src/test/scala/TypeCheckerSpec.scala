@@ -1165,6 +1165,14 @@ class TypeCheckerSpec extends FunSpec {
         i1 == i2;
         """ )
     }
+
+    it("float is a subtype of double") {
+      typeCheck("""
+        decl x: float;
+        decl y: float;
+        let z: double = x + y;
+        """ )
+    }
   }
 
   describe("Imports") {
@@ -1253,6 +1261,13 @@ class TypeCheckerSpec extends FunSpec {
         decl x: float;
         decl y: bit<32>;
         (x as bit<32>) + y
+        """ )
+    }
+    it("safe to cast integer float to double") {
+      typeCheck("""
+        decl x: float;
+        decl y: double;
+        y + (x as double);
         """ )
     }
   }

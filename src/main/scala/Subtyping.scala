@@ -60,39 +60,40 @@ object Subtyping {
       // Arrays are invariant
       areEqual(tsup, tsub) && subDims == supDims
     }
+    case (_:TFloat, _:TDouble) => true
     case _ => areEqual(sub, sup)
   }
 
-  def joinOf(t1: Type, t2: Type, op: BOp): Option[Type] = (t1, t2) match {
+  private def joinOfHelper(t1: Type, t2: Type, op: BOp): Option[Type] = (t1, t2) match {
     case (TStaticInt(v1), TStaticInt(v2)) => op.toFun match {
       case Some(fun) => Some(TStaticInt(fun(v1, v2)))
       case None => Some(TSizedInt(max(bitsNeeded(v1), bitsNeeded(v2))))
     }
-    case (TSizedInt(s1), TSizedInt(s2)) =>
-      Some(TSizedInt(max(s1, s2)))
-    case (TStaticInt(v), TSizedInt(s)) => {
-      Some(TSizedInt(max(s, bitsNeeded(v))))
-    }
-    case (TSizedInt(s), TStaticInt(v)) => {
-      Some(TSizedInt(max(s, bitsNeeded(v))))
-    }
-    case (idx:TIndex, st:TStaticInt) =>
-      Some(TSizedInt(bitsNeeded(max(idx.maxVal, st.v))))
-    case (st:TStaticInt, idx:TIndex) =>
-      Some(TSizedInt(bitsNeeded(max(idx.maxVal, st.v))))
-    case (_: TIndex, t2@TSizedInt(_)) => Some(t2)
+    case (TSizedInt(s1), TSizedInt(s2)) => Some(TSizedInt(max(s1, s2)))
+    case (TSizedInt(s), TStaticInt(v)) => Some(TSizedInt(max(s, bitsNeeded(v))))
+    case (st:TStaticInt, idx:TIndex) => Some(TSizedInt(bitsNeeded(max(idx.maxVal, st.v))))
     case (t2@TSizedInt(_), _:TIndex) => Some(t2)
     case (_:TFloat, _:TFloat) => Some(TFloat())
+    case (_:TFloat, _:TDouble) => Some(TDouble())
     case (ti1:TIndex, ti2:TIndex) =>
       Some(TSizedInt(max(bitsNeeded(ti1.maxVal), bitsNeeded(ti2.maxVal))))
     case (t1, t2) => if (t1 == t2) Some(t1) else None
+  }
+
+  /**
+   * Try finding the join of either ordering and use the result.
+   */
+  def joinOf(t1: Type, t2: Type, op: BOp): Option[Type] = {
+    val j1 = joinOfHelper(t1, t2, op)
+    if (j1.isDefined) j1
+    else joinOfHelper(t2, t1, op)
   }
 
   def safeCast(originalType: Type, castType: Type) = (originalType, castType) match {
     case (t1:IntType, t2:TSizedInt) =>  isSubtype(t1, t2)
     case (_:TFloat, _:TSizedInt) => false
     case (_:IntType, _:TFloat) => true
-    case (_:TFloat, _:TFloat) => true
-    case _ => false
+    case (_:TFloat, _:TDouble) => true
+    case (t1, t2) => areEqual(t1, t2)
   }
 }

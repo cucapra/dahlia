@@ -19,6 +19,7 @@ private class CppRunnable extends CppLike {
     case _:TBool => "bool"
     case _:TIndex | _:TStaticInt | _:TSizedInt => "int"
     case _:TFloat => "float"
+    case _:TDouble => "double"
     case TArray(typ, dims) =>
       dims.foldLeft(emitType(typ))({ case (acc, _) => "vector" <> angles(acc) })
     case TRecType(n, _) => n
