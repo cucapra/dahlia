@@ -161,7 +161,7 @@ $subCluster
         case CFor(range, _, _) => Dot.RangeNode(s"$name${range.iter}", range).emit
         case CReduce(op, _, _) =>
           Dot.PropNode(name, List(Dot.Label(s""""$op""""), Dot.Shape("diamond"))).emit
-        case CExpr(e) => ExprFormatter.formatNode((name, e)
+        case CExpr(e) => ExprFormatter.formatNode((name, e))
         case _ => ""
       }
     }

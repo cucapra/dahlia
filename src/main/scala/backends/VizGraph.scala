@@ -20,8 +20,28 @@ object VizGraph {
       case as@ClusterSet(set) => if (set.isEmpty) cl else ClusterSet(Set(as, cl))
     }
 
+    def sub(cl: Cluster[T]): Cluster[T] = {
+      Cluster.fromSet(this.flatten() -- cl.flatten())
+    }
+
+    def size(): Int = this.flatten().size
+
+    def flatten(): Set[T] = this match {
+      case ClusterNode(n) => Set(n)
+      case ClusterSet(s) => s.foldLeft(Set.empty[T])((acc, e) => acc ++ e.flatten())
+    }
+
     def +(t: T): Cluster[T] = this ++ ClusterNode(t)
-    def subCluster(cl: Cluster[T]): Cluster[T] = this ++ ClusterSet(Set(cl))
+
+    def subCluster(cl: Cluster[T]): Cluster[T] = this match {
+      case node@ClusterNode(_) => node ++ ClusterSet(Set(cl))
+      case cs@ClusterSet(set) =>
+        if (set.isEmpty) cl
+        else cl match {
+          case a@ClusterNode(_) => ClusterSet(Set(cs, a))
+          case as@ClusterSet(set) => if (set.isEmpty) cs else ClusterSet(Set(cs, as))
+        }
+    }
   }
   case class ClusterNode[T](node: T) extends Cluster[T]
   case class ClusterSet[T](children: Set[Cluster[T]]) extends Cluster[T]
@@ -52,12 +72,26 @@ object VizGraph {
       }
     }
 
+    def clusterify() = {
+      val diff = Cluster.fromSet(nodes.keySet) sub cluster
+      // Console.err.println("test")
+      // Console.err.println(diff)
+      if (diff.size() == 0) {
+        Graph(nodes, edges, cluster)
+      } else {
+        Graph(nodes, edges, diff ++ ClusterSet(Set(cluster)))
+      }
+    }
+
     def subMerge(sg: Graph[T]) = {
-      val oldCl = Cluster.fromSet(nodes.keySet)
       val newG = Graph(nodes, edges, cluster) flatMerge sg
-      val res = Graph(newG.nodes, newG.edges, oldCl.subCluster(Cluster.fromSet(sg.nodes.keySet)))
+      Graph(newG.nodes, newG.edges, cluster.subCluster(Cluster.fromSet(sg.nodes.keySet)))
       // Console.err.println(s"$cluster + ${sg.cluster} =\n\t ${res.cluster}")
-      res
+    }
+
+    def crazyMerge(cg: Graph[T]) = {
+      val newG = Graph(nodes, edges, cluster) flatMerge cg
+      Graph(newG.nodes, newG.edges, cluster ** cg.cluster)
     }
 
     def flatMerge(g: Graph[T]) = {
@@ -74,7 +108,7 @@ object VizGraph {
           case Some(ed) => acc + (source -> (tars ++ ed))
         }
       }
-      Graph(newNodes, newEdges, cluster ** g.cluster)
+      Graph(newNodes, newEdges, cluster ++ g.cluster)
     }
 
     def foldNodes[Acc](acc: Acc)(f: (Acc, T) => Acc) = {
@@ -124,15 +158,15 @@ object VizGraph {
           }
       }
 
-      // val clusterStr = cluster match {
-      //   case ClusterNode(_) => ""
-      //   case ClusterSet(as) =>
-      //     as.foldLeft((0, ""))((acc, e) =>
-      //       (acc._1+1, s"${fmtCl(e, acc._1+1)}; ${acc._2}"))._2
-      // }
-      val clusterStr = fmtCl(cluster, 0)
+      val clusterStr = cluster match {
+        case ClusterNode(_) => ""
+        case ClusterSet(as) =>
+          as.foldLeft((0, ""))((acc, e) =>
+            (acc._1+1, s"${fmtCl(e, acc._1+1)}; ${acc._2}"))._2
+      }
+      // val clusterStr = fmtCl(cluster, 0)
       Console.err.println(cluster)
-      Console.err.println(clusterStr)
+      // Console.err.println(clusterStr)
       s"$nodeStr\n$edgeStr\n$clusterStr"
     }
   }
