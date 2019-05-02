@@ -21,7 +21,7 @@ object Syntax {
       case _: TVoid => "void"
       case _: TBool => "bool"
       case _: TFloat => "float"
-      case TSizedInt(l) => s"int$l"
+      case TSizedInt(l) => s"bit<$l>"
       case TStaticInt(s) => s"static($s)"
       case TArray(t, dims) =>
         s"$t" + dims.foldLeft("")({ case (acc, (d, b)) => s"$acc[$d bank $b]" })
@@ -29,14 +29,6 @@ object Syntax {
       case TFun(args) => s"${args.mkString("->")} -> void"
       case TRecType(n, _) => s"$n"
       case TAlias(n) => n.toString
-    }
-
-    def matchOrError[A](pos: Position, construct: String, exp: String)
-                                  (andThen: PartialFunction[Type, A]): A = {
-      val mismatchError: PartialFunction[Type, A] = {
-        case _ => throw UnexpectedType(pos, construct, exp, this)
-      }
-      andThen.orElse(mismatchError)(this)
     }
   }
   // Types that can be upcast to Ints
@@ -83,17 +75,6 @@ object Syntax {
       case _:OpBAnd => "&"
       case _:OpBOr => "|"
       case _:OpBXor => "^"
-    }
-
-    def toFun: Option[(Int, Int) => Int] = this match {
-      case _:OpAdd => Some(_ + _)
-      case _:OpMul => Some(_ * _)
-      case _:OpDiv => Some(_ / _)
-      case _:OpSub => Some(_ - _)
-      case _:OpBOr => Some(_ | _)
-      case _:OpBAnd => Some(_ & _)
-      case _:OpBXor => Some(_ ^ _)
-      case _ => None
     }
   }
   // Equality ops
@@ -225,4 +206,31 @@ object Syntax {
     defs: List[Definition],
     decls: List[Decl],
     cmd: Command) extends Positional
+
+  /**
+   * Define common helper methods implicit classes.
+   */
+  implicit class RichType(typ: Type) {
+    def matchOrError[A](pos: Position, construct: String, exp: String)
+                       (andThen: PartialFunction[Type, A]): A = {
+      val mismatchError: PartialFunction[Type, A] = {
+        case _ => throw UnexpectedType(pos, construct, exp, typ)
+      }
+      andThen.orElse(mismatchError)(typ)
+    }
+  }
+
+  implicit class RichBop(bop: BOp) {
+    def toFun: Option[(Int, Int) => Int] = bop match {
+      case _:OpAdd => Some(_ + _)
+      case _:OpMul => Some(_ * _)
+      case _:OpDiv => Some(_ / _)
+      case _:OpSub => Some(_ - _)
+      case _:OpBOr => Some(_ | _)
+      case _:OpBAnd => Some(_ & _)
+      case _:OpBXor => Some(_ ^ _)
+      case _ => None
+    }
+  }
 }
+
