@@ -158,15 +158,15 @@ object VizGraph {
           }
       }
 
-      val clusterStr = cluster match {
-        case ClusterNode(_) => ""
-        case ClusterSet(as) =>
-          as.foldLeft((0, ""))((acc, e) =>
-            (acc._1+1, s"${fmtCl(e, acc._1+1)}; ${acc._2}"))._2
-      }
-      // val clusterStr = fmtCl(cluster, 0)
+      // val clusterStr = cluster match {
+      //   case ClusterNode(_) => ""
+      //   case ClusterSet(as) =>
+      //     as.foldLeft((0, ""))((acc, e) =>
+      //       (acc._1+1, s"${fmtCl(e, acc._1+1)}; ${acc._2}"))._2
+      // }
+      val clusterStr = fmtCl(cluster, 0)
       Console.err.println(cluster)
-      // Console.err.println(clusterStr)
+      Console.err.println(clusterStr)
       s"$nodeStr\n$edgeStr\n$clusterStr"
     }
   }
