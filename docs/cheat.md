@@ -176,14 +176,69 @@ import "printer.h" {
 
 Once created, views are accessed transparently as arrays.
 
-### Shrink views
+### Simple views
 
-Shrink views must have the same step and width parameters.
+The basic syntax of a simple view is:
 
 ```C
-decl a: bit<32>[8 bank 4];
-view v = shrink a[2 * i : 2];
+view v = a[ <suf> : + <pre> bank <shrink> ];
 ```
+
+where `+` and `bank` syntactically required. Suffixes can either be _aligned_
+or _rotating_. The `<pre>` and `bank <shrink>` can be optionally elided.
+
+```C
+view v = a[<suf>:] // valid
+view v = a[<suf>: bank <shrink>] // valid
+view v = a[_: <pre> bank <shrink>] // valid
+```
+
+#### Aligned view
+
+The syntax for creating an aligned view is:
+
+```C
+view v_a = a[factor * expr: ...]
+```
+
+where `factor` must be a factor of the banking factor the array. Example:
+
+```C
+decl a: bit<32>[16 bank 8];
+view v = a[4 * i: ]; // valid, i can be an arbitrary expression
+view v = a[2 * i: bank 2]; // valid
+```
+
+#### Rotation view
+
+The syntax for creating a rotation view is:
+
+```C
+view v_a = a[ expr! : ...]
+```
+
+Example:
+
+```C
+decl a: bit<32>[16 bank 8];
+view v = a[i!: ]; // valid
+view v = a[(i + j)! :] // valid
+```
+
+### Split views
+
+See the views doc for the semantics of `split`.
+
+Split views are created using the following syntax:
+
+```C
+decl a: bit<32>[16 bank 8];
+split v = a[by <factor>]
+```
+
+where `factor` must be a factor of the banking factor of the corresponding
+dimension. If `factor` is `1` then the dimension is preserved as is.
+
 
 ## Program Structure
 
