@@ -15,7 +15,11 @@ private class VivadoBackend extends CppLike {
 
   def bank(id: Id, banks: List[Int]): String = banks.zipWithIndex.foldLeft(""){
     case (acc, (bank, dim)) =>
-      s"${acc}\n#pragma HLS ARRAY_PARTITION variable=$id factor=$bank dim=${dim + 1}"
+      if (bank != 1) {
+        s"${acc}\n#pragma HLS ARRAY_PARTITION variable=$id factor=$bank dim=${dim + 1}"
+      } else {
+        acc
+      }
   }
 
   def bankPragmas(decls: List[Decl]): List[Doc] = decls
