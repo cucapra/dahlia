@@ -83,7 +83,7 @@ edge [arrowsize=0.4];
   private type CmdTag = (String, Command)
   def emitCmd(cmd: Command, ctx: Map[Id, String]): Graph[CmdTag] = cmd match {
     case CPar(c1, c2) => emitCmd(c1, ctx) flatMerge emitCmd(c2, ctx)
-    case CSeq(c1, c2) => emitCmd(c1, ctx) flatMerge emitCmd(c2, ctx) //TODO: make some viz diff here
+    case CSeq(c1, c2) => emitCmd(c1, ctx) crazyMerge emitCmd(c2, ctx) //TODO: make some viz diff here
     case CLet(id, _, e) => {
       //XXX: add prefix
       emitExpr(e, s"$id", ctx).map[CmdTag](x => ("", CExpr(x))) flatMerge
@@ -103,11 +103,11 @@ edge [arrowsize=0.4];
       val name = newName("iter")
       val parNode = emitCmd(par, ctx + (range.iter -> name))
       val combineNode = emitCmd(combine, ctx + (range.iter -> name))
-      val g = {
-        Graph.singleton[CmdTag](s"$name${range.iter}", (name, cmd)) flatMerge
-        combineNode
-      }
-      g subMerge parNode
+      (Graph.singleton[CmdTag](s"$name${range.iter}", (name, cmd)) flatMerge
+        combineNode flatMerge
+        parNode).clusterify()
+      // Console.err.println("dogg")
+      // Console.err.println(g.cluster)
     }
     case CWhile(_, _) => Graph.empty
     case CUpdate(lhs, rhs) => {
