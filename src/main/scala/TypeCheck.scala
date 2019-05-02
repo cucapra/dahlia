@@ -180,7 +180,7 @@ object TypeChecker {
       val (typ, nEnv) = checkE(e)
       if (safeCast(typ, castType) == false) {
         scribe.warn {
-          (s"Casting expression of type $typ to $castType which might not be safe", expr)
+          (s"Casting $typ to $castType which may lose precision.", expr)
         }
       }
       castType -> nEnv
