@@ -90,14 +90,22 @@ edge [arrowsize=0.4];
       Graph.singleton[CmdTag](s"$id", (s"$id", cmd))
     }
     case CView(_, _) => Graph.empty
-    case CIf(cond@_, tCmd@_, fCmd@_) => {
-      // val name = newName("cond")
-      // val tBranch = emitCmd(tCmd, ctx)
-      // val fBranch = emitCmd(fCmd, ctx)
+    case CIf(cond, tCmd, fCmd) => {
+      val name = newName("cond")
+      // val condNode = Graph.singleton[CmdTag](name, (name, CExpr(cond)))
+      val condNode = emitExpr(cond, name, ctx).map[CmdTag](x => ("", CExpr(x)))
+      val tBranch = (emitCmd(tCmd, ctx) flatMerge
+        Graph.singleton(s"${name}T", (s"${name}T", CEmpty))).clusterify()
+      val fBranch = (emitCmd(fCmd, ctx) flatMerge
+        Graph.singleton(s"${name}F", (s"${name}F", CEmpty))).clusterify()
+      val G = condNode subMerge tBranch subMerge fBranch
+      G.addNode(name, (name, CExpr(cond)))
+        .addEdge(name, s"${name}T")
+        .addEdge(name, s"${name}F")
       // // Graph.empty[CmdTag].addEdge(name, t: String)
       // Graph.singleton[CmdTag](name, (name, cmd)) merge
       // tBranch merge fBranch
-      Graph.empty
+      // Graph.empty
     }
     case CFor(range, par, combine) => {
       val name = newName("iter")

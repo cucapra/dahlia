@@ -57,11 +57,22 @@ private object Dot {
       table = (row.map { case (name, value) => Item(name, value, 1) }) :: table
     }
 
+    private def escape(s: String) = {
+      val map = Map(
+        "&" -> "&amp;",
+        "<" -> "&lt;",
+        ">" -> "&gt;")
+      map.foldLeft(s)((acc, e) => {
+        val (ch, rp) = e
+        acc.replace(ch, rp)
+      })
+    }
+
     override def emit(): String = {
       val rows = (if (rev) table else table.reverse).map { row =>
         val s = row.map {
           case Item(name, value, w) =>
-            s"<td port='$name' colspan='$w'>$value</td>"
+            s"""<td port='$name' colspan='$w'>${escape(value)}</td>"""
         }.mkString(" ")
         s"<tr>$s</tr>"
       }.mkString("\n")
