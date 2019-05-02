@@ -38,7 +38,7 @@ private object Dot {
   case class RangeNode(name: String, range: CRange) extends Node {
     val i = range.iter
     val start = range.s
-    val end = range.e
+    val end = range.e / range.u
     override def emit(): String =
       s"""$name [shape=invhouse, label="$i=$start..$end"]"""
   }

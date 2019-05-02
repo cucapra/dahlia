@@ -109,11 +109,15 @@ edge [arrowsize=0.4];
     }
     case CFor(range, par, combine) => {
       val name = newName("iter")
-      val parNode = emitCmd(par, ctx + (range.iter -> name))
+      val parNodes = (0 until range.u).foldLeft(Graph.empty[CmdTag]) {
+        (acc, _) => acc flatMerge emitCmd(par, ctx + (range.iter -> name)).clusterify()
+      }
+      // val parNode = emitCmd(par, ctx + (range.iter -> name))
+      // val parNode2 = emitCmd(par, ctx + (range.iter -> name))
       val combineNode = emitCmd(combine, ctx + (range.iter -> name))
       (Graph.singleton[CmdTag](s"$name${range.iter}", (name, cmd)) flatMerge
         combineNode flatMerge
-        parNode).clusterify()
+        parNodes).clusterify()
       // Console.err.println("dogg")
       // Console.err.println(g.cluster)
     }
