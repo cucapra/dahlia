@@ -765,7 +765,7 @@ class TypeCheckerSpec extends FunSpec {
         typeCheck("""
           decl a: bit<10>[16 bank 8];
           for (let i = 0..4) {
-            view v = a[4 * i :]
+            view v = a[8 * i :]
           }
           """ )
     }
@@ -846,8 +846,19 @@ class TypeCheckerSpec extends FunSpec {
     it("width must be factor of banking factor") {
       assertThrows[InvalidAlignFactor] {
         typeCheck("""
+          decl x: bit<32>;
           decl a: bit<10>[10 bank 5];
-          view v = a[3 * i :]
+          view v = a[3 * x :]
+          """ )
+      }
+    }
+
+    it("width must be a multiple of the banking factor") {
+      assertThrows[InvalidAlignFactor] {
+        typeCheck("""
+          decl x: bit<32>;
+          decl a: bit<10>[10 bank 10];
+          view v = a[5 * x :]
           """ )
       }
     }
@@ -855,10 +866,19 @@ class TypeCheckerSpec extends FunSpec {
     it("width must be statically known") {
       assertThrows[ParserError] {
         typeCheck("""
+          decl x: bit<32>;
           decl a: bit<10>[10 bank 5];
-          view v = a[i * i :]
+          view v = a[x * x :]
           """ )
       }
+    }
+
+    it("suffix factor is a factor of the new banking") {
+      typeCheck("""
+        decl x: bit<32>;
+        decl a: bit<10>[16 bank 8];
+        view v = a[6 * x : bank 2]
+        """ )
     }
   }
 

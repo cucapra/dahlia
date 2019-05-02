@@ -258,9 +258,11 @@ object TypeChecker {
       throw InvalidShrinkWidth(view.pos, bank, shrink.get)
     }
 
+    val newBank = shrink.getOrElse(bank)
+
     val idx = suf match {
-      case Aligned(fac, idx) => if (bank < fac || bank % fac != 0) {
-        throw InvalidAlignFactor(suf.pos, fac, bank)
+      case Aligned(fac, idx) => if (newBank > fac || fac % newBank != 0) {
+        throw InvalidAlignFactor(suf.pos, fac, newBank)
       } else {
         idx
       }
@@ -273,7 +275,7 @@ object TypeChecker {
       case _:IntType => () // IntTypes are valid
     }
 
-    nEnv -> (pre.getOrElse(len) -> shrink.getOrElse(bank))
+    nEnv -> (pre.getOrElse(len) -> newBank)
   }
 
   private def checkC(cmd: Command)
