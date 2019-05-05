@@ -8,7 +8,10 @@ object Logger {
   /** Makes all positionals logable by scribe */
   implicit object PositionalLoggable extends Loggable[(String,Positional)] {
     override def apply(value: (String, Positional)) = {
-      new output.TextOutput(s"${value._1}\n${value._2.pos.longString}")
+      val pos = value._2.pos
+
+      new output.TextOutput(
+        s"[${pos.line}.${pos.column}] ${value._1}\n${pos.longString}")
     }
   }
 
