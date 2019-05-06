@@ -99,8 +99,8 @@ object Cpp {
         case DynamicRange(_, s, e, step, _) => (s, e, step)
       }
       parens {
-        "int" <+> range.iter <+> "=" <+> value(start) <> semi <+>
-        range.iter <+> "<" <+> value(end) <> semi <+>
+        "int" <+> range.iter <+> "=" <+> start <> semi <+>
+        range.iter <+> "<" <+> end <> semi <+>
         range.iter <> "+=" <> step
       }
     }
