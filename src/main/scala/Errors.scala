@@ -24,6 +24,9 @@ object Errors {
   case class UnrollRangeError(pos: Position, rSize: Int, uFactor: Int) extends TypeError(
     s"Cannot unroll range of size $rSize by factor $uFactor.", pos)
 
+  case class InvalidDynamicUnroll(pos: Position, uFactor: Int) extends TypeError(
+    s"Cannot unroll dynamic loop range with unroll factor $uFactor.", pos)
+
   case class InvalidIndex(id: Id, actual: Type) extends TypeError(
     s"Invalid indexing type for `$id'. Expected: TIndex or TSizedInt, actual: $actual", id.pos)
 

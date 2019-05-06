@@ -126,15 +126,31 @@ object Syntax {
   case class EVar(id: Id) extends Expr
   case class ECast(e: Expr, castType: Type) extends Expr
 
-  case class CRange(iter: Id, s: Int, e: Int, u: Int) extends Positional {
+  sealed trait CRange extends Positional {
+    val iter: Id;
+    val unroll: Int;
+  }
+  case class StaticRange(
+    iter: Id,
+    start: Int,
+    end: Int,
+    unroll: Int) extends CRange {
     def idxType: TIndex = {
-      if ((e - s) % u != 0) {
-        throw UnrollRangeError(this.pos, e - s, u)
+      if ((end - start) % unroll != 0) {
+        throw UnrollRangeError(this.pos, end - start, unroll)
       } else {
-        TIndex((0, u), (s/u, e/u))
+        TIndex((0, unroll), (start/unroll, end/unroll))
       }
     }
   }
+  case class DynamicRange(
+    iter:Id,
+    start: Expr,
+    end: Expr,
+    step: Expr,
+    unroll: Int) extends CRange {
+      if (unroll != 1) throw InvalidDynamicUnroll(this.pos, unroll)
+    }
 
   sealed trait ROp extends Positional {
     override def toString = this match {

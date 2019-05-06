@@ -93,10 +93,16 @@ object Cpp {
      * Turns a range object into the parameter of a `for` loop.
      * (int <id> = <s>; <id> < <e>; <id>++)
      */
-    def emitRange(range: CRange): Doc = parens {
-      "int" <+> range.iter <+> "=" <+> value(range.s) <> semi <+>
-      range.iter <+> "<" <+> value(range.e) <> semi <+>
-      range.iter <> "++"
+    def emitRange(range: CRange): Doc = {
+      val (start, end, step): (Doc, Doc, Doc) = range match {
+        case StaticRange(_, s, e, _) => (value(s), value(e), value(1))
+        case DynamicRange(_, s, e, step, _) => (s, e, step)
+      }
+      parens {
+        "int" <+> range.iter <+> "=" <+> value(start) <> semi <+>
+        range.iter <+> "<" <+> value(end) <> semi <+>
+        range.iter <> "+=" <> step
+      }
     }
 
     implicit def emitCmd(c: Command): Doc = c match {

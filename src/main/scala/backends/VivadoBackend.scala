@@ -29,7 +29,7 @@ private class VivadoBackend extends CppLike {
 
   def emitFor(cmd: CFor): Doc =
     "for" <> emitRange(cmd.range) <+> scope {
-      unroll(cmd.range.u) <>
+      unroll(cmd.range.unroll) <>
       cmd.par <>
       (if (cmd.combine != CEmpty) line <> text("// combiner:") <@> cmd.combine
        else emptyDoc)

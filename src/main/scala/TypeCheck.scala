@@ -243,6 +243,12 @@ object TypeChecker {
     }
   }
 
+  private def isIntType(typ: Type, construct: String, expected: String)
+                       (implicit pos: Position) = typ match {
+    case _:IntType => ()
+    case t => throw UnexpectedType(pos, construct, expected, t)
+  }
+
   /**
    * Checks a given simple view and returns the dimensions for the view along
    * with an updated environment.
@@ -276,6 +282,27 @@ object TypeChecker {
     }
 
     nEnv -> (pre.getOrElse(len) -> newBank)
+  }
+
+  /**
+   * Checks if the CRange has the right types for the start, end, and step
+   * and returns an environment that adds the iteration to the scope along
+   * with the correct type.
+   */
+  private def checkCRange(range: CRange)
+                         (implicit env: Environment): Environment = range match {
+    case sr@StaticRange(iter, _, _, _) => env.add(iter, sr.idxType)
+    case DynamicRange(iter, start, end, step, _) => {
+      val (startTyp, e2) = checkE(start)(env)
+      val (endTyp, e3) = checkE(end)(e2)
+      val (stepTyp, e4) = checkE(step)(e3)
+
+      isIntType(startTyp, "loop start", "integer type")(start.pos)
+      isIntType(endTyp, "loop end", "integer type")(end.pos)
+      isIntType(stepTyp, "loop step", "integer type")(step.pos)
+
+      e4.add(iter, endTyp)
+    }
   }
 
   private def checkC(cmd: Command)
@@ -381,17 +408,17 @@ object TypeChecker {
     }
     case CFor(range, par, combine) => {
       val iter = range.iter
-      val (e1, binds) = env.withScope(range.u) { newScope =>
+      val (e1, binds) = env.withScope(range.unroll) { newScope =>
         // Add binding for iterator in a separate scope.
-        val e2 = newScope.add(iter, range.idxType)
-        checkC(par)(e2)
+        val env2 = checkCRange(range)(newScope)
+        checkC(par)(env2)
       }
       // Create scope where ids bound in the parallel scope map to fully banked
       // arrays. Remove the iterator binding.
       val vecBinds = binds
         .withFilter({ case (id, _) => id != iter })
         .map({ case (id, typ) =>
-          id -> TArray(typ, List((range.u, range.u)))
+          id -> TArray(typ, List((range.unroll, range.unroll)))
         })
 
       e1.withScope(1)(e2 => checkC(combine)(e2 ++ vecBinds))._1
