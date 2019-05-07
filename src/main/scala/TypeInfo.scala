@@ -30,7 +30,7 @@ object TypeInfo {
           val conBanks = me.conBanks.map({
             case (dim, bankSet) => dim -> (that.conBanks(dim) union bankSet)
           })
-          me.copy(conBanks = conBanks)
+          me.copy(conBanks = conBanks, conLocs = me.conLocs ++ that.conLocs)
         }
         case (me:SimpleInfo, _:SimpleInfo) => me
         case _ =>
@@ -48,7 +48,8 @@ object TypeInfo {
     id: Id,
     typ: Type,
     avBanks: Map[Int, Set[Int]],
-    conBanks: Map[Int, Set[Int]]) extends Info {
+    conBanks: Map[Int, Set[Int]],
+    conLocs: Map[(Int, Int), Position] = Map()) extends Info {
 
     def consumeBank(dim: Int, bank: Int)
                    (implicit pos: Position) = avBanks.contains(dim) match {
@@ -56,9 +57,11 @@ object TypeInfo {
         if (avBanks(dim).contains(bank) == false) {
           throw UnknownBank(id, bank)
         } else if (conBanks(dim).contains(bank)){
-          throw AlreadyConsumed(id, dim, bank)
+          throw AlreadyConsumed(id, dim, bank, conLocs((dim, bank)))
         } else {
-          this.copy(conBanks = conBanks + (dim -> (conBanks(dim) + bank)))
+          this.copy(
+            conBanks = conBanks + (dim -> (conBanks(dim) + bank)),
+            conLocs = conLocs + ((dim, bank) -> pos))
         }
       case false => throw UnknownDim(id, dim)
     }

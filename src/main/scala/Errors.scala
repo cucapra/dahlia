@@ -4,10 +4,13 @@ object Errors {
   import Syntax._
   import scala.util.parsing.input.Position
 
-  def withPos(s: String, pos: Position) =
-    s"[${pos.line}.${pos.column}] $s\n${pos.longString}"
+  def withPos(s: String, pos: Position, postMsg: String = "") =
+    s"[${pos.line}.${pos.column}] $s\n${pos.longString}\n${postMsg}"
 
-  class TypeError(msg: String, pos: Position) extends RuntimeException(withPos(msg, pos)) {
+  class TypeError(msg: String,
+                  pos: Position,
+                  postMsg: String) extends RuntimeException(withPos(msg, pos, postMsg)) {
+    def this(msg: String, pos: Position) = this(msg, pos, "")
   }
 
   @deprecated("MsgErrors are not informative. Either create a new Error case or reuse one of the exisiting ones", "fuse 0.0.1")
@@ -42,8 +45,10 @@ object Errors {
   case class BankUnrollInvalid(arrId: Id, bf: Int, uf: Int)(implicit pos: Position) extends TypeError(
     s"Invalid parallel access on `$arrId`. Banking factor ($bf) not equal to unrolling factor ($uf). Create a shrink view `view v_$arrId = $arrId[_ : bank $uf]' and use it instead.", pos)
 
-  case class AlreadyConsumed(id: Id, dim: Int, bank: Int)(implicit pos: Position) extends TypeError(
-    s"Bank $bank in dimension $dim of `$id' already consumed.", pos)
+  case class AlreadyConsumed(id: Id, dim: Int, bank: Int, origLoc: Position)
+                            (implicit pos: Position) extends TypeError(
+    s"Bank $bank in dimension $dim of `$id' already consumed.", pos,
+    s"\n[${origLoc.line}.${origLoc.column}] Last consume happened here:\n${origLoc.longString}")
 
   case class InvalidDynamicIndex(id:Id, bf:Int) extends TypeError(
     s"Dynamic access of array `$id' requires unbanked dimension. Actual banking factor: $bf. Use a shrink view to create unbanked array.", id.pos)
