@@ -20,6 +20,9 @@
       "cpp-runnable": {
         "title": "Generating Executables"
       },
+      "headers": {
+        "title": "Generating Headers"
+      },
       "imports": {
         "title": "Imports"
       },
