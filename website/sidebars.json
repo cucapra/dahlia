@@ -11,7 +11,8 @@
     ],
     "CLI": [
       "cli-compile",
-      "cpp-runnable"
+      "cpp-runnable",
+      "headers"
     ],
     "Tools": [
       "text-editors",
