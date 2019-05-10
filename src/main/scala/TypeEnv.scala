@@ -4,87 +4,9 @@ import scala.util.parsing.input.Position
 
 import Syntax._
 import Errors._
-import CompilerError._
-import TypeInfo._
 import Utils.RichOption
 
 object TypeEnv {
-
-  /**
-   * An Environment that keeps tracks of Lexical Scopes.
-   */
-  trait ScopeManager[T <: ScopeManager[T]] {
-    /**
-     * A Scope in the environment. A scope is a collection of bindings in the
-     * current lexical scope.
-     */
-    type Scope[K, V] = Map[K, V]
-
-    /**
-     * Open a new scope and run commands in it. When the scope ends, the
-     * bindings and capabilities bound in this scope are returned
-     *
-     * @param inScope Commands executed with the inner scope.
-     * @param resources Amount of resources required inside new scope.
-     * @returns A new environment without the topmost scope and a Scope
-     *          containing all bindings in the topmost scope.
-     */
-    def withScope(resources: Int)(inScope: T => T): (T, Scope[Id, Type]) =
-      inScope(this.addScope(resources)).endScope(resources)
-
-    /**
-     * Add a new scope which consumes [[resources]].
-     * @param resources Amount of resources the new Scope consumes
-     */
-    def addScope(resources: Int): T
-
-    /**
-     *  Remove the topmost scope from the environment. The bindings and capabilities
-     *  bound in this scope are removed from the context.
-     *  This method is only used for interface implementation and should not be
-     *  used directly.
-     *  @param resources Number of resources to be removed from the scope.
-     *  @returns A new environment without the topmost scope and a Scope
-     *           containing all bindings in the topmost scope.
-     */
-    def endScope(resources: Int): (T, Scope[Id, Type])
-
-    /**
-     * @returns The total amount of resources required by the environment
-     */
-    def getResources: Int
-  }
-
-  trait Mergable[T <: Mergable[T]] {
-
-    val getBoundIds: Set[Id]
-
-    def getInfo(id: Id): Info
-
-    def update(id: Id, info: Info): T
-
-    /**
-     * Merge this environment with [[that]] to create e' such that for each
-     * identifier id, e'.banks(id) <= this.banks(id) and e'.banks(id) <=
-     * that.banks(id).
-     * @assumes: this.getBoundIds == that.getBoundIds
-     */
-    def merge(that: T): T = {
-      // Sanity check: The same set of ids are bound by both environments
-      if (this.getBoundIds != that.getBoundIds) {
-        throw Impossible(
-          "merge",
-          "Trying to merge two environments which bind different sets of ids." +
-          s" Intersection of bind set: ${this.getBoundIds & that.getBoundIds}")
-      }
-
-      // For each bound id, set consumed banks to the union of consumed bank sets
-      // from both environments
-      this.getBoundIds.foldLeft[T](that)({ case (env, id) => {
-        env.update(id, env.getInfo(id) merge this.getInfo(id))
-      }})
-    }
-  }
 
   /**
    * An environment keep tracks of information for type checking:
@@ -97,9 +19,7 @@ object TypeEnv {
    * last two associations. A scope is a logical grouping of assoication
    * corresponding to lexical scope in programs.
    */
-  trait Environment
-    extends ScopeManager[Environment]
-    with Mergable[Environment] {
+  sealed trait Environment {
 
     /**
      * Methods to manipulate type defs. Since the typedefs are top level,
@@ -193,8 +113,140 @@ object TypeEnv {
      * @param binds A scope with bindings to be added to the environment.
      * @returns A new environment with all the bindings in the environment.
      */
-    def ++(binds: Scope[Id, Type]): Environment =
+    def ++(binds: Map[Id, Type]): Environment =
       binds.foldLeft[Environment](this)({ case (e, b) => e.add(b._1, b._2) })
+
+    /**
+     * Merge this environment with [[that]] to create e' such that for each
+     * identifier id, e'.banks(id) <= this.banks(id) and e'.banks(id) <=
+     * that.banks(id).
+     * @assumes: this.getBoundIds == that.getBoundIds
+     */
+    def merge(that: Environment): Environment
+
+    /**
+     * Open a new scope and run commands in it. When the scope ends, the
+     * bindings and capabilities bound in this scope are returned
+     *
+     * @param inScope Commands executed with the inner scope.
+     * @param resources Amount of resources required inside new scope.
+     * @returns A new environment without the topmost scope and a Scope
+     *          containing all bindings in the topmost scope.
+     */
+    def withScope(resources: Int)
+                 (inScope: Environment => Environment): (Environment, Map[Id, Type])
+
+    /**
+     * @returns The total amount of resources required by the environment
+     */
+    def getResources: Int
   }
 
+}
+
+object TypeEnvImplementation {
+
+  import TypeInfo._
+  import ScopeMap._
+  import CompilerError._
+  import TypeEnv.Environment
+
+  val emptyEnv: Environment = Env()(1)
+
+  private case class Env(
+    typeMap: ScopedMap[Id, Info] = ScopedMap(),
+    capMap: ScopedMap[Expr, Capability] = ScopedMap(),
+    typeDefMap: Map[Id, Type] = Map())
+    (implicit val res: Int) extends Environment {
+
+    type TypeScope = Map[Id, Info]
+    type CapScope = Map[Expr, Capability]
+
+    /** Capability methods */
+    def getCap(expr: Expr): Option[Capability] = capMap(expr)
+    def addCap(expr: Expr, cap: Capability): Environment = capMap.add(expr, cap) match {
+      case Some(cMap) => this.copy(capMap = cMap)
+      case None => throw Impossible("addCap", s"Capability for $expr already exists.")
+    }
+
+    /** Type defintions */
+    def resolveType(typ: Type): Type = typ match {
+      case TAlias(n) => getType(n)
+      case TFun(args) => TFun(args.map(resolveType(_)))
+      case arr@TArray(t, _) => arr.copy(typ = resolveType(t))
+      case t => t
+    }
+    def addType(alias: Id, typ: Type) = typeDefMap.get(alias) match {
+      case Some(_) => throw AlreadyBoundType(alias)
+      case None => this.copy(typeDefMap = typeDefMap + (alias -> typ))
+    }
+    def getType(alias: Id) = typeDefMap.get(alias) match {
+      case Some(t) => t
+      case None => throw UnboundType(alias)
+    }
+
+    /** Type binding methods */
+    def apply(id: Id) = getInfo(id).typ
+    def add(id: Id, typ: Type) = typeMap.add(id, Info(id, resolveType(typ))) match {
+      case None => throw AlreadyBound(id)
+      case Some(tMap) => this.copy(typeMap = tMap)
+    }
+    def update(id: Id, typ: Info) = typeMap.update(id, typ) match {
+      case None => throw UnboundVar(id)
+      case Some(tMap) => this.copy(typeMap = tMap)
+    }
+    def consumeBank(id: Id, dim: Int, bank: Int)
+                   (implicit pos: Position): Environment = {
+      val tMap = typeMap
+                  .update(id, this.getInfo(id).consumeBank(dim, bank))
+                  .getOrThrow(UnboundVar(id))
+      this.copy(typeMap = tMap)
+    }
+
+    val getResources = res
+
+    /** Helper functions for Mergable[Env] */
+    def getInfo(id: Id): Info = typeMap(id) match {
+      case Some(info) => info
+      case None => throw UnboundVar(id)
+    }
+    lazy val getBoundIds = typeMap.keys
+    def merge(env: Environment): Environment = env match {
+      case that:Env =>
+        // Sanity check: The same set of ids are bound by both environments
+        if (this.getBoundIds != that.getBoundIds) {
+          throw Impossible(
+            "merge",
+            "Trying to merge two environments which bind different sets of ids." +
+            s" Intersection of bind set: ${this.getBoundIds & that.getBoundIds}")
+        }
+
+        // For each bound id, set consumed banks to the union of consumed bank sets
+        // from both environments
+        this.getBoundIds.foldLeft[Env](that)({ case (env, id) => {
+          env.update(id, env.getInfo(id) merge this.getInfo(id))
+        }})
+    }
+
+    /** Helper functions for ScopeManager */
+    def addScope(resources: Int) = {
+      Env(typeMap.addScope, capMap.addScope, typeDefMap)(res * resources)
+    }
+    def endScope(resources: Int) = {
+      val scopes = for {
+        (tScope, tMap) <- typeMap.endScope;
+        (_, cMap) <- capMap.endScope
+      } yield (Env(tMap, cMap, typeDefMap)(res / resources), tScope)
+
+      scopes match {
+        case None => throw Impossible("endScope", "Removed topmost scope")
+        case Some((env, map)) => env -> map.map({ case (id, info) => id -> info.typ })
+      }
+    }
+    def withScope(resources: Int)(inScope: Environment => Environment) =
+      inScope(this.addScope(resources)) match {
+        case env:Env => env.endScope(resources)
+      }
+
+  }
 }
