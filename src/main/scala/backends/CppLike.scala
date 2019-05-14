@@ -116,9 +116,9 @@ object Cpp {
         case CExpr(e) => e <> semi
         case CEmpty => emptyDoc
         case _:CView =>
-          throw Impossible("emitCmd", "Views should not exist during codegen.")
+          throw Impossible("Views should not exist during codegen.")
         case _:CSplit =>
-          throw Impossible("emitCmd", "Views should not exist during codegen.")
+          throw Impossible("Views should not exist during codegen.")
     }
 
     def emitDecl(d: Decl): Doc = d.typ match {

@@ -8,7 +8,8 @@ libraryDependencies ++= Seq(
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.1",
   "org.bitbucket.inkytonik.kiama" %% "kiama" % "2.2.0",
   "com.github.scopt" %% "scopt" % "3.7.1",
-  "com.outr" %% "scribe" % "2.7.2"
+  "com.outr" %% "scribe" % "2.7.2",
+  "com.lihaoyi" %% "sourcecode" % "0.1.5"
 )
 
 scalacOptions ++= Seq(
