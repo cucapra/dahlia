@@ -202,7 +202,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
   }
 
   lazy val simpleCmd: P[Command] = positioned {
-    "let" ~> iden ~ (":" ~> typ).? ~ ("=" ~> expr) ^^ {
+    "let" ~> iden ~ (":" ~> typ).? ~ ("=" ~> expr).? ^^ {
       case id ~ t ~ exp => CLet(id, t, exp)
     } |
     view | splitView |

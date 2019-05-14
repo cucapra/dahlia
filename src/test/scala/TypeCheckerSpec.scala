@@ -7,36 +7,50 @@ import org.scalatest.FunSpec
 
 class TypeCheckerSpec extends FunSpec {
 
-  describe("Let without type") {
-    it("infers dynamic type for static numbers") {
-      val e1 = typeCheck("let x = 1")
-      assert(e1("x") === TSizedInt(1))
-    }
-  }
+  describe("Let bindings") {
 
-  describe("Let with explicit type") {
-    it("assigns explicit type") {
-      val e1 = typeCheck("let x: bit<16> = 1;")
-      assert(e1("x") === TSizedInt(16))
-    }
-
-    it("allows using larger sized int in assignment") {
-      val e2 = typeCheck("decl a: bit<8>; let x: bit<16> = a;")
-      assert(e2("x") === TSizedInt(16))
-    }
-
-    it("disallows using smaller sized int in assignment") {
-      assertThrows[UnexpectedSubtype] {
-        typeCheck("decl a: bit<16>; let x: bit<8> = a;")
+    describe("without explicit type but with initializer") {
+      it("infers dynamic type for static numbers") {
+        val e1 = typeCheck("let x = 1")
+        assert(e1("x") === TSizedInt(1))
       }
     }
 
-    it("RHS type must be equal to LHS type") {
-      assertThrows[UnexpectedSubtype] {
-        typeCheck("let x: bit<16> = true")
+    describe("with explicit type and initializer") {
+      it("assigns explicit type") {
+        val e1 = typeCheck("let x: bit<16> = 1;")
+        assert(e1("x") === TSizedInt(16))
+      }
+      it("allows using larger sized int in assignment") {
+        val e2 = typeCheck("decl a: bit<8>; let x: bit<16> = a;")
+        assert(e2("x") === TSizedInt(16))
+      }
+      it("disallows using smaller sized int in assignment") {
+        assertThrows[UnexpectedSubtype] {
+          typeCheck("decl a: bit<16>; let x: bit<8> = a;")
+        }
+      }
+      it("RHS type must be equal to LHS type") {
+        assertThrows[UnexpectedSubtype] {
+          typeCheck("let x: bit<16> = true")
+        }
       }
     }
 
+    describe("with explicit type and without initializer") {
+      it("works") {
+        val e1 = typeCheck("let x: bit<16>;")
+        assert(e1("x") === TSizedInt(16))
+      }
+      it("can be assigned to") {
+        typeCheck("let x: bit<16>; x := 1;")
+      }
+      it("requires correct type in assignment") {
+        assertThrows[UnexpectedSubtype] {
+          typeCheck("let x: bit<16>; x := true;")
+        }
+      }
+    }
   }
 
   describe("Cannot reference undeclared var") {

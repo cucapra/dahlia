@@ -118,6 +118,8 @@ object Errors {
   case class ArrayInRecord(name: Id, field: Id, typ: Type) extends RuntimeException(
     withPos(s"Records can only contain primitive types and other structs. Found field $field with $typ in record definition for `$name'.", field.pos))
   case class MalformedType(msg: String) extends RuntimeException(msg)
+  case class LetWithoutInitAndType(let: CLet) extends RuntimeException(
+    withPos("let expression without initializer must have an explicit type", let.pos))
 }
 
 object CompilerError {

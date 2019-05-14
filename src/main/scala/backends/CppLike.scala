@@ -102,7 +102,10 @@ object Cpp {
     implicit def emitCmd(c: Command): Doc = c match {
       case CPar(c1, c2) => c1 <@> c2
       case CSeq(c1, c2) => c1 <@> text("//---") <@> c2
-        case CLet(id, typ, e) => emitType(typ.get) <+> value(id) <+> equal <+> e <> semi
+        case CLet(id, typ, init) =>
+          emitType(typ.get) <+> value(id) <>
+          (if (init.isDefined) space <> equal <+> emitExpr(init.get) else emptyDoc) <>
+          semi
         case CIf(cond, cons, alt) =>
           "if" <> parens(cond) <> scope (cons) <+> "else" <> scope(alt)
         case f:CFor => emitFor(f)
