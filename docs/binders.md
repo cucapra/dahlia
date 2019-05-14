@@ -7,11 +7,12 @@ Variables in Fuse can be bound in four ways.
 
 ## Let bindings
 
-A `let` binding can be used in two ways:
+A `let` binding can be used in three ways:
 
 ```
 let <iden> = <expr>
 let <iden>: <type> = <expr>
+let <iden>: <type>;
 ```
 
 The first allows simple variable declarations that automatically infer the
@@ -28,8 +29,16 @@ can be represented as the explicit type.
 let x: bit<10> = 1;
 ```
 
-The right hand side has the type `bit<1>` which can be zero extended to be
-represented using 10 bits.
+> The right hand side has the type `bit<1>` which can be zero extended to be
+> represented using 10 bits.
+
+The final form allows defining uninitialized variables. Reading from uninitialized
+memories is undefined behaviour.
+
+```
+let x: bit<10>;
+let y = x; // undefined behavior
+```
 
 ## Declarations
 
