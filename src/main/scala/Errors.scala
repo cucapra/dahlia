@@ -75,10 +75,6 @@ object Errors {
   case class AlreadyBound(id: Id) extends TypeError(
     s"Variable `$id' already bound in scope", id.pos)
 
-  // Reduction errors
-  case class ReductionInvalidRHS(p: Position, rop: ROp, tl: Type, tr: Type) extends TypeError(
-    s"Unexpected type on right hand side of $rop. Expected: $tl[N bank N], received: $tr", p)
-
   // View errors
   case class InvalidShrinkWidth(pos: Position, bf: Int, width: Int) extends TypeError(
     s"Invalid shrinking factor for view. Expected factor of $bf (banking factor), received: $width", pos)

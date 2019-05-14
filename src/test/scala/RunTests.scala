@@ -7,7 +7,7 @@ import org.scalatest.Tag
 import java.nio.file.{Files, Paths, Path}
 import collection.JavaConverters._
 
-import Utils._
+import Configuration._
 
 object SlowTest extends Tag("fuselang.tag.SlowTest")
 
