@@ -33,11 +33,11 @@ let x: bit<10> = 1;
 > represented using 10 bits.
 
 The final form allows defining uninitialized variables. Reading from uninitialized
-memories is undefined behaviour.
+memories returns undefined garbage values stored in the memory.
 
 ```
 let x: bit<10>;
-let y = x; // undefined behavior
+let y = x; // returns garbage value stored in memory
 ```
 
 ## Declarations
