@@ -56,7 +56,7 @@ Local array definitions can optionally be initialized. Local memories with
 initializers can only have a single dimension.
 
 ```C
-let tmp: bit<32>[3] = {1, 2, 3}
+let tmp: bit<32>[3] = {1, 2, 3};
 ```
 
 ## Records
