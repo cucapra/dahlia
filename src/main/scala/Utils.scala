@@ -8,8 +8,8 @@ import backend.{VivadoBackend, CppRunnable, Backend}
 object Utils {
 
   sealed trait Mode
-  case object Compile extends Mode
-  case object Run extends Mode
+  final case object Compile extends Mode
+  final case object Run extends Mode
 
   val emptyConf = Config(null)
 
@@ -37,6 +37,10 @@ object Utils {
       case Some(v) => v
       case None => throw except
     }
+  }
+
+  @inline def assertOrThrow[T <: Throwable](cond: Boolean, except: T) = {
+    if (!cond) throw except
   }
 
 }

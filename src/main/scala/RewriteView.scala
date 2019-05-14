@@ -44,11 +44,12 @@ object RewriteView {
     case app@EApp(_, args) => for {
       argsn <- State.mapList(rewriteExpr)(args)
     } yield app.copy(args = argsn)
-    case ERecLiteral(fs) => {
-      for {
-        fsn <- State.mapMap(rewriteExpr)(fs)
-      } yield ERecLiteral(fsn)
-    }
+    case ERecLiteral(fs) => for {
+      fsn <- State.mapMap(rewriteExpr)(fs)
+    } yield ERecLiteral(fsn)
+    case EArrLiteral(idxs) => for {
+      idxsn <- State.mapList(rewriteExpr)(idxs)
+    } yield EArrLiteral(idxsn)
   }
 
   private def genViewAccessExpr(view: View, idx: Expr): Expr = view.suffix match {

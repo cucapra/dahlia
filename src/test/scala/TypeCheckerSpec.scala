@@ -1055,7 +1055,7 @@ class TypeCheckerSpec extends FunSpec {
         """ )
     }
     it("cannot be defined without explicit type in let") {
-      assertThrows[ExplicitRecTypeMissing] {
+      assertThrows[ExplicitTypeMissing] {
         typeCheck("""
           record point { x: bit<32>; y: bit<32> }
           let p = {x = 1; y = 2 }
@@ -1063,7 +1063,7 @@ class TypeCheckerSpec extends FunSpec {
       }
     }
     it("cannot be used inside expressions") {
-      assertThrows[RecLiteralNotInBinder] {
+      assertThrows[NotInBinder] {
         typeCheck("""
           record point { x: bit<32>; y: bit<32> }
           let p = 1 + {x = 1; y = 2 }
@@ -1092,6 +1092,42 @@ class TypeCheckerSpec extends FunSpec {
           let p: point = {x = 1; y = 2};
           """ )
       }
+    }
+  }
+
+  describe("Array literals") {
+    it("requires explicit type in the let binder") {
+      assertThrows[ExplicitTypeMissing] {
+        typeCheck("""
+          let x = {1, 2, 3}
+          """ )
+      }
+    }
+    it("does not support multidimensional literals") {
+      assertThrows[Unsupported] {
+        typeCheck("""
+          let x: bit<32>[10][10] = {1, 2, 3}
+          """ )
+      }
+    }
+    it("requires literal to have the same size") {
+      assertThrows[LiteralLengthMismatch] {
+        typeCheck("""
+          let x: bit<32>[5] = {1, 2, 3}
+          """ )
+      }
+    }
+    it("requires subtypes in the array literal") {
+      assertThrows[UnexpectedSubtype] {
+        typeCheck("""
+          let x: bit<32>[3] = {true, false, true}
+          """ )
+      }
+    }
+    it("can be banked") {
+      typeCheck("""
+        let x: bool[3 bank 3] = {true, false, true}
+        """ )
     }
   }
 

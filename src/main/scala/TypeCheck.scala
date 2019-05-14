@@ -8,7 +8,7 @@ import CompilerError._
 import Subtyping._
 import TypeEnv._
 import TypeEnvImplementation._
-import Utils.RichOption
+import Utils.{RichOption, assertOrThrow}
 import Logger.PositionalLoggable
 
 /**
@@ -175,7 +175,8 @@ object TypeChecker {
     case EFloat(_) => TFloat() -> env
     case EInt(v, _) => TStaticInt(v) -> env
     case EBool(_) => TBool() -> env
-    case ERecLiteral(_) => throw RecLiteralNotInBinder(expr.pos)
+    case ERecLiteral(_) => throw NotInBinder(expr.pos, "Record Literal")
+    case EArrLiteral(_) => throw NotInBinder(expr.pos, "Array Literal")
     case ECast(e, castType) => {
       val (typ, nEnv) = checkE(e)
       if (safeCast(typ, castType) == false) {
@@ -317,8 +318,31 @@ object TypeChecker {
           throw ReductionInvalidRHS(r.pos, rop, t1, ta)
       }
     }
+    case l@CLet(id, typ, Some(EArrLiteral(idxs))) => {
+      val expTyp = typ.getOrThrow(ExplicitTypeMissing(l.pos, "Array literal", id))
+
+      env.resolveType(expTyp).matchOrError(l.pos, "Let bound array literal", "array type") {
+        case TArray(elemTyp, dims) => {
+          assertOrThrow(dims.length == 1,
+            Unsupported(l.pos, "Multidimensional array literals"))
+
+          assertOrThrow(dims(0)._1 == idxs.length,
+            LiteralLengthMismatch(l.pos, dims(0)._1, idxs.length))
+
+          val nEnv = idxs.foldLeft(env)({ case (e, idx) =>
+            val (idxTyp, nEnv) = checkE(idx)(e)
+            assertOrThrow(isSubtype(idxTyp, elemTyp),
+              UnexpectedSubtype(idx.pos, "array literal", elemTyp, idxTyp))
+            nEnv
+          })
+
+          id.typ = typ
+          nEnv.add(id, expTyp)
+        }
+      }
+    }
     case l@CLet(id, typ, Some(exp@ERecLiteral(fs))) => {
-      val expTyp = typ.getOrThrow(ExplicitRecTypeMissing(l.pos, id))
+      val expTyp = typ.getOrThrow(ExplicitTypeMissing(l.pos, "Record literal", id))
       env.resolveType(expTyp) match {
         case recTyp@TRecType(name, expTypes) => {
           // Typecheck expressions in the literal and generate a new id to type map.
@@ -381,7 +405,10 @@ object TypeChecker {
       }
     }
     case l@CLet(id, typ, None) => {
-      val fullTyp = typ.map(env.resolveType(_)).getOrThrow(LetWithoutInitAndType(l))
+      val fullTyp = typ
+        .map(env.resolveType(_))
+        .getOrThrow(ExplicitTypeMissing(l.pos, "Let binding without initializer", id))
+
       env.add(id, fullTyp)
     }
     case CFor(range, par, combine) => {

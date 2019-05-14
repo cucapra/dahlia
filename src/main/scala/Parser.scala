@@ -31,6 +31,9 @@ private class FuseParser extends RegexParsers with PackratParsers {
   lazy val float = "(-)?[0-9]+\\.[0-9]+".r ^^ { n => n.toFloat }
   lazy val boolean = "true" ^^ { _ => true } | "false" ^^ { _ => false }
 
+  lazy val arrLiteral: P[Expr] = positioned {
+    braces(repsep(expr, ",")) ^^ { case es => EArrLiteral(es) }
+  }
   lazy val eaa: P[Expr] = positioned {
     iden ~ rep1(brackets(expr)) ^^ { case id ~ idxs => EArrAccess(id, idxs) }
   }
@@ -43,6 +46,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
   lazy val exprCast: P[Expr] = parens(expr ~ "as" ~ atyp) ^^ { case e ~ _ ~ t => ECast(e, t)}
 
   lazy val simpleAtom: P[Expr] = positioned {
+    arrLiteral |
     eaa |
     recLiteral |
     float ^^ { case f => EFloat(f) } |

@@ -19,7 +19,6 @@ object Errors {
   // Type mismatch
   case class UnexpectedType(pos: Position, construct: String, exp: String, actual: Type) extends TypeError(
     s"Expected type $exp in $construct, received: $actual.", pos)
-
   case class UnexpectedSubtype(pos: Position, con: String, exp: Type, actual: Type) extends TypeError(
     s"Expected subtype of $exp in $con, received: $actual.", pos)
 
@@ -100,14 +99,14 @@ object Errors {
   // Record Errors
   case class UnknownRecordField(pos: Position, recType: Id, field: Id) extends TypeError(
     s"Record type `$recType' has no field named `$field'.", pos)
-  case class RecLiteralNotInBinder(pos: Position) extends TypeError(
-    s"Record literal can only be bound by `let'. Found in context:", pos)
-  case class ExplicitRecTypeMissing(pos: Position, id: Id) extends TypeError(
-    s"Record literals require explict types. Missing type for `$id'.", pos)
   case class MissingField(pos: Position, recType: Id, field: Id) extends TypeError(
     s"Record literal of type `$recType' missing field `$field'", pos)
   case class ExtraField(pos: Position, recType: Id, field: Id) extends TypeError(
     s"Record literal of type `$recType' has an extra field `$field'", pos)
+
+  // Array errors
+  case class LiteralLengthMismatch(pos: Position, expLen: Int, acLen: Int) extends TypeError(
+    s"Given type requires $expLen elements but literals has $acLen elements.", pos)
 
   // Parsing errors
   case class ParserError(msg: String) extends RuntimeException(msg)
@@ -118,8 +117,12 @@ object Errors {
   case class ArrayInRecord(name: Id, field: Id, typ: Type) extends RuntimeException(
     withPos(s"Records can only contain primitive types and other structs. Found field $field with $typ in record definition for `$name'.", field.pos))
   case class MalformedType(msg: String) extends RuntimeException(msg)
-  case class LetWithoutInitAndType(let: CLet) extends RuntimeException(
-    withPos("let expression without initializer must have an explicit type", let.pos))
+  case class NotInBinder(pos: Position, construct: String) extends RuntimeException(
+    withPos(s"$construct can only be bound by `let'. Found in context:", pos))
+  case class ExplicitTypeMissing(pos: Position, litType: String, id: Id) extends RuntimeException(
+    withPos(s"$litType requires explict types. Missing type for `$id'.", pos))
+  case class Unsupported(pos: Position, construct: String) extends RuntimeException(
+    withPos(s"$construct are not supported.", pos))
 }
 
 object CompilerError {
