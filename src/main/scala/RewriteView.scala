@@ -71,7 +71,7 @@ object RewriteView {
       c2n <- rewriteC(c2)
     } yield CSeq(c1n, c2n)
     case l@CLet(_, _, e) => for {
-      en <- rewriteExpr(e)
+      en <- State.mapOpt(rewriteExpr)(e)
     } yield l.copy(e = en)
     case CView(id, arrId, dims) => State { env =>
       val f = (es: List[Expr]) => EArrAccess(arrId, es.zip(dims).map({ case (idx, view) =>
@@ -218,6 +218,14 @@ private object StateHelper {
           hdn <- f(hd)
           tln <- mapList(f)(tl)
         } yield hdn :: tln
+      }
+
+    def mapOpt[S, A, B](f: A => State[S, B])(eOpt: Option[A]): State[S, Option[B]] =
+      eOpt match {
+        case None => State.unit(None)
+        case Some(e) => for {
+          en <- f(e)
+        } yield Some(en)
       }
 
     /**

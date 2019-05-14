@@ -62,6 +62,7 @@ class ParsingTests extends org.scalatest.FunSuite {
 
   test("let") {
     parseAst("let x = 1; x + 2;")
+    parseAst("let x: bit<32>; x + 2;")
   }
 
   test("for loop") {

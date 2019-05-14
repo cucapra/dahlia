@@ -67,10 +67,10 @@ object BoundsChecker {
     }
   }
 
-  private def checkC(c: Command) : Unit = c match {
-    case CPar(c1, c2) => checkC(c1) ; checkC(c2)
-    case CSeq(c1, c2) => checkC(c1) ; checkC(c2)
-    case CLet(_, _, exp) => checkE(exp)
+  private def checkC(c: Command): Unit = c match {
+    case CPar(c1, c2) => checkC(c1); checkC(c2)
+    case CSeq(c1, c2) => checkC(c1); checkC(c2)
+    case CLet(_, _, exp) => exp.foreach(checkE(_))
     case CView(viewId, arrId, views) => {
       val typ = arrId.typ.getOrThrow(Impossible("checkC", s"$arrId is missing type in $c"))
       typ.matchOrError(c.pos, "view", "array type"){ case TArray(_, dims) =>

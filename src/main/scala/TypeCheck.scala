@@ -317,7 +317,7 @@ object TypeChecker {
           throw ReductionInvalidRHS(r.pos, rop, t1, ta)
       }
     }
-    case l@CLet(id, typ, exp@ERecLiteral(fs)) => {
+    case l@CLet(id, typ, Some(exp@ERecLiteral(fs))) => {
       val expTyp = typ.getOrThrow(ExplicitRecTypeMissing(l.pos, id))
       env.resolveType(expTyp) match {
         case recTyp@TRecType(name, expTypes) => {
@@ -354,7 +354,7 @@ object TypeChecker {
         case t => throw UnexpectedType(exp.pos, "let", "record type", t)
       }
     }
-    case l@CLet(id, typ, exp) => {
+    case l@CLet(id, typ, Some(exp)) => {
       // Check if the explicit type is bound in scope. Also, if the type is
       // a static int, upcast it to sized int. We do not allow variables to
       // have static types.
@@ -375,9 +375,14 @@ object TypeChecker {
             case TStaticInt(v) => TSizedInt(bitsNeeded(v))
             case t => t
           }
+          // Add inferred type to the AST Node.
           l.typ = Some(typ); e1.add(id, typ)
         }
       }
+    }
+    case l@CLet(id, typ, None) => {
+      val fullTyp = typ.map(env.resolveType(_)).getOrThrow(LetWithoutInitAndType(l))
+      env.add(id, fullTyp)
     }
     case CFor(range, par, combine) => {
       val iter = range.iter

@@ -38,7 +38,7 @@ object TypeEnv {
     def getType(alias: Id): Type
 
     /**
-     * Returns a type with recursively resolved TAlias.
+     * Returns a type with all nested TAliases resolved to a concrete type.
      */
     def resolveType(typ: Type): Type
 
