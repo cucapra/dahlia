@@ -63,7 +63,7 @@ class TypeCheckerSpec extends FunSpec {
 
   describe("Array access") {
     it("with invalid accessor type") {
-      assertThrows[InvalidIndex] {
+      assertThrows[UnexpectedType] {
         typeCheck("""
           decl a: bit<10>[10];
           a[true];

@@ -96,7 +96,7 @@ object TypeChecker {
           case (TSizedInt(_), env2) =>
             if (dims(dim)._2 != 1) throw InvalidDynamicIndex(id, dims(dim)._2)
             else env2.consumeBank(id, dim, 0) -> bres * 1
-          case (t, _) => throw InvalidIndex(id, t)
+          case (t, _) => throw UnexpectedType(idx.pos, "array indexing", "integer type", t)
         }
     })
 
