@@ -84,6 +84,8 @@ Record literals can only defined in a let binder and need an explicit type.
 let p: point = { x = 1; y = 2 }
 ```
 
+> Note the missing semicolon after `y = 2`
+
 ## Binary operations
 
 ```C
