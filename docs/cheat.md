@@ -30,10 +30,33 @@ decl a: bit<32>; // number
 
 ## Arrays
 
+### Global arrays
+
+Arrays defined using `decl` are used as the memory interface for this module.
+
 ```C
 decl arr: bit<32>[10] // 10 elements each of which is bit<10>
 decl barr: bit<32>[10 bank 2] // An array with two banks
 decl marr: bit<32>[10 bank 2][8 bank 4] // multi-dimensional arrays are supported
+```
+
+### Local arrays
+
+Local arrays are either mapped to BRAM or a register file depending on their
+size and usage. Read uninitialized memories results in undefined behavior.
+
+```C
+let tmp: bit<32>[10];
+let tmp_banked: bit<32>[10 bank 5];
+```
+
+### Literals
+
+Local array definitions can optionally be initialized. Local memories with
+initializers can only have a single dimension.
+
+```C
+let tmp: bit<32>[3] = {1, 2, 3}
 ```
 
 ## Records
