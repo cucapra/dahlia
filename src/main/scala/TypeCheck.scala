@@ -161,7 +161,7 @@ object TypeChecker {
                     (implicit env: Environment): (Type, Environment) = {
     val (typ, nEnv) = _checkE(e)
     if (e.typ.isDefined) {
-      throw Impossible("checkE", s"$e was type checked multiple times.")
+      throw Impossible(s"$e was type checked multiple times.")
     }
     e.typ = Some(typ)
     typ -> nEnv
@@ -209,7 +209,7 @@ object TypeChecker {
           // This works correctly with capabilties.
           (typ, arg) match {
             case (_:TArray, EVar(id)) => e1.consumeAll(id)(expr.pos)
-            case (_:TArray, expr) => throw Impossible("_checkE", s"Type of $expr is $typ")
+            case (_:TArray, expr) => throw Impossible(s"Type of $expr is $typ")
             case _ => e1
           }
         }})

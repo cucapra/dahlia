@@ -17,7 +17,7 @@ object BoundsChecker {
   private def checkE(e: Expr): Unit = e match {
     case EArrAccess(id, idxs) =>
       id.typ
-        .getOrThrow(Impossible("checkE", s"$id missing type in $e"))
+        .getOrThrow(Impossible(s"$id missing type in $e"))
         .matchOrError(id.pos, "array access", s"array type"){
           case TArray(_, dims) =>
             idxs
@@ -53,7 +53,7 @@ object BoundsChecker {
 
       val maxVal: Int =
         sufExpr.typ
-          .getOrThrow(Impossible("checkView", s"$sufExpr is missing type"))
+          .getOrThrow(Impossible(s"$sufExpr is missing type"))
           .matchOrError(viewId.pos, "view", "Integer Type"){
           case idx:TIndex => fac * idx.maxVal
           case TStaticInt(v) => fac * v
@@ -74,7 +74,7 @@ object BoundsChecker {
     case CSeq(c1, c2) => checkC(c1); checkC(c2)
     case CLet(_, _, exp) => exp.foreach(checkE(_))
     case CView(viewId, arrId, views) => {
-      val typ = arrId.typ.getOrThrow(Impossible("checkC", s"$arrId is missing type in $c"))
+      val typ = arrId.typ.getOrThrow(Impossible(s"$arrId is missing type in $c"))
       typ.matchOrError(c.pos, "view", "array type"){ case TArray(_, dims) =>
         views.zip(dims).foreach({ case (view, (len, _)) =>
           checkView(len, viewId, view)

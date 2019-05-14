@@ -17,7 +17,7 @@ object Configuration {
   def toBackend(str: String): Backend = str match {
     case "vivado" => VivadoBackend
     case "c++" => CppRunnable
-    case b => throw CompilerError.Impossible("toBackend", s"Unknown backend $b")
+    case b => throw CompilerError.Impossible(s"Unknown backend $b")
   }
 
   case class Config(

@@ -24,7 +24,7 @@ private class CppRunnable extends CppLike {
       dims.foldLeft(emitType(typ))({ case (acc, _) => "vector" <> angles(acc) })
     case TRecType(n, _) => n
     case _:TFun =>
-      throw Impossible("emitType", "Cannot emit function types")
+      throw Impossible("Cannot emit function types")
     case TAlias(n) => n
   }
 

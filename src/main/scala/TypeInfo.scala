@@ -21,9 +21,9 @@ object TypeInfo {
      */
     def merge(that: Info): Info = {
       if (this.id != that.id)
-        Impossible("merge", s"Tried to merge ${that.id} and ${this.id}")
+        Impossible(s"Tried to merge ${that.id} and ${this.id}")
       if (this.typ != that.typ)
-        Impossible("merge", s"Tried to merge types ${that.typ} and ${this.typ} for ${this.id}")
+        Impossible(s"Tried to merge types ${that.typ} and ${this.typ} for ${this.id}")
 
       (this, that) match {
         case (me:ArrayInfo, that:ArrayInfo) => {
@@ -34,14 +34,14 @@ object TypeInfo {
         }
         case (me:SimpleInfo, _:SimpleInfo) => me
         case _ =>
-          throw Impossible("merge", s"Tried to merge $this and $that.")
+          throw Impossible(s"Tried to merge $this and $that.")
       }
     }
   }
 
   private case class SimpleInfo(id: Id, typ: Type) extends Info {
     def consumeBank(d: Int, b: Int)(implicit p: Position) =
-      throw Impossible("consumeBank", s"Tried to consume bank for type $typ")
+      throw Impossible(s"Tried to consume bank for type $typ")
   }
 
   private case class ArrayInfo(
