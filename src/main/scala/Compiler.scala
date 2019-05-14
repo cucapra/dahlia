@@ -2,7 +2,7 @@ package fuselang
 
 import scala.util.{Try, Success, Failure}
 import java.nio.file.Path
-import Utils._
+import Configuration._
 
 object Compiler {
 
