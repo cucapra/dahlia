@@ -1,7 +1,7 @@
 package fuselang.backend
 
 import fuselang.Syntax._
-import fuselang.Utils._
+import fuselang.Configuration._
 import fuselang.CompilerError._
 
 import Cpp._
@@ -57,7 +57,7 @@ private class VivadoBackend extends CppLike {
     case TAlias(n) => n
   }
 
-  def emitProg(p: Prog, c: fuselang.Utils.Config): String = {
+  def emitProg(p: Prog, c: Config): String = {
     val layout =
       vsep(p.includes.map(emitInclude)) <@>
       vsep(p.defs.map(emitDef)) <@>

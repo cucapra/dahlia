@@ -1,7 +1,7 @@
 package fuselang.backend
 
 import fuselang.Syntax._
-import fuselang.Utils._
+import fuselang.Configuration._
 import fuselang.CompilerError._
 
 import Cpp._
