@@ -314,17 +314,17 @@ class TypeCheckerSpec extends FunSpec {
 
   describe("Reductions") {
     it("RHS should be an array") {
-      assertThrows[ReductionInvalidRHS] {
+      assertThrows[UnexpectedType] {
         typeCheck("let x = 1; x += x;")
       }
     }
     it("RHS should be fully banked") {
-      assertThrows[ReductionInvalidRHS] {
+      assertThrows[UnexpectedType] {
         typeCheck("decl a: bit<32>[8 bank 2]; let x = 0; x += a;")
       }
     }
     it("RHS should be 1-dimensional array") {
-      assertThrows[ReductionInvalidRHS] {
+      assertThrows[UnexpectedType] {
         typeCheck("decl a: bit<32>[8 bank 8][10]; let x = 0; x += a;")
       }
     }

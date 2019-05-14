@@ -310,12 +310,12 @@ object TypeChecker {
           if (isSubtype(t2, t1) == false ||
               dims.length != 1 ||
               dims(0)._1 != dims(0)._2) {
-            throw ReductionInvalidRHS(r.pos, rop, t1, ta)
+            throw UnexpectedType(r.pos, s"reduction operator $rop", "fully banked array", ta)
           } else {
             e2
           }
         case _ =>
-          throw ReductionInvalidRHS(r.pos, rop, t1, ta)
+          throw UnexpectedType(r.pos, s"reduction operator $rop", "fully banked array", ta)
       }
     }
     case l@CLet(id, typ, Some(EArrLiteral(idxs))) => {
