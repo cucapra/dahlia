@@ -83,6 +83,7 @@ object Cpp {
       case EVar(id) => value(id)
       case EBinop(op, e1, e2) => parens(e1 <+> op.toString <+> e2)
       case EArrAccess(id, idxs) => id <> ssep(idxs.map(idx => brackets(emitExpr(idx))), emptyDoc)
+      case EArrLiteral(idxs) => braces(hsep(idxs.map(idx => emitExpr(idx)), comma))
       case ERecAccess(rec, field) => rec <> dot <> field
       case ERecLiteral(fs) => scope {
         hsep(fs.toList.map({ case (id, expr) => "." <> id <+> "=" <+> expr }), comma)

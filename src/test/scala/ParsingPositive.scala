@@ -154,6 +154,18 @@ class ParsingTests extends org.scalatest.FunSuite {
       """ )
   }
 
+  test("record literals") {
+    parseAst("""
+      let res: point = { x = 10; y = 10 };
+      """ )
+  }
+
+  test("array literals") {
+    parseAst("""
+      let res: bit<32>[10] = { 1, 2, 3 };
+      """ )
+  }
+
   test("records access") {
     parseAst("""
       let k = p.x;

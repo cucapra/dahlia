@@ -12,6 +12,8 @@ object BoundsChecker {
     checkC(p.cmd)
   }
 
+  // XXX(rachit): This is incorrect. It needs to recur down to exprs contained
+  // in EBinop, EApp, etc.
   private def checkE(e: Expr): Unit = e match {
     case EArrAccess(id, idxs) =>
       id.typ
