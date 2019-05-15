@@ -7,7 +7,6 @@ import Errors._
 import CompilerError._
 import Subtyping._
 import TypeEnv._
-import TypeEnvImplementation._
 import Utils.{RichOption, assertOrThrow}
 import Logger.PositionalLoggable
 

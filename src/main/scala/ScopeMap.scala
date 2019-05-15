@@ -6,7 +6,7 @@ object ScopeMap {
    * A map that undestands scopes. A ScopedMap is a chain of maps from
    * [[K]] to [[V]].
    */
-  case class ScopedMap[K, V](mapList: List[Map[K, V]] = List(Map[K, V]())) {
+  case class ScopedMap[K, V](private val mapList: List[Map[K, V]] = List(Map[K, V]())) {
 
     def get(key: K): Option[V] =
       mapList.find(map => map.get(key).isDefined).map(c => c(key))
@@ -18,7 +18,7 @@ object ScopeMap {
      */
     def add(key: K, value: V): Option[ScopedMap[K, V]] = get(key) match {
       case Some(_) => None
-      case None => Some(ScopedMap[K, V](mapList.head + (key -> value) :: mapList.tail))
+      case None => Some(this.copy(mapList = mapList.head + (key -> value) :: mapList.tail))
     }
 
     /**
@@ -32,7 +32,7 @@ object ScopeMap {
       case Some(_) => {
         val scope = mapList.indexWhere(m => m.get(key).isDefined)
         val newMapList = mapList.updated(scope, mapList(scope) + (key -> value))
-        Some(ScopedMap(newMapList))
+        Some(this.copy(mapList = newMapList))
       }
     }
 
@@ -41,7 +41,7 @@ object ScopeMap {
 
     def endScope: Option[(Map[K, V], ScopedMap[K, V])] = mapList match {
       case Nil => None
-      case hd :: tl => Some((hd, ScopedMap(tl)))
+      case hd :: tl => Some((hd, this.copy(mapList = tl)))
     }
 
     /** Return the set of all keys. */

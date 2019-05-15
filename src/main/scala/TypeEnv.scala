@@ -4,9 +4,15 @@ import scala.util.parsing.input.Position
 
 import Syntax._
 import Errors._
+import TypeInfo._
+import ScopeMap._
+import CompilerError._
+
 import Utils.RichOption
 
 object TypeEnv {
+
+  val emptyEnv: Environment = Env()(1)
 
   /**
    * An environment keep tracks of information for type checking:
@@ -126,21 +132,10 @@ object TypeEnv {
     def getResources: Int
   }
 
-}
-
-object TypeEnvImplementation {
-
-  import TypeInfo._
-  import ScopeMap._
-  import CompilerError._
-  import TypeEnv.Environment
-
-  val emptyEnv: Environment = Env()(1)
-
   private case class Env(
     typeMap: ScopedMap[Id, Info] = ScopedMap(),
     typeDefMap: Map[Id, Type] = Map())
-    (implicit val res: Int) extends Environment {
+  (implicit val res: Int) extends Environment {
 
     type TypeScope = Map[Id, Info]
     type CapScope = Map[Expr, Capability]
@@ -172,11 +167,11 @@ object TypeEnvImplementation {
       case Some(tMap) => this.copy(typeMap = tMap)
     }
     def consumeBank(id: Id, dim: Int, bank: Int)
-                   (implicit pos: Position): Environment = {
+    (implicit pos: Position): Environment = {
       val tMap = typeMap
-                  .update(id, this.getInfo(id).consumeBank(dim, bank))
-                  .getOrThrow(UnboundVar(id))
-      this.copy(typeMap = tMap)
+        .update(id, this.getInfo(id).consumeBank(dim, bank))
+        .getOrThrow(UnboundVar(id))
+        this.copy(typeMap = tMap)
     }
 
     val getResources = res
@@ -221,6 +216,6 @@ object TypeEnvImplementation {
       inScope(this.addScope(resources)) match {
         case env:Env => env.endScope(resources)
       }
-
   }
 }
+

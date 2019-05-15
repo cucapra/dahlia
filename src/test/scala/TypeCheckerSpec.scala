@@ -86,7 +86,6 @@ class TypeCheckerSpec extends FunSpec {
           """ )
       }
     }
-
     it("consumes bank without unroll") {
       assertThrows[AlreadyConsumed] {
         typeCheck("""
@@ -98,7 +97,6 @@ class TypeCheckerSpec extends FunSpec {
           """ )
       }
     }
-
     it("consumes all banks with unroll") {
       assertThrows[AlreadyConsumed] {
         typeCheck("""
