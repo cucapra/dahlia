@@ -92,22 +92,6 @@ object TypeEnv {
       }
 
     /**
-     * Capability manipulation
-     */
-    /** Get the capability associated with [[e]].
-     *  @param e The Expr to get the capability for.
-     *  @returns The Capability associated with e. Returns None if no association is found.
-     */
-    def getCap(e: Expr): Option[Capability]
-    /**
-     * Associate the capabilitie [[cap]] to the expressions [[e]].
-     * @param e The param with which the capability is associated
-     * @param cap The capability the expression has.
-     * @return A new environment which contains the capability mapping.
-     */
-    def addCap(e: Expr, cap: Capability): Environment
-
-    /**
      * Create a new Environment with all the bindings in [[binds]] added to the
      * current scope.
      * @param binds A scope with bindings to be added to the environment.
@@ -155,19 +139,11 @@ object TypeEnvImplementation {
 
   private case class Env(
     typeMap: ScopedMap[Id, Info] = ScopedMap(),
-    capMap: ScopedMap[Expr, Capability] = ScopedMap(),
     typeDefMap: Map[Id, Type] = Map())
     (implicit val res: Int) extends Environment {
 
     type TypeScope = Map[Id, Info]
     type CapScope = Map[Expr, Capability]
-
-    /** Capability methods */
-    def getCap(expr: Expr): Option[Capability] = capMap(expr)
-    def addCap(expr: Expr, cap: Capability): Environment = capMap.add(expr, cap) match {
-      case Some(cMap) => this.copy(capMap = cMap)
-      case None => throw Impossible(s"Capability for $expr already exists.")
-    }
 
     /** Type defintions */
     def resolveType(typ: Type): Type = typ match {
@@ -229,13 +205,12 @@ object TypeEnvImplementation {
 
     /** Helper functions for ScopeManager */
     def addScope(resources: Int) = {
-      Env(typeMap.addScope, capMap.addScope, typeDefMap)(res * resources)
+      Env(typeMap.addScope, typeDefMap)(res * resources)
     }
     def endScope(resources: Int) = {
       val scopes = for {
-        (tScope, tMap) <- typeMap.endScope;
-        (_, cMap) <- capMap.endScope
-      } yield (Env(tMap, cMap, typeDefMap)(res / resources), tScope)
+        (tScope, tMap) <- typeMap.endScope
+      } yield (Env(tMap, typeDefMap)(res / resources), tScope)
 
       scopes match {
         case None => throw Impossible("Removed topmost scope")

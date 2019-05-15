@@ -8,6 +8,7 @@ object Compiler {
 
   def compileStringWithError(prog: String, c: Config = emptyConf ) = {
     val ast = FuseParser.parse(prog)
+    GadgetChecker.check(ast)
     TypeChecker.typeCheck(ast)
     BoundsChecker.check(ast);
     val rast = RewriteView.rewriteProg(ast)

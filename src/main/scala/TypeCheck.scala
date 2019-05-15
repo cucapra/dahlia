@@ -31,6 +31,7 @@ import Logger.PositionalLoggable
  *  function consume_banks(expr, env):
  *    consume banks and return product of static parts of index types of accessors.
  *
+ *  // TODO(rachit): Update this algorithm
  *  function check_eaa(env, cap_env, req_resources, required_cap, expr):
  *    if cap_env(expr) == R and required_cap == W: FAIL
  *    else if cap_env(expr) == R: SUCCESS
@@ -101,7 +102,7 @@ object TypeChecker {
     })
 
   private def checkLVal(e: Expr)(implicit env: Environment) = e match {
-    case EArrAccess(id, idxs) => env(id) match {
+    case acc@EArrAccess(id, idxs) => env(id) match {
       // This only triggers for r-values. l-values are checked in checkLVal
       case TArray(typ, dims) => {
         if (dims.length != idxs.length) {
@@ -109,16 +110,15 @@ object TypeChecker {
         }
         // Bind the type of to Id
         id.typ = Some(env(id));
-        // Capability check
-        env.getCap(e) match {
-          case Some(Write) => throw AlreadyWrite(e)
-          case Some(Read) => throw InvalidCap(e, Write, Read)
-          case None => {
+        // Consumption check
+        acc.consumable match {
+          case Some(Annotations.ShouldConsume) => {
             val (e1, bres) = consumeBanks(id, idxs, dims)(env, e.pos)
             if (bres != env.getResources)
               throw InsufficientResourcesInUnrollContext(env.getResources, bres, e)
-            typ -> e1.addCap(e, Write)
+            typ -> e1
           }
+          case con => throw Impossible(s"$acc in write position has $con annotation")
         }
       }
       case t => throw UnexpectedType(e.pos, "array access", s"$t[]", t)
@@ -223,7 +223,7 @@ object TypeChecker {
       }
       case (t, _) => throw UnexpectedType(expr.pos, "record access", "record type", t)
     }
-    case EArrAccess(id, idxs) => env(id).matchOrError(expr.pos, "array access", s"array type"){
+    case acc@EArrAccess(id, idxs) => env(id).matchOrError(expr.pos, "array access", s"array type"){
       // This only triggers for r-values. l-values are checked in checkLVal
       case TArray(typ, dims) => {
         if (dims.length != idxs.length) {
@@ -231,13 +231,13 @@ object TypeChecker {
         }
         // Bind the type of to Id
         id.typ = Some(env(id));
-        // Check capabilities
-        env.getCap(expr) match {
-          case Some(Write) => throw InvalidCap(expr, Read, Write)
-          case Some(Read) => typ -> env
-          case None => {
+        // Consumption check
+        acc.consumable match {
+          case None => throw Impossible(s"$acc in read position has no consumable annotation")
+          case Some(Annotations.SkipConsume) => typ -> env
+          case Some(Annotations.ShouldConsume) => {
             val e1 = consumeBanks(id, idxs, dims)(env, expr.pos)._1
-            typ -> e1.addCap(expr, Read)
+            typ -> e1
           }
         }
       }
