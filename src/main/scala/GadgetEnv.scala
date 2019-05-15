@@ -98,7 +98,7 @@ object GadgetEnv {
     }
 
     def withScope(inScope: GadgetEnvironment => GadgetEnvironment) = {
-      val newScope = GadgetEnv(gadgetMap.addScope, resources.addScope)
+      val newScope = GadgetEnv(gadgetMap.addScope, resources.addScope, capMap.addScope)
       inScope(newScope) match {
         case env: GadgetEnv => env.endScope
       }

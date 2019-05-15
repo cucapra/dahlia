@@ -30,10 +30,13 @@ object GadgetChecker {
     checkC(cmd)(addDecls(decls, emptyEnv))
   }
 
+  /**
+   * Add all physical resources corresponding to the decl and the default accessor.
+   */
   private def addDecls(decls: List[Decl], env: Environment) =
     decls
       .collect({ case Decl(id, _:TArray) => id })
-      .foldLeft(env)({ case (env, decl) => env.addResource(decl)})
+      .foldLeft(env)({ case (env, id) => env.addResource(id).addGadget(id, id)})
 
   private def checkESeq(exprs: Iterable[Expr])(implicit env: Environment): Environment =
     exprs.foldLeft(env)({ case (env, expr) => checkE(expr)(env) })
@@ -89,7 +92,8 @@ object GadgetChecker {
     case CSeq(c1, c2) => checkCSeq(Vector(c1, c2))
     case CUpdate(lhs, rhs) => checkE(rhs)(checkLVal(lhs))
     case CReduce(_, lhs, rhs) => checkE(rhs)(checkLVal(lhs))
-    case CLet(id, Some(_:TArray), eOpt) => eOpt.map(checkE(_)).getOrElse(env).addResource(id)
+    case CLet(id, Some(_:TArray), eOpt) =>
+      eOpt.map(checkE(_)).getOrElse(env).addResource(id).addGadget(id, id)
     case CLet(_, _, eOpt) => eOpt.map(checkE).getOrElse(env)
     case CExpr(e) => checkE(e)
     case CIf(cond, c1, c2) => {
