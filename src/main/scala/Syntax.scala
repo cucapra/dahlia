@@ -2,19 +2,37 @@ package fuselang
 
 import scala.util.parsing.input.{Positional, Position}
 
+import Errors._
+
 object Syntax {
 
-  import Errors._
+  /**
+   * Annotations added by the various passes of the type checker.
+   */
+  object Annotations {
+    sealed trait Consumable
+    final case object ShouldConsume extends Consumable
+    final case object SkipConsume extends Consumable
 
-  case class Id(v: String) extends Positional {
-    var typ: Option[Type] = None;
+    sealed trait ConsumableAnnotation {
+      var consumable: Option[Consumable] = None
+    }
+
+    sealed trait TypeAnnotation {
+      var typ: Option[Type] = None;
+    }
+  }
+
+  import Annotations._
+
+  case class Id(v: String) extends Positional with TypeAnnotation {
     override def toString = s"$v"
   }
 
   // Capabilities for read/write
   sealed trait Capability
-  case object Read extends Capability
-  case object Write extends Capability
+  final case object Read extends Capability
+  final case object Write extends Capability
 
   sealed trait Type extends Positional {
     override def toString = this match {
@@ -108,18 +126,17 @@ object Syntax {
   case class OpBAnd() extends BOp with BitOp
   case class OpBXor() extends BOp with BitOp
 
-  sealed trait Expr extends Positional {
+  sealed trait Expr extends Positional with TypeAnnotation {
     def isLVal = this match {
       case _:EVar | _:EArrAccess => true
       case _ => false
     }
-    var typ: Option[Type] = None
   }
   case class EInt(v: Int, base: Int = 10) extends Expr
   case class EFloat(f: Float) extends Expr
   case class EBool(v: Boolean) extends Expr
   case class EBinop(op: BOp, e1: Expr, e2: Expr) extends Expr
-  case class EArrAccess(id: Id, idxs: List[Expr]) extends Expr
+  case class EArrAccess(id: Id, idxs: List[Expr]) extends Expr with ConsumableAnnotation
   case class EArrLiteral(idxs: List[Expr]) extends Expr
   case class ERecAccess(rec: Expr, fieldName: Id) extends Expr
   case class ERecLiteral(fields: Map[Id, Expr]) extends Expr
