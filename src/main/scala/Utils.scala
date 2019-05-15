@@ -13,4 +13,10 @@ object Utils {
     if (!cond) throw except
   }
 
+  @deprecated("pr is used for debugging. Remove all call to it before committing", "fuse 0.0.1")
+  @inline def pr[T](v: T) = {
+    println(v)
+    v
+  }
+
 }
