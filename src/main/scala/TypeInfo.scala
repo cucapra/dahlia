@@ -5,6 +5,7 @@ import scala.util.parsing.input.Position
 import Syntax._
 import Errors._
 import CompilerError._
+import Utils._
 
 object TypeInfo {
 
@@ -12,6 +13,7 @@ object TypeInfo {
     val id: Id
     val typ: Type
 
+    /** Consume the given bank from the Info object */
     def consumeBank(dim: Int, bank: Int)(implicit pos: Position): Info
 
     /**
@@ -20,10 +22,10 @@ object TypeInfo {
      * - avBanks is the intersection of this.conBanks and that.conBanks
      */
     def merge(that: Info): Info = {
-      if (this.id != that.id)
-        Impossible(s"Tried to merge ${that.id} and ${this.id}")
-      if (this.typ != that.typ)
-        Impossible(s"Tried to merge types ${that.typ} and ${this.typ} for ${this.id}")
+      assertOrThrow(this.id == that.id,
+        Impossible(s"Tried to merge ${that.id} and ${this.id}"))
+      assertOrThrow(this.typ == that.typ,
+        Impossible(s"Tried to merge types ${that.typ} and ${this.typ} for ${this.id}"))
 
       (this, that) match {
         case (me:ArrayInfo, that:ArrayInfo) => {
@@ -33,8 +35,7 @@ object TypeInfo {
           me.copy(conBanks = conBanks, conLocs = me.conLocs ++ that.conLocs)
         }
         case (me:SimpleInfo, _:SimpleInfo) => me
-        case _ =>
-          throw Impossible(s"Tried to merge $this and $that.")
+        case _ => throw Impossible(s"Tried to merge $this and $that.")
       }
     }
   }

@@ -8,6 +8,8 @@ import Utils.RichOption
 
 object BoundsChecker {
 
+  // XXX(rachit): This is incorrect. It doesn't do bounds checking on function
+  // bodies.
   def check(p: Prog) : Unit = {
     checkC(p.cmd)
   }
