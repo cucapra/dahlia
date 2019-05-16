@@ -9,7 +9,7 @@ object Utils {
     }
   }
 
-  @inline def assertOrThrow[T <: Throwable](cond: Boolean, except: T) = {
+  @inline def assertOrThrow[T <: Throwable](cond: Boolean, except: => T) = {
     if (!cond) throw except
   }
 
@@ -18,5 +18,6 @@ object Utils {
     println(v)
     v
   }
+
 
 }

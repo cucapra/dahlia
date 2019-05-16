@@ -36,8 +36,8 @@ object Errors {
   case class UnknownDim(id: Id, dim: Int)(implicit pos: Position) extends TypeError(
     s"`$id' does not have dimension $dim", pos)
 
-  case class UnknownBank(id: Id, bank: Int)(implicit pos: Position) extends TypeError(
-    s"`$id' does not have dimension $bank", pos)
+  case class UnknownBank(id: Id, bank: Int, dim: Int)(implicit pos: Position) extends TypeError(
+    s"`$id' does not have bank $bank in dimension $dim.", pos)
 
   case class BankUnrollInvalid(arrId: Id, bf: Int, uf: Int)(implicit pos: Position) extends TypeError(
     s"Invalid parallel access on `$arrId`. Banking factor ($bf) not equal to unrolling factor ($uf). Create a shrink view `view v_$arrId = $arrId[_ : bank $uf]' and use it instead.", pos)
@@ -67,11 +67,11 @@ object Errors {
     s"$op expected integers or floats, received: $t1 and $t2.", op.pos)
 
   // Binding errors
-  case class UnboundVar(id: Id) extends TypeError(
-    s"Variable `$id' not defined.", id.pos)
+  case class Unbound(id: Id) extends TypeError(
+    s"`$id' is not bound in scope.", id.pos)
 
   case class AlreadyBound(id: Id) extends TypeError(
-    s"Variable `$id' already bound in scope", id.pos)
+    s"`$id' already bound in scope", id.pos)
 
   // View errors
   case class InvalidShrinkWidth(pos: Position, bf: Int, width: Int) extends TypeError(
@@ -82,13 +82,6 @@ object Errors {
     s"Cannot create view for $arrId inside an unrolled context.", pos)
   case class InvalidSplitFactor(id: Id, arrId: Id, split: Int, bank: Int, dim: Int) extends TypeError(
     s"Cannot create split view $id: split factor $split does not divide banking factor $bank in dimension $dim for $arrId", id.pos)
-
-  // Type definition errors
-  case class AlreadyBoundType(id: Id) extends TypeError(
-    s"Type alias `$id' already bound in scope.", id.pos)
-
-  case class UnboundType(id: Id) extends TypeError(
-    s"Type alias `$id' not bound in scope.", id.pos)
 
   // Record Errors
   case class UnknownRecordField(pos: Position, recType: Id, field: Id) extends TypeError(

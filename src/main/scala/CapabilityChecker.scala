@@ -17,8 +17,6 @@ object CapabilityChecker {
 
     type Env = CapabilityEnv
 
-    implicit val resources = ()
-
     def check(p: Prog): Unit = {
       val Prog(_, defs, _, cmd) = p
 

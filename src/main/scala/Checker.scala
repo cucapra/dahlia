@@ -91,12 +91,5 @@ object Checker {
      */
     def asPartial[A, B, C](f: (A, B) => C): PF[(A, B), C ] = { case (a, b) => f(a, b) }
 
-    /*def merge(that: Checker) = new Checker {
-
-      implicit def scopePair[A <: ScopeManager[_], B <: ScopeManager[_]](pair: (A, B)): ScopeManager[(A, B)]
-
-      type Env = (this.type, that.type)
-    }*/
-
   }
 }
