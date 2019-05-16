@@ -6,6 +6,7 @@ import Syntax._
 import Errors._
 import TypeInfo._
 import ScopeMap._
+import Gadgets._
 import CompilerError._
 
 import Utils.RichOption
@@ -38,12 +39,6 @@ object TypeEnv {
     def addType(alias: Id, typ: Type): Environment
 
     /**
-     * Returns the type [[alias]] is associated to.
-     * @throws [[UnboundType]] if the alias has no binding for types.
-     */
-    def getType(alias: Id): Type
-
-    /**
      * Returns a type with all nested TAliases resolved to a concrete type.
      */
     def resolveType(typ: Type): Type
@@ -70,32 +65,37 @@ object TypeEnv {
     def add(id: Id, typ: Type): Environment
 
     /**
-     * Returns a new Environment where the [[bank]] in [[dim]] is consumed.
-     * @param id The name of the TArray that is being updated
-     * @param dim The dimension of the of array.
-     * @param bank The bank of the array to be consumed.
-     * @throws [[AlreadyConsumed]] If the [[bank]] in [[dim]] of [[id]] has
-     *                             already been consumed.
-     * @throws [[UnknownDim]] If the dimension for the array doesn't exist.
+     * Add physical resources to the environment.
+     * @param id Name of the physical resource.
+     * @param banks Number of banks in each dimension of the physical resource.
+     *
+     * For example, addResources("A", List(2, 2)) adds the set of resources
+     * {A00, A01, A10, A11} to the environment.
      */
-    def consumeBank(id: Id, dim: Int, bank: Int)(implicit pos: Position): Environment
+    def addResources(id: Id, banks: Vector[Int]): Environment
 
     /**
-     * Convinience methods for fully consuming dimensions or arrays.
+     * Associate a gadget to the name of the physical resource it consumes.
+     * Note that this DOES NOT associate it to the exact list of resources
+     * consumed.
+     * @param gadget Name of the gadget that consumes the resource.
+     * @param resource The name of the physical resource being consumed.
+     *
+     * For example, the call addGadget("V_A", "A") associates "V_A" to the
+     * physical resource "A".
      */
-    def consumeDim(id: Id, dim: Int)
-                  (implicit pos: Position): Environment =
-      this(id).matchOrError(pos, "array access", "array type"){ case TArray(_, dims) =>
-        val (_, bank) = dims.lift(dim).getOrThrow(UnknownDim(id, dim))
-        val banks = 0.until(bank)
+    def addGadget(gadget: Id, resource: Gadget): Environment
 
-        banks.foldLeft(this)({ case (env, bank) => env.consumeBank(id, dim, bank)})
-      }
-
-    def consumeAll(id: Id)(implicit pos: Position): Environment =
-      this(id).matchOrError(pos, "array access", "array type"){ case TArray(_, dims) =>
-        dims.zipWithIndex.foldLeft(this)({ case (env, (_, dim)) => env.consumeDim(id, dim) })
-      }
+    /**
+     * Consume the physical resources implied by the access of this gadget.
+     * Uses the mapping created by addGadget to find the underlying physical
+     * resource and consumed the banks associated with it.
+     *
+     * @param gadget Name of the gadget causing the consume.
+     * @param banks Banks to be consumed for each dimension
+     */
+    def consumeGadget(gadget: Id, indices: List[Type])
+                     (implicit pos: Position): Environment
 
     /**
      * Create a new Environment with all the bindings in [[binds]] added to the
@@ -133,12 +133,10 @@ object TypeEnv {
   }
 
   private case class Env(
-    typeMap: ScopedMap[Id, Info] = ScopedMap(),
-    typeDefMap: Map[Id, Type] = Map())
-  (implicit val res: Int) extends Environment {
-
-    type TypeScope = Map[Id, Info]
-    type CapScope = Map[Expr, Capability]
+    typeMap: ScopedMap[Id, Type] = ScopedMap(),
+    typeDefMap: Map[Id, Type] = Map(),
+    phyRes: ScopedMap[Id, ArrayInfo] = ScopedMap(),
+    gadgetMap: ScopedMap[Id, Gadget] = ScopedMap())(implicit val res: Int) extends Environment {
 
     /** Type defintions */
     def resolveType(typ: Type): Type = typ match {
@@ -157,32 +155,46 @@ object TypeEnv {
     }
 
     /** Type binding methods */
-    def apply(id: Id) = getInfo(id).typ
-    def add(id: Id, typ: Type) = typeMap.add(id, Info(id, resolveType(typ))) match {
+    def apply(id: Id) = typeMap(id).getOrThrow(UnboundVar(id))
+    def add(id: Id, typ: Type) = typeMap.add(id, resolveType(typ)) match {
       case None => throw AlreadyBound(id)
       case Some(tMap) => this.copy(typeMap = tMap)
     }
-    def update(id: Id, typ: Info) = typeMap.update(id, typ) match {
-      case None => throw UnboundVar(id)
-      case Some(tMap) => this.copy(typeMap = tMap)
-    }
-    def consumeBank(id: Id, dim: Int, bank: Int)
-    (implicit pos: Position): Environment = {
-      val tMap = typeMap
-        .update(id, this.getInfo(id).consumeBank(dim, bank))
-        .getOrThrow(UnboundVar(id))
-        this.copy(typeMap = tMap)
+
+    /** Managing physical resources */
+    def addResources(id: Id, banks: Vector[Int]) = {
+      val pRes = phyRes.add(id, ArrayInfo(id, banks)).getOrThrow(AlreadyBound(id))
+      this.copy(phyRes = pRes)
     }
 
-    val getResources = res
+    def addGadget(gadget: Id, resource: Gadget) = ???
+
+    def consumeGadget(gadget: Id, indices: List[Type])
+                     (implicit pos: Position) = {
+      val resource = gadgetMap.get(gadget).getOrThrow(UnboundVar(gadget))
+
+      val info = phyRes
+        .get(resource.underlying)
+        .getOrThrow(Impossible("Gadget bound to unknown memory"))
+
+      val newInfo = resource.getSummary(indices).zipWithIndex.foldLeft(info)({
+        case (inf, (banks, dim)) => banks.foldLeft(inf){
+          case (inff, bank) => inff.consumeBank(dim, bank)
+        }
+      })
+
+      val pRes = phyRes
+        .update(resource.underlying, newInfo)
+        .getOrThrow(Impossible("Unknown resource"))
+
+      this.copy(phyRes = pRes)
+    }
+
 
     /** Helper functions for Mergable[Env] */
-    def getInfo(id: Id): Info = typeMap(id) match {
-      case Some(info) => info
-      case None => throw UnboundVar(id)
-    }
     lazy val getBoundIds = typeMap.keys
-    def merge(env: Environment): Environment = env match {
+    def merge(env: Environment): Environment = ???
+      /*env match {
       case that:Env =>
         // Sanity check: The same set of ids are bound by both environments
         if (this.getBoundIds != that.getBoundIds) {
@@ -196,26 +208,28 @@ object TypeEnv {
         this.getBoundIds.foldLeft[Env](that)({ case (env, id) => {
           env.update(id, env.getInfo(id) merge this.getInfo(id))
         }})
-    }
+    }*/
 
     /** Helper functions for ScopeManager */
     def addScope(resources: Int) = {
-      Env(typeMap.addScope, typeDefMap)(res * resources)
+      Env(typeMap.addScope, typeDefMap, phyRes.addScope, gadgetMap.addScope)(res * resources)
     }
     def endScope(resources: Int) = {
       val scopes = for {
         (tScope, tMap) <- typeMap.endScope
-      } yield (Env(tMap, typeDefMap)(res / resources), tScope)
+        (_, pMap) <- phyRes.endScope
+        (_, gMap) <- gadgetMap.endScope
+      } yield (Env(tMap, typeDefMap, pMap, gMap)(res / resources), tScope)
 
-      scopes match {
-        case None => throw Impossible("Removed topmost scope")
-        case Some((env, map)) => env -> map.map({ case (id, info) => id -> info.typ })
-      }
+      scopes.getOrThrow(Impossible("Removed topmost scope"))
     }
-    def withScope(resources: Int)(inScope: Environment => Environment) =
+    def withScope(resources: Int)(inScope: Environment => Environment) = {
       inScope(this.addScope(resources)) match {
         case env:Env => env.endScope(resources)
       }
+    }
+
+    val getResources = res
   }
 }
 
