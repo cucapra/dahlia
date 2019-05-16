@@ -55,7 +55,7 @@ class TypeCheckerSpec extends FunSpec {
 
   describe("Cannot reference undeclared var") {
     it("in top level") {
-      assertThrows[UnboundVar] {
+      assertThrows[Unbound] {
         typeCheck("x + 1")
       }
     }
@@ -127,22 +127,22 @@ class TypeCheckerSpec extends FunSpec {
     }
 
     it("in if") {
-      assertThrows[UnboundVar] {
+      assertThrows[Unbound] {
         typeCheck("if (true) {let x = 1;} x + 2;")
       }
     }
     it("in for") {
-      assertThrows[UnboundVar] {
+      assertThrows[Unbound] {
         typeCheck("for (let i = 0..10){let x = 1;} x + 2;")
       }
     }
     it("in while") {
-      assertThrows[UnboundVar] {
+      assertThrows[Unbound] {
         typeCheck("while (true) {let x = 1;} x + 2;")
       }
     }
     it("iterator id in combine block") {
-      assertThrows[UnboundVar] {
+      assertThrows[Unbound] {
         typeCheck("""
           decl a: bit<32>[8];
           for (let i = 0..8) {
@@ -665,7 +665,7 @@ class TypeCheckerSpec extends FunSpec {
     }
 
     it("cannot be used before defintion") {
-      assertThrows[UnboundVar] {
+      assertThrows[Unbound] {
         typeCheck("""
           def bar(a: bool) { foo(a) }
           def foo(a: bool) { foo(a) }
@@ -674,7 +674,7 @@ class TypeCheckerSpec extends FunSpec {
     }
 
     it("do not allow recursion") {
-      assertThrows[UnboundVar] {
+      assertThrows[Unbound] {
         typeCheck("""
           def bar(a: bool) { bar(a) }
           """ )
@@ -799,7 +799,7 @@ class TypeCheckerSpec extends FunSpec {
           """ )
       }
     }
-    it("completely consumes underlying array from context") {
+    ignore("completely consumes underlying array from context") {
       assertThrows[AlreadyConsumed] {
         typeCheck("""
           decl a: bool[10 bank 5][10 bank 5];
@@ -984,7 +984,7 @@ class TypeCheckerSpec extends FunSpec {
         """ )
     }
     it("cannot use undefined type aliases") {
-      assertThrows[UnboundType] {
+      assertThrows[Unbound] {
         typeCheck("""
           record bars {
             k: point
@@ -1002,7 +1002,7 @@ class TypeCheckerSpec extends FunSpec {
       }
     }
     it("cannot rebind type alias") {
-      assertThrows[AlreadyBoundType] {
+      assertThrows[AlreadyBound] {
         typeCheck("""
           record bars {
             k: bit<32>

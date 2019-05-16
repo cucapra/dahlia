@@ -6,7 +6,7 @@ import CompilerError._
 import Subtyping._
 import TypeEnv._
 import Gadgets._
-import Utils.{RichOption, assertOrThrow}
+import Utils._
 import Logger.PositionalLoggable
 
 /**
@@ -48,27 +48,35 @@ object TypeChecker {
    * (`checkC`).
    */
   def typeCheck(p: Prog) = {
-    val defs = p.includes.flatMap(_.defs) ++ p.defs
-    val funcsEnv = defs.foldLeft(emptyEnv)({ case (e, d) => checkDef(d, e) })
-    val initEnv = p.decls.foldLeft(funcsEnv)({ case (env, Decl(id, typ)) =>
-      val rTyp = env.resolveType(typ);
-      id.typ = Some(rTyp)
-      env.add(id, rTyp)
-    })
-    checkC(p.cmd)(initEnv)
+    val Prog(includes, defs, decls, cmd) = p
+
+    val allDefs = includes.flatMap(_.defs) ++ defs
+    val topFunc = FuncDef(Id(""), decls, Some(cmd))
+
+    (allDefs ++ List(topFunc)).foldLeft(emptyEnv) {
+      case (e, d) => checkDef(d, e)
+    }
   }
 
   private def checkDef(defi: Definition, env: Environment) = defi match {
     case FuncDef(id, args, bodyOpt) => {
       val (env2, _) = env.withScope(1) { newScope =>
+
+        // Bind all declarations to the body.
         val envWithArgs = args.foldLeft(newScope)({ case (env, Decl(id, typ)) =>
           val rTyp = env.resolveType(typ)
           id.typ = Some(rTyp);
           env.add(id, rTyp)
         })
+
+        // Add physical resources corresponding to array decls
+        val envWithResources = args
+          .collect({ case Decl(id, t:TArray) => id -> t})
+          .foldLeft(envWithArgs)({ case (env, (id, t)) => addPhysicalResource(id, t)(env)})
+
         bodyOpt
-          .map(body => checkC(body)(envWithArgs))
-          .getOrElse(envWithArgs)
+          .map(body => checkC(body)(envWithResources))
+          .getOrElse(envWithResources)
       }
       env2.add(id, TFun(args.map(_.typ)))
     }
@@ -78,24 +86,49 @@ object TypeChecker {
     }
   }
 
-  private def getIdxTypes(idxs: List[Expr])(implicit env: Environment) = {
-    val (nEnv, types) = idxs.foldLeft((env, List[Type]())) {
-      case ((env1, types), idx) => {
-        val (t, e) = checkE(idx)(env1)
-        (e, t :: types)
-      }
-    }
-    val bres = types.foldLeft(1)({ case (bres, typ) => typ match {
-      case TIndex((s, e), _) => bres * (e - s)
-      case TStaticInt(_) | TSizedInt(_) => bres * 1
-      case _ => throw Impossible("Non int type")
-    }})
+  /**
+   * Add physical resources and default accessor gadget corresponding to a new
+   * array. This is used for `decl` with arrays and new `let` bound arrays.
+   */
+  private def addPhysicalResource(id: Id, typ: TArray)(implicit env: Environment) = {
+    env
+      .addResource(id, typ.dims.map(_._2))
+      .addGadget(id, BaseGadget(id))
+  }
 
-    (nEnv, bres, types)
+  /**
+   * Generate a ConsumeList corresponding to the underlying memory type and
+   * the index accessors.
+   */
+  private def getConsumeList(idxs: List[Expr], dims: List[(Int, Int)])
+                            (implicit arrId: Id, env: Environment) = {
+    val (nEnv, bres, consume) = idxs.zipWithIndex.foldLeft((env, 1, IndexedSeq[Iterable[Int]]()))({
+      case ((env1, bres, consume), (idx, dim)) => checkE(idx)(env1) match {
+        // Index is an index type.
+        case (TIndex((s, e), _), env2) =>
+          if (dims(dim)._2 != e - s)
+            throw BankUnrollInvalid(arrId, dims(dim)._2, e - s)(idx.pos)
+          else
+            (env2, bres * (e - s), Range(s, e) +: consume)
+        // Index is a statically known number.
+        case (TStaticInt(v), env2) =>
+          (env2, bres * 1, Vector(v % dims(dim)._2) +: consume)
+        // Index is a dynamic number.
+        case (TSizedInt(_), env2) =>
+          if (dims(dim)._2 != 1) throw InvalidDynamicIndex(arrId, dims(dim)._2)
+          else (env2, bres * 1, Vector(0) +: consume)
+
+        case (t, _) =>
+          throw UnexpectedType(idx.pos, "array indexing", "integer type", t)
+      }
+    })
+
+    // Reverse the types list to match the order with idxs.
+    (nEnv, bres, consume.reverse)
   }
 
   private def checkLVal(e: Expr)(implicit env: Environment) = e match {
-    case acc@EArrAccess(id, idxs) => env(id) match {
+    case acc@EArrAccess(id, idxs) => env(id).matchOrError(e.pos, "array access", s"array") {
       // This only triggers for r-values. l-values are checked in checkLVal
       case TArray(typ, dims) => {
         if (dims.length != idxs.length) {
@@ -106,15 +139,16 @@ object TypeChecker {
         // Consumption check
         acc.consumable match {
           case Some(Annotations.ShouldConsume) => {
-            val (e1, bres, types) = getIdxTypes(idxs)
+            val (e1, bres, consumeList) = getConsumeList(idxs, dims)(id, env)
+            // Check if the accessors generated enough copies for the context.
             if (bres != env.getResources)
               throw InsufficientResourcesInUnrollContext(env.getResources, bres, e)
-            typ -> e1.consumeGadget(id, types)(acc.pos)
+            // Consume the resources required by this gadget.
+            typ -> e1.consumeWithGadget(id, consumeList)(acc.pos)
           }
           case con => throw Impossible(s"$acc in write position has $con annotation")
         }
       }
-      case t => throw UnexpectedType(e.pos, "array access", s"$t[]", t)
     }
     case _ => checkE(e)
   }
@@ -193,7 +227,6 @@ object TypeChecker {
       case TFun(argTypes) => {
         // All functions return `void`.
         TVoid() -> args.zip(argTypes).foldLeft(env)({ case (e, (arg, expectedTyp)) => {
-          // XXX(rachit): Probably wrong, maybe needs contravariance.
           val (typ, e1) = checkE(arg)(e);
           if (isSubtype(typ, expectedTyp) == false) {
             throw UnexpectedSubtype(arg.pos, "parameter", expectedTyp, typ)
@@ -201,7 +234,10 @@ object TypeChecker {
           // If an array id is used as a parameter, consume it completely.
           // This works correctly with capabilties.
           (typ, arg) match {
-            case (_:TArray, EVar(id)) => ??? // e1.consumeAll(id)(expr.pos)
+            case (ta:TArray, EVar(gadget)) => {
+              val consumeList = ta.dims.map(dim => 0.until(dim._2))
+              e1.consumeWithGadget(gadget, consumeList)(gadget.pos)
+            }
             case (_:TArray, expr) => throw Impossible(s"Type of $expr is $typ")
             case _ => e1
           }
@@ -229,8 +265,9 @@ object TypeChecker {
           case None => throw Impossible(s"$acc in read position has no consumable annotation")
           case Some(Annotations.SkipConsume) => typ -> env
           case Some(Annotations.ShouldConsume) => {
-            val (e1, _, types) = getIdxTypes(idxs)
-            typ -> e1.consumeGadget(id, types)(expr.pos)
+            val (e1, _, consumeList) = getConsumeList(idxs, dims)(id, env)
+            // Consume the resources required by this gadget.
+            typ -> e1.consumeWithGadget(id, consumeList)(acc.pos)
           }
         }
       }
@@ -441,7 +478,7 @@ object TypeChecker {
         })
 
         // Fully consume the array
-        val nEnv = env1.addGadget(id, ViewGadget(id, arrId, adims))
+        val nEnv = env1.addGadget(id, ViewGadget(env1.getGadget(arrId), adims))
 
         // Annotate the ids in the expressions
         val viewTyp = TArray(typ, ndims.reverse)
@@ -464,9 +501,6 @@ object TypeChecker {
           throw IncorrectAccessDims(arrId, alen, vlen)
         }
 
-        // Create a gadget for the view
-        val nEnv = env.addGadget(id, ViewGadget(id, arrId, adims))
-
         /**
          * Create a type for the split view. For the following split view:
          * ```
@@ -474,11 +508,8 @@ object TypeChecker {
          * split s = a[by k0][by k1]...
          * ```
          * [[s]] gets the type t[k0 bank k0][(d0 / k0) bank (b0 / k0)] ....
-         *
-         * When ki = 1, we do not generate a new dimension.
          */
         val viewDims = adims.zip(dims).flatMap({
-          case ((dim, bank), 1) => List((dim, bank))
           case ((dim, bank), n) if n > 1 => {
             if (bank % n == 0) {
               List((n, n), (dim / n, bank / n))
@@ -488,6 +519,10 @@ object TypeChecker {
           }
           case ((dim, bank), n) => throw InvalidSplitFactor(id, arrId, n, bank, dim)
         })
+
+        // Create a gadget for the view
+        val nEnv = env.addGadget(id,
+          ViewGadget(env.getGadget(arrId), adims , viewDims))
 
         // Annotate the ids in the expressions
         val viewTyp = TArray(typ, viewDims)

@@ -3,7 +3,9 @@ package fuselang
 /**
  * Set that provides support for Scopes.
  */
-case class ScopedSet[V](private val setList: List[Set[V]] = List(Set[V]())) {
+case class ScopedSet[V]
+                    (val setList: List[Set[V]] = List(Set[V]()))
+                    extends AnyVal {
 
   override def toString =
     setList.map(set => s"{${set.mkString(", ")}}").mkString("->")

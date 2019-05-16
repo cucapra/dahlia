@@ -4,6 +4,7 @@ import scala.util.parsing.input.Position
 
 import Syntax._
 import Errors._
+import Utils._
 
 object TypeInfo {
 
@@ -13,19 +14,32 @@ object TypeInfo {
     conBanks: Map[Int, Set[Int]],
     conLocs: Map[(Int, Int), Position] = Map()) {
 
-    def consumeBank(dim: Int, bank: Int)
-                   (implicit pos: Position) = avBanks.contains(dim) match {
-      case true =>
-        if (avBanks(dim).contains(bank) == false) {
-          throw UnknownBank(id, bank)
-        } else if (conBanks(dim).contains(bank)){
-          throw AlreadyConsumed(id, dim, bank, conLocs((dim, bank)))
-        } else {
-          this.copy(
-            conBanks = conBanks + (dim -> (conBanks(dim) + bank)),
-            conLocs = conLocs + ((dim, bank) -> pos))
-        }
-      case false => throw UnknownDim(id, dim)
+    private def consumeDim(dim: Int, resources: Set[Int])
+                          (implicit pos: Position) = {
+      assertOrThrow(avBanks.contains(dim), UnknownDim(id, dim))
+      val (av, con) = (avBanks(dim), conBanks(dim))
+
+      // Make sure banks exist.
+      val diff = resources diff av
+      assertOrThrow(diff.isEmpty, UnknownBank(id, diff.toSeq(0), dim))
+
+      // Make sure banks are not already consumed.
+      val alreadyCon = con intersect resources
+      if (alreadyCon.isEmpty == false) {
+        val bank = alreadyCon.toSeq(0)
+        throw AlreadyConsumed(id, dim, bank, conLocs((dim, bank)))
+      }
+
+      this.copy(
+        conBanks = conBanks + (dim -> con.diff(resources)),
+        conLocs = conLocs ++ resources.map((dim, _) -> pos))
+    }
+
+    def consumeResources(resources: Iterable[Iterable[Int]])
+                        (implicit pos: Position) = {
+      resources.zipWithIndex.foldLeft(this) {
+        case (info, (resource, dim)) => info.consumeDim(dim, resource.toSet)
+      }
     }
 
     def merge(that: ArrayInfo) = {
@@ -39,7 +53,7 @@ object TypeInfo {
   }
 
   object ArrayInfo {
-    def apply(id: Id, banks: Vector[Int]): ArrayInfo = {
+    def apply(id: Id, banks: Iterable[Int]): ArrayInfo = {
       val banksWithIndex = banks.zipWithIndex
       ArrayInfo(
         id,
