@@ -1,12 +1,11 @@
 package fuselang
 
-import scala.util.parsing.input.Position
-
 import Syntax._
 import Errors._
 import CompilerError._
 import Subtyping._
 import TypeEnv._
+import Gadgets._
 import Utils.{RichOption, assertOrThrow}
 import Logger.PositionalLoggable
 
@@ -79,26 +78,21 @@ object TypeChecker {
     }
   }
 
-  private def consumeBanks
-    (id: Id, idxs: List[Expr], dims: List[(Int, Int)])
-    (implicit env: Environment, pos: Position) =
-    idxs.zipWithIndex.foldLeft((env, 1))({
-      case ((env1, bres), (idx, dim)) =>
-        val t = checkE(idx)(env1);
-        t match {
-          case (TIndex((s, e), _), env2) =>
-            if (dims(dim)._2 != e - s)
-              throw BankUnrollInvalid(id, dims(dim)._2, e - s)
-            else
-              env2.consumeDim(id, dim) -> bres * (e - s)
-          case (TStaticInt(v), env2) =>
-            env2.consumeBank(id, dim, v % dims(dim)._2) -> bres * 1
-          case (TSizedInt(_), env2) =>
-            if (dims(dim)._2 != 1) throw InvalidDynamicIndex(id, dims(dim)._2)
-            else env2.consumeBank(id, dim, 0) -> bres * 1
-          case (t, _) => throw UnexpectedType(idx.pos, "array indexing", "integer type", t)
-        }
-    })
+  private def getIdxTypes(idxs: List[Expr])(implicit env: Environment) = {
+    val (nEnv, types) = idxs.foldLeft((env, List[Type]())) {
+      case ((env1, types), idx) => {
+        val (t, e) = checkE(idx)(env1)
+        (e, t :: types)
+      }
+    }
+    val bres = types.foldLeft(1)({ case (bres, typ) => typ match {
+      case TIndex((s, e), _) => bres * (e - s)
+      case TStaticInt(_) | TSizedInt(_) => bres * 1
+      case _ => throw Impossible("Non int type")
+    }})
+
+    (nEnv, bres, types)
+  }
 
   private def checkLVal(e: Expr)(implicit env: Environment) = e match {
     case acc@EArrAccess(id, idxs) => env(id) match {
@@ -112,10 +106,10 @@ object TypeChecker {
         // Consumption check
         acc.consumable match {
           case Some(Annotations.ShouldConsume) => {
-            val (e1, bres) = consumeBanks(id, idxs, dims)(env, e.pos)
+            val (e1, bres, types) = getIdxTypes(idxs)
             if (bres != env.getResources)
               throw InsufficientResourcesInUnrollContext(env.getResources, bres, e)
-            typ -> e1
+            typ -> e1.consumeGadget(id, types)(acc.pos)
           }
           case con => throw Impossible(s"$acc in write position has $con annotation")
         }
@@ -207,7 +201,7 @@ object TypeChecker {
           // If an array id is used as a parameter, consume it completely.
           // This works correctly with capabilties.
           (typ, arg) match {
-            case (_:TArray, EVar(id)) => e1.consumeAll(id)(expr.pos)
+            case (_:TArray, EVar(id)) => ??? // e1.consumeAll(id)(expr.pos)
             case (_:TArray, expr) => throw Impossible(s"Type of $expr is $typ")
             case _ => e1
           }
@@ -235,8 +229,8 @@ object TypeChecker {
           case None => throw Impossible(s"$acc in read position has no consumable annotation")
           case Some(Annotations.SkipConsume) => typ -> env
           case Some(Annotations.ShouldConsume) => {
-            val e1 = consumeBanks(id, idxs, dims)(env, expr.pos)._1
-            typ -> e1
+            val (e1, _, types) = getIdxTypes(idxs)
+            typ -> e1.consumeGadget(id, types)(expr.pos)
           }
         }
       }
@@ -447,7 +441,7 @@ object TypeChecker {
         })
 
         // Fully consume the array
-        val nEnv = env1.consumeAll(arrId)(view.pos)
+        val nEnv = env1.addGadget(id, ViewGadget(id, arrId, adims))
 
         // Annotate the ids in the expressions
         val viewTyp = TArray(typ, ndims.reverse)
@@ -469,8 +463,9 @@ object TypeChecker {
         if(vlen != alen) {
           throw IncorrectAccessDims(arrId, alen, vlen)
         }
-        // Fully consume the underlying array
-        val nEnv = env.consumeAll(arrId)(view.pos)
+
+        // Create a gadget for the view
+        val nEnv = env.addGadget(id, ViewGadget(id, arrId, adims))
 
         /**
          * Create a type for the split view. For the following split view:
