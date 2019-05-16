@@ -352,7 +352,7 @@ object TypeChecker {
       val expTyp = typ.getOrThrow(ExplicitTypeMissing(l.pos, "Array literal", id))
 
       env.resolveType(expTyp).matchOrError(l.pos, "Let bound array literal", "array type") {
-        case TArray(elemTyp, dims) => {
+        case ta@TArray(elemTyp, dims) => {
           assertOrThrow(dims.length == 1,
             Unsupported(l.pos, "Multidimensional array literals"))
 
@@ -367,7 +367,9 @@ object TypeChecker {
           })
 
           id.typ = typ
-          nEnv.add(id, expTyp)
+
+          // Add the type binding, physical resource, and the accessor.
+          addPhysicalResource(id, ta)(nEnv).add(id, expTyp)
         }
       }
     }
