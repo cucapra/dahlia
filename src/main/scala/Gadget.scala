@@ -44,7 +44,7 @@ object Gadgets {
     def apply(
       underlying: Gadget,
       arrayDims: List[(Int, Int)],
-      splitDims: List[(Int, Int)]): ViewGadget = {
+      @deprecated("Not used", "0.0.1") splitDims: List[(Int, Int)]): ViewGadget = {
         ViewGadget(underlying, arrayDims)
     }
   }

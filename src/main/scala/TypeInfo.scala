@@ -31,7 +31,7 @@ object TypeInfo {
       }
 
       this.copy(
-        conBanks = conBanks + (dim -> con.diff(resources)),
+        conBanks = conBanks + (dim -> con.union(resources)),
         conLocs = conLocs ++ resources.map((dim, _) -> pos))
     }
 
