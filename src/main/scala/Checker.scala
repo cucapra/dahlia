@@ -92,4 +92,22 @@ object Checker {
     def asPartial[A, B, C](f: (A, B) => C): PF[(A, B), C ] = { case (a, b) => f(a, b) }
 
   }
+
+  /**
+   * Partial checker defines helper functions for writing down checkers and
+   * bootstrapping them correctly. Most of the time, we'll override one
+   * of the myCheck methods and then use them with the default checker methods.
+   */
+  abstract class PartialChecker extends Checker {
+
+    def myCheckE: PF[(Expr, Env), Env] = asPartial(checkE(_: Expr)(_: Env))
+
+    def myCheckC: PF[(Command, Env), Env] = asPartial(checkC(_: Command)(_: Env))
+
+    override def checkE(expr: Expr)(implicit env: Env): Env =
+      myCheckE.orElse(asPartial(super.checkE(_: Expr)(_: Env)))((expr, env))
+
+    override def checkC(cmd: Command)(implicit env: Env): Env =
+      myCheckC.orElse(asPartial(super.checkC(_: Command)(_: Env)))((cmd, env))
+  }
 }

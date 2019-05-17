@@ -13,7 +13,7 @@ object CapabilityChecker {
 
   def check(p: Prog) = CapChecker.check(p)
 
-  private final case object CapChecker extends Checker {
+  private final case object CapChecker extends PartialChecker {
 
     type Env = CapabilityEnv
 
@@ -25,7 +25,7 @@ object CapabilityChecker {
       checkC(cmd)(emptyEnv); ()
     }
 
-    def myCheckE: PF[(Expr, Env), Env] = {
+    override def myCheckE: PF[(Expr, Env), Env] = {
       case (acc@EArrAccess(_, idxs), env) => {
         val (nEnv, consumableAnn, cap) = env.get(acc) match {
           case Some(Write) => throw InvalidCap(acc, Read, Write)
@@ -37,7 +37,7 @@ object CapabilityChecker {
       }
     }
 
-    def myCheckC: PF[(Command, Env), Env] = {
+    override def myCheckC: PF[(Command, Env), Env] = {
       case (CSeq(c1, c2), env) => checkC(c1)(env); checkC(c2)(env)
     }
 
@@ -59,13 +59,5 @@ object CapabilityChecker {
       case _ => checkE(e)
     }
 
-    /**
-     * Override the checkE function used for checking
-     */
-    override def checkE(expr: Expr)(implicit env: Env): Env =
-      myCheckE.orElse(asPartial(super.checkE(_: Expr)(_: Env)))((expr, env))
-
-    override def checkC(cmd: Command)(implicit env: Env): Env =
-      myCheckC.orElse(asPartial(super.checkC(_: Command)(_: Env)))((cmd, env))
   }
 }
