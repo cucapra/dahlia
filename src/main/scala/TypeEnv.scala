@@ -104,7 +104,7 @@ object TypeEnv {
      * @param banks Banks to be consumed for each dimension
      */
     def consumeResource(name: Id, resources: Iterable[Iterable[Int]])
-                       (implicit pos: Position): Environment
+                       (implicit pos: List[Position]): Environment
 
     /**
      * Create a new Environment with all the bindings in [[binds]] added to the
@@ -142,7 +142,7 @@ object TypeEnv {
 
     /** Convinience Methods */
     def consumeWithGadget(gadget: Id, consumeList: ConsumeList)
-                         (implicit pos: Position) = {
+                         (implicit pos: List[Position]) = {
       val (resName, resources) = this.getGadget(gadget).getSummary(consumeList)
       this.consumeResource(resName, resources)
     }
@@ -185,7 +185,7 @@ object TypeEnv {
       this.copy(phyRes = pRes)
     }
     def consumeResource(name: Id, resources: Iterable[Iterable[Int]])
-                       (implicit pos: Position): Environment = {
+                       (implicit pos: List[Position]): Environment = {
       phyRes.get(name) match {
         case None =>
           throw Impossible(s"No physical resource named $name.")
