@@ -778,12 +778,12 @@ class TypeCheckerSpec extends FunSpec {
           """ )
       }
     }
-    ignore("completely consumes underlying array from context") {
+    it("cannot be used in the same time step as underlying array") {
       assertThrows[AlreadyConsumed] {
         typeCheck("""
           decl a: bool[10 bank 5][10 bank 5];
           view v = a[0!:][0!:];
-          a[0][0]
+          a[0][0]; v[0][0];
           """ )
       }
     }
@@ -880,6 +880,55 @@ class TypeCheckerSpec extends FunSpec {
         decl i: bit<32>;
         view v = a[i * i ! :]
         """ )
+    }
+  }
+
+  describe("Gadget checking") {
+    it("simple views aliasing same underlying array cannot be used together") {
+      assertThrows[AlreadyConsumed] {
+        typeCheck("""
+          decl a: bit<32>[10 bank 2][10 bank 5];
+          view v1 = a[0!:][0!:];
+          view v2 = a[1!:][2!:];
+          v1[0][0]; v2[0][0];
+          """ )
+      }
+    }
+    it("views created from other views cannot be used together") {
+      assertThrows[AlreadyConsumed] {
+        typeCheck("""
+          decl a: bit<32>[10 bank 2][10 bank 5];
+          view v1 = a[0!:][0!:];
+          view v2 = v1[1!:][2!:];
+          a[0][0]; v2[0][0];
+          """ )
+      }
+    }
+    it("split views created from the same underlying arrays cannot be used together") {
+      assertThrows[AlreadyConsumed] {
+        typeCheck("""
+          decl a: bit<32>[10 bank 2][10 bank 2];
+          view v1 = a[0!:][0!:];
+          split v2 = a[by 2][by 2];
+          v2[0][1][0][2]; v1[0][0];
+          """ )
+      }
+    }
+    it("arrays have fine grained bank tracking") {
+        typeCheck("""
+          decl a: float[2 bank 2][10 bank 2];
+          a[0][0];
+          a[1][1];
+          """ )
+    }
+    it("simple views dont have fine grained bank tracking") {
+      assertThrows[AlreadyConsumed] {
+        typeCheck("""
+          decl a: float[10 bank 2][10];
+          view v1 = a[2 * 1: +2][0!:];
+          v1[0][0]; v1[1][0];
+          """ )
+      }
     }
   }
 
