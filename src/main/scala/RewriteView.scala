@@ -87,8 +87,6 @@ object RewriteView {
           case TArray(_, dims) => dims.map(_._2)
           case t => throw Impossible(s"Array has type $t in $c")
         }
-      // TODO(rachit): THIS IS WRONG NOW.
-      Utils.pr("This is wrong")
       val f = (es: List[Expr]) => {
         val it = es.iterator
         // For each dimension, if it was split by more than 1, group the next
