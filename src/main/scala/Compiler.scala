@@ -24,7 +24,7 @@ object Compiler {
     compileStringWithError(prog, c)
   } match {
     case Success(out) => Right(out)
-    /*case Failure(f: Errors.TypeError) =>
+    case Failure(f: Errors.TypeError) =>
       Left(s"[${red("Type error")}] ${f.getMessage}")
     case Failure(f: Errors.ParserError) =>
       Left(s"[${red("Parsing error")}] ${f.getMessage}")
@@ -32,8 +32,8 @@ object Compiler {
       Left(s"[${red("Impossible")}] ${f.getMessage}. " +
         "This should never trigger. Please report this as a bug.")
     case Failure(f: RuntimeException) =>
-      Left(s"[${red("Error")}] ${f.getMessage}")*/
-    case Failure(f) => throw f; Left(f.getMessage)
+      Left(s"[${red("Error")}] ${f.getMessage}")
+    case Failure(f) => Left(f.getMessage)
   }
 
   def compileStringToFile(prog: String, c: Config, out: String): Either[String, Path] = {
