@@ -36,9 +36,9 @@ object TypeInfo {
     }
 
     def consumeResources(resources: Iterable[Iterable[Int]])
-                        (implicit pos: Position) = {
-      resources.zipWithIndex.foldLeft(this) {
-        case (info, (resource, dim)) => info.consumeDim(dim, resource.toSet)
+                        (implicit pos: List[Position]) = {
+      resources.zipWithIndex.zip(pos).foldLeft(this) {
+        case (info, ((resource, dim), pos)) => info.consumeDim(dim, resource.toSet)(pos)
       }
     }
 

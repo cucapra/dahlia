@@ -144,7 +144,7 @@ object TypeChecker {
             if (bres != env.getResources)
               throw InsufficientResourcesInUnrollContext(env.getResources, bres, e)
             // Consume the resources required by this gadget.
-            typ -> e1.consumeWithGadget(id, consumeList)(acc.pos)
+            typ -> e1.consumeWithGadget(id, consumeList)(idxs.map(_.pos))
           }
           case con => throw Impossible(s"$acc in write position has $con annotation")
         }
@@ -236,7 +236,7 @@ object TypeChecker {
           (typ, arg) match {
             case (ta:TArray, EVar(gadget)) => {
               val consumeList = ta.dims.map(dim => 0.until(dim._2))
-              e1.consumeWithGadget(gadget, consumeList)(gadget.pos)
+              e1.consumeWithGadget(gadget, consumeList)(ta.dims.map(_ => gadget.pos))
             }
             case (_:TArray, expr) => throw Impossible(s"Type of $expr is $typ")
             case _ => e1
@@ -267,7 +267,7 @@ object TypeChecker {
           case Some(Annotations.ShouldConsume) => {
             val (e1, _, consumeList) = getConsumeList(idxs, dims)(id, env)
             // Consume the resources required by this gadget.
-            typ -> e1.consumeWithGadget(id, consumeList)(acc.pos)
+            typ -> e1.consumeWithGadget(id, consumeList)(idxs.map(_.pos))
           }
         }
       }

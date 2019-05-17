@@ -44,7 +44,7 @@ object Errors {
 
   case class AlreadyConsumed(id: Id, dim: Int, bank: Int, origLoc: Position)
                             (implicit pos: Position) extends TypeError(
-    s"Bank $bank in dimension $dim of `$id' already consumed.", pos,
+    s"Bank $bank in dimension ${dim + 1} of physical resource `$id' already consumed.", pos,
     s"\n[${origLoc.line}.${origLoc.column}] Last consume happened here:\n${origLoc.longString}")
 
   case class InvalidDynamicIndex(id:Id, bf:Int) extends TypeError(
