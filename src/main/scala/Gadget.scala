@@ -2,6 +2,16 @@ package fuselang
 
 import Syntax._
 
+/**
+ * A _gadget_ represents a unit of hardware that adapts memory indices. Program
+ * subscript gadgets to index them, and gadgets produce accesses (both reads
+ * and writes) to the underlying gadget. A physical memory has a _base gadget_
+ * on top of which all gadget hierarchies are built. During type checking,
+ * gadgets are responsible for summarizing their resource consumption --
+ * specifically, they transform source resource demands. When the program
+ * asks for resources from a gadget, the gadget determines which resources
+ * it requires from the underlying gadget.
+ */
 object Gadgets {
 
   type ConsumeList = Iterable[Iterable[Int]]
@@ -37,7 +47,8 @@ object Gadgets {
      * Creates logic for a split view. A split view always has an even number
      * of dimensions which are grouped. For now, the implementation simply
      * consumes the entire underlying array. It is possible to refine this
-     * when static accessors are used.
+     * when static accessors are used. For now, we ignore the [[splitDims]]
+     * parameter completely.
      */
     def apply(
       underlying: Gadget,

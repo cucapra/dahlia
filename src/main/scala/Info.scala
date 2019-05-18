@@ -6,7 +6,7 @@ import Syntax._
 import Errors._
 import Utils._
 
-object TypeInfo {
+object Info {
 
   case class ArrayInfo(
     id: Id,
