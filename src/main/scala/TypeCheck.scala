@@ -55,6 +55,19 @@ import Logger.PositionalLoggable
  *    built on top of another gadget itself which might come from a memory
  *    or another gadget itself. This creates a hierarchy of gadgets.
  *
+ * '''Access checking'''
+ *
+ * Access checking is done in four steps:
+ *
+ * 1. If the memory was marked with [[Syntax.Annotations.SkipConsume]],
+ *    we do the well formedness check and move on.
+ * 2. Otherwise, we generate resource consumptions implied by the indices for
+ *    each dimension of the array.
+ * 3. We pass on this resource consumption list to the gadget for the access
+ *    which transforms the resources into one for the underlying resource.
+ * 4. Finally, we consume the resources required by the transformed consumption
+ *    list.
+ *
  */
 object TypeChecker {
 
@@ -106,7 +119,8 @@ object TypeChecker {
    * Add physical resources and default accessor gadget corresponding to a new
    * array. This is used for `decl` with arrays and new `let` bound arrays.
    */
-  private def addPhysicalResource(id: Id, typ: TArray)(implicit env: Environment) = {
+  private def addPhysicalResource(id: Id, typ: TArray)
+                                 (implicit env: Environment) = {
     env
       .addResource(id, typ.dims.map(_._2))
       .addGadget(id, BaseGadget(id))

@@ -4,7 +4,7 @@ import scala.util.parsing.input.Position
 
 import Syntax._
 import Errors._
-import TypeInfo._
+import Info._
 import ScopeMap._
 import Gadgets._
 import CompilerError._
