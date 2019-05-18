@@ -19,7 +19,6 @@ object TypeEnv {
    * An environment keep tracks of information for type checking:
    * - The typedefs bound at the start of the program.
    * - The association of Identifiers to corresponding types.
-   * - The association of Expressions to the capabilities acquired.
    * - Number of resources nested unrolled contexts imply.
    *
    * The environment structure is built using a chain of scope over the
@@ -124,8 +123,8 @@ object TypeEnv {
     def merge(that: Environment): Environment
 
     /**
-     * Open a new scope and run commands in it. When the scope ends, the
-     * bindings and capabilities bound in this scope are returned
+     * Open a new scope and run commands in it. When the scope ends, new the
+     * bindings bound in this scope are returned
      *
      * @param inScope Commands executed with the inner scope.
      * @param resources Amount of resources required inside new scope.
