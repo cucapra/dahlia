@@ -1,7 +1,6 @@
 package fuselang.backend
 
-import fuselang.Syntax._
-// import fuselang.Utils._
+import fuselang.common.Syntax._
 
 private object Dot {
 

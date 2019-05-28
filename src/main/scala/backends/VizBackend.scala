@@ -1,7 +1,8 @@
 package fuselang.backend
 
-import fuselang.Syntax._
-import fuselang.Utils._
+import fuselang.common._
+import Syntax._
+import Configuration._
 
 private object Vizualization {
 
@@ -54,6 +55,8 @@ edge [arrowsize=0.4];
       idxs.foldLeft(accessEdges)((acc, e) =>
         acc flatMerge emitExpr(e, nodeName, ctx, false))
     }
+    case EArrLiteral(_) => Graph.empty
+    case ECast(_, _) => Graph.empty
     case ERecAccess(_, _) => Graph.empty
     case ERecLiteral(_) => Graph.empty
     case EApp(fname, args) => {
@@ -86,10 +89,16 @@ edge [arrowsize=0.4];
     case CSeq(c1, c2) => emitCmd(c1, ctx) crazyMerge emitCmd(c2, ctx) //TODO: make some viz diff here
     case CLet(id, _, e) => {
       //XXX: add prefix
-      emitExpr(e, s"$id", ctx).map[CmdTag](x => ("", CExpr(x))) flatMerge
-      Graph.singleton[CmdTag](s"$id", (s"$id", cmd))
+      e match {
+        case Some(e) => {
+          emitExpr(e, s"$id", ctx).map[CmdTag](x => ("", CExpr(x))) flatMerge
+          Graph.singleton[CmdTag](s"$id", (s"$id", cmd))
+        }
+        case None => Graph.empty
+      }
     }
-    case CView(_, _) => Graph.empty
+    case CView(_, _, _) => Graph.empty
+    case CSplit(_, _, _) => Graph.empty
     case CIf(cond, tCmd, fCmd) => {
       val name = newName("cond")
       // val condNode = Graph.singleton[CmdTag](name, (name, CExpr(cond)))
@@ -167,4 +176,6 @@ edge [arrowsize=0.4];
 
 case object VizBackend extends Backend {
   def emitProg(p: Prog, c: Config) = Vizualization.emit(p, c)
+  val canGenerateHeader: Boolean = false
+  // val canGenerateHeader: Boolean = false
 }
