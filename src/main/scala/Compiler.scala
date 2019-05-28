@@ -3,18 +3,18 @@ package fuselang
 import scala.util.Try
 import java.nio.file.Path
 
+import CmdlineConfig._
 import common._
-import Configuration._
 
 object Compiler {
 
-  def compileStringWithError(prog: String, c: Config = emptyConf ) = {
+  def compileStringWithError(prog: String, c: CmdlineConfig = emptyConf ) = {
     val ast = FuseParser.parse(prog)
     passes.CapabilityChecker.check(ast)
     typechecker.TypeChecker.typeCheck(ast)
     passes.BoundsChecker.check(ast);
     val rast = passes.RewriteView.rewriteProg(ast)
-    c.backend.emit(rast, c)
+    c.backend.emit(rast, c.toCommonConfig())
   }
 
   // Outputs red text to the console
@@ -36,7 +36,7 @@ object Compiler {
     })
   }
 
-  def compileStringToFile(prog: String, c: Config, out: String): Either[String, Path] = {
+  def compileStringToFile(prog: String, c: CmdlineConfig, out: String): Either[String, Path] = {
     import java.nio.file.{Files, Paths, StandardOpenOption}
 
     compileString(prog, c).map(p => {
