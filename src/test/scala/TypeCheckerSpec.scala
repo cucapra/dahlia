@@ -1,5 +1,6 @@
 package fuselang
 
+import fuselang.common._
 import TestUtils._
 import Errors._
 import org.scalatest.FunSpec

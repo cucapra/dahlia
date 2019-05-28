@@ -5,6 +5,8 @@ import collection.JavaConverters._
 
 import org.scalatest.FunSuite
 
+import common._
+
 class FileTypePositive extends FunSuite {
 
   val shouldCompile = Paths.get("src/test/should-compile")
