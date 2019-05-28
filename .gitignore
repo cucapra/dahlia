@@ -26,3 +26,4 @@ _test
 
 ## Object files
 *.o
+.projectile
