@@ -1,10 +1,11 @@
 package fuselang.backend
 
-import fuselang.Syntax._
-import fuselang.Configuration._
-import fuselang.CompilerError._
-
 import Cpp._
+
+import fuselang.common._
+import Syntax._
+import Configuration._
+import CompilerError._
 
 private class VivadoBackend extends CppLike {
 

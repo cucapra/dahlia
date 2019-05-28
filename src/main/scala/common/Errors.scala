@@ -1,4 +1,4 @@
-package fuselang
+package fuselang.common
 
 import Syntax._
 import scala.util.parsing.input.Position

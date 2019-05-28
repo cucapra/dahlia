@@ -1,6 +1,6 @@
 package fuselang.backend
 
-import fuselang._
+import fuselang.common._
 import CompilerError.BackendError
 
 /**

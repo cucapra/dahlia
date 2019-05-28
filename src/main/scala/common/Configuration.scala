@@ -1,8 +1,8 @@
-package fuselang
+package fuselang.common
 
 import java.io.File
 
-import backend.{VivadoBackend, CppRunnable, Backend}
+import fuselang.backend.{VivadoBackend, CppRunnable, Backend}
 
 object Configuration {
 

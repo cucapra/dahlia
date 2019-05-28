@@ -1,7 +1,7 @@
-package fuselang
+package fuselang.typechecker
 
 import scala.math.{max,log10,ceil}
-import Syntax._
+import fuselang.common.Syntax._
 
 /**
  * Subtyping relations are only defined over the number hierarchy. Read 't1 < t2'

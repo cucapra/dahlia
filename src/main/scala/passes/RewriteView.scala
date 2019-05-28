@@ -1,10 +1,11 @@
-package fuselang
+package fuselang.passes
 
+import fuselang.common._
 import Syntax._
 import CodeGenHelpers._
 import CompilerError._
 
-import Utils.RichOption
+import fuselang.Utils.RichOption
 
 /**
  * AST pass to rewrite views into simple array accesses. Should be used after
