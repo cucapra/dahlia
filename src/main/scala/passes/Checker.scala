@@ -1,7 +1,7 @@
-package fuselang
+package fuselang.passes
 
-import Syntax._
-import EnvHelpers._
+import fuselang.common.Syntax._
+import fuselang.typechecker.EnvHelpers._
 import scala.{PartialFunction => PF}
 
 object Checker {

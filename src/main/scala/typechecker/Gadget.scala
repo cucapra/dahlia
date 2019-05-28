@@ -1,6 +1,6 @@
-package fuselang
+package fuselang.typechecker
 
-import Syntax._
+import fuselang.common.Syntax._
 
 /**
  * A _gadget_ represents a unit of hardware that adapts memory indices. Program

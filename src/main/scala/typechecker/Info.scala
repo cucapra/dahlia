@@ -1,10 +1,11 @@
-package fuselang
+package fuselang.typechecker
 
 import scala.util.parsing.input.Position
 
+import fuselang.common._
 import Syntax._
 import Errors._
-import Utils._
+import fuselang.Utils._
 
 object Info {
 

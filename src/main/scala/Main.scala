@@ -3,12 +3,13 @@ package fuselang
 import java.nio.file.{Files, Path}
 import java.io.File
 
+import common._
 import Configuration._
 import Compiler._
 
 object Main {
 
-  val parser = new scopt.OptionParser[Config]("fuse"){
+  val parser = new scopt.OptionParser[Config]("fuse") {
 
     head("fuse", "0.0.1")
 

@@ -3,16 +3,17 @@ package fuselang
 import scala.util.Try
 import java.nio.file.Path
 
+import common._
 import Configuration._
 
 object Compiler {
 
   def compileStringWithError(prog: String, c: Config = emptyConf ) = {
     val ast = FuseParser.parse(prog)
-    CapabilityChecker.check(ast)
-    TypeChecker.typeCheck(ast)
-    BoundsChecker.check(ast);
-    val rast = RewriteView.rewriteProg(ast)
+    passes.CapabilityChecker.check(ast)
+    typechecker.TypeChecker.typeCheck(ast)
+    passes.BoundsChecker.check(ast);
+    val rast = passes.RewriteView.rewriteProg(ast)
     c.backend.emit(rast, c)
   }
 
