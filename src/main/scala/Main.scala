@@ -3,13 +3,13 @@ package fuselang
 import java.nio.file.{Files, Path}
 import java.io.File
 
-import common._
-import Configuration._
+import CmdlineConfig._
 import Compiler._
+import common.Logger
 
 object Main {
 
-  val parser = new scopt.OptionParser[Config]("fuse") {
+  val parser = new scopt.OptionParser[CmdlineConfig]("fuse") {
 
     head("fuse", "0.0.1")
 
@@ -61,7 +61,7 @@ object Main {
           .text("Option to be passed to the C++ compiler. Can be repeated."))
   }
 
-  def runWithConfig(conf: Config): Either[String, Int] = {
+  def runWithConfig(conf: CmdlineConfig): Either[String, Int] = {
     type ErrString = String
 
     val path = conf.srcFile.toPath
@@ -86,7 +86,7 @@ object Main {
 
   def main(args: Array[String]): Unit = {
 
-    parser.parse(args, Config(null)) match {
+    parser.parse(args, emptyConf) match {
       case Some(conf) => {
         Logger.setLogLevel(conf.logLevel)
         val status = runWithConfig(conf)
