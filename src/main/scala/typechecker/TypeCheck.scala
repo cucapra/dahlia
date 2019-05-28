@@ -1,12 +1,14 @@
-package fuselang
+package fuselang.typechecker
 
-import Syntax._
-import Errors._
-import CompilerError._
 import Subtyping._
 import TypeEnv._
 import Gadgets._
-import Utils._
+import fuselang.Utils._
+
+import fuselang.common._
+import Syntax._
+import Errors._
+import CompilerError._
 import Logger.PositionalLoggable
 
 /**
