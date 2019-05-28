@@ -2,7 +2,7 @@ package fuselang
 
 import java.io.File
 
-import fuselang.backend.{VivadoBackend, CppRunnable, Backend}
+import fuselang.backend.{VivadoBackend, VizBackend, CppRunnable, Backend}
 
 object CmdlineConfig {
 
@@ -12,11 +12,12 @@ object CmdlineConfig {
 
   val emptyConf = CmdlineConfig(null)
 
-  val validBackends = Set("vivado", "c++")
+  val validBackends = Set("vivado", "c++", "viz")
 
   def toBackend(str: String): Backend = str match {
     case "vivado" => VivadoBackend
     case "c++" => CppRunnable
+    case "viz" => VizBackend
     case b@_ => throw common.CompilerError.Impossible(s"Unknown backend $b")
   }
 
