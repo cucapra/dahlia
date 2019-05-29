@@ -17,6 +17,7 @@ HOST_O = 'main.o'  # The .o file for host code.
 # For executing on a Xilinx Zynq board.
 ZYNQ_SSH_PREFIX = ['sshpass', '-p', 'root']  # Provide Zynq SSH password.
 ZYNQ_HOST = 'zb1'
+ZYNQ_DEST_DIR = '/mnt'
 ZYNQ_REBOOT_DELAY = 40
 
 
@@ -364,7 +365,7 @@ def stage_fpga_execute(db, config):
         # Zynq board.
         bin_dir = os.path.join(task.code_dir, 'sd_card')
         bin_files = [os.path.join(bin_dir, f) for f in os.listdir(bin_dir)]
-        dest = ZYNQ_HOST + ':/mnt'
+        dest = '{}:{}'.format(ZYNQ_HOST, ZYNQ_DEST_DIR)
         task.run(
             ZYNQ_SSH_PREFIX + ['scp', '-r'] + bin_files + [dest],
             timeout=1200
@@ -381,7 +382,7 @@ def stage_fpga_execute(db, config):
         task.run(
             ZYNQ_SSH_PREFIX + [
                 'ssh', ZYNQ_HOST,
-                'cd /mnt ; ./{}'.format(config['EXECUTABLE_NAME']),
+                'cd {}; ./{}'.format(ZYNQ_DEST_DIR, config['EXECUTABLE_NAME']),
             ],
             timeout=120
         )
