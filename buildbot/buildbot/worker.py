@@ -379,8 +379,10 @@ def stage_fpga_execute(db, config):
 
         # Run the FPGA program and collect results
         task.run(
-            ZYNQ_SSH_PREFIX + ['ssh', ZYNQ_HOST, '/mnt/' +
-                               config['EXECUTABLE_NAME']],
+            ZYNQ_SSH_PREFIX + [
+                'ssh', ZYNQ_HOST,
+                'cd /mnt ; ./{}'.format(config['EXECUTABLE_NAME']),
+            ],
             timeout=120
         )
 
