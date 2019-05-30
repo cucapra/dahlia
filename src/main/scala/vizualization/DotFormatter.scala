@@ -1,4 +1,4 @@
-package fuselang.backend
+package fuselang.vizualization
 
 import fuselang.common.Syntax._
 

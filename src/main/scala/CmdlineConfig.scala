@@ -2,7 +2,8 @@ package fuselang
 
 import java.io.File
 
-import fuselang.backend.{VivadoBackend, VizBackend, CppRunnable, Backend}
+import fuselang.backend.{VivadoBackend, CppRunnable, Backend}
+import fuselang.vizualization.VizBackend
 
 object CmdlineConfig {
 

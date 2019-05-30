@@ -1,5 +1,6 @@
-package fuselang.backend
+package fuselang.vizualization
 
+import fuselang.backend.Backend
 import fuselang.common._
 import Syntax._
 import Configuration._
@@ -177,5 +178,4 @@ edge [arrowsize=0.4];
 case object VizBackend extends Backend {
   def emitProg(p: Prog, c: Config) = Vizualization.emit(p, c)
   val canGenerateHeader: Boolean = false
-  // val canGenerateHeader: Boolean = false
 }

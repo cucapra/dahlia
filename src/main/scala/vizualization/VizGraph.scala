@@ -1,4 +1,4 @@
-package fuselang.backend
+package fuselang.vizualization
 
 object VizGraph {
 
