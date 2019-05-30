@@ -86,8 +86,8 @@ edge [arrowsize=0.4];
 
   private type CmdTag = (String, Command)
   def emitCmd(cmd: Command, ctx: Map[Id, String]): Graph[CmdTag] = cmd match {
-    case CPar(c1, c2) => emitCmd(c1, ctx) flatMerge emitCmd(c2, ctx)
-    case CSeq(c1, c2) => emitCmd(c1, ctx) crazyMerge emitCmd(c2, ctx) //TODO: make some viz diff here
+    case CPar(c1, c2) => emitCmd(c1, ctx) clustMerge emitCmd(c2, ctx)
+    case CSeq(c1, c2) => emitCmd(c1, ctx) clustMerge emitCmd(c2, ctx)
     case CLet(id, _, e) => {
       //XXX: add prefix
       e match {
@@ -102,34 +102,25 @@ edge [arrowsize=0.4];
     case CSplit(_, _, _) => Graph.empty
     case CIf(cond, tCmd, fCmd) => {
       val name = newName("cond")
-      // val condNode = Graph.singleton[CmdTag](name, (name, CExpr(cond)))
       val condNode = emitExpr(cond, name, ctx).map[CmdTag](x => ("", CExpr(x)))
       val tBranch = (emitCmd(tCmd, ctx) flatMerge
         Graph.singleton(s"${name}T", (s"${name}T", CEmpty))).clusterify()
       val fBranch = (emitCmd(fCmd, ctx) flatMerge
         Graph.singleton(s"${name}F", (s"${name}F", CEmpty))).clusterify()
-      val G = condNode subMerge tBranch subMerge fBranch
+      val G = condNode flatMerge tBranch flatMerge fBranch
       G.addNode(name, (name, CExpr(cond)))
         .addEdge(name, s"${name}T")
         .addEdge(name, s"${name}F")
-      // // Graph.empty[CmdTag].addEdge(name, t: String)
-      // Graph.singleton[CmdTag](name, (name, cmd)) merge
-      // tBranch merge fBranch
-      // Graph.empty
     }
     case CFor(range, par, combine) => {
       val name = newName("iter")
-      val parNodes = (0 until range.u).foldLeft(Graph.empty[CmdTag]) {
-        (acc, _) => acc flatMerge emitCmd(par, ctx + (range.iter -> name)).clusterify()
+      val unroll = if (false) range.u else 1
+      val parNodes = (0 until unroll).foldLeft(Graph.empty[CmdTag]) {
+        (acc, _) => acc flatMerge emitCmd(par, ctx + (range.iter -> name))
       }
-      // val parNode = emitCmd(par, ctx + (range.iter -> name))
-      // val parNode2 = emitCmd(par, ctx + (range.iter -> name))
       val combineNode = emitCmd(combine, ctx + (range.iter -> name))
-      (Graph.singleton[CmdTag](s"$name${range.iter}", (name, cmd)) flatMerge
-        combineNode flatMerge
-        parNodes).clusterify()
-      // Console.err.println("dogg")
-      // Console.err.println(g.cluster)
+      Graph.singleton[CmdTag](s"$name${range.iter}", (name, cmd)) flatMerge
+        (combineNode flatMerge parNodes).clusterify()
     }
     case CWhile(_, _) => Graph.empty
     case CUpdate(lhs, rhs) => {
