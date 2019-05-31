@@ -362,11 +362,12 @@ def stage_fpga_execute(db, config):
             return
 
         # Copy datafiles to executable dir.
-        data_files = [os.path.join(task.code_dir, f) for f in os.listdir(task.code_dir) if f.endswith('.data')]
+        data_files = [os.path.join(task.code_dir, f) for f in os.listdir(task.code_dir) if f.endswith('.data') if f is not None]
         dest = os.path.join(task.code_dir, 'sd_card')
-        task.run(
-            ['cp'] + data_files + [dest]
-        )
+        if data_files:
+            task.run(
+                ['cp'] + data_files + [dest]
+            )
         
         # Copy the compiled code (CPU binary + FPGA bitstream) to the
         # Zynq board.
