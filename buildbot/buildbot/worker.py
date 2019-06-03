@@ -345,13 +345,17 @@ def stage_hls(db, config):
         )
 
         # Copy datafiles to executable dir.
-        data_files = [os.path.join(task.code_dir, f) for f in os.listdir(task.code_dir) if f.endswith('.data')]
+        data_files = [
+            os.path.join(task.code_dir, f)
+            for f in os.listdir(task.code_dir)
+            if f.endswith('.data')
+        ]
         dest = os.path.join(task.code_dir, 'sd_card')
         if data_files:
             task.run(
                 ['cp'] + data_files + [dest]
             )
-        
+
 
 def stage_fpga_execute(db, config):
     """Work stage: upload bitstream to the FPGA controller, run the
