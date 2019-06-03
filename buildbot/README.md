@@ -62,6 +62,8 @@ For example, you can zip up a directory and submit it like this:
 
     $ zip -r - . | curl -F file='@-;filename=code.zip' $BUILDBOT/jobs
 
+If the directory contains data files with `.data` extension, they'll be copied over to the target FPGA.
+
 You can also specify job configuration options as further POST parameters:
 
 - `skipseashell`, which lets you supply plain HLS C code as input.
