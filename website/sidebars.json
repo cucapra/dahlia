@@ -1,6 +1,7 @@
 {
   "docs": {
-    "Setup": [
+    "Introduction": [
+      "overview",
       "installation"
     ],
     "Language constructs": [

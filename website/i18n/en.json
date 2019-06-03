@@ -32,6 +32,9 @@
       "literals": {
         "title": "Literals"
       },
+      "overview": {
+        "title": "Overview"
+      },
       "testing": {
         "title": "Testing Fuse"
       },
@@ -48,7 +51,7 @@
       "Github": "Github"
     },
     "categories": {
-      "Setup": "Setup",
+      "Introduction": "Introduction",
       "Language constructs": "Language constructs",
       "CLI": "CLI",
       "Tools": "Tools",
