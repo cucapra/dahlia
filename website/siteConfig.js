@@ -19,8 +19,8 @@ const siteConfig = {
 
   /* Colors for website */
   colors: {
-    primaryColor: '#009292',
-    secondaryColor: '#009292',
+    primaryColor: '#b31b1b',  // Cornell red.
+    secondaryColor: '#541b18',
   },
 
   // This copyright info is used in /core/Footer.js and blog RSS/Atom feeds.
