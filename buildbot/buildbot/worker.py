@@ -344,14 +344,14 @@ def stage_hls(db, config):
             cwd=CODE_DIR,
         )
 
-        # Copy datafiles to executable dir.
+        # Copy datafiles to the executable directory.
         data_files = [
             os.path.join(task.code_dir, f)
             for f in os.listdir(task.code_dir)
             if f.endswith('.data')
         ]
-        dest = os.path.join(task.code_dir, 'sd_card')
         if data_files:
+            dest = os.path.join(task.code_dir, 'sd_card')
             task.run(
                 ['cp'] + data_files + [dest]
             )
