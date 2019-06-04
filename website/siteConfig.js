@@ -9,7 +9,7 @@ const siteConfig = {
   headerLinks: [
     {doc: 'installation', label: 'Docs'},
     {label: 'Notes', href: 'https://capra.cs.cornell.edu/seashell/docs'},
-    {label: 'Github', href: 'https://github.com/cucapra/seashell'}
+    {label: 'GitHub', href: 'https://github.com/cucapra/seashell'}
   ],
 
   /* path to images for header/footer */
@@ -62,10 +62,10 @@ const siteConfig = {
   cleanUrl: true,
 
   // Show documentation's last contributor's name.
-   enableUpdateBy: true,
+  enableUpdateBy: true,
 
   // Show documentation's last update time.
-   enableUpdateTime: true,
+  enableUpdateTime: true,
 
 };
 
