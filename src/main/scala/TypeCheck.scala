@@ -381,27 +381,29 @@ object TypeChecker {
     case l@CLet(id, typ, Some(EArrLiteral(idxs))) => {
       val expTyp = typ.getOrThrow(ExplicitTypeMissing(l.pos, "Array literal", id))
 
-      env.resolveType(expTyp).matchOrError(l.pos, "Let bound array literal", "array type") {
-        case ta@TArray(elemTyp, dims) => {
-          assertOrThrow(dims.length == 1,
-            Unsupported(l.pos, "Multidimensional array literals"))
+      env
+        .resolveType(expTyp)
+        .matchOrError(l.pos, "Let bound array literal", "array type") {
+          case ta@TArray(elemTyp, dims) => {
+            assertOrThrow(dims.length == 1,
+              Unsupported(l.pos, "Multidimensional array literals"))
 
-          assertOrThrow(dims(0)._1 == idxs.length,
-            LiteralLengthMismatch(l.pos, dims(0)._1, idxs.length))
+            assertOrThrow(dims(0)._1 == idxs.length,
+              LiteralLengthMismatch(l.pos, dims(0)._1, idxs.length))
 
-          val nEnv = idxs.foldLeft(env)({ case (e, idx) =>
-            val (idxTyp, nEnv) = checkE(idx)(e)
-            assertOrThrow(isSubtype(idxTyp, elemTyp),
-              UnexpectedSubtype(idx.pos, "array literal", elemTyp, idxTyp))
-            nEnv
-          })
+            val nEnv = idxs.foldLeft(env)({ case (e, idx) =>
+              val (idxTyp, nEnv) = checkE(idx)(e)
+              assertOrThrow(isSubtype(idxTyp, elemTyp),
+                UnexpectedSubtype(idx.pos, "array literal", elemTyp, idxTyp))
+              nEnv
+            })
 
-          id.typ = typ
+            id.typ = typ
 
-          // Add the type binding, physical resource, and the accessor.
-          addPhysicalResource(id, ta)(nEnv).add(id, expTyp)
+            // Add the type binding, physical resource, and the accessor.
+            addPhysicalResource(id, ta)(nEnv).add(id, expTyp)
+          }
         }
-      }
     }
     case l@CLet(id, typ, Some(exp@ERecLiteral(fs))) => {
       val expTyp = typ.getOrThrow(ExplicitTypeMissing(l.pos, "Record literal", id))
@@ -469,9 +471,17 @@ object TypeChecker {
     case l@CLet(id, typ, None) => {
       val fullTyp = typ
         .map(env.resolveType(_))
-        .getOrThrow(ExplicitTypeMissing(l.pos, "Let binding without initializer", id))
+        .getOrThrow(ExplicitTypeMissing(l.pos,
+                                        "Let binding without initializer",
+                                        id))
 
-      env.add(id, fullTyp)
+      // If this is an array literal, bind the physical resource too.
+      val nEnv = fullTyp match {
+        case ta: TArray => addPhysicalResource(id, ta)(env)
+        case _ => env
+      }
+
+      nEnv.add(id, fullTyp)
     }
     case CFor(range, par, combine) => {
       val iter = range.iter

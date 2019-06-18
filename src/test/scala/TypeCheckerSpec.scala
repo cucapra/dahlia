@@ -1155,6 +1155,14 @@ class TypeCheckerSpec extends FunSpec {
         let x: bool[3 bank 3] = {true, false, true}
         """ )
     }
+    it("can be used without initializer") {
+      typeCheck("""
+        let x: bool[3] = {true, false, true}
+        x[1];
+        ---
+        x[0] = false
+        """ )
+    }
   }
 
   describe("Indexing with dynamic (sized) var") {
