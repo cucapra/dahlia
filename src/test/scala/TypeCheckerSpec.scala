@@ -1157,10 +1157,12 @@ class TypeCheckerSpec extends FunSpec {
     }
     it("can be used without initializer") {
       typeCheck("""
-        let x: bool[3] = {true, false, true}
-        x[1];
-        ---
-        x[0] = false
+        let x: bool[3] = {true, false, true};
+        {
+          x[1];
+          ---
+          x[0] := false
+        }
         """ )
     }
   }
