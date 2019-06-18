@@ -1163,6 +1163,14 @@ class TypeCheckerSpec extends FunSpec {
         x[0] = false
         """ )
     }
+    it("can be used across --- boundaries") {
+      typeCheck("""
+        let x: bool[3] = {true, false, true};
+        x[1];
+        ---
+        x[0] := false
+        """ )
+    }
   }
 
   describe("Indexing with dynamic (sized) var") {
