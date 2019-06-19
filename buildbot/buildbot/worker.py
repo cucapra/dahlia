@@ -293,14 +293,24 @@ def stage_seashell(db, config):
 def _sds_cmd(prefix, func_hw, c_hw, directives, platform):
     """Make a sds++ command with all our standard arguments.
     """
-    return prefix + [
-        'sds++',
-        '-sds-pf', platform,
-        '-sds-hw', func_hw, c_hw, directives, '-sds-end',
-        '-clkid', '3',
-        '-poll-mode', '1',
-        '-verbose', '-Wall', '-O3',
-    ]
+    if not directives:
+        return prefix + [
+            'sds++',
+            '-sds-pf', platform,
+            '-sds-hw', func_hw, c_hw, '-sds-end',
+            '-clkid', '3',
+            '-poll-mode', '1',
+            '-verbose', '-Wall', '-O3',
+        ]
+    else:
+        return prefix + [
+            'sds++',
+            '-sds-pf', platform,
+            '-sds-hw', func_hw, c_hw, '-hls-tcl', directives, '-sds-end',
+            '-clkid', '3',
+            '-poll-mode', '1',
+            '-verbose', '-Wall', '-O3',
+        ]
 
 
 def _hw_filenames(task):
