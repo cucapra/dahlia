@@ -293,7 +293,7 @@ def stage_seashell(db, config):
 def _sds_cmd(prefix, func_hw, c_hw, task):
     """Make a sds++ command with all our standard arguments.
     """
-    if not directives:
+    if not task['directives']:
         return prefix + [
             'sds++',
             '-sds-pf', task['platform'],
