@@ -330,10 +330,11 @@ def stage_hls(db, config):
         hw_basename, hw_c, hw_o = _hw_filenames(task)
         _task_config(task, config)
         flags = shlex.split(task['sdsflags'])
+        sds_cmd = _sds_cmd(prefix, hw_basename, hw_c, task) 
 
         # Run Xilinx SDSoC compiler for hardware functions.
         task.run(
-            _sds_cmd(prefix, hw_basename, hw_c, task) + flags + [
+            sds_cmd + flags + [
                 '-c',
                 hw_c, '-o', hw_o,
             ],
@@ -343,7 +344,7 @@ def stage_hls(db, config):
 
         # Run the Xilinx SDSoC compiler for host function.
         task.run(
-            _sds_cmd(prefix, hw_basename, hw_c, task['platform']) + flags + [
+            sds_cmd + flags + [
                 '-c',
                 C_MAIN, '-o', HOST_O,
             ],
@@ -352,7 +353,7 @@ def stage_hls(db, config):
 
         # Run Xilinx SDSoC compiler for created objects.
         task.run(
-            _sds_cmd(prefix, hw_basename, hw_c, task['platform']) + flags + [
+            sds_cmd + flags + [
                 hw_o, HOST_O, '-o', config['EXECUTABLE_NAME'],
             ],
             timeout=config["SYNTHESIS_TIMEOUT"],
