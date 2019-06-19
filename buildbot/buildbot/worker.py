@@ -290,13 +290,13 @@ def stage_seashell(db, config):
             f.write(hls_code)
 
 
-def _sds_cmd(prefix, func_hw, c_hw, directives, platform):
+def _sds_cmd(prefix, func_hw, c_hw, task):
     """Make a sds++ command with all our standard arguments.
     """
     if not directives:
         return prefix + [
             'sds++',
-            '-sds-pf', platform,
+            '-sds-pf', task['platform'],
             '-sds-hw', func_hw, c_hw, '-sds-end',
             '-clkid', '3',
             '-poll-mode', '1',
@@ -305,8 +305,8 @@ def _sds_cmd(prefix, func_hw, c_hw, directives, platform):
     else:
         return prefix + [
             'sds++',
-            '-sds-pf', platform,
-            '-sds-hw', func_hw, c_hw, '-hls-tcl', directives, '-sds-end',
+            '-sds-pf', task['platform'],
+            '-sds-hw', func_hw, c_hw, '-hls-tcl', task['directives'], '-sds-end',
             '-clkid', '3',
             '-poll-mode', '1',
             '-verbose', '-Wall', '-O3',
@@ -332,24 +332,14 @@ def stage_hls(db, config):
         flags = shlex.split(task['sdsflags'])
 
         # Run Xilinx SDSoC compiler for hardware functions.
-        if not task['directives']:
-            task.run(
-                _sds_cmd(prefix, hw_basename, hw_c, task['platform']) + flags + [
-                    '-c',
-                    hw_c, '-o', hw_o,
-                ],
-                timeout=config["COMPILE_TIMEOUT"],
-                cwd=CODE_DIR,
-            )
-        else:
-            task.run(
-                _sds_cmd(prefix, hw_basename, hw_c, task['directives'], task['platform']) + flags + [
-                    '-c',
-                    hw_c, '-o', hw_o,
-                ],
-                timeout=config["COMPILE_TIMEOUT"],
-                cwd=CODE_DIR,
-            )
+        task.run(
+            _sds_cmd(prefix, hw_basename, hw_c, task) + flags + [
+                '-c',
+                hw_c, '-o', hw_o,
+            ],
+            timeout=config["COMPILE_TIMEOUT"],
+            cwd=CODE_DIR,
+        )
 
         # Run the Xilinx SDSoC compiler for host function.
         task.run(
