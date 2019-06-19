@@ -154,6 +154,8 @@ def _task_config(task, config):
     task['sdsflags'] = flags
     task['estimate'] = est
 
+    task['directives'] = task['config'].get('directives') or \
+        config['DEFAULT_DIRECTIVES']
     task['platform'] = task['config'].get('platform') or \
         config['DEFAULT_PLATFORM']
 
@@ -228,6 +230,7 @@ def stage_make(db, config):
             prefix + [
                 'make',
                 'ESTIMATE={}'.format(task['estimate']),
+                'DIRECTIVES={}'.format(task['directives']),
                 'PLATFORM={}'.format(task['platform']),
                 'TARGET={}'.format(config['EXECUTABLE_NAME']),
             ],
@@ -287,13 +290,13 @@ def stage_seashell(db, config):
             f.write(hls_code)
 
 
-def _sds_cmd(prefix, func_hw, c_hw, platform):
+def _sds_cmd(prefix, func_hw, c_hw, directives, platform):
     """Make a sds++ command with all our standard arguments.
     """
     return prefix + [
         'sds++',
         '-sds-pf', platform,
-        '-sds-hw', func_hw, c_hw, '-sds-end',
+        '-sds-hw', func_hw, c_hw, directives, '-sds-end',
         '-clkid', '3',
         '-poll-mode', '1',
         '-verbose', '-Wall', '-O3',
@@ -320,7 +323,7 @@ def stage_hls(db, config):
 
         # Run Xilinx SDSoC compiler for hardware functions.
         task.run(
-            _sds_cmd(prefix, hw_basename, hw_c, task['platform']) + flags + [
+            _sds_cmd(prefix, hw_basename, hw_c, task['directives'], task['platform']) + flags + [
                 '-c',
                 hw_c, '-o', hw_o,
             ],
