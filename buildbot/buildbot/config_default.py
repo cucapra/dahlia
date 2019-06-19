@@ -45,7 +45,7 @@ CONFIG_OPTIONS = {
 EXECUTABLE_NAME = 'sdsoc'
 
 # Default directives file is empty.
-DEFAULT_DIRECTIVES = ' '
+DEFAULT_DIRECTIVES = ''
 
 # The number of (recent) lines of the log to show on job pages.
 LOG_PREVIEW_LINES = 32

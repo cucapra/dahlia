@@ -332,8 +332,13 @@ def stage_hls(db, config):
         flags = shlex.split(task['sdsflags'])
 
         # Run Xilinx SDSoC compiler for hardware functions.
+        if not task['directives']:
+            sds_cmd_args= task['platform']
+        else:
+            sds_cmd_args= task['directives'], task['platform']
+            
         task.run(
-            _sds_cmd(prefix, hw_basename, hw_c, task['directives'], task['platform']) + flags + [
+            _sds_cmd(prefix, hw_basename, hw_c, sds_cmd_args) + flags + [
                 '-c',
                 hw_c, '-o', hw_o,
             ],
