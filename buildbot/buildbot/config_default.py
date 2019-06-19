@@ -35,6 +35,7 @@ CONFIG_OPTIONS = {
     'skipseashell': bool,
     'estimate': bool,
     'make': bool,
+    'kernel': str,
     'sdsflags': str,
     'platform': str,
 }
