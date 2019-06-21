@@ -69,6 +69,8 @@ You can also specify job configuration options as further POST parameters:
 - `skipseashell`, which lets you supply plain HLS C code as input.
 - `estimate`, to use the Xilinx toolchain's resource estimation facility. The job will skip synthesis and execution on the FPGA.
 - `make`, to use a Makefile instead of the built-in compilation workflow (see below).
+- `hwname`, which lets you provide a name for the job during makefile flow.
+- `directives`, which let's you provide the name of a file with a set of directives (pragmas). If you want to force default directive files to be ignored you can use this as `directives=0`.
 
 Use `-F <option>=1` to enable these options with `curl`.
 
@@ -96,5 +98,6 @@ For estimation, buildbot supplies flags for `sds++` using the `SDSFLAGS` variabl
 %.o: %.c
     sds++ $(SDSFLAGS) $< -o $@
 ```
+For configurations provided above, buildbot also relies on following variables, `ESTIMATE`, `DIRECTIVES`. Make sure these variables behave according to the configuration description in your makefile.
 
 [curl]: https://curl.haxx.se
