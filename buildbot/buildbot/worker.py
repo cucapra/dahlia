@@ -154,7 +154,6 @@ def _task_config(task, config):
     task['sdsflags'] = flags
     task['estimate'] = est
 
-    task['directives'] = task['config'].get('directives')
     task['platform'] = task['config'].get('platform') or \
         config['DEFAULT_PLATFORM']
 
@@ -233,8 +232,8 @@ def stage_make(db, config):
                 'PLATFORM={}'.format(task['platform']),
                 'TARGET={}'.format(config['EXECUTABLE_NAME']),
             ]
-        if not task['directives']:
-            make_cmd = make_cmd + ['DIRECTIVES={}'.format(task['directives']),]
+        if task['config'].get('directives'):
+            make_cmd = make_cmd + ['DIRECTIVES={}'.format(task['config'].get['directives']),]
 
         task.run(
             make_cmd,
@@ -310,13 +309,13 @@ def _sds_cmd(prefix, task):
             '-poll-mode', '1',
             '-verbose', '-Wall', '-O3',
         ]
-    if not task['directives']:
+    if task['config'].get('directives'):
         return sds_cmd_head + [
-                '-sds-hw', func_hw, c_hw, '-sds-end',
+                '-sds-hw', func_hw, c_hw, '-hls-tcl', task['config'].get('directives'), '-sds-end',
             ] + sds_cmd_tail
     else:
         return sds_cmd_head + [
-                '-sds-hw', func_hw, c_hw, '-hls-tcl', task['directives'], '-sds-end',
+                '-sds-hw', func_hw, c_hw, '-sds-end',
             ] + sds_cmd_tail
 
 
