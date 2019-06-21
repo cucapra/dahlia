@@ -225,15 +225,14 @@ def stage_make(db, config):
                 task['sdsflags']
             ))
 
-        make_cmd = 
-            prefix + [
+        make_cmd = prefix + [
                 'make',
                 'ESTIMATE={}'.format(task['estimate']),
                 'PLATFORM={}'.format(task['platform']),
                 'TARGET={}'.format(config['EXECUTABLE_NAME']),
             ]
         if task['config'].get('directives'):
-            make_cmd = make_cmd + ['DIRECTIVES={}'.format(task['config'].get['directives']),]
+            make_cmd += ['DIRECTIVES={}'.format(task['config'].get['directives']),]
 
         task.run(
             make_cmd,
@@ -299,8 +298,7 @@ def _sds_cmd(prefix, task):
     """Make a sds++ command with all our standard arguments.
     """
     hw_basename, hw_c, hw_o = _hw_filenames(task)
-    sds_cmd_head = 
-        prefix + [
+    sds_cmd_head = prefix + [
             'sds++',
             '-sds-pf', task['platform'],
         ]
