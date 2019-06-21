@@ -28,7 +28,7 @@ private class CppRunnable extends CppLike {
     case TAlias(n) => n
   }
 
-  def emitArrayDecl(ta: TArray, id: Id) = emitType(ta) <+> s"&$id"
+  def emitArrayDecl(ta: TArray, id: Id) = emitType(ta) <+> s"$id"
 
   def emitFor(cmd: CFor): Doc =
     "for" <> emitRange(cmd.range) <+> scope {
@@ -140,7 +140,7 @@ private class CppRunnableHeader extends CppRunnable {
   override def emitCmd(c: Command): Doc = emptyDoc
 
   override def emitFunc = { case FuncDef(id, args, _) =>
-    val as = hsep(args.map(emitDecl), comma)
+    val as = hsep(args.map(d => emitDecl(d.id, d.typ)), comma)
     "void" <+> id <> parens(as) <> semi
   }
 

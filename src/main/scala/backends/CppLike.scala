@@ -105,7 +105,7 @@ object Cpp {
       case CPar(c1, c2) => c1 <@> c2
       case CSeq(c1, c2) => c1 <@> text("//---") <@> c2
       case CLet(id, typ, init) =>
-        emitType(typ.get) <+> value(id) <>
+        emitDecl(id, typ.get) <>
         (if (init.isDefined) space <> equal <+> emitExpr(init.get) else emptyDoc) <>
         semi
       case CIf(cond, cons, alt) =>
@@ -120,13 +120,13 @@ object Cpp {
         throw Impossible("Views should not exist during codegen.")
     }
 
-    def emitDecl(d: Decl): Doc = d.typ match {
-      case ta:TArray => emitArrayDecl(ta, d.id)
-      case _ => emitType(d.typ) <+> d.id
+    def emitDecl(id: Id, typ: Type): Doc = typ match {
+      case ta:TArray => emitArrayDecl(ta, id)
+      case _ => emitType(typ) <+> id
     }
 
     def emitFunc: FuncDef => Doc = { case func@FuncDef(id, args, bodyOpt) =>
-      val as = hsep(args.map(emitDecl), comma)
+      val as = hsep(args.map(decl => emitDecl(decl.id, decl.typ)), comma)
       // If body is not defined, this is an extern. Elide the definition.
       bodyOpt.map(body => "void" <+> id <> parens(as) <+> scope {
         emitFuncHeader(func) <@>
