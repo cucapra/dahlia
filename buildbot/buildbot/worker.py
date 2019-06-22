@@ -232,7 +232,7 @@ def stage_make(db, config):
                 'TARGET={}'.format(config['EXECUTABLE_NAME']),
             ]
         if task['config'].get('directives'):
-            make_cmd += ['DIRECTIVES={}'.format(task['config'].get['directives']),]
+            make_cmd.append(['DIRECTIVES={}'.format(task['config']['directives']),])
 
         task.run(
             make_cmd,
@@ -309,7 +309,7 @@ def _sds_cmd(prefix, task):
         ]
     if task['config'].get('directives'):
         return sds_cmd_head + [
-                '-sds-hw', func_hw, c_hw, '-hls-tcl', task['config'].get('directives'), '-sds-end',
+                '-sds-hw', func_hw, c_hw, '-hls-tcl', task['config']['directives'], '-sds-end',
             ] + sds_cmd_tail
     else:
         return sds_cmd_head + [
