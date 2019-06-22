@@ -231,7 +231,7 @@ def stage_make(db, config):
                 'PLATFORM={}'.format(task['platform']),
                 'TARGET={}'.format(config['EXECUTABLE_NAME']),
             ]
-        if task['config'].get('directives'):
+        if task['config']['directives']:
             make_cmd.append(['DIRECTIVES={}'.format(task['config']['directives']),])
 
         task.run(
@@ -307,7 +307,7 @@ def _sds_cmd(prefix, task):
             '-poll-mode', '1',
             '-verbose', '-Wall', '-O3',
         ]
-    if task['config'].get('directives'):
+    if task['config']['directives']:
         return sds_cmd_head + [
                 '-sds-hw', func_hw, c_hw, '-hls-tcl', task['config']['directives'], '-sds-end',
             ] + sds_cmd_tail
