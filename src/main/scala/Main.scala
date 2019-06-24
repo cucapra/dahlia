@@ -3,13 +3,14 @@ package fuselang
 import java.nio.file.{Files, Path}
 import java.io.File
 
-import CmdlineConfig._
 import Compiler._
 import common.Logger
+import common.Configuration._
+import Utils.validBackends
 
 object Main {
 
-  val parser = new scopt.OptionParser[CmdlineConfig]("fuse") {
+  val parser = new scopt.OptionParser[Config]("fuse") {
 
     head("fuse", "0.0.1")
 
@@ -35,7 +36,7 @@ object Main {
       .valueName("<backend>")
       .validate(b => if (validBackends.contains(b)) success
                      else failure(s"Invalid backend name. Valid backes are ${validBackends.mkString(",")}"))
-      .action((b, c) => c.copy(backend = toBackend(b)))
+      .action((b, c) => c.copy(backend = b))
       .text("Name of the backend to use. Default backed is vivado.")
 
     opt[String]('l', "log-level")
@@ -47,7 +48,7 @@ object Main {
       .text("Generate header file instead of code. Defaults to false")
 
     cmd("run")
-      .action((_, c) => c.copy(mode = Run, backend = toBackend("c++")))
+      .action((_, c) => c.copy(mode = Run, backend = "c++"))
       .text("Generate a runnable object file. Assumes GCC and required headers are available. Implies mode=c++.")
       .children(
         opt[String]('o', "outfile")
@@ -61,7 +62,7 @@ object Main {
           .text("Option to be passed to the C++ compiler. Can be repeated."))
   }
 
-  def runWithConfig(conf: CmdlineConfig): Either[String, Int] = {
+  def runWithConfig(conf: Config): Either[String, Int] = {
     type ErrString = String
 
     val path = conf.srcFile.toPath

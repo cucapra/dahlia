@@ -19,5 +19,11 @@ object Utils {
     v
   }
 
+  val validBackends = Set("vivado", "c++")
 
+  def toBackend(str: String): fuselang.backend.Backend = str match {
+    case "vivado" => backend.VivadoBackend
+    case "c++" => backend.CppRunnable
+    case b@_ => throw common.CompilerError.Impossible(s"Unknown backend $b")
+  }
 }
