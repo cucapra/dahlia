@@ -232,7 +232,7 @@ def stage_make(db, config):
                 'TARGET={}'.format(config['EXECUTABLE_NAME']),
             ]
         if task['config']['directives']:
-            make_cmd.append(['DIRECTIVES={}'.format(task['config']['directives']),])
+            make_cmd.append('DIRECTIVES={}'.format(task['config']['directives']))
 
         task.run(
             make_cmd,
