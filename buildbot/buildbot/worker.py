@@ -217,9 +217,6 @@ def stage_make(db, config):
     with work(db, state.MAKE, state.MAKE_PROGRESS, state.HLS_FINISH) as task:
         _task_config(task, config)
 
-        # Print this name on the job page
-        task['hwname'] = task['config'].get('hwname')
-        
         if task['sdsflags']:
             task.log('WARNING: make stage is ignoring sdsflags={}'.format(
                 task['sdsflags']
@@ -265,8 +262,6 @@ def stage_seashell(db, config):
 
             task.log('skipping Fuse compilation stage')
             task['hw_basename'] = base
-            # Print this name on the job page
-            task['hwname'] = base
             return
 
         # Look for the Seashell source code.
