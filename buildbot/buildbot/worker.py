@@ -234,6 +234,9 @@ def stage_make(db, config):
             cwd=CODE_DIR,
         )
 
+        # Run data extraction after synthesis
+        data_extract.synth_data(task)
+
 
 def stage_seashell(db, config):
     """Work stage: compile Seashell code to HLS C.
