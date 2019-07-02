@@ -580,7 +580,7 @@ object TypeChecker {
         checkC(c1)(newScope)
       }
       val env2 = checkC(c2)(env ++ binds)
-      env1 merge env2
+      env2 merge env1
     }
     case CExpr(e) => checkE(e)._2
     case CEmpty => env
