@@ -30,10 +30,33 @@ decl a: bit<32>; // number
 
 ## Arrays
 
+### Global arrays
+
+Arrays defined using `decl` are used as the memory interface for this module.
+
 ```C
-decl arr: bit<32>[10] // 10 elements each of which is bit<10>
+decl arr: bit<32>[10] // 10 elements each of which is bit<32>
 decl barr: bit<32>[10 bank 2] // An array with two banks
 decl marr: bit<32>[10 bank 2][8 bank 4] // multi-dimensional arrays are supported
+```
+
+### Local arrays
+
+Local arrays are either mapped to BRAM or a register file depending on their
+size and usage. Read uninitialized memories results in undefined behavior.
+
+```C
+let tmp: bit<32>[10];
+let tmp_banked: bit<32>[10 bank 5];
+```
+
+### Literals
+
+Local array definitions can optionally be initialized. Local memories with
+initializers can only have a single dimension.
+
+```C
+let tmp: bit<32>[3] = {1, 2, 3};
 ```
 
 ## Records
@@ -44,12 +67,12 @@ decl marr: bit<32>[10 bank 2][8 bank 4] // multi-dimensional arrays are supporte
 // Cannot contain arrays
 record point {
   x: bit<32>;
-  y: bit<32>;
+  y: bit<32>
 }
 // Can contain other records
 record rect {
   lb: point;
-  rt: point;
+  rt: point
 }
 ```
 
@@ -60,6 +83,8 @@ Record literals can only defined in a let binder and need an explicit type.
 ```C
 let p: point = { x = 1; y = 2 }
 ```
+
+> Note the missing semicolon after `y = 2`
 
 ## Binary operations
 
@@ -149,18 +174,96 @@ def foo(a: bit<32>[10], b: bit<32>[10]) {
 foo(arr, barr)
 ```
 
+## Externs
+
+Externs are similar to function declarations. An extern is simply a function
+header without the body:
+
+```
+def extern foo(a: bool, x: bit<32>);
+```
+
+Usually, you'll want to use `extern`s with `import` statements.
+
+## Import statements
+
+Import statements can be used to add `#include`s to files and import `extern`
+definitions. The imported functions can only be externs.
+
+```C
+import "printer.h" {
+  def extern print_vector(a: bit<32>[10]);
+}
+```
+
+
 ## Views
 
 Once created, views are accessed transparently as arrays.
 
-### Shrink views
+### Simple views
 
-Shrink views must have the same step and width parameters.
+The basic syntax of a simple view is:
 
 ```C
-decl a: bit<32>[8 bank 4];
-view v = shrink a[2 * i : 2];
+view v = a[ <suf> : + <pre> bank <shrink> ];
 ```
+
+where `+` and `bank` syntactically required. Suffixes can either be _aligned_
+or _rotating_. The `<pre>` and `bank <shrink>` can be optionally elided.
+
+```C
+view v = a[<suf>:] // valid
+view v = a[<suf>: bank <shrink>] // valid
+view v = a[_: <pre> bank <shrink>] // valid
+```
+
+#### Aligned view
+
+The syntax for creating an aligned view is:
+
+```C
+view v_a = a[factor * expr: ...]
+```
+
+where `factor` must be a factor of the banking factor the array. Example:
+
+```C
+decl a: bit<32>[16 bank 8];
+view v = a[4 * i: ]; // valid, i can be an arbitrary expression
+view v = a[2 * i: bank 2]; // valid
+```
+
+#### Rotation view
+
+The syntax for creating a rotation view is:
+
+```C
+view v_a = a[ expr! : ...]
+```
+
+Example:
+
+```C
+decl a: bit<32>[16 bank 8];
+view v = a[i!: ]; // valid
+view v = a[(i + j)! :] // valid
+```
+
+### Split views
+
+See the views doc for the semantics of `split`.
+
+Split views are created using the following syntax:
+
+```C
+decl a: bit<32>[16 bank 8];
+split v = a[by <factor>]
+```
+
+where `factor` must be a factor of the banking factor of the corresponding
+dimension. If `factor` is `1` then the dimension is preserved as is.
+
 
 ## Program Structure
 

@@ -1,8 +1,8 @@
 package fuselang.backend
 
 import fuselang.Syntax._
-import fuselang.Utils._
-import fuselang.Errors._
+import fuselang.Configuration._
+import fuselang.CompilerError._
 
 import Cpp._
 
@@ -14,101 +14,153 @@ import Cpp._
  */
 private class CppRunnable extends CppLike {
 
-  def emitType(typ: Type) = typ match {
+  def emitType(typ: Type): Doc = typ match {
     case _:TVoid => "void"
-    case _:TBool | _:TIndex | _:TStaticInt | _:TSizedInt => "int"
+    case _:TBool => "bool"
+    case _:TIndex | _:TStaticInt | _:TSizedInt => "int"
     case _:TFloat => "float"
-    case TArray(typ, _) => "vector" <> angles(emitType(typ))
+    case _:TDouble => "double"
+    case TArray(typ, dims) =>
+      dims.foldLeft(emitType(typ))({ case (acc, _) => "vector" <> angles(acc) })
     case TRecType(n, _) => n
-    case _:TFun => throw Impossible("Cannot emit function types")
+    case _:TFun =>
+      throw Impossible("Cannot emit function types")
     case TAlias(n) => n
   }
 
-  def emitArrayDecl(ta: TArray, id: Id) = emitType(ta) <+> s"&$id"
+  def emitArrayDecl(ta: TArray, id: Id) = emitType(ta) <+> s"$id"
 
   def emitFor(cmd: CFor): Doc =
     "for" <> emitRange(cmd.range) <+> scope {
-      cmd.par <@>
-      (if (cmd.combine != CEmpty) text("// combiner:") <@> cmd.combine else value(""))
+      cmd.par <> {
+        if (cmd.combine != CEmpty)
+          line <> text("// combiner:") <@> cmd.combine
+        else
+          emptyDoc
+      }
     }
 
-  def emitFuncHeader(func: FuncDef) = value("")
+  def emitFuncHeader(func: FuncDef) = emptyDoc
 
   /**
    * Emit code to parse the value for declaration `d`. Assumes that the
-   * program has already created a value `v` of the type picojson::value to
+   * program has already created a value `v` of the type json to
    * store the data. Each parameter generates two statements:
    *
-   * auto id_t = get_arg<type>("id", "type", v); // v is the picojson value parsed earlier.
-   * auto id = `transform`(id_t);
+   * auto id = get_arg<type>("id", "type", v); // v is the json value parsed earlier.
    *
-   * For the second statement, `transform` is generated based on the type of the
-   * param:
-   *
-   * - Arrays are turned in n-dimensional vectors and then flattened.
-   * - Primitives are cast to primitive type from `double`. (All numbers in JSON
-   *   are initially parsed as doubles.)
+   * <align> is generated based on the type of the param:
    */
-  def emitParseDecl: Decl => Doc = { case Decl(id, typ) => {
-    val comment = value(s"// parsing parameter $id")
+  def emitParseDecl: Decl => Doc = { case Decl(id, _) => {
+    // Use the type decoration for id since it's guaranteed to be resolved.
+    val typ = id.typ.get
 
-    val parseStmt = typ match {
-      case _:TBool | _:IntType | _:TFloat => {
-        cBind(s"${id}_t",
-          cCall("get_arg", Some("double"),
-            List(quote(id), quote("int"), "v")))
+    val (typeName, cTyp): (Doc, Doc) = typ match {
+      case _:TAlias | _:TRecType | _:TBool | _:IntType | _:TFloat => {
+        val typeName = emitType(typ)
+        (quote(typeName), typeName)
       }
-      case arr@TArray(_:IntType | _:TFloat | _:TBool, _) => {
-        cBind(s"${id}_t",
-          cCall(
-            "get_arg",
-            Some("picojson::array"),
-            List(quote(id), quote(s"${arr.typ}[]"), "v")))
+      case arr@TArray(_, dims) => {
+        val typeName = quote(s"${arr.typ}${dims.map(_ => "[]").mkString}")
+        val cType =
+          "n_dim_vec_t" <> angles(emitType(arr.typ) <> comma <+> dims.length.toString)
+        (typeName, cType)
       }
-      case t => throw Impossible(s"Cannot parse type $t with CppRunnable backend.")
+      case t =>
+        throw NotImplemented(s"Cannot parse type `$t' with CppRunnable backend.")
     }
 
-    val alignType = typ match {
-      case _:TBool | _:IntType | _:TFloat => {
-        cBind(s"$id",
-          cCall("to_num", Some(emitType(typ)), List(s"${id}_t")))
-      }
-      case arr@TArray(_:IntType | _:TFloat | _:TBool, dims) => {
-        val funcName = s"to_order_${dims.length}_tensor"
-        cBind(s"$id",
-          cCall("flatten_matrix", Some(emitType(arr.typ)),
-            List(cCall(
-              funcName,
-              Some(emitType(arr.typ)),
-              s"${id}_t" :: dims.map(t => value(t._1))))))
-      }
-      case t => throw Impossible(s"Cannot parse type $t with CppRunnable backend.")
-    }
+    cBind(s"${id}",
+      cCall("get_arg", Some(cTyp), List(quote(id), typeName, "v")))
 
-    comment <@> parseStmt <@> alignType
   }}
 
+  /**
+   * Generates [[from_json]] and [[to_json]] for a given record. Used by the
+   * json library to extract records from json.
+   * See: https://github.com/nlohmann/json#basic-usage
+   */
+  private def recordHelpers: RecordDef => Doc = { case RecordDef(name, fields) =>
+    "void to_json" <> parens(s"nlohmann::json& j, const ${name}& r") <+> scope {
+      "j =" <+> "nlohmann::json" <> braces(hsep({
+        fields.map({ case (id, _) => braces(quote(id) <> comma <+> s"r.$id")}).toList
+      }, comma)) <> semi
+    } <@>
+    "void from_json" <> parens(s"const nlohmann::json& j, ${name}& r") <+> scope {
+      vsep({
+        fields.map({ case (id, _) =>
+          "j.at" <> parens(quote(id)) <> ".get_to" <> parens(s"r.$id") <> semi
+        }).toList
+      })
+    }
+  }
+
   def emitProg(p: Prog, c: Config) = {
-    val prog =
-      vsep(p.includes.map(emitInclude)) <@>
-      vsep(p.defs.map(emitDef)) <@>
-      emitFunc(FuncDef(Id(c.kernelName), p.decls, Some(p.cmd)))
+    // Comments to demarcate autogenerated struct parsing helpers
+    val startHelpers = value("/***************** Parse helpers  ******************/")
+    val endHelpers = value("/***************************************************/")
 
-    val getArgs: Doc = vsep(p.decls.map(emitParseDecl), line)
+    // Add parsing library to the list of includes.
+    val includes = Include("parser.cpp", List()) :: p.includes
 
-    val modProg = "#include" <+> dquotes("parser.cpp") <@> prog <@>
-    value("int main(int argc, char** argv)") <+> scope {
+    // Generate parsing helpers for all record defintions.
+    val parseHelpers =
+      vsep(p.defs.collect({ case rec: RecordDef => recordHelpers(rec)}))
+
+    // Generate code for the main kernel in this file.
+    val kernel = vsep {
+      includes.map(emitInclude) ++
+      p.defs.map(emitDef) ++
+      (startHelpers ::
+      parseHelpers ::
+      endHelpers ::
+      emitFunc(FuncDef(Id(c.kernelName), p.decls, Some(p.cmd))) ::
+      Nil)
+    }
+
+    // Generate function calls to extract all kernel parameters from the JSON
+    val getArgs: Doc = vsep(p.decls.map(emitParseDecl))
+
+    // Generate a main function that parses are kernel parameters and calls
+    // the kernel function.
+    val main = value("int main(int argc, char** argv)") <+> scope {
+      "using namespace flattening;" <@>
       cBind("v", cCall("parse_data", None, List("argc", "argv"))) <> semi <@>
       getArgs <@>
       cCall(c.kernelName, None, p.decls.map(decl => value(decl.id.v))) <> semi <@>
       "return 0" <> semi
     }
 
-    super.pretty(modProg).layout
+    // Emit string
+    super.pretty(kernel <@> main).layout
+  }
+}
+
+private class CppRunnableHeader extends CppRunnable {
+  override def emitCmd(c: Command): Doc = emptyDoc
+
+  override def emitFunc = { case FuncDef(id, args, _) =>
+    val as = hsep(args.map(d => emitDecl(d.id, d.typ)), comma)
+    "void" <+> id <> parens(as) <> semi
+  }
+
+  override def emitProg(p: Prog, c: Config) = {
+    val includes = Include("parser.cpp", List()) :: p.includes
+
+    val declarations =
+      vsep(includes.map(emitInclude)) <@>
+      vsep (p.defs.map(emitDef)) <@>
+      emitFunc(FuncDef(Id(c.kernelName), p.decls, None))
+
+    super.pretty(declarations).layout
   }
 }
 
 case object CppRunnable extends Backend {
-  private val emitter = new CppRunnable()
-  def emitProg(p: Prog, c: Config) = emitter.emitProg(p, c)
+  def emitProg(p: Prog, c: Config) = c.header match {
+    case true => (new CppRunnableHeader()).emitProg(p, c)
+    case false => (new CppRunnable()).emitProg(p, c)
+  }
+  val canGenerateHeader = true
 }
+

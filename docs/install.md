@@ -3,9 +3,7 @@ id: installation
 title: Installation
 ---
 
-Fuse is a programming language for designing hardware accelerators.
-It provides abstractions that guarantee hardware realizability after type checking.
-For more details, see [the documentation][docs].
+Here's how to get and run the compiler.
 
 ## Set It Up
 
@@ -30,7 +28,7 @@ Type `sbt assembly` to generate a [fat jar][] for command-line use and distribut
 If you're working on the compiler, you probably want to use the sbt console instead (it's faster for repeated builds).
 Run `sbt` alone to get the console, where you can type commands like `compile`, `test`, and `run [args]`.
 
-Adding the prefix `~` (such as `~compile`) makes `sbt` go into watch mode, i.e., it will re-run the command every time a dependency changes. Use `~assembly` to continously update `./fuse` or `~test` to continously test the changes.
+Adding the prefix `~` (such as `~compile`) makes `sbt` go into watch mode, i.e., it will re-run the command every time a dependency changes. Use `~assembly` to continuously update `./fuse` or `~test` to continuously test the changes.
 
 If you want to execute a sequence of `sbt` commands without starting `sbt` console, you can type `sbt "; cmd1; cm2 ..."`. For example, `sbt "; test; assembly"` will run `sbt test` followed by `sbt assembly`.
 

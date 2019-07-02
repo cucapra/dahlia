@@ -4,7 +4,18 @@ id: cpp-runnable
 ---
 
 The `fuse` CLI provides the `run` subcommand for generating executables that
-can be used to test Fuse code without going throught a synthesis workflow.
+can be used to test Fuse code without going through a synthesis workflow.
+
+## Limitation
+
+The backend is meant to be used for functional testing and as such has a few
+important limitations.
+
+1. Exact bitwidth integer computation is not supported. Sized integers get
+   compiled to C++ `int`. This affects the semantics of programs that relay on wrap around behavior for sized ints.
+2. `unroll`s do not create any form of parallelism. The annotation is compiled
+   away after typechecking. This does not affect the semantics, only the performance.
+3. Functions are not inlined. This does not affect the semantics, only the performance.
 
 ## Example
 
@@ -22,12 +33,9 @@ for (let i = 0..2) {
     c[i][j] := a[i][j] + b[i][j];
   }
 }
----
-print_vector(c);
 ```
 
-Add this code to a file titled `matadd.fuse`. The `print_vector` extern is
-provided by the parsing library.
+Add this code to a file titled `matadd.fuse`.
 
 > If you're running the `fuse` command outside the compiler repository, the
 > command will also create a folder called `_headers` and unpack the required
@@ -61,6 +69,8 @@ and run the command:
 ```
 
 which will produce the desired output from adding the two matrices `a` and `b`.
+There will be no output because we aren't printing anything out. We can define
+a Fuse [extern](binders.md#functions) to see the output.
 
 ## Compiler Configuration
 
@@ -72,12 +82,29 @@ $(CXX) -I <headers_loc>/ matadd.cpp -o matadd.cpp.o
 ```
 
 The headers include a small parsing library written in C++ that uses the
-[picojson](https://github.com/kazuho/picojson) header library to parse in
+[nlohmann json](https://github.com/kazuho/picojson) header library to parse in
 arguments to the function.
 
 The `run` mode also automatically generates a `main` method to parse in
 arguments and align their types. This mode is meant for allow for quick functional
 testing of the kernel code while development.
+
+## Data Format
+
+We use the [JSON](https://www.json.org/) format to pass in data to the compiled
+executable. The types in Fuse directly map to JSON data elements:
+
+- **Numeric Types**: While the JSON standard only allows for `double`s, the
+    parsing library correctly casts double into input types. As noted before,
+    numbers are not bit precise.
+- **Booleans**: Maps to a JSON boolean.
+- **N-Dimensional Arrays**: Maps to arrays of arrays in JSON. We require that
+   the array elements have the same type. The parsing library can handle
+   arbitrary `n`-dimensional arrays. However, note that we use a template based
+   implementation for flattening arrays which might increase the *compile* time
+   with the C++ compiler.
+- **Records**: Records simply map to JSON objects. The record will be parsed
+  into the type specified by the declaration.
 
 ## Larger Projects
 

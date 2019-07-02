@@ -35,7 +35,9 @@ import Syntax._
  *
  *  Joins: t1 and t2 have a join T if t1 < T and t2 < T. Informally, this is
  *  described as descending down the trees of t1 and t2 to find a common ancestor.
- *  Canonically, we call this type the "least upper bound"
+ *  Canonically, we call this type an "upper bound" and a "least upper bound"
+ *  if there is no type T' statisfying T' < T and is an upper bound for t1 and
+ *  t2.
  */
 object Subtyping {
   def bitsNeeded(n: Int) = n match {
@@ -54,33 +56,44 @@ object Subtyping {
     case (TSizedInt(v1), TSizedInt(v2)) => v1 <= v2
     case (_:IntType, _:TSizedInt) => true
     case (_:TStaticInt, _:TIndex) => true
-    case (TArray(tsub, _), TArray(tsup, _)) => {
-      // Arrays are mutable so we are conservative and disallow subtyping.
-      areEqual(tsup, tsub)
+    case (TArray(tsub, subDims), TArray(tsup, supDims)) => {
+      // Arrays are invariant
+      areEqual(tsup, tsub) && subDims == supDims
     }
+    case (_:TFloat, _:TDouble) => true
     case _ => areEqual(sub, sup)
   }
 
-  def joinOf(t1: Type, t2: Type, op: BOp): Option[Type] = (t1, t2) match {
+  private def joinOfHelper(t1: Type, t2: Type, op: BOp): Option[Type] = (t1, t2) match {
     case (TStaticInt(v1), TStaticInt(v2)) => op.toFun match {
       case Some(fun) => Some(TStaticInt(fun(v1, v2)))
       case None => Some(TSizedInt(max(bitsNeeded(v1), bitsNeeded(v2))))
     }
-    case (TSizedInt(s1), TSizedInt(s2)) =>
-      Some(TSizedInt(max(s1, s2)))
-    case (TStaticInt(v), TSizedInt(s)) => {
-      Some(TSizedInt(max(s, bitsNeeded(v))))
-    }
-    case (TSizedInt(s), TStaticInt(v)) => {
-      Some(TSizedInt(max(s, bitsNeeded(v))))
-    }
-    case (idx@TIndex(_, _), TStaticInt(v)) =>
-      Some(TSizedInt(max(idx.maxVal, bitsNeeded(v))))
-    case (TStaticInt(v), idx@TIndex(_, _)) =>
-      Some(TSizedInt(max(idx.maxVal, bitsNeeded(v))))
-    case (_: TIndex, t2@TSizedInt(_)) => Some(t2)
+    case (TSizedInt(s1), TSizedInt(s2)) => Some(TSizedInt(max(s1, s2)))
+    case (TSizedInt(s), TStaticInt(v)) => Some(TSizedInt(max(s, bitsNeeded(v))))
+    case (st:TStaticInt, idx:TIndex) => Some(TSizedInt(bitsNeeded(max(idx.maxVal, st.v))))
     case (t2@TSizedInt(_), _:TIndex) => Some(t2)
     case (_:TFloat, _:TFloat) => Some(TFloat())
-    case _ => None
+    case (_:TFloat, _:TDouble) => Some(TDouble())
+    case (ti1:TIndex, ti2:TIndex) =>
+      Some(TSizedInt(max(bitsNeeded(ti1.maxVal), bitsNeeded(ti2.maxVal))))
+    case (t1, t2) => if (t1 == t2) Some(t1) else None
+  }
+
+  /**
+   * Try finding the join of either ordering and use the result.
+   */
+  def joinOf(t1: Type, t2: Type, op: BOp): Option[Type] = {
+    val j1 = joinOfHelper(t1, t2, op)
+    if (j1.isDefined) j1
+    else joinOfHelper(t2, t1, op)
+  }
+
+  def safeCast(originalType: Type, castType: Type) = (originalType, castType) match {
+    case (t1:IntType, t2:TSizedInt) =>  isSubtype(t1, t2)
+    case (_:TFloat, _:TSizedInt) => false
+    case (_:IntType, _:TFloat) => true
+    case (_:TFloat, _:TDouble) => true
+    case (t1, t2) => areEqual(t1, t2)
   }
 }

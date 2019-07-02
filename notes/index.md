@@ -1,9 +1,10 @@
 ---
 title: Notes About Seashell
 ---
-Try out seashell demo:
 
-* [Online REPL](../)
+::: todo
+These notes might be out of date. Refer to the up to date [documentation](https://capra.cs.cornell.edu/fuse/).
+:::
 
 Read some notes about aspects of Seashell's design:
 

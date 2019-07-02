@@ -1,13 +1,3 @@
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- */
-
-// See https://docusaurus.io/docs/site-config for all the possible
-// site configuration options.
-
 const baseUrl = '/fuse/'
 const siteConfig = {
   title: 'Fuse',
@@ -18,7 +8,8 @@ const siteConfig = {
   organizationName: 'cucapra',
   headerLinks: [
     {doc: 'installation', label: 'Docs'},
-    {href: 'https://capra.cs.cornell.edu/seashell/docs', label: 'Notes'}
+    {label: 'Notes', href: 'https://capra.cs.cornell.edu/seashell/docs'},
+    {label: 'GitHub', href: 'https://github.com/cucapra/seashell'}
   ],
 
   /* path to images for header/footer */
@@ -28,8 +19,8 @@ const siteConfig = {
 
   /* Colors for website */
   colors: {
-    primaryColor: '#009292',
-    secondaryColor: '#009292',
+    primaryColor: '#b31b1b',  // Cornell red.
+    secondaryColor: '#541b18',
   },
 
   // This copyright info is used in /core/Footer.js and blog RSS/Atom feeds.
@@ -71,24 +62,10 @@ const siteConfig = {
   cleanUrl: true,
 
   // Show documentation's last contributor's name.
-   enableUpdateBy: true,
+  enableUpdateBy: true,
 
   // Show documentation's last update time.
-   enableUpdateTime: true,
-
-  /* Custom fonts for website */
-  /*
-  fonts: {
-    myFont: [
-      "Times New Roman",
-      "Serif"
-    ],
-    myOtherFont: [
-      "-apple-system",
-      "system-ui"
-    ]
-  },
-  */
+  enableUpdateTime: true,
 
 };
 

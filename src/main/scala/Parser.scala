@@ -31,6 +31,9 @@ private class FuseParser extends RegexParsers with PackratParsers {
   lazy val float = "(-)?[0-9]+\\.[0-9]+".r ^^ { n => n.toFloat }
   lazy val boolean = "true" ^^ { _ => true } | "false" ^^ { _ => false }
 
+  lazy val arrLiteral: P[Expr] = positioned {
+    braces(repsep(expr, ",")) ^^ { case es => EArrLiteral(es) }
+  }
   lazy val eaa: P[Expr] = positioned {
     iden ~ rep1(brackets(expr)) ^^ { case id ~ idxs => EArrAccess(id, idxs) }
   }
@@ -40,7 +43,10 @@ private class FuseParser extends RegexParsers with PackratParsers {
     braces(repsep(recLiteralField, ";")) ^^ { case fs => ERecLiteral(fs.toMap) }
   }
 
+  lazy val exprCast: P[Expr] = parens(expr ~ "as" ~ atyp) ^^ { case e ~ _ ~ t => ECast(e, t)}
+
   lazy val simpleAtom: P[Expr] = positioned {
+    arrLiteral |
     eaa |
     recLiteral |
     float ^^ { case f => EFloat(f) } |
@@ -50,6 +56,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
     boolean ^^ { case b => EBool(b) } |
     iden ~ parens(repsep(expr, ",")) ^^ { case f ~ args => EApp(f, args) } |
     iden ^^ { case id => EVar(id) } |
+    exprCast |
     parens(expr)
   }
 
@@ -86,10 +93,11 @@ private class FuseParser extends RegexParsers with PackratParsers {
   lazy val and: P[BOp] = positioned("&&" ^^ { _ => OpAnd() })
   lazy val or: P[BOp] = positioned("||" ^^ { _ => OpOr() })
 
-  // Expressions
-  // The bin* parsers implement the precedence order of operators described
-  // for C/C++: https://en.cppreference.com/w/c/language/operator_precedence
-  // The tower-like structure is required to implement precedence correctly.
+  /** Expressions
+   * The bin* parsers implement the precedence order of operators described
+   * for C/C++: https://en.cppreference.com/w/c/language/operator_precedence
+   * The tower-like structure is required to implement precedence correctly.
+   */
   lazy val binMul: P[Expr] = positioned {
     recAccess ~ mulOps ~ binMul ^^ { case l ~ op ~ r => EBinop(op, l, r)} |
     recAccess
@@ -134,6 +142,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
     brackets(number)^^ { n => (n, 1) }
   lazy val atyp: P[Type] =
     "float" ^^ { _ => TFloat() } |
+    "double" ^^ { _ => TDouble() } |
     "bool" ^^ { _ => TBool() } |
     "bit" ~> angular(number) ^^ { case s => TSizedInt(s) } |
     iden ^^ { case id => TAlias(id) }
@@ -163,18 +172,29 @@ private class FuseParser extends RegexParsers with PackratParsers {
     "/=" ^^ { _ => RAdd() }
   }
 
-  // Some ugly validation for shrink step size = width
-  lazy val viewParam: P[(Expr, Int, Int)] =
-    number ~ "*" ~ expr ~ ":" ~ number ^^ {
-      case step ~ _ ~ idx ~ _ ~ width => (idx, width, step)
-    } |
-    number ~ ":" ~ number ^^ {
-      case idx ~ _ ~ width => (EInt(idx), width, width)
-    }
+  // Simple views
+  lazy val viewSuffix: P[Suffix] = positioned {
+    expr <~ "!" ^^ { case e => Rotation(e) } |
+    number ~ "*" ~ expr ^^ { case fac ~ _ ~ e => Aligned(fac, e) } |
+    "_" ^^ { case _ => Rotation(EInt(0)) }
+  }
 
-  lazy val view: P[ViewType] = positioned {
-    "shrink" ~> iden ~ rep1(brackets(viewParam)) ^^ {
-      case arrId ~ params => Shrink(arrId, params)
+  lazy val viewParam: P[View] = positioned {
+    viewSuffix ~ ":" ~ ("+" ~> number).? ~ ("bank" ~> number).? ^^ {
+      case suf ~ _ ~ prefixOpt ~ shrinkOpt => View(suf, prefixOpt, shrinkOpt)
+    }
+  }
+
+  lazy val view: P[Command] = positioned {
+    "view" ~> iden ~ "=" ~ iden ~ rep1(brackets(viewParam)) ^^ {
+      case id ~ _ ~ arrId ~ params => CView(id, arrId, params)
+    }
+  }
+
+  // split views
+  lazy val splitView: P[Command] = positioned {
+    "split" ~> iden ~ "=" ~ iden ~ rep1(brackets("by" ~> number)) ^^ {
+      case id ~ _ ~ arrId ~ factors => CSplit(id, arrId, factors)
     }
   }
 
@@ -186,10 +206,10 @@ private class FuseParser extends RegexParsers with PackratParsers {
   }
 
   lazy val simpleCmd: P[Command] = positioned {
-    "let" ~> iden ~ (":" ~> typ).? ~ ("=" ~> expr) ^^ {
+    "let" ~> iden ~ (":" ~> typ).? ~ ("=" ~> expr).? ^^ {
       case id ~ t ~ exp => CLet(id, t, exp)
     } |
-    "view" ~> iden ~ "=" ~ view ^^ { case arrId ~ _ ~ vt => CView(arrId, vt) } |
+    view | splitView |
     expr ~ ":=" ~ expr ^^ { case l ~ _ ~ r => CUpdate(l, r) } |
     expr ~ rop ~ expr ^^ { case l ~ rop ~ r => CReduce(rop, l, r) } |
     expr ^^ { case e => CExpr(e) }

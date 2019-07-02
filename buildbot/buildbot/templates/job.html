@@ -8,7 +8,19 @@
     </li>
     <li>
         <b>state:</b>
-        {{ job.state }}
+        {{ status_strings[job.state] }}
+
+        <form action="" method="post" class="inline">
+            <select name="state">
+                {% for state, name in status_strings.items() -%}
+                <option value="{{ state }}"
+                    {%- if state == job.state %}selected{% endif %}>
+                    {{ name }}
+                </option>
+                {%- endfor %}
+            </select>
+            <input type="submit" value="Set">
+        </form>
     </li>
     {% for key, value in job.items() %}
     {% if key not in ('started', 'state', 'name', 'log') %}
@@ -20,24 +32,13 @@
     {% endfor %}
 </ul>
 
-<h3>Files</h3>
-<ul>
-{% for path in files %}
-    <li>
-        <a href="{{ url_for('job_file', name=job.name, filename=path) }}">
-            {{ path }}
-        </a>
-    </li>
-{% endfor %}
-</ul>
+<p>
+    List
+    <a href="{{ url_for('job_files', name=job.name) }}">the job’s files</a>.
+</p>
 
-<h3>Log</h3>
-<ul class="log">
-{% for time, text in job.log %}
-    <li>
-        <time>{{ time | dt }}</time><br>
-        <pre>{{ text }}</pre>
-    </li>
-{% endfor %}
-</ul>
+<p>
+    See <a href="{{ url_for('job_log', name=job.name) }}">the full log</a>.
+</p>
+<pre class="log">{{ log }}</pre>
 {% endblock %}

@@ -3,7 +3,8 @@ package fuselang
 import java.nio.file.{Files, Path}
 import java.io.File
 
-import Utils._
+import Configuration._
+import Compiler._
 
 object Main {
 
@@ -36,6 +37,14 @@ object Main {
       .action((b, c) => c.copy(backend = toBackend(b)))
       .text("Name of the backend to use. Default backed is vivado.")
 
+    opt[String]('l', "log-level")
+      .action((s, c) => c.copy(logLevel = Logger.stringToLevel(s)))
+      .text("Set logging level for the compiler. Defaults to 'info'.")
+
+    opt[Unit]('h', "header")
+      .action((_, c) => c.copy(header = true))
+      .text("Generate header file instead of code. Defaults to false")
+
     cmd("run")
       .action((_, c) => c.copy(mode = Run, backend = toBackend("c++")))
       .text("Generate a runnable object file. Assumes GCC and required headers are available. Implies mode=c++.")
@@ -51,25 +60,37 @@ object Main {
           .text("Option to be passed to the C++ compiler. Can be repeated."))
   }
 
+  def runWithConfig(conf: Config): Either[String, Int] = {
+    type ErrString = String
+
+    val path = conf.srcFile.toPath
+    val prog = Files.exists(path) match {
+      case true => Right(new String(Files.readAllBytes(path)))
+      case false => Left(s"$path: No such file in working directory")
+    }
+
+    val cppPath: Either[ErrString, Option[Path]] = prog.flatMap(prog => conf.output match {
+      case Some(out) => compileStringToFile(prog, conf, out).map(path => Some(path))
+      case None => compileString(prog, conf).map(res => { println(res); None })
+    })
+
+    val status: Either[ErrString, Int] = cppPath.flatMap(pathOpt => conf.mode match {
+      case Run =>
+        GenerateExec.generateExec(pathOpt.get, s"${conf.output.get}.o", conf.compilerOpts)
+      case _ => Right(0)
+    })
+
+    status
+  }
+
   def main(args: Array[String]): Unit = {
 
     parser.parse(args, Config(null)) match {
       case Some(conf) => {
-        val prog = new String(Files.readAllBytes(conf.srcFile.toPath))
-
-        val cppPath: Either[String, Option[Path]] = conf.output match {
-          case Some(out) => Compiler.compileStringToFile(prog, conf, out).map(path => Some(path))
-          case None => Compiler.compileString(prog, conf).map(res => { println(res); None })
-        }
-
-        val status: Either[String, Int] = cppPath.flatMap(pathOpt => conf.mode match {
-          case Run =>
-            GenerateExec.generateExec(pathOpt.get, s"${conf.output.get}.o", conf.compilerOpts)
-          case _ => Right(0)
-        })
-
+        Logger.setLogLevel(conf.logLevel)
+        val status = runWithConfig(conf)
         sys.exit(
-          status.left.map(compileErr => { sys.error(compileErr); 1 }).merge)
+          status.left.map(compileErr => { System.err.println(compileErr); 1 }).merge)
       }
       case None => {
         sys.exit(1)

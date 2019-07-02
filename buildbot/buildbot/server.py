@@ -4,7 +4,7 @@ import os
 from io import StringIO
 import csv
 from . import workproc
-from .db import JobDB, ARCHIVE_NAME, CODE_DIR, NotFoundError
+from .db import JobDB, ARCHIVE_NAME, NotFoundError, BadJobError
 from datetime import datetime
 import re
 from . import state
@@ -31,10 +31,13 @@ STATUS_STRINGS = {
     state.COMPILE_FINISH: "Compiled",
     state.HLS: "Synthesis",
     state.HLS_FINISH: "Synthesized",
+    state.MAKE: "make",
+    state.MAKE_PROGRESS: "make-ing",
     state.RUN: "Running",
     state.DONE: "Done",
-    state.FAIL: "Failed"
+    state.FAIL: "Failed",
 }
+
 
 def _get(job_name):
     """Get a job by name, or raise a 404 error."""
@@ -42,6 +45,8 @@ def _get(job_name):
         return db.get(job_name)
     except NotFoundError:
         flask.abort(404, 'Job {} not found.'.format(job_name))
+    except BadJobError:
+        flask.abort(410, 'Job {} is malformed.'.format(job_name))
 
 
 def _unpad(s):
@@ -97,8 +102,8 @@ def get_config(values):
     form values.
     """
     config = {}
-    for key in app.config['CONFIG_OPTIONS']:
-        config[key] = bool(values.get(key))
+    for key, typ in app.config['CONFIG_OPTIONS'].items():
+        config[key] = typ(values.get(key, ''))
     return config
 
 
@@ -120,6 +125,7 @@ def add_job():
             file.save(ARCHIVE_NAME + ext)
         notify_workers(name)
 
+    # merging extraction branch, this code section seems to ave been removed in master
     elif 'code' in request.values:
         code = request.values['code']
 
@@ -129,7 +135,8 @@ def add_job():
             with open(os.path.join(CODE_DIR, 'main.ss'), 'w') as f:
                 f.write(code)
         notify_workers(name)
-
+    # merge conflict code section ends here
+    
     else:
         return 'missing code or file', 400
 
@@ -166,7 +173,8 @@ def jobs_html():
     return flask.render_template(
         'joblist.html',
         jobs=db._all(),
-        status_strings=STATUS_STRINGS)
+        status_strings=STATUS_STRINGS,
+    )
 
 
 @app.route('/live.html')
@@ -174,8 +182,42 @@ def live_html():
     return flask.render_template('live.html')
 
 
-@app.route('/jobs/<name>.html')
+@app.route('/jobs/<name>.html', methods=['GET', 'POST'])
 def show_job(name):
+    job = _get(name)
+
+    # Possibly update the job.
+    if request.method == 'POST':
+        new_state = request.form['state']
+        db.log(job['name'], 'manual state change')
+        db.set_state(job, new_state)
+        notify_workers(job['name'])
+
+    # Get the last few lines in the log.
+    log_filename = db._log_path(name)
+    lines = app.config['LOG_PREVIEW_LINES']
+    try:
+        with open(log_filename) as f:
+            log_lines = list(f)[-lines:]
+    except IOError:
+        log_lines = []
+
+    return flask.render_template(
+        'job.html',
+        job=job,
+        status_strings=STATUS_STRINGS,
+        log=''.join(log_lines),
+    )
+
+
+@app.route('/jobs/<name>/log.txt')
+def job_log(name):
+    filename = db._log_path(name)
+    return flask.send_file(filename)
+
+
+@app.route('/jobs/<name>/files.html')
+def job_files(name):
     job = _get(name)
 
     # Find all the job's files.
@@ -187,7 +229,11 @@ def show_job(name):
             if not fn.startswith('.'):
                 paths.append(os.path.join(dp, fn))
 
-    return flask.render_template('job.html', job=job, files=paths)
+    return flask.render_template(
+        'files.html',
+        job=job,
+        files=paths,
+    )
 
 
 @app.route('/jobs/<name>')

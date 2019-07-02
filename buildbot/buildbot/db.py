@@ -4,11 +4,13 @@ import time
 import os
 from contextlib import contextmanager
 import json
+from datetime import datetime
 
 JOBS_DIR = 'jobs'
 ARCHIVE_NAME = 'code'
 CODE_DIR = 'code'
 INFO_FILENAME = 'info.json'
+LOG_FILENAME = 'log.txt'
 
 
 @contextmanager
@@ -22,13 +24,14 @@ def chdir(path):
 
 
 class NotFoundError(Exception):
+    """The job indicated could not be found.
+    """
     pass
 
 
-def log(job, message):
-    """Add a message to the job's log.
+class BadJobError(Exception):
+    """The requested job is corrupted and unusable.
     """
-    job['log'].append((time.time(), message))
 
 
 class JobDB:
@@ -48,6 +51,10 @@ class JobDB:
         """Get the path to a job's info JSON file."""
         return os.path.join(self.job_dir(name), INFO_FILENAME)
 
+    def _log_path(self, name):
+        """Get the path to a job's log file."""
+        return os.path.join(self.job_dir(name), LOG_FILENAME)
+
     def _read(self, name):
         """Read a job from its info file.
 
@@ -56,7 +63,10 @@ class JobDB:
         path = self._info_path(name)
         if os.path.isfile(path):
             with open(path) as f:
-                return json.load(f)
+                try:
+                    return json.load(f)
+                except json.JSONDecodeError:
+                    raise BadJobError()
         else:
             raise NotFoundError()
 
@@ -69,14 +79,18 @@ class JobDB:
     def _all(self):
         """Read all the jobs.
 
-        This is probably pretty slow, and its O(n) where n is the total
-        number of jobs in the system.
+        Corrupted/unreadable jobs are not included in the list. This is
+        probably pretty slow, and it's O(n) where n is the total number
+        of jobs in the system.
         """
         for name in os.listdir(os.path.join(self.base_path, JOBS_DIR)):
             path = self._info_path(name)
             if os.path.isfile(path):
                 with open(path) as f:
-                    yield json.load(f)
+                    try:
+                        yield json.load(f)
+                    except json.JSONDecodeError:
+                        continue
 
     def _acquire(self, old_state, new_state):
         """Look for a job in `old_state`, update it to `new_state`, and
@@ -91,7 +105,7 @@ class JobDB:
             raise NotFoundError()
 
         job['state'] = new_state
-        log(job, 'acquired in state {}'.format(new_state))
+        self.log(job['name'], 'acquired in state {}'.format(new_state))
         with open(self._info_path(job['name']), 'w') as f:
             json.dump(job, f)
 
@@ -107,7 +121,6 @@ class JobDB:
             'started': time.time(),
             'state': state,
             'config': config,
-            'log': [],
         }
         self._write(job)
         return job
@@ -131,6 +144,14 @@ class JobDB:
             self.cv.notify_all()
         return job
 
+    def log(self, name, message):
+        """Add a message to the named job's log.
+        """
+        fn = self._log_path(name)
+        timestamp = datetime.now().isoformat()
+        with open(fn, 'a') as f:
+            print(timestamp, message, file=f)
+
     @contextmanager
     def create(self, state, config={}):
         """A context manager for creating a new job. A directory is
@@ -152,7 +173,7 @@ class JobDB:
         """
         with self.cv:
             job['state'] = state
-            log(job, 'state changed to {}'.format(state))
+            self.log(job['name'], 'state changed to {}'.format(state))
             self._write(job)
             self.cv.notify_all()
 

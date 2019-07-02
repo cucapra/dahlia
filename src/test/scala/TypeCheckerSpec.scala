@@ -2,46 +2,43 @@ package fuselang
 
 import TestUtils._
 import Errors._
-import Syntax._
 import org.scalatest.FunSpec
 
 class TypeCheckerSpec extends FunSpec {
 
-  describe("Let without type") {
-    it("infers dynamic type for static numbers") {
-      val e1 = typeCheck("let x = 1")
-      assert(e1("x").typ === TSizedInt(1))
-    }
-  }
+  describe("Let bindings") {
 
-  describe("Let with explicit type") {
-    it("assigns explicit type") {
-      val e1 = typeCheck("let x: bit<16> = 1;")
-      assert(e1("x").typ === TSizedInt(16))
-    }
-
-    it("allows using larger sized int in assignment") {
-      val e2 = typeCheck("decl a: bit<8>; let x: bit<16> = a;")
-      assert(e2("x").typ === TSizedInt(16))
-    }
-
-    it("disallows using smaller sized int in assignment") {
-      assertThrows[UnexpectedSubtype] {
-        typeCheck("decl a: bit<16>; let x: bit<8> = a;")
+    describe("with explicit type and initializer") {
+      it("disallows using smaller sized int in assignment") {
+        assertThrows[UnexpectedSubtype] {
+          typeCheck("decl a: bit<16>; let x: bit<8> = a;")
+        }
+      }
+      it("RHS type must be equal to LHS type") {
+        assertThrows[UnexpectedSubtype] {
+          typeCheck("let x: bit<16> = true")
+        }
       }
     }
 
-    it("RHS type must be equal to LHS type") {
-      assertThrows[UnexpectedSubtype] {
-        typeCheck("let x: bit<16> = true")
+    describe("with explicit type and without initializer") {
+      it("works") {
+        typeCheck("let x: bit<16>;")
+      }
+      it("can be assigned to") {
+        typeCheck("let x: bit<16>; x := 1;")
+      }
+      it("requires correct type in assignment") {
+        assertThrows[UnexpectedSubtype] {
+          typeCheck("let x: bit<16>; x := true;")
+        }
       }
     }
-
   }
 
   describe("Cannot reference undeclared var") {
     it("in top level") {
-      assertThrows[UnboundVar] {
+      assertThrows[Unbound] {
         typeCheck("x + 1")
       }
     }
@@ -49,7 +46,7 @@ class TypeCheckerSpec extends FunSpec {
 
   describe("Array access") {
     it("with invalid accessor type") {
-      assertThrows[InvalidIndex] {
+      assertThrows[UnexpectedType] {
         typeCheck("""
           decl a: bit<10>[10];
           a[true];
@@ -72,25 +69,27 @@ class TypeCheckerSpec extends FunSpec {
           """ )
       }
     }
-
     it("consumes bank without unroll") {
-      val e1 = typeCheck("""
-        decl a: bit<64>[10];
-        for (let i = 0..10) {
-          let x = a[i]
-        }
-        """ )
-      assert(e1("a").conBanks(0) === Set(0))
+      assertThrows[AlreadyConsumed] {
+        typeCheck("""
+          decl a: bit<64>[10];
+          for (let i = 0..10) {
+            let x = a[i]
+          }
+          a[0]
+          """ )
+      }
     }
-
     it("consumes all banks with unroll") {
-      val e2 = typeCheck("""
-        decl a: bit<64>[10 bank 5];
-        for (let i = 0..10) unroll 5 {
-          let x = a[i]
-        }
-        """ )
-      assert(e2("a").conBanks(0) === 0.until(5).toSet)
+      assertThrows[AlreadyConsumed] {
+        typeCheck("""
+          decl a: bit<64>[10 bank 5];
+          for (let i = 0..10) unroll 5 {
+            let x = a[i]
+          }
+          a[0]
+          """ )
+      }
     }
 
   }
@@ -111,22 +110,22 @@ class TypeCheckerSpec extends FunSpec {
     }
 
     it("in if") {
-      assertThrows[UnboundVar] {
+      assertThrows[Unbound] {
         typeCheck("if (true) {let x = 1;} x + 2;")
       }
     }
     it("in for") {
-      assertThrows[UnboundVar] {
+      assertThrows[Unbound] {
         typeCheck("for (let i = 0..10){let x = 1;} x + 2;")
       }
     }
     it("in while") {
-      assertThrows[UnboundVar] {
+      assertThrows[Unbound] {
         typeCheck("while (true) {let x = 1;} x + 2;")
       }
     }
     it("iterator id in combine block") {
-      assertThrows[UnboundVar] {
+      assertThrows[Unbound] {
         typeCheck("""
           decl a: bit<32>[8];
           for (let i = 0..8) {
@@ -185,12 +184,10 @@ class TypeCheckerSpec extends FunSpec {
       }
     }
     it("adding static ints does NOT perform type level computation") {
-      val e1 = typeCheck("let x = 1; let y = 2; let z = x + y;")
-      assert(e1("z").typ === TSizedInt(2))
+      typeCheck("let x = 1; let y = 2; let z = x + y;")
     }
     it("result of addition upcast to subtype join") {
-      val e3 = typeCheck("decl x: bit<32>; decl y: bit<16>; let z = x + y")
-      assert(e3("z").typ === TSizedInt(32))
+      typeCheck("decl x: bit<32>; decl y: bit<16>; let z = x + y")
     }
   }
 
@@ -202,9 +199,7 @@ class TypeCheckerSpec extends FunSpec {
     }
 
     it("can reassign decl") {
-      val e3 = typeCheck("decl x: bit<32>; decl y: bit<16>; x := y")
-      assert(e3("x").typ === TSizedInt(32), "assigning dynamic := dynamic")
-      assert(e3("y").typ === TSizedInt(16), "assigning dynamic := dynamic")
+      typeCheck("decl x: bit<32>; decl y: bit<16>; x := y")
     }
   }
 
@@ -296,17 +291,17 @@ class TypeCheckerSpec extends FunSpec {
 
   describe("Reductions") {
     it("RHS should be an array") {
-      assertThrows[ReductionInvalidRHS] {
+      assertThrows[UnexpectedType] {
         typeCheck("let x = 1; x += x;")
       }
     }
     it("RHS should be fully banked") {
-      assertThrows[ReductionInvalidRHS] {
+      assertThrows[UnexpectedType] {
         typeCheck("decl a: bit<32>[8 bank 2]; let x = 0; x += a;")
       }
     }
     it("RHS should be 1-dimensional array") {
-      assertThrows[ReductionInvalidRHS] {
+      assertThrows[UnexpectedType] {
         typeCheck("decl a: bit<32>[8 bank 8][10]; let x = 0; x += a;")
       }
     }
@@ -394,6 +389,25 @@ class TypeCheckerSpec extends FunSpec {
           """ )
       }
     }
+
+    it("allow declarations in first statement to be used in second") {
+      typeCheck("""
+              let bucket_idx = 10;
+              ---
+              bucket_idx := 20;
+         """ )
+    }
+
+    it("check for declarations used in both branches") {
+      typeCheck("""
+              let test_var = 10;
+              {
+                test_var := 50;
+                ---
+                test_var := 30;
+              }
+         """ )
+    }
   }
 
   describe("Parallel composition") {
@@ -406,6 +420,30 @@ class TypeCheckerSpec extends FunSpec {
           let y = a[i];
         }
         """ )
+    }
+
+    it("allows same banks to be used with reassignment") {
+      typeCheck("""
+        decl a: bit<10>[20 bank 10];
+        for (let i = 0..20) unroll 10 {
+          a[i] := 5;
+          ---
+          a[i] := 2;
+        }
+      """ )
+    }
+
+    it("reuses banks of multidimensional array") {
+      typeCheck("""
+        decl a: bit<10>[20 bank 10][10 bank 5];
+        for (let i = 0..20) unroll 10 {
+          for (let j = 0..10) unroll 5 {
+            a[i][j] := 5;
+            ---
+            a[i][j] := 3;
+          }
+        }
+      """ )
     }
   }
 
@@ -501,8 +539,6 @@ class TypeCheckerSpec extends FunSpec {
               }
           """ )
     }
-
-
   }
 
   describe("Capabilities in unrolled context") {
@@ -608,7 +644,7 @@ class TypeCheckerSpec extends FunSpec {
     }
 
     it("cannot be used before defintion") {
-      assertThrows[UnboundVar] {
+      assertThrows[Unbound] {
         typeCheck("""
           def bar(a: bool) { foo(a) }
           def foo(a: bool) { foo(a) }
@@ -617,7 +653,7 @@ class TypeCheckerSpec extends FunSpec {
     }
 
     it("do not allow recursion") {
-      assertThrows[UnboundVar] {
+      assertThrows[Unbound] {
         typeCheck("""
           def bar(a: bool) { bar(a) }
           """ )
@@ -660,6 +696,17 @@ class TypeCheckerSpec extends FunSpec {
           """ )
       }
     }
+
+    it("Require exact match for array dimensions and banks") {
+      assertThrows[UnexpectedSubtype] {
+        typeCheck("""
+          def foo(a: bit<32>[10 bank 5]) {
+          }
+          decl b: bit<32>[5 bank 5];
+          foo(b)
+          """ )
+      }
+    }
   }
 
   describe("Function applications w/ externs") {
@@ -684,38 +731,12 @@ class TypeCheckerSpec extends FunSpec {
     }
   }
 
-  describe("Shrink views") {
-    it("width must be equal to step") {
-      assertThrows[MalformedShrink] {
-        typeCheck("""
-          decl a: bit<10>[10];
-          view v = shrink a[3 * i : 1]
-          """ )
-      }
-    }
-    it("width must be factor of banking factor") {
-      assertThrows[InvalidShrinkWidth] {
-        typeCheck("""
-          decl a: bit<10>[10 bank 5];
-          view v = shrink a[3 * i : 3]
-          """ )
-      }
-    }
+  describe("Simple views") {
     it("must have dimensions equal to array") {
       assertThrows[IncorrectAccessDims] {
         typeCheck("""
           decl a: bit<10>[10 bank 5][10 bank 5];
-          view v = shrink a[5 * i : 5]
-          """ )
-      }
-    }
-    it("cannot be inside unrolled context") {
-      assertThrows[ViewInsideUnroll] {
-        typeCheck("""
-          decl a: bit<10>[16 bank 8];
-          for (let i = 0..4) unroll 4 {
-            view v = shrink a[4 * i : 4]
-          }
+          view v = a[5 * i :]
           """ )
       }
     }
@@ -725,17 +746,25 @@ class TypeCheckerSpec extends FunSpec {
           decl a: bit<10>[16 bank 8];
           for (let i = 0..4) unroll 4 {
             for (let j = 0..4) {
-              view v = shrink a[4 * j : 4]
+              view v = a[4 * j :]
             }
           }
           """ )
       }
     }
+    it("can use loop iterator if not unrolled") {
+        typeCheck("""
+          decl a: bit<10>[16 bank 8];
+          for (let i = 0..4) {
+            view v = a[8 * i :]
+          }
+          """ )
+    }
     it("has the same type as the underlying array") {
       assertThrows[NoJoin] {
         typeCheck("""
           decl a: bool[10 bank 5];
-          view v = shrink a[0 : 5];
+          view v = a[0!:];
           v[3] + 1;
           """ )
       }
@@ -744,17 +773,160 @@ class TypeCheckerSpec extends FunSpec {
       assertThrows[IncorrectAccessDims] {
         typeCheck("""
           decl a: bool[10 bank 5][10 bank 5];
-          view v = shrink a[0 : 5][0 : 5];
+          view v = a[0!:][0!:];
           v[1]
           """ )
       }
     }
-    it("completely consumes underlying array from context") {
+    it("cannot be used in the same time step as underlying array") {
       assertThrows[AlreadyConsumed] {
         typeCheck("""
           decl a: bool[10 bank 5][10 bank 5];
-          view v = shrink a[0 : 5][0 : 5];
-          a[0][0]
+          view v = a[0!:][0!:];
+          a[0][0]; v[0][0];
+          """ )
+      }
+    }
+  }
+
+  describe("Split views") {
+    it("requires the same dimesions as the underlying array") {
+      assertThrows[IncorrectAccessDims] {
+        typeCheck("""
+          decl a: bit<32>[10 bank 5][2];
+          split v = a[by 5];
+          """ )
+      }
+    }
+    it("cannot be created inside an unrolled loop") {
+      assertThrows[ViewInsideUnroll] {
+        typeCheck("""
+          decl a: bit<32>[10 bank 5];
+          for (let i = 0 .. 8) unroll 2 {
+            split v = a[by 5];
+          }
+          """ )
+      }
+    }
+    it("requires split factor to divide banking factor") {
+      assertThrows[InvalidSplitFactor] {
+        typeCheck("""
+          decl a: bit<32>[10];
+          split v = a[by 5];
+          """ )
+      }
+    }
+    it("add another dimension for each non-zero split") {
+      assertThrows[IncorrectAccessDims] {
+        typeCheck("""
+          decl a: bit<32>[10 bank 5];
+          split v = a[by 5];
+          v[0]
+          """ )
+      }
+    }
+    it("can be created inside an normal loop") {
+      typeCheck("""
+        decl a: bit<32>[10 bank 5];
+        split v = a[by 5];
+        """ )
+    }
+  }
+
+  describe("Simple aligned views") {
+    it("width must be factor of banking factor") {
+      assertThrows[InvalidAlignFactor] {
+        typeCheck("""
+          decl x: bit<32>;
+          decl a: bit<10>[10 bank 5];
+          view v = a[3 * x :]
+          """ )
+      }
+    }
+
+    it("width must be a multiple of the banking factor") {
+      assertThrows[InvalidAlignFactor] {
+        typeCheck("""
+          decl x: bit<32>;
+          decl a: bit<10>[10 bank 10];
+          view v = a[5 * x :]
+          """ )
+      }
+    }
+
+    it("width must be statically known") {
+      assertThrows[ParserError] {
+        typeCheck("""
+          decl x: bit<32>;
+          decl a: bit<10>[10 bank 5];
+          view v = a[x * x :]
+          """ )
+      }
+    }
+
+    it("suffix factor is a factor of the new banking") {
+      typeCheck("""
+        decl x: bit<32>;
+        decl a: bit<10>[16 bank 8];
+        view v = a[6 * x : bank 2]
+        """ )
+    }
+  }
+
+  describe("Simple rotation views") {
+    it("can describe arbitrary, unrestricted rotations") {
+      typeCheck("""
+        decl a: bit<10>[10 bank 5];
+        decl i: bit<32>;
+        view v = a[i * i ! :]
+        """ )
+    }
+  }
+
+  describe("Gadget checking") {
+    it("simple views aliasing same underlying array cannot be used together") {
+      assertThrows[AlreadyConsumed] {
+        typeCheck("""
+          decl a: bit<32>[10 bank 2][10 bank 5];
+          view v1 = a[0!:][0!:];
+          view v2 = a[1!:][2!:];
+          v1[0][0]; v2[0][0];
+          """ )
+      }
+    }
+    it("views created from other views cannot be used together") {
+      assertThrows[AlreadyConsumed] {
+        typeCheck("""
+          decl a: bit<32>[10 bank 2][10 bank 5];
+          view v1 = a[0!:][0!:];
+          view v2 = v1[1!:][2!:];
+          a[0][0]; v2[0][0];
+          """ )
+      }
+    }
+    it("split views created from the same underlying arrays cannot be used together") {
+      assertThrows[AlreadyConsumed] {
+        typeCheck("""
+          decl a: bit<32>[10 bank 2][10 bank 2];
+          view v1 = a[0!:][0!:];
+          split v2 = a[by 2][by 2];
+          v2[0][1][0][2]; v1[0][0];
+          """ )
+      }
+    }
+    it("arrays have fine grained bank tracking") {
+        typeCheck("""
+          decl a: float[2 bank 2][10 bank 2];
+          a[0][0];
+          a[1][1];
+          """ )
+    }
+    it("simple views dont have fine grained bank tracking") {
+      assertThrows[AlreadyConsumed] {
+        typeCheck("""
+          decl a: float[10 bank 2][10];
+          view v1 = a[2 * 1: +2][0!:];
+          v1[0][0]; v1[1][0];
           """ )
       }
     }
@@ -840,7 +1012,7 @@ class TypeCheckerSpec extends FunSpec {
         """ )
     }
     it("cannot use undefined type aliases") {
-      assertThrows[UnboundType] {
+      assertThrows[Unbound] {
         typeCheck("""
           record bars {
             k: point
@@ -858,7 +1030,7 @@ class TypeCheckerSpec extends FunSpec {
       }
     }
     it("cannot rebind type alias") {
-      assertThrows[AlreadyBoundType] {
+      assertThrows[AlreadyBound] {
         typeCheck("""
           record bars {
             k: bit<32>
@@ -909,7 +1081,7 @@ class TypeCheckerSpec extends FunSpec {
         """ )
     }
     it("cannot be defined without explicit type in let") {
-      assertThrows[ExplicitRecTypeMissing] {
+      assertThrows[ExplicitTypeMissing] {
         typeCheck("""
           record point { x: bit<32>; y: bit<32> }
           let p = {x = 1; y = 2 }
@@ -917,7 +1089,7 @@ class TypeCheckerSpec extends FunSpec {
       }
     }
     it("cannot be used inside expressions") {
-      assertThrows[RecLiteralNotInBinder] {
+      assertThrows[NotInBinder] {
         typeCheck("""
           record point { x: bit<32>; y: bit<32> }
           let p = 1 + {x = 1; y = 2 }
@@ -949,6 +1121,52 @@ class TypeCheckerSpec extends FunSpec {
     }
   }
 
+  describe("Array literals") {
+    it("requires explicit type in the let binder") {
+      assertThrows[ExplicitTypeMissing] {
+        typeCheck("""
+          let x = {1, 2, 3}
+          """ )
+      }
+    }
+    it("does not support multidimensional literals") {
+      assertThrows[Unsupported] {
+        typeCheck("""
+          let x: bit<32>[10][10] = {1, 2, 3}
+          """ )
+      }
+    }
+    it("requires literal to have the same size") {
+      assertThrows[LiteralLengthMismatch] {
+        typeCheck("""
+          let x: bit<32>[5] = {1, 2, 3}
+          """ )
+      }
+    }
+    it("requires subtypes in the array literal") {
+      assertThrows[UnexpectedSubtype] {
+        typeCheck("""
+          let x: bit<32>[3] = {true, false, true}
+          """ )
+      }
+    }
+    it("can be banked") {
+      typeCheck("""
+        let x: bool[3 bank 3] = {true, false, true}
+        """ )
+    }
+    it("can be used without initializer") {
+      typeCheck("""
+        let x: bool[3] = {true, false, true};
+        {
+          x[1];
+          ---
+          x[0] := false
+        }
+        """ )
+    }
+  }
+
   describe("Indexing with dynamic (sized) var") {
     it("works with an unbanked array") {
       typeCheck("decl a: bit<10>[10]; decl x: bit<10>; a[x] := 5")
@@ -960,7 +1178,7 @@ class TypeCheckerSpec extends FunSpec {
     }
   }
 
-  describe("subtyping relations") {
+  describe("Subtyping relations") {
     it("static ints are always subtypes") {
       typeCheck("1 == 2")
     }
@@ -990,6 +1208,15 @@ class TypeCheckerSpec extends FunSpec {
         """ )
     }
 
+    it("index types get upcast to sized int with log2(maxVal)") {
+      typeCheck("""
+        decl arr:bit<32>[10];
+        for (let i = 0..33) {
+          arr[5] := i * 1;
+        }
+        """ )
+    }
+
     it("Array subtyping is not allowed") {
       assertThrows[UnexpectedSubtype] {
         typeCheck("""
@@ -1001,6 +1228,133 @@ class TypeCheckerSpec extends FunSpec {
           foo(a)
           """ )
       }
+    }
+
+    it("join of index types is dynamic") {
+      typeCheck("""
+        for (let i = 0..10) {
+          for (let j = 0..2) {
+              let x = i + j;
+            }
+        }
+        """ )
+    }
+
+    it("equal types have joins") {
+      typeCheck("""
+        let x = true;
+        let y = false;
+        x == y;
+
+        let i1: bit<32> = 10;
+        let i2: bit<32> = 11;
+        i1 == i2;
+        """ )
+    }
+
+    it("float is a subtype of double") {
+      typeCheck("""
+        decl x: float;
+        decl y: float;
+        let z: double = x + y;
+        """ )
+    }
+  }
+
+  describe("Imports") {
+    it("adds externs into type checking scope") {
+      typeCheck("""
+        import "print.cpp" {
+          def extern print_vect(f: float[4]);
+        }
+        decl a: float[4];
+        print_vect(a);
+        """ )
+    }
+  }
+
+  describe("Bound Checking") {
+    it("static ints smaller than array size are valid") {
+      typeCheck("""
+        decl a: bit<32>[10];
+        let v = a[9];
+        """ )
+    }
+
+    it("static ints larger than array size fail") {
+      assertThrows[IndexOutOfBounds] {
+        typeCheck("""
+          decl a: bit<32>[10];
+          let v = a[10];
+          """ )
+      }
+    }
+
+    it("array access with index types is valid when maxVal <= array length") {
+      typeCheck("""
+        decl a: bit<32>[10];
+
+        for (let i = 0..10) {
+          a[i] := 0;
+        }
+        """ )
+    }
+
+    it("array access with index types fails when maxVal > array length") {
+      assertThrows[IndexOutOfBounds] {
+        typeCheck("""
+          decl a: bit<32>[10];
+
+          for (let i = 0..11) {
+            a[i] := 0;
+          }
+        """ )
+      }
+    }
+
+    it("simple views with prefixes have their bounds checked") {
+      assertThrows[IndexOutOfBounds] {
+        typeCheck("""
+          decl a: bit<32>[10];
+          view v_a = a[0!:+3];
+          v_a[3];
+          """ )
+      }
+    }
+
+    it("creation of simple views is bounds checked") {
+      assertThrows[IndexOutOfBounds] {
+        typeCheck("""
+          decl a: bit<32>[10];
+          for (let i = 0..10) {
+            view v_a = a[i!:+3];
+          }
+          """ )
+      }
+    }
+  }
+
+  describe("Explicit casting") {
+    it("safe to cast integer types to float") {
+      typeCheck("""
+        decl x: float;
+        decl y: bit<32>;
+        (y as float) + x;
+        """ )
+    }
+    it("warning when casting float to bit type") {
+      typeCheck("""
+        decl x: float;
+        decl y: bit<32>;
+        (x as bit<32>) + y
+        """ )
+    }
+    it("safe to cast integer float to double") {
+      typeCheck("""
+        decl x: float;
+        decl y: double;
+        y + (x as double);
+        """ )
     }
   }
 

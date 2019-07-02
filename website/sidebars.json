@@ -1,6 +1,7 @@
 {
   "docs": {
-    "Setup": [
+    "Introduction": [
+      "overview",
       "installation"
     ],
     "Language constructs": [
@@ -11,10 +12,12 @@
     ],
     "CLI": [
       "cli-compile",
-      "cpp-runnable"
+      "cpp-runnable",
+      "headers"
     ],
     "Tools": [
-      "text-editors"
+      "text-editors",
+      "access-visualizer"
     ],
     "Development": [
       "testing"

@@ -62,6 +62,7 @@ class ParsingTests extends org.scalatest.FunSuite {
 
   test("let") {
     parseAst("let x = 1; x + 2;")
+    parseAst("let x: bit<32>; x + 2;")
   }
 
   test("for loop") {
@@ -138,12 +139,6 @@ class ParsingTests extends org.scalatest.FunSuite {
       """ )
   }
 
-  test("views") {
-    parseAst("""
-      view v_a = shrink a[4 * i : 4]
-      """ )
-  }
-
   test("records definitions") {
     parseAst("""
       record Point {
@@ -156,6 +151,18 @@ class ParsingTests extends org.scalatest.FunSuite {
         x: int;
         y: bit<32>
       }
+      """ )
+  }
+
+  test("record literals") {
+    parseAst("""
+      let res: point = { x = 10; y = 10 };
+      """ )
+  }
+
+  test("array literals") {
+    parseAst("""
+      let res: bit<32>[10] = { 1, 2, 3 };
       """ )
   }
 
@@ -182,4 +189,64 @@ class ParsingTests extends org.scalatest.FunSuite {
       """ )
   }
 
+  test("simple views") {
+    parseAst("""
+      view v = a[_ :];
+      """ )
+
+    parseAst("""
+      view v = a[_ : bank 2];
+      """ )
+
+    parseAst("""
+      view v = a[4 * i :];
+      """ )
+
+    parseAst("""
+      view v = a[i + 1! :];
+      """ )
+
+    parseAst("""
+      view v = a[4 * i : +3];
+      """ )
+
+    parseAst("""
+      view v = a[i + 1! : +3];
+      """ )
+
+    parseAst("""
+      view v = a[4 * i : bank 5];
+      """ )
+
+    parseAst("""
+      view v = a[i + 1! : bank 5];
+      """ )
+
+    parseAst("""
+      view v = a[4*i:+3 bank 5];
+      """ )
+
+    parseAst("""
+      view v = a[i + 1! : +3 bank 5];
+      """ )
+  }
+
+  test("split views") {
+    parseAst("""
+      split b = a[by 10];
+      """ )
+
+    parseAst("""
+      split b = a[by 10][by 20];
+      """ )
+  }
+
+  test("casting") {
+    parseAst("""
+      let x = (y as bit<32>)
+      """ )
+    parseAst("""
+      let x = (y as float)
+      """ )
+  }
 }

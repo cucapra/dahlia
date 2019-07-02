@@ -2,18 +2,15 @@ package fuselang
 
 import Syntax._
 import CodeGenHelpers._
+import CompilerError._
+
+import Utils.RichOption
 
 /**
  * AST pass to rewrite views into simple array accesses. Should be used after
  * type checking.
  *
- * For `shrink` views, we rewrite them as:
- *
- * view v_a = shrink a[4 * i : 4];
- * v_a[k];
- * ==>
- * // remove the view decl
- * a[4*i + k]
+ * TODO(rachit): Update description.
  *
  * If `a` itself is a view, we keep rewriting it until we reach a true array.
  *
@@ -31,6 +28,9 @@ object RewriteView {
 
   private def rewriteExpr(e: Expr): State[Env, Expr] = e match {
     case EVar(_) | EInt(_, _) | EFloat(_) | EBool(_) | _:ERecAccess => State.unit(e)
+    case ec@ECast(e, _) => for {
+      en <- rewriteExpr(e)
+    } yield ec.copy(e = en)
     case eb@EBinop(_, e1, e2) => for {
       e1n <- rewriteExpr(e1)
       e2n <- rewriteExpr(e2)
@@ -44,12 +44,23 @@ object RewriteView {
     case app@EApp(_, args) => for {
       argsn <- State.mapList(rewriteExpr)(args)
     } yield app.copy(args = argsn)
-    case ERecLiteral(fs) => {
-      for {
-        fsn <- State.mapMap(rewriteExpr)(fs)
-      } yield ERecLiteral(fsn)
-    }
+    case ERecLiteral(fs) => for {
+      fsn <- State.mapMap(rewriteExpr)(fs)
+    } yield ERecLiteral(fsn)
+    case EArrLiteral(idxs) => for {
+      idxsn <- State.mapList(rewriteExpr)(idxs)
+    } yield EArrLiteral(idxsn)
   }
+
+  private def genViewAccessExpr(view: View, idx: Expr): Expr = view.suffix match {
+    case Aligned(factor, e2) => (EInt(factor) * e2) + idx
+    case Rotation(e) => e + idx
+  }
+
+  private def splitAccessExpr(i: Expr, j: Expr, arrBank: Int, viewBank: Int): Expr =
+    (i * EInt(viewBank)) +
+    ((j / EInt(viewBank)) * EInt(arrBank)) +
+    (j % EInt(viewBank))
 
   private def rewriteC(c: Command): State[Env, Command] = c match {
     case CPar(c1, c2) => for {
@@ -61,12 +72,34 @@ object RewriteView {
       c2n <- rewriteC(c2)
     } yield CSeq(c1n, c2n)
     case l@CLet(_, _, e) => for {
-      en <- rewriteExpr(e)
+      en <- State.mapOpt(rewriteExpr)(e)
     } yield l.copy(e = en)
-    case CView(id, Shrink(arrId, dims)) => State { env =>
-      val f = (es: List[Expr]) => EArrAccess(arrId, es.zip(dims).map({
-        case (e, (idx, _, s)) => e + (idx * EInt(s))
+    case CView(id, arrId, dims) => State { env =>
+      val f = (es: List[Expr]) => EArrAccess(arrId, es.zip(dims).map({ case (idx, view) =>
+        genViewAccessExpr(view, idx)
       }))
+      (CEmpty, env + (id -> f))
+    }
+    case CSplit(id, arrId, factors) => State { env =>
+      val arrBanks = arrId
+        .typ
+        .getOrThrow(Impossible(s"$arrId is missing type in $c")) match {
+          case TArray(_, dims) => dims.map(_._2)
+          case t => throw Impossible(s"Array has type $t in $c")
+        }
+      val f = (es: List[Expr]) => {
+        val it = es.iterator
+        // For each dimension, if it was split by more than 1, group the next
+        // two accessors.
+        val groups = factors.map({
+          case factor => List(it.next, it.next) -> factor
+        })
+        val idxs = groups.zip(arrBanks).map({
+          case ((List(i), _), _) => i
+          case ((List(i, j), factor), arrBank) => splitAccessExpr(i, j, arrBank, arrBank / factor)
+        })
+        EArrAccess(arrId, idxs)
+      }
       (CEmpty, env + (id -> f))
     }
     case CIf(e1, c1, c2) => for {
@@ -185,6 +218,14 @@ private object StateHelper {
           hdn <- f(hd)
           tln <- mapList(f)(tl)
         } yield hdn :: tln
+      }
+
+    def mapOpt[S, A, B](f: A => State[S, B])(eOpt: Option[A]): State[S, Option[B]] =
+      eOpt match {
+        case None => State.unit(None)
+        case Some(e) => for {
+          en <- f(e)
+        } yield Some(en)
       }
 
     /**

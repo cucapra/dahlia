@@ -1,7 +1,7 @@
 import threading
 import subprocess
 import os
-from .db import ARCHIVE_NAME, CODE_DIR, log
+from .db import ARCHIVE_NAME, CODE_DIR
 from contextlib import contextmanager
 import traceback
 import shlex
@@ -9,17 +9,16 @@ import time
 from . import data_extract
 from . import state
 
-SEASHELL_EXT = '.sea'
+SEASHELL_EXT = '.fuse'
 C_EXT = '.cpp'
 OBJ_EXT = '.o'
-SDS_PLATFORM = 'zed'
 C_MAIN = 'main.cpp'  # Currently, the host code *must* be named this.
 HOST_O = 'main.o'  # The .o file for host code.
-EXECUTABLE = 'sdsoc'
 
 # For executing on a Xilinx Zynq board.
 ZYNQ_SSH_PREFIX = ['sshpass', '-p', 'root']  # Provide Zynq SSH password.
 ZYNQ_HOST = 'zb1'
+ZYNQ_DEST_DIR = '/mnt'
 ZYNQ_REBOOT_DELAY = 40
 
 
@@ -63,51 +62,65 @@ class JobTask:
     def log(self, message):
         """Add an entry to the job's log.
         """
-        log(self.job, message)
+        self.db.log(self.job['name'], message)
 
     def set_state(self, state):
         """Set the job's state.
         """
         self.db.set_state(self.job, state)
 
-    def proc_log(self, cmd, proc, stdout=True, stderr=True):
-        """Log the output of a command run on behalf of a job.
-
-        Provide the command (a list of arguments), and the process
-        (e.g., returned from `run`. Specify whether to include the
-        stdout and stderr streams.
-        """
-        out = '$ ' + _cmd_str(cmd)
-        streams = []
-        if stdout:
-            streams.append(proc.stdout)
-        if stderr:
-            streams.append(proc.stderr)
-        out += _stream_text(*streams)
-        self.log(out)
-
-    def run(self, cmd, log_stdout=True, timeout=60, cwd='', **kwargs):
+    def run(self, cmd, capture=False, timeout=60, cwd='', **kwargs):
         """Run a command and log its output.
 
-        Return an exited process object, with output captured (in `stdout`
-        and `stderr`). The `log_stdout` flag determines whether the stdout
-        stream is included in the log; set this to False if the point of
-        running the command is to collect data from stdout. Additional
-        arguments are forwarded to `subprocess.run`.
-        """
-        kwargs['timeout'] = timeout
+        Return an exited process object. If `capture`, then  the
+        standard output is *not* logged and is instead available as the return
+        value's `stdout` field. Additional arguments are forwarded to
+        `subprocess.run`.
 
-        kwargs['cwd'] = os.path.normpath(os.path.join(self.dir, cwd))
-        proc = run(cmd, **kwargs)
-        self.proc_log(cmd, proc, stdout=log_stdout)
-        return proc
+        Raise an appropriate `WorkError` if the command fails.
+        """
+        full_cwd = os.path.normpath(os.path.join(self.dir, cwd))
+        self.log('$ {}'.format(_cmd_str(cmd)))
+
+        log_filename = self.db._log_path(self.job['name'])
+        with open(log_filename, 'ab') as f:
+            try:
+                return subprocess.run(
+                    cmd,
+                    check=True,
+                    stdout=subprocess.PIPE if capture else f,
+                    stderr=f,
+                    timeout=timeout,
+                    cwd=full_cwd,
+                    **kwargs,
+                )
+            except subprocess.CalledProcessError as exc:
+                raise WorkError('command failed ({})'.format(
+                    exc.returncode,
+                ))
+            except FileNotFoundError as exc:
+                raise WorkError('command {} not found'.format(
+                    exc.filename,
+                ))
+            except subprocess.TimeoutExpired as exc:
+                raise WorkError('timeout after {} seconds{}'.format(
+                    exc.timeout,
+                ))
 
 
 @contextmanager
-def work(db, old_state, temp_state, done_state):
+def work(db, old_state, temp_state, done_state_or_func):
     """A context manager for acquiring a job temporarily in an
     exclusive way to work on it. Produce a `JobTask`.
+    Done state can either be a valid state string or a function that
+    accepts a Task object and returns a valid state string.
     """
+    done_func = None
+    if isinstance(done_state_or_func, str):
+        done_func = lambda _: done_state_or_func  # noqa
+    else:
+        done_func = done_state_or_func
+
     job = db.acquire(old_state, temp_state)
     task = JobTask(db, job)
     try:
@@ -119,20 +132,7 @@ def work(db, old_state, temp_state, done_state):
         task.log(traceback.format_exc())
         task.set_state(state.FAIL)
     else:
-        task.set_state(done_state)
-
-
-def _stream_text(*args):
-    """Given some bytes objects, return a string listing all the
-    non-empty ones, delimited by a separator and starting with a
-    newline (if any part is nonempty).
-    """
-    out = '\n---\n'.join(b.decode('utf8', 'ignore')
-                         for b in args if b)
-    if out:
-        return '\n' + out
-    else:
-        return ''
+        task.set_state(done_func(task))
 
 
 def _cmd_str(cmd):
@@ -142,37 +142,21 @@ def _cmd_str(cmd):
     return ' '.join(shlex.quote(p) for p in cmd)
 
 
-def run(cmd, **kwargs):
-    """Run a command, like `subprocess.run`, while capturing output.
-    Raise an appropriate `WorkError` if the command fails.
-
-    `cmd` must be a list of arguments.
+def _task_config(task, config):
+    """Interpret some configuration options on a task, and assign the
+    task's `sdsflags` and `platform` fields so they can be used
+    directly.
     """
-    try:
-        return subprocess.run(
-            cmd,
-            check=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            **kwargs
-        )
-    except subprocess.CalledProcessError as exc:
-        raise WorkError('$ {}\ncommand failed ({}){}'.format(
-            _cmd_str(cmd),
-            exc.returncode,
-            _stream_text(exc.stdout, exc.stderr),
-        ))
-    except FileNotFoundError as exc:
-        raise WorkError('$ {}\ncommand {} not found'.format(
-            _cmd_str(cmd),
-            exc.filename,
-        ))
-    except subprocess.TimeoutExpired as exc:
-        raise WorkError('$ {}\ntimeout after {} seconds{}'.format(
-            _cmd_str(cmd),
-            exc.timeout,
-            _stream_text(exc.stdout, exc.stderr),
-        ))
+    flags = task['config'].get('sdsflags') or ''
+    est = 0
+    if task['config'].get('estimate'):
+        flags += ' -perf-est-hw-only'
+        est = 1
+    task['sdsflags'] = flags
+    task['estimate'] = est
+
+    task['platform'] = task['config'].get('platform') or \
+        config['DEFAULT_PLATFORM']
 
 
 class WorkThread(threading.Thread):
@@ -195,10 +179,19 @@ class WorkThread(threading.Thread):
             self.func(self.db, self.config)
 
 
+def should_make(task):
+    """Run stage_make if make was specified in the task config.
+    """
+    if task['config'].get('make'):
+        return state.MAKE
+    else:
+        return state.UNPACK_FINISH
+
+
 def stage_unpack(db, config):
     """Work stage: unpack source code.
     """
-    with work(db, state.UPLOAD, state.UNPACK, state.UNPACK_FINISH) as task:
+    with work(db, state.UPLOAD, state.UNPACK, should_make) as task:
         # Unzip the archive into the code directory.
         os.mkdir(task.code_dir)
         task.run(["unzip", "-d", task.code_dir, "{}.zip".format(ARCHIVE_NAME)])
@@ -215,11 +208,39 @@ def stage_unpack(db, config):
                 task.log('collapsed directory {}'.format(code_contents[0]))
 
 
+def stage_make(db, config):
+    """Work stage: run make command. Assumes that at the end of the make
+    command, work equivalent to the stage_hls is done, i.e., either
+    estimation data has been generated or a bitstream has been
+    generated.
+    """
+    prefix = config["HLS_COMMAND_PREFIX"]
+    with work(db, state.MAKE, state.MAKE_PROGRESS, state.HLS_FINISH) as task:
+        _task_config(task, config)
+
+        if task['sdsflags']:
+            task.log('WARNING: make stage is ignoring sdsflags={}'.format(
+                task['sdsflags']
+            ))
+
+        task.run(
+            prefix + [
+                'make',
+                'ESTIMATE={}'.format(task['estimate']),
+                'PLATFORM={}'.format(task['platform']),
+                'TARGET={}'.format(config['EXECUTABLE_NAME']),
+            ],
+            timeout=config["SYNTHESIS_TIMEOUT"],
+            cwd=CODE_DIR,
+        )
+
+
 def stage_seashell(db, config):
     """Work stage: compile Seashell code to HLS C.
     """
     compiler = config["SEASHELL_COMPILER"]
-    with work(db, state.UNPACK_FINISH, state.COMPILE, state.COMPILE_FINISH) as task:
+    with work(db, state.UNPACK_FINISH, state.COMPILE,
+              state.COMPILE_FINISH) as task:
         if task['config'].get('skipseashell'):
             # Skip the Seashell stage. Instead, just try to guess which
             # file contains the hardware function. For now, this
@@ -231,9 +252,12 @@ def stage_seashell(db, config):
                     c_name = name
                     break
             else:
-                raise WorkError('no C source file found')
+                raise WorkError(
+                    'No hardware source file found. Expected a file with '
+                    'extension {} and basename not `main`.'.format(C_EXT)
+                )
 
-            task.log('skipping Seashell compilation stage')
+            task.log('skipping Fuse compilation stage')
             task['hw_basename'] = base
             return
 
@@ -244,12 +268,13 @@ def stage_seashell(db, config):
                 source_name = name
                 break
         else:
-            raise WorkError('no source file found')
+            raise WorkError('No Fuse source file found. Expected a file '
+                            'with extension {}'.format(SEASHELL_EXT))
         task['seashell_main'] = name
 
         # Run the Seashell compiler.
         source_path = os.path.join(task.code_dir, source_name)
-        hls_code = task.run([compiler, source_path], log_stdout=False).stdout
+        hls_code = task.run([compiler, source_path], capture=True).stdout
 
         # A filename for the translated C code.
         base, _ = os.path.splitext(source_name)
@@ -261,12 +286,12 @@ def stage_seashell(db, config):
             f.write(hls_code)
 
 
-def _sds_cmd(prefix, func_hw, c_hw):
+def _sds_cmd(prefix, func_hw, c_hw, platform):
     """Make a sds++ command with all our standard arguments.
     """
     return prefix + [
         'sds++',
-        '-sds-pf', SDS_PLATFORM,
+        '-sds-pf', platform,
         '-sds-hw', func_hw, c_hw, '-sds-end',
         '-clkid', '3',
         '-poll-mode', '1',
@@ -289,41 +314,52 @@ def stage_hls(db, config):
     prefix = config["HLS_COMMAND_PREFIX"]
     with work(db, state.COMPILE_FINISH, state.HLS, state.HLS_FINISH) as task:
         hw_basename, hw_c, hw_o = _hw_filenames(task)
-        xflags = ''
+        _task_config(task, config)
+        flags = shlex.split(task['sdsflags'])
 
         # Run Xilinx SDSoC compiler for hardware functions.
         task.run(
-            _sds_cmd(prefix, hw_basename, hw_c) + [
-                '-c', '-MMD', '-MP', '-MF"vsadd.d"', hw_c,
-                '-o', hw_o,
+            _sds_cmd(prefix, hw_basename, hw_c, task['platform']) + flags + [
+                '-c',
+                hw_c, '-o', hw_o,
             ],
-            timeout=120,
+            timeout=config["COMPILE_TIMEOUT"],
             cwd=CODE_DIR,
         )
 
         # Run the Xilinx SDSoC compiler for host function.
         task.run(
-            _sds_cmd(prefix, hw_basename, hw_c) + [
-                '-c', '-MMD', '-MP', '-MF"main.d"', C_MAIN,
-                '-o', HOST_O,
+            _sds_cmd(prefix, hw_basename, hw_c, task['platform']) + flags + [
+                '-c',
+                C_MAIN, '-o', HOST_O,
             ],
             cwd=CODE_DIR,
         )
 
-        if task['config'].get('estimate'):
-            xflags = '-perf-est-hw-only'
-
         # Run Xilinx SDSoC compiler for created objects.
         task.run(
-            _sds_cmd(prefix, hw_basename, hw_c) + [
-                xflags, hw_o, HOST_O, '-o', EXECUTABLE,
+            _sds_cmd(prefix, hw_basename, hw_c, task['platform']) + flags + [
+                hw_o, HOST_O, '-o', config['EXECUTABLE_NAME'],
             ],
-            timeout=3000,
+            timeout=config["SYNTHESIS_TIMEOUT"],
             cwd=CODE_DIR,
         )
 
         # Run data extraction after synthesis
         data_extract.synth_data(task)
+        
+        # Copy datafiles to the executable directory.
+        data_files = [
+            os.path.join(task.code_dir, f)
+            for f in os.listdir(task.code_dir)
+            if f.endswith('.data')
+        ]
+        if data_files:
+            dest = os.path.join(task.code_dir, 'sd_card')
+            task.run(
+                ['cp'] + data_files + [dest]
+            )
+
 
 def stage_fpga_execute(db, config):
     """Work stage: upload bitstream to the FPGA controller, run the
@@ -345,7 +381,7 @@ def stage_fpga_execute(db, config):
         # Zynq board.
         bin_dir = os.path.join(task.code_dir, 'sd_card')
         bin_files = [os.path.join(bin_dir, f) for f in os.listdir(bin_dir)]
-        dest = ZYNQ_HOST + ':/mnt'
+        dest = '{}:{}'.format(ZYNQ_HOST, ZYNQ_DEST_DIR)
         task.run(
             ZYNQ_SSH_PREFIX + ['scp', '-r'] + bin_files + [dest],
             timeout=1200
@@ -360,7 +396,10 @@ def stage_fpga_execute(db, config):
 
         # Run the FPGA program and collect results
         task.run(
-            ZYNQ_SSH_PREFIX + ['ssh', ZYNQ_HOST, '/mnt/' + EXECUTABLE],
+            ZYNQ_SSH_PREFIX + [
+                'ssh', ZYNQ_HOST,
+                'cd {}; ./{}'.format(ZYNQ_DEST_DIR, config['EXECUTABLE_NAME']),
+            ],
             timeout=120
         )
 
@@ -369,6 +408,7 @@ def work_threads(db, config):
     """Get a list of (unstarted) Thread objects for processing tasks.
     """
     out = []
-    for stage in (stage_unpack, stage_seashell, stage_hls, stage_fpga_execute):
+    for stage in (stage_unpack, stage_make, stage_seashell,
+                  stage_hls, stage_fpga_execute):
         out.append(WorkThread(db, config, stage))
     return out

@@ -4,14 +4,15 @@ import sys.process._
 import scala.io.Source
 import java.nio.file.{Files, Paths, Path, StandardOpenOption}
 
-import Errors.HeaderMissing
+import CompilerError.HeaderMissing
 
 /**
  * Provides utilities to compile a program and link it with headers required
  * by the CppRunnable backend.
  */
 object GenerateExec {
-  val headers = List("parser.cpp", "picojson.h")
+  // TODO(rachit): Move this to build.sbt
+  val headers = List("parser.cpp", "json.hpp")
 
   var headerLocation = Paths.get("src/main/resources/headers")
   val headerFallbackLocation = Paths.get("_headers/")
@@ -22,7 +23,9 @@ object GenerateExec {
     headerLocation = headerFallbackLocation
 
     if (Files.exists(headerFallbackLocation) == false)  {
-      println(s"Missing required headers for `fuse run`. Unpacking from JAR file into $headerFallbackLocation.")
+      scribe.warn(
+        s"Missing headers required for `fuse run`." +
+        s" Unpacking from JAR file into $headerFallbackLocation.")
 
       val dir = Files.createDirectory(headerFallbackLocation)
       for (header <- headers) {
@@ -46,9 +49,6 @@ object GenerateExec {
    */
   def generateExec(src: Path, out: String, compilerOpts: List[String]): Either[String, Int] = {
 
-    val CXX =
-      Seq("g++", "--std=c++11", "-Wall", "-I", headerLocation.toString) ++ compilerOpts
-
     // Make sure all headers are downloaded.
     for (header <- headers) {
       if (Files.exists(headerLocation.resolve(header)) == false) {
@@ -56,14 +56,21 @@ object GenerateExec {
       }
     }
 
+    val CXX =
+      Seq("g++", "--std=c++14", "-Wall", "-I", headerLocation.toString) ++ compilerOpts
+
+    val stderr = new StringBuilder
+    val logger = ProcessLogger(l => scribe.info(l),
+                               l => stderr ++= (l + "\n"))
+
     // Generate [[out]]. `!` is defined by sys.process:
     // https://www.scala-lang.org/api/2.12.8/scala/sys/process/index.html
     val cmd = CXX ++ Seq(src.toString, "-o", out)
-    println(cmd.mkString(" "))
-    val status = cmd.!
+    scribe.info(cmd.mkString(" "))
+    val status = cmd ! logger
 
     if (status != 0) {
-      Left(s"Failed to generate the executable $out")
+      Left(s"Failed to generate the executable $out.\n${stderr}")
     } else {
       Right(status)
     }

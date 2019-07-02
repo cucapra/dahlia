@@ -13,14 +13,24 @@ docs/*pdf
 ensime.sbt
 .ensime_cache
 .ensime
+.sbt-hydra-history
+.metals
+.bloop
 
 node_modules/
 
 ## Ignore run headers
 src/main/resources/headers/*.h
+src/main/resources/headers/*.hpp
 
 ## Ignore fuse-benchmarks github repo
 fuse-benchmarks/
 
 ## Testing dir
 _test
+
+## Object files
+*.o
+
+compiled/
+*~

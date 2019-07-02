@@ -2,8 +2,7 @@ package fuselang.backend
 
 import org.bitbucket.inkytonik.kiama.output._
 import fuselang.Syntax._
-import fuselang.Errors._
-import fuselang.CodeGenHelpers._
+import fuselang.CompilerError._
 
 object Cpp {
   /**
@@ -23,7 +22,7 @@ object Cpp {
 
     override val defaultIndent = 2
 
-    def quote(id: Any) = dquotes(id.toString)
+    def quote(id: Doc) = dquotes(id)
 
     /**
      * Helper to generate a variable declaration with an initial value.
@@ -36,7 +35,7 @@ object Cpp {
      * Helper to generate a function call that might have a type parameter
      */
     def cCall(f: Doc, tParam: Option[Doc], args: List[Doc]): Doc = {
-      f <> (if (tParam.isDefined) angles(tParam.get) else value("")) <>
+      f <> (if (tParam.isDefined) angles(tParam.get) else emptyDoc) <>
       parens(hsep(args, ","))
     }
 
@@ -58,19 +57,13 @@ object Cpp {
     def emitFor(cmd: CFor): Doc
 
     /**
-     * Used to emit function headers. All C++ backend will convert the function
-     * bodies in the same way but might require different pragrams for arguments\
+     * Used to emit function headers. All C++ backends will convert the function
+     * bodies in the same way but might require different pragrams for arguments
      * or setup code.
      */
     def emitFuncHeader(func: FuncDef): Doc
 
     implicit def IdToString(id: Id): Doc = value(id.v)
-
-    // FIXME(rachit): This is probably incorrect.
-    def flattenIdx(idxs: List[Expr], dimSizes: List[Int]) =
-      idxs.zip(dimSizes).foldRight[Expr](EInt(0))({
-        case ((idx, dim), acc) => idx + (EInt(dim) * acc)
-      })
 
     def scope(doc: Doc): Doc =
       lbrace <@> indent(doc) <@> rbrace
@@ -82,17 +75,16 @@ object Cpp {
     }
 
     implicit def emitExpr(e: Expr): Doc = e match {
+      case ECast(e, typ) => parens(emitType(typ)) <> emitExpr(e)
       case EApp(fn, args) => fn <> parens(hsep(args.map(emitExpr), comma))
       case EInt(v, base) => value(emitBaseInt(v, base))
       case EFloat(f) => value(f)
       case EBool(b) => value(if(b) 1 else 0)
       case EVar(id) => value(id)
       case EBinop(op, e1, e2) => parens(e1 <+> op.toString <+> e2)
-      case EArrAccess(id, idxs) => id.typ match {
-        case Some(TArray(_, dims)) => id <> brackets(flattenIdx(idxs, dims.map(_._1)))
-        case Some(_) => throw Impossible("array access doesnt use array")
-        case None => throw Impossible("type information missing in exprToDoc")
-      }
+      case EArrAccess(id, idxs) =>
+        id <> ssep(idxs.map(idx => brackets(emitExpr(idx))), emptyDoc)
+      case EArrLiteral(idxs) => braces(hsep(idxs.map(idx => emitExpr(idx)), comma))
       case ERecAccess(rec, field) => rec <> dot <> field
       case ERecLiteral(fs) => scope {
         hsep(fs.toList.map({ case (id, expr) => "." <> id <+> "=" <+> expr }), comma)
@@ -112,30 +104,34 @@ object Cpp {
     implicit def emitCmd(c: Command): Doc = c match {
       case CPar(c1, c2) => c1 <@> c2
       case CSeq(c1, c2) => c1 <@> text("//---") <@> c2
-        case CLet(id, typ, e) => emitType(typ.get) <+> value(id) <+> equal <+> e <> semi
-        case CIf(cond, cons, alt) =>
-          "if" <> parens(cond) <> scope (cons) <+> "else" <> scope(alt)
-        case f:CFor => emitFor(f)
-        case CWhile(cond, body) => "while" <> parens(cond) <+> scope(body)
-        case CUpdate(lhs, rhs) => lhs <+> "=" <+> rhs <> semi
-        case CReduce(rop, lhs, rhs) => lhs <+> rop.toString <+> rhs <> semi
-        case CExpr(e) => e <> semi
-        case CEmpty => ""
-        case _:CView => throw Impossible("Views should not exist during codegen.")
+      case CLet(id, typ, init) =>
+        emitDecl(id, typ.get) <>
+        (if (init.isDefined) space <> equal <+> emitExpr(init.get) else emptyDoc) <>
+        semi
+      case CIf(cond, cons, alt) =>
+        "if" <> parens(cond) <> scope (cons) <+> "else" <> scope(alt)
+      case f:CFor => emitFor(f)
+      case CWhile(cond, body) => "while" <> parens(cond) <+> scope(body)
+      case CUpdate(lhs, rhs) => lhs <+> "=" <+> rhs <> semi
+      case CReduce(rop, lhs, rhs) => lhs <+> rop.toString <+> rhs <> semi
+      case CExpr(e) => e <> semi
+      case CEmpty => emptyDoc
+      case _:CView | _:CSplit =>
+        throw Impossible("Views should not exist during codegen.")
     }
 
-    def emitDecl(d: Decl): Doc = d.typ match {
-      case ta:TArray => emitArrayDecl(ta, d.id)
-      case _ => emitType(d.typ) <+> d.id
+    def emitDecl(id: Id, typ: Type): Doc = typ match {
+      case ta:TArray => emitArrayDecl(ta, id)
+      case _ => emitType(typ) <+> id
     }
 
     def emitFunc: FuncDef => Doc = { case func@FuncDef(id, args, bodyOpt) =>
-      val as = hsep(args.map(emitDecl), comma)
+      val as = hsep(args.map(decl => emitDecl(decl.id, decl.typ)), comma)
       // If body is not defined, this is an extern. Elide the definition.
       bodyOpt.map(body => "void" <+> id <> parens(as) <+> scope {
         emitFuncHeader(func) <@>
         body
-      }).getOrElse(value(""))
+      }).getOrElse(emptyDoc)
     }
 
     def emitDef(defi: Definition): Doc = defi match {

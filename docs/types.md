@@ -36,13 +36,17 @@ a future computation), simply add an explicit type annotation:
 let x: bit<10> = 1;
 ```
 
-## Floats
+## Floats & Doubles
 
 Fuse provides a simple float type:
 
 ```C
-let f = 1.0 // f is float
+let f = 1.0; // f is float
+let f: double = 2.0;
 ```
+
+**Note**: Automatic inferences always infers the type `float` for floating
+point literals.
 
 Fixed point floating numbers are **not yet implemented**.
 

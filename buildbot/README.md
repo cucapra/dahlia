@@ -62,9 +62,15 @@ For example, you can zip up a directory and submit it like this:
 
     $ zip -r - . | curl -F file='@-;filename=code.zip' $BUILDBOT/jobs
 
-It's also possible to provide Seashell code as an ordinary POST string instead of as a file attachment using the `code` parameter.
-You can also specify configuration options as further parameters; the only current configuration option is `skipseashell`, which lets you supply plain HLS C code as input.
-(With curl, use `-F skipseashell=1`.)
+If the directory contains data files with `.data` extension, they'll be copied over to the target FPGA.
+
+You can also specify job configuration options as further POST parameters:
+
+- `skipseashell`, which lets you supply plain HLS C code as input.
+- `estimate`, to use the Xilinx toolchain's resource estimation facility. The job will skip synthesis and execution on the FPGA.
+- `make`, to use a Makefile instead of the built-in compilation workflow (see below).
+
+Use `-F <option>=1` to enable these options with `curl`.
 
 To see a list of the current jobs, get `/jobs.csv`:
 
@@ -77,5 +83,18 @@ To get details about a specific job, request `/jobs/<name>`:
 You can also download output files from a job:
 
     $ curl -O $BUILDBOT/jobs/d988ruiuAk4/files/code/compiled.o
+
+
+Makefiles
+---------
+
+Larger projects that use multiple sources and need them to linked in a particular fashion should use the `make` configuration option. With this option, buildbot will run the provided Makefile instead of running its own commands and assume that the artifact is built when the command terminates successfully.
+
+For estimation, buildbot supplies flags for `sds++` using the `SDSFLAGS` variable. In your Makefile, make sure that you pass in this option when building hardware targets:
+
+```make
+%.o: %.c
+    sds++ $(SDSFLAGS) $< -o $@
+```
 
 [curl]: https://curl.haxx.se

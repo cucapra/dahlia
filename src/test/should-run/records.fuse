@@ -1,0 +1,28 @@
+import "cassert" {
+  def extern assert(cond: bool);
+}
+
+record point {
+  x: bit<32>;
+  y: bit<32>
+}
+
+decl shape1: point[2];
+decl shape2: point[2];
+decl gold: point;
+
+let X: bit<32> = 0;
+let Y: bit<32> = 0;
+
+for (let i = 0..2) {
+  let x = shape1[i].x + shape2[i].x;
+  let y = shape1[i].y + shape2[i].y;
+} combine {
+  X += x;
+  Y += y;
+}
+
+let res: point = { x = X; y = Y };
+
+assert(res.x == gold.x);
+assert(res.y == gold.y);
