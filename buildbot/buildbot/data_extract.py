@@ -74,7 +74,7 @@ def pf_rpt(datawriter, task):
 def hw_rpt(datawriter, task):
     ################ Open hardware module file ###################################
     task.log("--hardware preformance data--")
-    hw_basename = task['config']['hwname'] | default(task['hw_basename'])
+    hw_basename = task['config']['hwname'] or task['hw_basename']
     report = os.path.join(task.code_dir, '_sds/reports', 'sds_' + hw_basename + '.rpt')
     if os.path.isfile(report): # Use with for file open
         data = open(report, "r+")
