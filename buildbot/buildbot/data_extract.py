@@ -11,6 +11,7 @@ def synth_data(task):
     datacsvpath = os.path.join(task.code_dir, 'run_data.csv')
     datacsv = open(datacsvpath,'w') #overwrite existing
     datawriter = csv.writer(datacsv)
+    task.log("--Data extraction stage--")
     
     hw_rpt(datawriter, task)
     if task['config'].get('estimate'):
@@ -73,7 +74,8 @@ def pf_rpt(datawriter, task):
 def hw_rpt(datawriter, task):
     ################ Open hardware module file ###################################
     task.log("--hardware preformance data--")
-    report = os.path.join(task.code_dir, '_sds/reports', 'sds_' + task['hw_basename'] + '.rpt')
+    hw_basename = task['config']['hwname'] | default(task['hw_basename'])
+    report = os.path.join(task.code_dir, '_sds/reports', 'sds_' + hw_basename + '.rpt')
     if os.path.isfile(report): # Use with for file open
         data = open(report, "r+")
     
@@ -122,7 +124,7 @@ def hw_rpt(datawriter, task):
         data.close()
     
     else:
-        task.log("sds_" + task['hw_basename'] + " does not exit!! @ " + report)
+        task.log("sds_" + hw_basename + " does not exit!! @ " + report)
         #sys.exit()
     
 def dm_rpt(datawriter, task):    
