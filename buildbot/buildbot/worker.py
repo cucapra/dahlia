@@ -218,18 +218,25 @@ def stage_make(db, config):
     with work(db, state.MAKE, state.MAKE_PROGRESS, state.HLS_FINISH) as task:
         _task_config(task, config)
 
+        # Print this name on the job page
+        task['hwname'] = task['config'].get('hwname')
+        
         if task['sdsflags']:
             task.log('WARNING: make stage is ignoring sdsflags={}'.format(
                 task['sdsflags']
             ))
 
-        task.run(
-            prefix + [
+        make_cmd = prefix + [
                 'make',
                 'ESTIMATE={}'.format(task['estimate']),
                 'PLATFORM={}'.format(task['platform']),
                 'TARGET={}'.format(config['EXECUTABLE_NAME']),
-            ],
+            ]
+        if task['config']['directives']:
+            make_cmd.append('DIRECTIVES={}'.format(task['config']['directives']))
+
+        task.run(
+            make_cmd,
             timeout=config["SYNTHESIS_TIMEOUT"],
             cwd=CODE_DIR,
         )
@@ -262,6 +269,8 @@ def stage_seashell(db, config):
 
             task.log('skipping Fuse compilation stage')
             task['hw_basename'] = base
+            # Print this name on the job page
+            task['hwname'] = base
             return
 
         # Look for the Seashell source code.
@@ -289,17 +298,27 @@ def stage_seashell(db, config):
             f.write(hls_code)
 
 
-def _sds_cmd(prefix, func_hw, c_hw, platform):
+def _sds_cmd(prefix, task):
     """Make a sds++ command with all our standard arguments.
     """
-    return prefix + [
-        'sds++',
-        '-sds-pf', platform,
-        '-sds-hw', func_hw, c_hw, '-sds-end',
-        '-clkid', '3',
-        '-poll-mode', '1',
-        '-verbose', '-Wall', '-O3',
-    ]
+    hw_basename, hw_c, hw_o = _hw_filenames(task)
+    sds_cmd_head = prefix + [
+            'sds++',
+            '-sds-pf', task['platform'],
+        ]
+    sds_cmd_tail = [ 
+            '-clkid', '3',
+            '-poll-mode', '1',
+            '-verbose', '-Wall', '-O3',
+        ]
+    if task['config']['directives']:
+        return sds_cmd_head + [
+                '-sds-hw', func_hw, c_hw, '-hls-tcl', task['config']['directives'], '-sds-end',
+            ] + sds_cmd_tail
+    else:
+        return sds_cmd_head + [
+                '-sds-hw', func_hw, c_hw, '-sds-end',
+            ] + sds_cmd_tail
 
 
 def _hw_filenames(task):
@@ -316,13 +335,13 @@ def stage_hls(db, config):
     """
     prefix = config["HLS_COMMAND_PREFIX"]
     with work(db, state.COMPILE_FINISH, state.HLS, state.HLS_FINISH) as task:
-        hw_basename, hw_c, hw_o = _hw_filenames(task)
         _task_config(task, config)
         flags = shlex.split(task['sdsflags'])
+        sds_cmd = _sds_cmd(prefix, task) 
 
         # Run Xilinx SDSoC compiler for hardware functions.
         task.run(
-            _sds_cmd(prefix, hw_basename, hw_c, task['platform']) + flags + [
+            sds_cmd + flags + [
                 '-c',
                 hw_c, '-o', hw_o,
             ],
@@ -332,7 +351,7 @@ def stage_hls(db, config):
 
         # Run the Xilinx SDSoC compiler for host function.
         task.run(
-            _sds_cmd(prefix, hw_basename, hw_c, task['platform']) + flags + [
+            sds_cmd + flags + [
                 '-c',
                 C_MAIN, '-o', HOST_O,
             ],
@@ -341,7 +360,7 @@ def stage_hls(db, config):
 
         # Run Xilinx SDSoC compiler for created objects.
         task.run(
-            _sds_cmd(prefix, hw_basename, hw_c, task['platform']) + flags + [
+            sds_cmd + flags + [
                 hw_o, HOST_O, '-o', config['EXECUTABLE_NAME'],
             ],
             timeout=config["SYNTHESIS_TIMEOUT"],
