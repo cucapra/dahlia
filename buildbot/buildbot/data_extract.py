@@ -6,12 +6,16 @@ import os
 import sys
 import csv
 
+
 def synth_data(task):
     ################ Open CSV files to write results to ##########################
     datacsvpath = os.path.join(task.code_dir, 'run_data.csv')
     datacsv = open(datacsvpath,'w') #overwrite existing
     datawriter = csv.writer(datacsv)
-    task.log("--Data extraction stage--")
+    task.log(" ")
+    task.log("----------------------------------------------------------------")
+    task.log("--    Data extraction stage    --")
+    task.log("----------------------------------------------------------------")
     
     hw_rpt(datawriter, task)
     if task['config'].get('estimate'):
@@ -25,12 +29,74 @@ def synth_data(task):
     # Close file
     datacsv.close()
     
+
 def test_extract(task):
     task.log('Testing extract script worker access')
 
+
+def hw_rpt(datawriter, task):
+    ################ Open hardware module file ###################################
+    task.log(" ")
+    task.log("--     hardware preformance data    --")
+    hw_basename = task['config']['hwname'] # if task['config']['make'] # else task['hw_basename']
+    report = os.path.join(task.code_dir, '_sds/reports', 'sds_' + hw_basename + '.rpt')
+    if os.path.isfile(report): # Use with for file open
+        data = open(report, "r+")
+    
+        lines = []
+        for line in data:
+            lines.append(line)
+        
+        # extract relevant data # section jump strategy?
+        for num, line in enumerate(lines,1):
+            if '== Performance Estimates' in line:
+                lat = num-1
+            if '== Utilization Estimates' in line:
+                utl = num-1
+        
+        # Read timing details
+        timing  = re.split("\|",''.join(lines[lat+7].split()))
+        latency = re.split("\|",''.join(lines[lat+16].split()))
+        
+        task.log ('Target Clock, Estimated Clock, Min Latency, Max Latency, Pipelining')
+        task.log (timing[2] + timing[3] + latency[1] + latency[2] + latency[5])
+        task.log(" ")
+        
+        datawriter.writerow(['Target Clock','Estimated Clock','Min latency','Max latency','Pipelining'])
+        datawriter.writerow([timing[2],timing[3],latency[1],latency[2],latency[5]])
+        datawriter.writerow([ ])
+        
+        # Read loop details
+        datawriter.writerow([ ])
+        
+        # Read utilization details
+        for num, line in enumerate(lines[utl:utl+20],1):
+            if 'Name' in line:
+                names = re.split("\|+",''.join(line.split()))[1:-1] # strip away empty elements added
+            if 'Total' in line:
+                total = re.split("\|+",''.join(line.split()))[1:-1]
+            if 'Available' in line:
+                avail = re.split("\|+",''.join(line.split()))[1:-1]
+            if 'Utilization' in line:
+                util  = re.split("\|+",''.join(line.split()))[1:-1]
+        
+        for num in range(len(names)):
+            task.log (names[num] + '-' + total[num] + 'of' + avail[num] + '->' + util[num] + '%')
+            datawriter.writerow([names[num],total[num],avail[num],util[num]])
+        datawriter.writerow([ ])
+        
+        # Close file
+        data.close()
+    
+    else:
+        task.log("sds_" + hw_basename + " does not exit!! @ " + report)
+        #sys.exit()
+    
+
 def pf_rpt(datawriter, task):
     ################ Open hardware estimate file ###################################
-    task.log("--hardware preformance data--")
+    task.log(" ")
+    task.log("--    hardware preformance estimates    --")
     report = os.path.join(task.code_dir, '_sds/est', 'perf.est')
     if os.path.isfile(report): # Use with for file open
         data = open(report, "r+")
@@ -70,66 +136,10 @@ def pf_rpt(datawriter, task):
         #sys.exit()
 
 
-
-def hw_rpt(datawriter, task):
-    ################ Open hardware module file ###################################
-    task.log("--hardware preformance data--")
-    hw_basename = task['config']['hwname'] # if task['config']['make'] # else task['hw_basename']
-    report = os.path.join(task.code_dir, '_sds/reports', 'sds_' + hw_basename + '.rpt')
-    if os.path.isfile(report): # Use with for file open
-        data = open(report, "r+")
-    
-        lines = []
-        for line in data:
-            lines.append(line)
-        
-        # extract relevant data # section jump strategy?
-        for num, line in enumerate(lines,1):
-            if '== Performance Estimates' in line:
-                lat = num-1
-            if '== Utilization Estimates' in line:
-                utl = num-1
-        
-        # Read timing details
-        timing  = re.split("\|",''.join(lines[lat+7].split()))
-        latency = re.split("\|",''.join(lines[lat+16].split()))
-        
-        task.log ('Target Clock, Estimated Clock, Min Latency, Max Latency, Pipelining')
-        task.log (timing[2] + timing[3] + latency[1] + latency[2] + latency[5])
-        
-        datawriter.writerow(['Target Clock','Estimated Clock','Min latency','Max latency','Pipelining'])
-        datawriter.writerow([timing[2],timing[3],latency[1],latency[2],latency[5]])
-        datawriter.writerow([ ])
-        
-        # Read loop details
-        datawriter.writerow([ ])
-        
-        # Read utilization details
-        for num, line in enumerate(lines[utl:utl+20],1):
-            if 'Name' in line:
-                names = re.split("\|+",''.join(line.split()))[1:-1] # strip away empty elements added
-            if 'Total' in line:
-                total = re.split("\|+",''.join(line.split()))[1:-1]
-            if 'Available' in line:
-                avail = re.split("\|+",''.join(line.split()))[1:-1]
-            if 'Utilization' in line:
-                util  = re.split("\|+",''.join(line.split()))[1:-1]
-        
-        for num in range(len(names)):
-            task.log (names[num] + '-' + total[num] + 'of' + avail[num] + '->' + util[num] + '%')
-            datawriter.writerow([names[num],total[num],avail[num],util[num]])
-        datawriter.writerow([ ])
-        
-        # Close file
-        data.close()
-    
-    else:
-        task.log("sds_" + hw_basename + " does not exit!! @ " + report)
-        #sys.exit()
-    
 def dm_rpt(datawriter, task):    
     ################ Open data motion network file ###############################
-    task.log("--data motion network--")
+    task.log(" ")
+    task.log("--    data motion network    --")
     report = os.path.join(task.code_dir, '_sds/reports', 'data_motion.html')
     if os.path.isfile(report):  # Use with for file open
         data = open(report, "r+")
@@ -152,6 +162,7 @@ def dm_rpt(datawriter, task):
         
         items = items//2 # IP Port appears twice in the report for the two tables
         
+        task.log(" ")
         task.log ('IP port- Connection- Transfer size- Mem layout- Data mover setup time- Transfer time')
         
         datawriter.writerow(['IP port','Connection','Transfer size','Mem layout','Data mover setup time','Transfer time'])
@@ -174,6 +185,9 @@ def dm_rpt(datawriter, task):
         task.log("data_motion does not exit!! @ " + report)
         #sys.exit()
 
-#def runtime_data():
+
+def runtime_data(datawriter, task):
     
     ######### Open json ##########
+    task.log(" ")
+    task.log("--    run data extraction not yet implemented    --")

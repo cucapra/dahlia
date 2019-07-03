@@ -291,6 +291,7 @@ def stage_seashell(db, config):
         # A filename for the translated C code.
         base, _ = os.path.splitext(source_name)
         c_name = base + C_EXT
+        task['config']['hwname'] = base
         task['hw_basename'] = base
 
         # Write the C code.
