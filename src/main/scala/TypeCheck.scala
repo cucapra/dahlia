@@ -576,10 +576,11 @@ object TypeChecker {
       case t => throw UnexpectedType(cmd.pos, "split", "array", t)
     }
     case CSeq(c1, c2) => {
-      val (_, binds) = env.withScope(1) { newScope =>
+      val (env1, binds) = env.withScope(1) { newScope =>
         checkC(c1)(newScope)
       }
-      checkC(c2)(env ++ binds)
+      val env2 = checkC(c2)(env ++ binds)
+      env2 merge env1
     }
     case CExpr(e) => checkE(e)._2
     case CEmpty => env

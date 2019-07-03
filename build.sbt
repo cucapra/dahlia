@@ -46,8 +46,13 @@ getHeaders := {
   }
 }
 
-/* Override default assembly task to depend on getPicoJson */
+/* Override default assembly task to depend on getHeaders */
 assembly := {
   getHeaders.value
   assembly.value
+}
+
+Test / compile := {
+  getHeaders.value
+  (Test / compile).value
 }

@@ -82,7 +82,8 @@ object Cpp {
       case EBool(b) => value(if(b) 1 else 0)
       case EVar(id) => value(id)
       case EBinop(op, e1, e2) => parens(e1 <+> op.toString <+> e2)
-      case EArrAccess(id, idxs) => id <> ssep(idxs.map(idx => brackets(emitExpr(idx))), emptyDoc)
+      case EArrAccess(id, idxs) =>
+        id <> ssep(idxs.map(idx => brackets(emitExpr(idx))), emptyDoc)
       case EArrLiteral(idxs) => braces(hsep(idxs.map(idx => emitExpr(idx)), comma))
       case ERecAccess(rec, field) => rec <> dot <> field
       case ERecLiteral(fs) => scope {
@@ -103,31 +104,29 @@ object Cpp {
     implicit def emitCmd(c: Command): Doc = c match {
       case CPar(c1, c2) => c1 <@> c2
       case CSeq(c1, c2) => c1 <@> text("//---") <@> c2
-        case CLet(id, typ, init) =>
-          emitType(typ.get) <+> value(id) <>
-          (if (init.isDefined) space <> equal <+> emitExpr(init.get) else emptyDoc) <>
-          semi
-        case CIf(cond, cons, alt) =>
-          "if" <> parens(cond) <> scope (cons) <+> "else" <> scope(alt)
-        case f:CFor => emitFor(f)
-        case CWhile(cond, body) => "while" <> parens(cond) <+> scope(body)
-        case CUpdate(lhs, rhs) => lhs <+> "=" <+> rhs <> semi
-        case CReduce(rop, lhs, rhs) => lhs <+> rop.toString <+> rhs <> semi
-        case CExpr(e) => e <> semi
-        case CEmpty => emptyDoc
-        case _:CView =>
-          throw Impossible("Views should not exist during codegen.")
-        case _:CSplit =>
-          throw Impossible("Views should not exist during codegen.")
+      case CLet(id, typ, init) =>
+        emitDecl(id, typ.get) <>
+        (if (init.isDefined) space <> equal <+> emitExpr(init.get) else emptyDoc) <>
+        semi
+      case CIf(cond, cons, alt) =>
+        "if" <> parens(cond) <> scope (cons) <+> "else" <> scope(alt)
+      case f:CFor => emitFor(f)
+      case CWhile(cond, body) => "while" <> parens(cond) <+> scope(body)
+      case CUpdate(lhs, rhs) => lhs <+> "=" <+> rhs <> semi
+      case CReduce(rop, lhs, rhs) => lhs <+> rop.toString <+> rhs <> semi
+      case CExpr(e) => e <> semi
+      case CEmpty => emptyDoc
+      case _:CView | _:CSplit =>
+        throw Impossible("Views should not exist during codegen.")
     }
 
-    def emitDecl(d: Decl): Doc = d.typ match {
-      case ta:TArray => emitArrayDecl(ta, d.id)
-      case _ => emitType(d.typ) <+> d.id
+    def emitDecl(id: Id, typ: Type): Doc = typ match {
+      case ta:TArray => emitArrayDecl(ta, id)
+      case _ => emitType(typ) <+> id
     }
 
     def emitFunc: FuncDef => Doc = { case func@FuncDef(id, args, bodyOpt) =>
-      val as = hsep(args.map(emitDecl), comma)
+      val as = hsep(args.map(decl => emitDecl(decl.id, decl.typ)), comma)
       // If body is not defined, this is an extern. Elide the definition.
       bodyOpt.map(body => "void" <+> id <> parens(as) <+> scope {
         emitFuncHeader(func) <@>
