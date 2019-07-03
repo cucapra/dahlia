@@ -233,7 +233,9 @@ def stage_make(db, config):
                 'TARGET={}'.format(config['EXECUTABLE_NAME']),
             ]
         if task['config']['directives']:
-            make_cmd.append('DIRECTIVES={}'.format(task['config']['directives']))
+            make_cmd.append(
+                'DIRECTIVES={}'.format(task['config']['directives'])
+            )
 
         task.run(
             make_cmd,
@@ -304,22 +306,23 @@ def _sds_cmd(prefix, task):
     """
     hw_basename, hw_c, hw_o = _hw_filenames(task)
     sds_cmd_head = prefix + [
-            'sds++',
-            '-sds-pf', task['platform'],
-        ]
-    sds_cmd_tail = [ 
-            '-clkid', '3',
-            '-poll-mode', '1',
-            '-verbose', '-Wall', '-O3',
-        ]
+        'sds++',
+        '-sds-pf', task['platform'],
+    ]
+    sds_cmd_tail = [
+        '-clkid', '3',
+        '-poll-mode', '1',
+        '-verbose', '-Wall', '-O3',
+    ]
     if task['config']['directives']:
         return sds_cmd_head + [
-                '-sds-hw', func_hw, c_hw, '-hls-tcl', task['config']['directives'], '-sds-end',
-            ] + sds_cmd_tail
+            '-sds-hw', hw_basename, hw_c, '-hls-tcl',
+            task['config']['directives'], '-sds-end',
+        ] + sds_cmd_tail
     else:
         return sds_cmd_head + [
-                '-sds-hw', func_hw, c_hw, '-sds-end',
-            ] + sds_cmd_tail
+            '-sds-hw', hw_basename, hw_c, '-sds-end',
+        ] + sds_cmd_tail
 
 
 def _hw_filenames(task):
@@ -338,7 +341,8 @@ def stage_hls(db, config):
     with work(db, state.COMPILE_FINISH, state.HLS, state.HLS_FINISH) as task:
         _task_config(task, config)
         flags = shlex.split(task['sdsflags'])
-        sds_cmd = _sds_cmd(prefix, task) 
+        sds_cmd = _sds_cmd(prefix, task)
+        hw_basename, hw_c, hw_o = _hw_filenames(task)
 
         # Run Xilinx SDSoC compiler for hardware functions.
         task.run(
