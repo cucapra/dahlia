@@ -59,7 +59,7 @@ def hw_rpt(datawriter, task):
         latency = re.split("\|",''.join(lines[lat+16].split()))
         
         task.log ('Target Clock, Estimated Clock, Min Latency, Max Latency, Pipelining')
-        task.log (timing[2] + timing[3] + latency[1] + latency[2] + latency[5])
+        task.log (timing[2] + ', ' + timing[3] + ', ' + latency[1] + ', ' + latency[2] + ', ' + latency[5])
         task.log(" ")
         
         datawriter.writerow(['Target Clock','Estimated Clock','Min latency','Max latency','Pipelining'])
@@ -81,7 +81,7 @@ def hw_rpt(datawriter, task):
                 util  = re.split("\|+",''.join(line.split()))[1:-1]
         
         for num in range(len(names)):
-            task.log (names[num] + '-' + total[num] + 'of' + avail[num] + '->' + util[num] + '%')
+            task.log (names[num] + '- ' + total[num] + ' of ' + avail[num] + ' -> ' + util[num] + ' %')
             datawriter.writerow([names[num],total[num],avail[num],util[num]])
         datawriter.writerow([ ])
         
@@ -108,23 +108,23 @@ def pf_rpt(datawriter, task):
         # extract relevant data
         if lines[2].find("hwLatency")>0:
             latency = re.findall('(?<=")[^"]*(?=")',lines[2])
-            task.log('hw cycles' + latency[0])
+            task.log('hw cycles' + " " + latency[0])
         
         if lines[6].find("dsp")>0:
             dsp     = re.findall('(?<=")[^"]*(?=")',lines[6])
-            task.log(dsp[2] + "/" + dsp[4])
+            task.log(dsp[2] + " / " + dsp[4])
         
         if lines[7].find("bram")>0:
             bram    = re.findall('(?<=")[^"]*(?=")',lines[7])
-            task.log(bram[2] + "/" + bram[4])
+            task.log(bram[2] + " / " + bram[4])
         
         if lines[8].find("lut")>0:
             lut     = re.findall('(?<=")[^"]*(?=")',lines[8])
-            task.log(lut[2] + "/" + lut[4])
+            task.log(lut[2] + " / " + lut[4])
         
         if lines[9].find("ff")>0:
             ff      = re.findall('(?<=")[^"]*(?=")',lines[9])
-            task.log(ff[2] + "/" + ff[4])
+            task.log(ff[2] + " / " + ff[4])
        
         datawriter.writerow([latency[0],dsp[2],bram[2],lut[2],ff[2]])
         
@@ -163,7 +163,7 @@ def dm_rpt(datawriter, task):
         items = items//2 # IP Port appears twice in the report for the two tables
         
         task.log(" ")
-        task.log ('IP port- Connection- Transfer size- Mem layout- Data mover setup time- Transfer time')
+        task.log ('IP port - Connection - Transfer size - Mem layout - Data mover setup time - Transfer time')
         
         datawriter.writerow(['IP port','Connection','Transfer size','Mem layout','Data mover setup time','Transfer time'])
         
@@ -175,7 +175,7 @@ def dm_rpt(datawriter, task):
             meml = re.findall('(?<=>).*(?=<)',lines[acs+15+8*item])
             dmst = re.findall('(?<=>).*(?=<)',lines[acs+16+8*item])
             trft = re.findall('(?<=>).*(?=<)',lines[acs+17+8*item])
-            task.log(ip[0] + conn[0] + tsiz[0] + meml[0] + dmst[0] + trft[0])
+            task.log(ip[0] + ' - ' + conn[0] + ' - ' + tsiz[0] + ' - ' + meml[0] + ' - ' + dmst[0] + ' - ' + trft[0])
             datawriter.writerow([ip[0],conn[0],tsiz[0],meml[0],dmst[0],trft[0]])
         
         # Close file
