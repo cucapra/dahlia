@@ -1375,5 +1375,4 @@ class TypeCheckerSpec extends FunSpec {
         """ )
     }
   }
-
 }
