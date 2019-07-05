@@ -20,4 +20,7 @@ object Configuration {
     header: Boolean = false,              // Generate a header
     logLevel: scribe.Level = scribe.Level.Info
   )
+
+  val validBackends = Set("vivado", "c++")
+
 }

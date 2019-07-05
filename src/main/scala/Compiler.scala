@@ -8,13 +8,19 @@ import Configuration.{Config, emptyConf}
 
 object Compiler {
 
+  def toBackend(str: String): fuselang.backend.Backend = str match {
+    case "vivado" => backend.VivadoBackend
+    case "c++" => backend.CppRunnable
+    case b@_ => throw common.CompilerError.Impossible(s"Unknown backend $b")
+  }
+
   def compileStringWithError(prog: String, c: Config = emptyConf) = {
     val ast = FuseParser.parse(prog)
     passes.CapabilityChecker.check(ast)
     typechecker.TypeChecker.typeCheck(ast)
     passes.BoundsChecker.check(ast);
     val rast = passes.RewriteView.rewriteProg(ast)
-    Utils.toBackend(c.backend).emit(rast, c)
+    toBackend(c.backend).emit(rast, c)
   }
 
   // Outputs red text to the console
