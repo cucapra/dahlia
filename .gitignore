@@ -31,4 +31,5 @@ _test
 
 compiled/
 *~
+.DS_Store
 .projectile
