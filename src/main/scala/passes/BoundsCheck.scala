@@ -1,10 +1,12 @@
-package fuselang
+package fuselang.passes
 
+import fuselang.Utils.RichOption
+
+import fuselang.common._
 import Syntax._
 import Errors._
 import CompilerError._
 import Logger._
-import Utils.RichOption
 
 object BoundsChecker {
 

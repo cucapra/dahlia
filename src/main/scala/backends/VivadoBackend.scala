@@ -1,10 +1,11 @@
 package fuselang.backend
 
-import fuselang.Syntax._
-import fuselang.Configuration._
-import fuselang.CompilerError._
-
 import Cpp._
+
+import fuselang.common._
+import Syntax._
+import Configuration._
+import CompilerError._
 
 private class VivadoBackend extends CppLike {
 
@@ -51,7 +52,7 @@ private class VivadoBackend extends CppLike {
     case _:TFloat => "float"
     case _:TDouble => "double"
     case TSizedInt(s) => s"ap_int<$s>"
-    case TArray(typ, _) => typ.toString
+    case TArray(typ, _) => emitType(typ)
     case TRecType(n, _) => n
     case _:TFun => throw Impossible("Cannot emit function types")
     case TAlias(n) => n
@@ -72,7 +73,7 @@ private class VivadoBackendHeader extends VivadoBackend {
   override def emitCmd(c: Command): Doc = emptyDoc
 
   override def emitFunc = { case FuncDef(id, args, _) =>
-    val as = hsep(args.map(emitDecl), comma)
+    val as = hsep(args.map(d => emitDecl(d.id, d.typ)), comma)
     "void" <+> id <> parens(as) <> semi
   }
 

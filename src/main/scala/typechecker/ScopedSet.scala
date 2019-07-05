@@ -1,4 +1,4 @@
-package fuselang
+package fuselang.typechecker
 
 /**
  * Set that provides support for Scopes.

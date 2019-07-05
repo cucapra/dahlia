@@ -14,6 +14,8 @@ ensime.sbt
 .ensime_cache
 .ensime
 .sbt-hydra-history
+.metals
+.bloop
 
 node_modules/
 
@@ -29,4 +31,8 @@ _test
 
 compiled/
 *~
+<<<<<<< HEAD
 .DS_Store
+=======
+.projectile
+>>>>>>> ac6d4cf701cb61874005c8aee7b6cd9520ac6d03

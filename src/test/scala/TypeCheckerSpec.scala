@@ -1,5 +1,6 @@
 package fuselang
 
+import fuselang.common._
 import TestUtils._
 import Errors._
 import org.scalatest.FunSpec
@@ -376,6 +377,24 @@ class TypeCheckerSpec extends FunSpec {
   }
 
   describe("Sequential composition") {
+    it("total resources consumed is union of all resources consumed") {
+      assertThrows[AlreadyConsumed] {
+        typeCheck("""
+          decl a: bit<32>[8];
+          decl b: bit<32>[8];
+          decl c: bit<32>[8];
+          {
+            c[0] := 1
+            ---
+            b[0] := 1;
+            ---
+            a[0] := 1;
+          }
+          b[0] := 1
+          """ )
+      }
+    }
+
     it("doesnt refresh resources globally when composed with parallel composition") {
       assertThrows[AlreadyWrite] {
         typeCheck("""

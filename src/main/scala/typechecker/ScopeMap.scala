@@ -1,7 +1,7 @@
-package fuselang
+package fuselang.typechecker
 
-import CompilerError._
-import Utils._
+import fuselang.common.CompilerError._
+import fuselang.Utils._
 
 object ScopeMap {
 

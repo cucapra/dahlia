@@ -1,4 +1,4 @@
-package fuselang
+package fuselang.common
 
 import scala.util.parsing.input.{Positional, Position}
 

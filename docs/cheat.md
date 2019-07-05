@@ -35,7 +35,7 @@ decl a: bit<32>; // number
 Arrays defined using `decl` are used as the memory interface for this module.
 
 ```C
-decl arr: bit<32>[10] // 10 elements each of which is bit<10>
+decl arr: bit<32>[10] // 10 elements each of which is bit<32>
 decl barr: bit<32>[10 bank 2] // An array with two banks
 decl marr: bit<32>[10 bank 2][8 bank 4] // multi-dimensional arrays are supported
 ```

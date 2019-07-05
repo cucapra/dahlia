@@ -1,8 +1,10 @@
-package fuselang
+package fuselang.typechecker
 
-import Syntax._
 import EnvHelpers._
-import Utils._
+import fuselang.Utils._
+
+import fuselang.common._
+import Syntax._
 import CompilerError._
 
 object CapabilityEnv {

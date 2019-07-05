@@ -1,10 +1,11 @@
 package fuselang.backend
 
-import fuselang.Syntax._
-import fuselang.Configuration._
-import fuselang.CompilerError._
-
 import Cpp._
+
+import fuselang.common._
+import Syntax._
+import Configuration._
+import CompilerError._
 
 /**
  * Same as [[fuselang.backend.VivadoBackend]] except this creates a main
@@ -28,12 +29,16 @@ private class CppRunnable extends CppLike {
     case TAlias(n) => n
   }
 
-  def emitArrayDecl(ta: TArray, id: Id) = emitType(ta) <+> s"&$id"
+  def emitArrayDecl(ta: TArray, id: Id) = emitType(ta) <+> s"$id"
 
   def emitFor(cmd: CFor): Doc =
     "for" <> emitRange(cmd.range) <+> scope {
-      cmd.par <>
-      (if (cmd.combine != CEmpty) line <> text("// combiner:") <@> cmd.combine else emptyDoc)
+      cmd.par <> {
+        if (cmd.combine != CEmpty)
+          line <> text("// combiner:") <@> cmd.combine
+        else
+          emptyDoc
+      }
     }
 
   def emitFuncHeader(func: FuncDef) = emptyDoc
@@ -43,7 +48,7 @@ private class CppRunnable extends CppLike {
    * program has already created a value `v` of the type json to
    * store the data. Each parameter generates two statements:
    *
-   * auto id = <align>(get_arg<type>("id", "type", v)); // v is the json value parsed earlier.
+   * auto id = get_arg<type>("id", "type", v); // v is the json value parsed earlier.
    *
    * <align> is generated based on the type of the param:
    */
@@ -58,10 +63,12 @@ private class CppRunnable extends CppLike {
       }
       case arr@TArray(_, dims) => {
         val typeName = quote(s"${arr.typ}${dims.map(_ => "[]").mkString}")
-        val cType = "n_dim_vec_t" <> angles(emitType(arr.typ) <> comma <+> dims.length.toString)
+        val cType =
+          "n_dim_vec_t" <> angles(emitType(arr.typ) <> comma <+> dims.length.toString)
         (typeName, cType)
       }
-      case t => throw NotImplemented(s"Cannot parse type `$t' with CppRunnable backend.")
+      case t =>
+        throw NotImplemented(s"Cannot parse type `$t' with CppRunnable backend.")
     }
 
     cBind(s"${id}",
@@ -134,7 +141,7 @@ private class CppRunnableHeader extends CppRunnable {
   override def emitCmd(c: Command): Doc = emptyDoc
 
   override def emitFunc = { case FuncDef(id, args, _) =>
-    val as = hsep(args.map(emitDecl), comma)
+    val as = hsep(args.map(d => emitDecl(d.id, d.typ)), comma)
     "void" <+> id <> parens(as) <> semi
   }
 

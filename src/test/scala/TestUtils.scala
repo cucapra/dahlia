@@ -1,5 +1,9 @@
 package fuselang
 
+import common._
+import passes._
+import typechecker._
+
 object TestUtils {
 
   import scala.language.implicitConversions

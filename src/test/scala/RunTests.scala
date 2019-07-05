@@ -7,7 +7,8 @@ import org.scalatest.Tag
 import java.nio.file.{Files, Paths, Path}
 import collection.JavaConverters._
 
-import Configuration._
+import common._
+import Configuration.Config
 
 object SlowTest extends Tag("fuselang.tag.SlowTest")
 
@@ -31,8 +32,8 @@ object AsyncRun {
 
     val conf = Config(
       srcFile = src.toFile(),
-      mode = Run,
-      backend = backend.CppRunnable,
+      mode = Configuration.Run,
+      backend = Configuration.Cpp,
       output = Some(out.toString))
 
     val compileToC = Future { Main.runWithConfig(conf) }
@@ -53,7 +54,7 @@ object AsyncRun {
 class RunTests extends org.scalatest.AsyncFunSuite {
 
   // Suppress logging infor logging.
-  Logger.setLogLevel(scribe.Level.Warn)
+  common.Logger.setLogLevel(scribe.Level.Warn)
 
   val shouldRun = Paths.get("src/test/should-run")
   val srcFilePattern = """.*\.fuse"""

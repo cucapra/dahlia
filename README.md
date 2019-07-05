@@ -6,8 +6,10 @@ Fuse is a programming language for designing hardware accelerators.
 It provides abstractions that guarantee hardware realizability after type checking.
 For more details, see [the documentation][docs].
 
-[docs]: https://capra.cs.cornell.edu/fuse
+Seashell is the reference compiler for compiling Fuse programs to various HLS
+backends. Vivado HLS is the only currently supported backend.
 
+[docs]: https://capra.cs.cornell.edu/fuse
 
 ## Set It Up
 

@@ -2,6 +2,7 @@ package fuselang
 
 import scala.util.parsing.combinator._
 
+import fuselang.common._
 import Syntax._
 
 private class FuseParser extends RegexParsers with PackratParsers {
