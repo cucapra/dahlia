@@ -31,8 +31,5 @@ _test
 
 compiled/
 *~
-<<<<<<< HEAD
 .DS_Store
-=======
 .projectile
->>>>>>> ac6d4cf701cb61874005c8aee7b6cd9520ac6d03
