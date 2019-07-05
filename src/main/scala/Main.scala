@@ -6,7 +6,6 @@ import java.io.File
 import Compiler._
 import common.Logger
 import common.Configuration._
-import Utils.validBackends
 
 object Main {
 
