@@ -33,7 +33,7 @@ object AsyncRun {
     val conf = Config(
       srcFile = src.toFile(),
       mode = Configuration.Run,
-      backend = "c++",
+      backend = Configuration.Cpp,
       output = Some(out.toString))
 
     val compileToC = Future { Main.runWithConfig(conf) }
