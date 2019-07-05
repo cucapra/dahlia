@@ -9,6 +9,12 @@ import common.Configuration._
 
 object Main {
 
+  // Command-line names for backends.
+  val backends = Map(
+    "vivado" -> Vivado,
+    "c++" -> Cpp,
+  )
+
   val parser = new scopt.OptionParser[Config]("fuse") {
 
     head("fuse", "0.0.1")
@@ -33,9 +39,9 @@ object Main {
 
     opt[String]('b', "backend")
       .valueName("<backend>")
-      .validate(b => if (validBackends.contains(b)) success
-                     else failure(s"Invalid backend name. Valid backes are ${validBackends.mkString(",")}"))
-      .action((b, c) => c.copy(backend = b))
+      .validate(b => if (backends.contains(b)) success
+                     else failure(s"Invalid backend name. Valid backes are ${backends.mkString(",")}"))
+      .action((b, c) => c.copy(backend = backends(b)))
       .text("Name of the backend to use. Default backed is vivado.")
 
     opt[String]('l', "log-level")
@@ -47,7 +53,7 @@ object Main {
       .text("Generate header file instead of code. Defaults to false")
 
     cmd("run")
-      .action((_, c) => c.copy(mode = Run, backend = "c++"))
+      .action((_, c) => c.copy(mode = Run, backend = Cpp))
       .text("Generate a runnable object file. Assumes GCC and required headers are available. Implies mode=c++.")
       .children(
         opt[String]('o', "outfile")

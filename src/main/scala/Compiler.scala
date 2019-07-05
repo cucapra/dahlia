@@ -4,14 +4,13 @@ import scala.util.Try
 import java.nio.file.Path
 
 import common._
-import Configuration.{Config, emptyConf}
+import Configuration._
 
 object Compiler {
 
-  def toBackend(str: String): fuselang.backend.Backend = str match {
-    case "vivado" => backend.VivadoBackend
-    case "c++" => backend.CppRunnable
-    case b@_ => throw common.CompilerError.Impossible(s"Unknown backend $b")
+  def toBackend(str: BackendOption): fuselang.backend.Backend = str match {
+    case Vivado => backend.VivadoBackend
+    case Cpp => backend.CppRunnable
   }
 
   def compileStringWithError(prog: String, c: Config = emptyConf) = {
