@@ -7,6 +7,9 @@ import org.scalatest.Tag
 import java.nio.file.{Files, Paths, Path}
 import collection.JavaConverters._
 
+import common._
+import Configuration.Config
+
 object SlowTest extends Tag("fuselang.tag.SlowTest")
 
 object AsyncRun {
@@ -27,10 +30,10 @@ object AsyncRun {
   (src: Path, data: Path, out: Path)
   (implicit ec: ExecutionContext): Future[Either[String, Int]] = {
 
-    val conf = CmdlineConfig.CmdlineConfig(
+    val conf = Config(
       srcFile = src.toFile(),
-      mode = CmdlineConfig.Run,
-      backend = backend.CppRunnable,
+      mode = Configuration.Run,
+      backend = "c++",
       output = Some(out.toString))
 
     val compileToC = Future { Main.runWithConfig(conf) }
