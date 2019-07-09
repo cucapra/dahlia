@@ -11,6 +11,7 @@ object Compiler {
   def toBackend(str: BackendOption): fuselang.backend.Backend = str match {
     case Vivado => backend.VivadoBackend
     case Cpp => backend.CppRunnable
+    case Intel => backend.IntelBackend
   }
 
   def compileStringWithError(prog: String, c: Config = emptyConf) = {

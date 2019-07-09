@@ -13,6 +13,7 @@ object Main {
   val backends = Map(
     "vivado" -> Vivado,
     "c++" -> Cpp,
+    "intel" -> Intel,
   )
 
   val parser = new scopt.OptionParser[Config]("fuse") {
