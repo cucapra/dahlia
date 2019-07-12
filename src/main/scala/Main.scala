@@ -22,12 +22,12 @@ object Main {
     arg[File]("<srcfile>")
       .required()
       .action((x, c) => c.copy(srcFile = x))
-      .text("source code file")
+      .text("Source code file.")
 
     opt[String]('o', "out")
       .valueName("<outfile>")
       .action((f, c) => c.copy(output = Some(f)))
-      .text("Output code in a file. Emits code to standard out if absent.")
+      .text("Output code in a file. Default: use stdout.")
 
     opt[String]('n', "name")
       .valueName("<kernel>")
@@ -35,22 +35,22 @@ object Main {
           if (x.matches("[A-Za-z0-9_]+")) success
           else failure("Kernel name should only contain alphanumerals and _"))
       .action((x, c) => c.copy(kernelName = x))
-      .text("Name of the top level function. Default name is `kernel`.")
+      .text("Name of the top level function. Default: `kernel`.")
 
     opt[String]('b', "backend")
       .valueName("<backend>")
       .validate(b => if (backends.contains(b)) success
-                     else failure(s"Invalid backend name. Valid backes are ${backends.mkString(",")}"))
+                     else failure(s"Invalid backend name. Valid backends are ${backends.keys.mkString(", ")}"))
       .action((b, c) => c.copy(backend = backends(b)))
-      .text("Name of the backend to use. Default backed is vivado.")
+      .text("Name of the backend to use. Default: `vivado`.")
 
     opt[String]('l', "log-level")
       .action((s, c) => c.copy(logLevel = Logger.stringToLevel(s)))
-      .text("Set logging level for the compiler. Defaults to 'info'.")
+      .text("Set logging level for the compiler. Default: `info`.")
 
     opt[Unit]('h', "header")
       .action((_, c) => c.copy(header = true))
-      .text("Generate header file instead of code. Defaults to false")
+      .text("Generate header file instead of code. Default: false.")
 
     cmd("run")
       .action((_, c) => c.copy(mode = Run, backend = Cpp))
