@@ -79,7 +79,7 @@ object TypeChecker {
    * (`checkC`).
    */
   def typeCheck(p: Prog) = {
-    val Prog(includes, defs, decls, cmd) = p
+    val Prog(includes, defs, _, decls, cmd) = p
 
     val allDefs = includes.flatMap(_.defs) ++ defs
     val topFunc = FuncDef(Id(""), decls, Some(cmd))

@@ -19,7 +19,7 @@ object CapabilityChecker {
     type Env = CapabilityEnv
 
     def check(p: Prog): Unit = {
-      val Prog(_, defs, _, cmd) = p
+      val Prog(_, defs, _, _, cmd) = p
 
       defs.collect({ case FuncDef(_, _, bodyOpt) => bodyOpt.map(checkC(_)(emptyEnv)) })
 
