@@ -26,6 +26,10 @@ testOptions in Test += Tests.Argument("-oD")
 parallelExecution in Test := false
 logBuffered in Test := false
 
+/* sbt-assembly configuration: build an executable jar. */
+assemblyOption in assembly := (assemblyOption in assembly).value.copy(
+    prependShellScript = Some(sbtassembly.AssemblyPlugin.defaultShellScript)
+)
 assemblyJarName in assembly := "fuse.jar"
 test in assembly := {}
 
