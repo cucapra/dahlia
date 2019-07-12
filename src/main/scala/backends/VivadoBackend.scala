@@ -12,6 +12,7 @@ private class VivadoBackend extends CppLike {
     |// Avoid using `ap_int` in "software" compilation.
     |#ifdef __SDSVHLS__
     |#include "ap_int.h"
+    |#else
     |template <int N> using ap_int = int;
     |#endif
   """.stripMargin.strip
