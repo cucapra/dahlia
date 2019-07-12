@@ -15,7 +15,7 @@ private class VivadoBackend extends CppLike {
     |#else
     |template <int N> using ap_int = int;
     |#endif
-  """.stripMargin.strip
+  """.stripMargin.trim
 
   def unroll(n: Int): Doc = n match {
     case 1 => emptyDoc
