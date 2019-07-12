@@ -11,8 +11,17 @@ jobs:
             apt update
             apt install -y g++
       - checkout
+      - restore_cache:
+          key: sbt-cache
       - run:
-          name: Compile and Test
-          command: |
-            sbt assembly
-            sbt test
+          name: Compile
+          command: sbt assembly
+      - save_cache:
+          key: sbt-cache
+          paths:
+              - "~/.ivy2/cache"
+              - "~/.sbt"
+              - "~/.m2"
+      - run:
+          name: Test
+          command: sbt test
