@@ -268,11 +268,16 @@ private class FuseParser extends RegexParsers with PackratParsers {
     }
   }
 
+  // Top-level decorations (for the kernel function).
+  lazy val decor: P[String] = {
+    "decor" ~> stringVal
+  }
+
   // Prog
   lazy val prog: P[Prog] = positioned {
-    include.* ~ defs.* ~ decl.* ~ cmd.? ^^ {
-      case incls ~ fns ~ decls ~ cmd =>
-        Prog(incls, fns, decls, cmd.getOrElse(CEmpty))
+    include.* ~ defs.* ~ decor.* ~ decl.* ~ cmd.? ^^ {
+      case incls ~ fns ~ decors ~ decls ~ cmd =>
+        Prog(incls, fns, decors, decls, cmd.getOrElse(CEmpty))
     }
   }
 
