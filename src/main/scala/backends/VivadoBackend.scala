@@ -8,6 +8,13 @@ import Configuration._
 import CompilerError._
 
 private class VivadoBackend extends CppLike {
+  val CppPreamble: Doc = """
+    |// Avoid using `ap_int` in "software" compilation.
+    |#ifdef __SDSVHLS__
+    |#include "ap_int.h"
+    |template <int N> using ap_int = int;
+    |#endif
+  """.stripMargin.strip
 
   def unroll(n: Int): Doc = n match {
     case 1 => emptyDoc
@@ -60,6 +67,7 @@ private class VivadoBackend extends CppLike {
 
   def emitProg(p: Prog, c: Config): String = {
     val layout =
+      CppPreamble <@>
       vsep(p.includes.map(emitInclude)) <@>
       vsep(p.defs.map(emitDef)) <@>
       emitFunc(FuncDef(Id(c.kernelName), p.decls, Some(p.cmd)))
