@@ -89,6 +89,7 @@ object BoundsChecker {
     case CIf(cond, tbranch, fbranch) => checkE(cond) ; checkC(tbranch) ; checkC(fbranch)
     case CFor(_, par, combine) => checkC(par) ; checkC(combine)
     case CWhile(cond, body) => checkE(cond) ; checkC(body)
+    case CDecorate(_) => ()
     case CUpdate(lhs, rhs) => checkE(lhs) ; checkE(rhs)
     case CReduce(_, l, r) => checkE(l) ; checkE(r)
     case CExpr(e) => checkE(e)

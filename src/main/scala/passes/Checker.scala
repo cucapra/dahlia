@@ -59,7 +59,7 @@ object Checker {
     def checkLVal(e: Expr)(implicit env: Env): Env = checkE(e)
 
     def checkC(cmd: Command)(implicit env: Env): Env = cmd match {
-      case _:CSplit | _:CView | CEmpty => env
+      case _:CSplit | _:CView | CEmpty | CDecorate(_) => env
       case CPar(c1, c2) => checkCSeq(Vector(c1, c2))
       case CSeq(c1, c2) => checkCSeq(Vector(c1, c2))
       case CUpdate(lhs, rhs) => checkE(rhs)(checkLVal(lhs))
