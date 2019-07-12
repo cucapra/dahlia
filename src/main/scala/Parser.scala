@@ -220,7 +220,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
     block |
     cfor |
     conditional |
-    "while" ~> parens(expr) ~ block ^^ { case cond ~ body => CWhile(cond, body) }
+    "while" ~> parens(expr) ~ block ^^ { case cond ~ body => CWhile(cond, body) } |
     "decor" ~> stringVal ^^ { case value => CDecorate(value) }
   }
 
