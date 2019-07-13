@@ -586,6 +586,6 @@ object TypeChecker {
     }
     case CExpr(e) => checkE(e)._2
     case CEmpty => env
-    case CDecorate(_) => env
+    case _:CDecorate => env
   }
 }
