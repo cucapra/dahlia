@@ -71,7 +71,7 @@ private class VivadoBackend extends CppLike {
       CppPreamble <@>
       vsep(p.includes.map(emitInclude)) <@>
       vsep(p.defs.map(emitDef)) <@>
-      vsep(p.decors.map(text)) <@>
+      vsep(p.decors.map(d => text(d.value))) <@>
       emitFunc(FuncDef(Id(c.kernelName), p.decls, Some(p.cmd)))
 
     super.pretty(layout).layout
