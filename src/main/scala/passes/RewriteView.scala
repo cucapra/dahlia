@@ -115,7 +115,7 @@ object RewriteView {
     case cw@CWhile(_, c) => for {
       cn <- rewriteC(c)
     } yield cw.copy(body = cn)
-    case CDecorate(_) => State.unit(c)
+    case _:CDecorate => State.unit(c)
     case CUpdate(e1, e2) => for {
       e1n <- rewriteExpr(e1)
       e2n <- rewriteExpr(e2)
