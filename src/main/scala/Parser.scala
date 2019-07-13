@@ -221,7 +221,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
     cfor |
     conditional |
     "while" ~> parens(expr) ~ block ^^ { case cond ~ body => CWhile(cond, body) } |
-    "decor" ~> stringVal ^^ { case value => CDecorate(value) }
+    decor
   }
 
   lazy val parCmd: P[Command] = positioned {
@@ -269,8 +269,8 @@ private class FuseParser extends RegexParsers with PackratParsers {
   }
 
   // Top-level decorations (for the kernel function).
-  lazy val decor: P[String] = {
-    "decor" ~> stringVal
+  lazy val decor: P[CDecorate] = {
+    "decor" ~> stringVal ^^ { case value => CDecorate(value) }
   }
 
   // Prog

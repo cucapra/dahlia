@@ -225,7 +225,7 @@ object Syntax {
   case class Prog(
     includes: List[Include],
     defs: List[Definition],
-    decors: List[String],
+    decors: List[CDecorate],
     decls: List[Decl],
     cmd: Command) extends Positional
 
