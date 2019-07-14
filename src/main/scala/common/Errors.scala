@@ -63,8 +63,8 @@ object Errors {
     s"$t1 and $t2 are incomparable. Cannot create a join for construct $cons.", pos)
 
   // Operation errors
-  case class BinopError(op: BOp, t1: Type, t2: Type) extends TypeError(
-    s"$op expected integers or floats, received: $t1 and $t2.", op.pos)
+  case class BinopError(op: BOp, exp: String, t1: Type, t2: Type) extends TypeError(
+    s"$op expected $exp, received: $t1 and $t2.", op.pos)
 
   // Binding errors
   case class Unbound(id: Id) extends TypeError(

@@ -71,7 +71,8 @@ object Subtyping {
     }
     case (TSizedInt(s1), TSizedInt(s2)) => Some(TSizedInt(max(s1, s2)))
     case (TSizedInt(s), TStaticInt(v)) => Some(TSizedInt(max(s, bitsNeeded(v))))
-    case (st:TStaticInt, idx:TIndex) => Some(TSizedInt(bitsNeeded(max(idx.maxVal, st.v))))
+    case (st:TStaticInt, idx:TIndex) =>
+      Some(TSizedInt(bitsNeeded(max(idx.maxVal, st.v))))
     case (t2@TSizedInt(_), _:TIndex) => Some(t2)
     case (_:TFloat, _:TFloat) => Some(TFloat())
     case (_:TFloat, _:TDouble) => Some(TDouble())
