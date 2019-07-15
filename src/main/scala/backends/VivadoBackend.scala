@@ -14,6 +14,7 @@ private class VivadoBackend extends CppLike {
     |#include "ap_int.h"
     |#else
     |template <int N> using ap_int = int;
+    |template <int N> using ap_uint = unsigned int;
     |#endif
   """.stripMargin.trim
 
