@@ -1279,7 +1279,7 @@ class TypeCheckerSpec extends FunSpec {
         """ )
     }
 
-    it("unsigned and signed cannot be compared") {
+    it("unsigned and signed types are incomparable") {
       assertThrows[NoJoin] {
         typeCheck("""
           decl x: ubit<32>;
