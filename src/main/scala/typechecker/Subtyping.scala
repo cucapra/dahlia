@@ -53,7 +53,7 @@ object Subtyping {
   }
 
   def isSubtype(sub: Type, sup: Type): Boolean = (sub, sup) match {
-    case (TSizedInt(v1), TSizedInt(v2)) => v1 <= v2
+    case (TSizedInt(v1, un1), TSizedInt(v2, un2)) => un1 == un2 && v1 <= v2
     case (_:IntType, _:TSizedInt) => true
     case (_:TStaticInt, _:TIndex) => true
     case (TArray(tsub, subDims), TArray(tsup, supDims)) => {
@@ -67,17 +67,21 @@ object Subtyping {
   private def joinOfHelper(t1: Type, t2: Type, op: BOp): Option[Type] = (t1, t2) match {
     case (TStaticInt(v1), TStaticInt(v2)) => op.toFun match {
       case Some(fun) => Some(TStaticInt(fun(v1, v2)))
-      case None => Some(TSizedInt(max(bitsNeeded(v1), bitsNeeded(v2))))
+      case None => Some(TSizedInt(max(bitsNeeded(v1), bitsNeeded(v2)), false))
     }
-    case (TSizedInt(s1), TSizedInt(s2)) => Some(TSizedInt(max(s1, s2)))
-    case (TSizedInt(s), TStaticInt(v)) => Some(TSizedInt(max(s, bitsNeeded(v))))
+    case (TSizedInt(s1, un1), TSizedInt(s2, un2)) =>
+      if (un1 == un2) Some(TSizedInt(max(s1, s2), un1))
+      else None
+    case (TSizedInt(s, un), TStaticInt(v)) =>
+      Some(TSizedInt(max(s, bitsNeeded(v)), un))
     case (st:TStaticInt, idx:TIndex) =>
-      Some(TSizedInt(bitsNeeded(max(idx.maxVal, st.v))))
-    case (t2@TSizedInt(_), _:TIndex) => Some(t2)
+      // Infer unsigned
+      Some(TSizedInt(bitsNeeded(max(idx.maxVal, st.v)), false))
+    case (t2:TSizedInt, _:TIndex) => Some(t2)
     case (_:TFloat, _:TFloat) => Some(TFloat())
     case (_:TFloat, _:TDouble) => Some(TDouble())
     case (ti1:TIndex, ti2:TIndex) =>
-      Some(TSizedInt(max(bitsNeeded(ti1.maxVal), bitsNeeded(ti2.maxVal))))
+      Some(TSizedInt(max(bitsNeeded(ti1.maxVal), bitsNeeded(ti2.maxVal)), false))
     case (t1, t2) => if (t1 == t2) Some(t1) else None
   }
 

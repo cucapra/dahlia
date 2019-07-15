@@ -146,7 +146,7 @@ object TypeChecker {
         case (TStaticInt(v), env2) =>
           (env2, bres * 1, Vector(v % dims(dim)._2) +: consume)
         // Index is a dynamic number.
-        case (TSizedInt(_), env2) =>
+        case (_:TSizedInt, env2) =>
           if (dims(dim)._2 != 1) throw InvalidDynamicIndex(arrId, dims(dim)._2)
           else (env2, bres * 1, Vector(0) +: consume)
 
@@ -208,8 +208,9 @@ object TypeChecker {
       joinOf(t1, t2, op).getOrThrow(NoJoin(op.pos, op.toString, t1, t2))
     case _:BitOp => (t1, t2) match {
       case (_:TSizedInt, _:IntType) => t1
-      case (TStaticInt(v), _:IntType) => TSizedInt(bitsNeeded(v))
-      case (tidx@TIndex(_, _), _:IntType) => TSizedInt(bitsNeeded(tidx.maxVal))
+      case (TStaticInt(v), _:IntType) => TSizedInt(bitsNeeded(v), false)
+      case (tidx@TIndex(_, _), _:IntType) =>
+        TSizedInt(bitsNeeded(tidx.maxVal), false)
       case _ => throw BinopError(op, "integer type", t1, t2)
     }
   }
@@ -451,7 +452,7 @@ object TypeChecker {
       // a static int, upcast it to sized int. We do not allow variables to
       // have static types.
       val rTyp = typ.map(env.resolveType(_) match {
-        case TStaticInt(v) => TSizedInt(bitsNeeded(v))
+        case TStaticInt(v) => TSizedInt(bitsNeeded(v), false)
         case t => t
       })
       val (t, e1) = checkE(exp)
@@ -464,7 +465,7 @@ object TypeChecker {
         }
         case None => {
           val typ = t match {
-            case TStaticInt(v) => TSizedInt(bitsNeeded(v))
+            case TStaticInt(v) => TSizedInt(bitsNeeded(v), false)
             case t => t
           }
           // Add inferred type to the AST Node.

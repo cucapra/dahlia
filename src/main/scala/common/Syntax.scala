@@ -48,7 +48,7 @@ object Syntax {
       case _: TBool => "bool"
       case _: TFloat => "float"
       case _: TDouble => "double"
-      case TSizedInt(l) => s"bit<$l>"
+      case TSizedInt(l, un) => s"${if (un) "u" else ""}bit<$l>"
       case TStaticInt(s) => s"static($s)"
       case TArray(t, dims) =>
         s"$t" + dims.foldLeft("")({ case (acc, (d, b)) => s"$acc[$d bank $b]" })
@@ -60,7 +60,7 @@ object Syntax {
   }
   // Types that can be upcast to Ints
   sealed trait IntType
-  case class TSizedInt(len: Int) extends Type with IntType
+  case class TSizedInt(len: Int, unsigned: Boolean) extends Type with IntType
   case class TStaticInt(v: Int) extends Type with IntType
   case class TIndex(static: (Int, Int), dynamic: (Int, Int)) extends Type with IntType {
     // Our ranges are represented as s..e with e excluded from the range.

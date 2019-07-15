@@ -142,7 +142,8 @@ private class FuseParser extends RegexParsers with PackratParsers {
     "float" ^^ { _ => TFloat() } |
     "double" ^^ { _ => TDouble() } |
     "bool" ^^ { _ => TBool() } |
-    "bit" ~> angular(number) ^^ { case s => TSizedInt(s) } |
+    "bit" ~> angular(number) ^^ { case s => TSizedInt(s, false) } |
+    "ubit" ~> angular(number) ^^ { case s => TSizedInt(s, true) } |
     iden ^^ { case id => TAlias(id) }
   lazy val typ: P[Type] =
     atyp ~ rep1(typIdx) ^^ { case t ~ dims => TArray(t, dims) } |

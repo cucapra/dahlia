@@ -59,7 +59,7 @@ private class VivadoBackend extends CppLike {
     case _:TBool | _:TIndex | _:TStaticInt => "int"
     case _:TFloat => "float"
     case _:TDouble => "double"
-    case TSizedInt(s) => s"ap_int<$s>"
+    case TSizedInt(s, un) => if (un) s"ap_uint<$s>" else s"ap_int<$s>"
     case TArray(typ, _) => emitType(typ)
     case TRecType(n, _) => n
     case _:TFun => throw Impossible("Cannot emit function types")

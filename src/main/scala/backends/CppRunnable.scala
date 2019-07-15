@@ -18,7 +18,8 @@ private class CppRunnable extends CppLike {
   def emitType(typ: Type): Doc = typ match {
     case _:TVoid => "void"
     case _:TBool => "bool"
-    case _:TIndex | _:TStaticInt | _:TSizedInt => "int"
+    case _:TIndex | _:TStaticInt => "int"
+    case TSizedInt(_, un) => if (un) "unsigned int" else "int"
     case _:TFloat => "float"
     case _:TDouble => "double"
     case TArray(typ, dims) =>

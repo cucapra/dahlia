@@ -29,10 +29,12 @@ object BoundsChecker {
               .zip(dims)
               .foreach({
                 case ((idx, t), (size, _)) => t.foreach({
-                  case idxt@TSizedInt(n) => if (math.pow(2, n) >= size) {
-                    scribe.warn(
-                      (s"$idxt is used for an array access. This might be out of bounds at runtime.", idx))
-                  }
+                  case idxt@TSizedInt(n, _) =>
+                    if (math.pow(2, n) >= size) {
+                      scribe.warn(
+                        (s"$idxt is used for an array access. " +
+                          "This might be out of bounds at runtime.", idx))
+                    }
                   case TStaticInt(v) => if (v >= size) throw IndexOutOfBounds(id)
                   case t@TIndex(_, _) => if (t.maxVal >= size) throw IndexOutOfBounds(id)
                   case t => throw UnexpectedType(id.pos, "array access", s"[$t]", t)
@@ -61,7 +63,7 @@ object BoundsChecker {
           .matchOrError(viewId.pos, "view", "Integer Type"){
           case idx:TIndex => fac * idx.maxVal
           case TStaticInt(v) => fac * v
-          case idx@TSizedInt(_) =>
+          case idx:TSizedInt =>
             scribe.warn(
               (s"$idx is used to create view $viewId. This could be unsafe.", idx));
             1

@@ -1278,6 +1278,16 @@ class TypeCheckerSpec extends FunSpec {
         let z: double = x + y;
         """ )
     }
+
+    it("unsigned and signed cannot be compared") {
+      assertThrows[NoJoin] {
+        typeCheck("""
+          decl x: ubit<32>;
+          decl y: bit<32>;
+          let z = x + y;
+          """ )
+      }
+    }
   }
 
   describe("Imports") {
