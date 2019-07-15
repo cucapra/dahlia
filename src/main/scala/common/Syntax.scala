@@ -23,6 +23,14 @@ object Syntax {
     }
   }
 
+  object OpConstructor {
+    val add: (Int, Int) => Int = (_ + _)
+    val mul: (Int, Int) => Int = (_ * _)
+    val div: (Int, Int) => Int = (_ / _)
+    val sub: (Int, Int) => Int = (_ - _)
+    val mod: (Int, Int) => Int = (_ % _)
+  }
+
   import Annotations._
 
   case class Id(v: String) extends Positional with TypeAnnotation {
@@ -76,55 +84,19 @@ object Syntax {
   }
 
   sealed trait BOp extends Positional {
-    override def toString = this match {
-      case _:OpEq => "=="
-      case _:OpNeq => "!="
-      case _:OpLt => "<"
-      case _:OpLte => "<="
-      case _:OpGt => ">"
-      case _:OpGte => ">="
-      case _:OpAnd => "&&"
-      case _:OpOr => "||"
-      case _:OpAdd => "+"
-      case _:OpSub => "-"
-      case _:OpMul => "*"
-      case _:OpDiv => "/"
-      case _:OpMod => "%"
-      case _:OpLsh => "<<"
-      case _:OpRsh => ">>"
-      case _:OpBAnd => "&"
-      case _:OpBOr => "|"
-      case _:OpBXor => "^"
+    val op: String;
+    override def toString = this.op
+    def toFun: Option[(Int, Int) => Int] = this match {
+      case n:NumOp => Some(n.fun)
+      case _ => None
     }
   }
-  // Equality ops
-  sealed trait EqOp
-  case class OpEq() extends BOp with EqOp
-  case class OpNeq() extends BOp with EqOp
-  // Comparison ops
-  sealed trait CmpOp
-  case class OpLt() extends BOp with CmpOp
-  case class OpGt() extends BOp with CmpOp
-  case class OpLte() extends BOp with CmpOp
-  case class OpGte() extends BOp with CmpOp
-  // Boolean ops
-  sealed trait BoolOp
-  case class OpAnd() extends BOp with BoolOp
-  case class OpOr() extends BOp with BoolOp
-  // integer/float ops
-  sealed trait NumOp
-  case class OpAdd() extends BOp with NumOp
-  case class OpSub() extends BOp with NumOp
-  case class OpMul() extends BOp with NumOp
-  case class OpDiv() extends BOp with NumOp
-  case class OpMod() extends BOp with NumOp
-  // Bit ops
-  sealed trait BitOp
-  case class OpLsh() extends BOp with BitOp
-  case class OpRsh() extends BOp with BitOp
-  case class OpBOr() extends BOp with BitOp
-  case class OpBAnd() extends BOp with BitOp
-  case class OpBXor() extends BOp with BitOp
+
+  case class EqOp(op: String) extends BOp
+  case class CmpOp(op: String) extends BOp
+  case class BoolOp(op: String) extends BOp
+  case class NumOp(op: String, fun: (Int, Int) => Int) extends BOp
+  case class BitOp(op: String) extends BOp
 
   sealed trait Expr extends Positional with TypeAnnotation {
     def isLVal = this match {
@@ -154,18 +126,9 @@ object Syntax {
     }
   }
 
-  sealed trait ROp extends Positional {
-    override def toString = this match {
-      case _: RAdd => "+="
-      case _: RMul => "*="
-      case _: RSub => "-="
-      case _: RDiv => "/="
-    }
+  case class ROp(op: String) extends Positional {
+    override def toString = this.op
   }
-  case class RAdd() extends ROp
-  case class RMul() extends ROp
-  case class RSub() extends ROp
-  case class RDiv() extends ROp
 
   /** Views **/
   sealed trait Suffix extends Positional
@@ -239,19 +202,6 @@ object Syntax {
         case _ => throw UnexpectedType(pos, construct, exp, typ)
       }
       andThen.orElse(mismatchError)(typ)
-    }
-  }
-
-  implicit class RichBop(bop: BOp) {
-    def toFun: Option[(Int, Int) => Int] = bop match {
-      case _:OpAdd => Some(_ + _)
-      case _:OpMul => Some(_ * _)
-      case _:OpDiv => Some(_ / _)
-      case _:OpSub => Some(_ - _)
-      case _:OpBOr => Some(_ | _)
-      case _:OpBAnd => Some(_ & _)
-      case _:OpBXor => Some(_ ^ _)
-      case _ => None
     }
   }
 }

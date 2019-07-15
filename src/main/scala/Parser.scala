@@ -67,32 +67,29 @@ private class FuseParser extends RegexParsers with PackratParsers {
   }
 
   // Binops. Need to parse them seperately from EBinop to get positions.
+  import Syntax.{OpConstructor => OC}
   lazy val mulOps: P[BOp] = positioned {
-    "/" ^^ { _ => OpDiv() } |
-    "*" ^^ { _ => OpMul() } |
-    "%" ^^ { _ => OpMul() }
+    "/" ^^ { _ => NumOp("/", OC.div) } |
+    "*" ^^ { _ => NumOp("*", OC.mul) } |
+    "%" ^^ { _ => NumOp("%", OC.mod) }
   }
   lazy val addOps: P[BOp] = positioned {
-    "+" ^^ { _ => OpAdd() } |
-    "-" ^^ { _ => OpSub() }
+    "+" ^^ { _ => NumOp("+", OC.add) } |
+    "-" ^^ { _ => NumOp("-", OC.sub) }
   }
   lazy val eqOps: P[BOp] = positioned {
-    "==" ^^ { _ => OpEq() } |
-    "!=" ^^ { _ => OpNeq() } |
-    ">=" ^^ { _ => OpGte() } |
-    "<=" ^^ { _ => OpLte() } |
-    ">"  ^^ { _ => OpGt() } |
-    "<"  ^^ { _ => OpLt() }
+    ("==" | "!=") ^^ { op => EqOp(op) } |
+    (">=" | "<=" | ">" | "<") ^^ { op => CmpOp(op) }
   }
   lazy val shOps: P[BOp] = positioned {
-    ">>" ^^ { _ => OpRsh()} |
-    "<<" ^^ { _ => OpLsh()}
+    (">>" | "<<") ^^ { op => BitOp(op)}
   }
-  lazy val bAnd: P[BOp] = positioned("&" ^^ { _ => OpBAnd() })
-  lazy val bOr: P[BOp] = positioned("|" ^^ { _ => OpBOr() })
-  lazy val bXor: P[BOp] = positioned("^" ^^ { _ => OpBXor() })
-  lazy val and: P[BOp] = positioned("&&" ^^ { _ => OpAnd() })
-  lazy val or: P[BOp] = positioned("||" ^^ { _ => OpOr() })
+  lazy val bAnd: P[BOp] = positioned("&" ^^ { op => BitOp(op) })
+  lazy val bOr: P[BOp] = positioned("|" ^^  { op => BitOp(op) })
+  lazy val bXor: P[BOp] = positioned("^" ^^ { op => BitOp(op) })
+
+  lazy val and: P[BOp] = positioned("&&" ^^ { op => BoolOp(op) })
+  lazy val or: P[BOp] = positioned("||" ^^  { op => BoolOp(op) })
 
   /** Expressions
    * The bin* parsers implement the precedence order of operators described
@@ -167,10 +164,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
   }
 
   lazy val rop: P[ROp] = positioned {
-    "+=" ^^ { _ => RAdd() } |
-    "*=" ^^ { _ => RAdd() } |
-    "-=" ^^ { _ => RAdd() } |
-    "/=" ^^ { _ => RAdd() }
+    ("+=" | "*=" | "-=" | "/=") ^^ { op => ROp(op) }
   }
 
   // Simple views
