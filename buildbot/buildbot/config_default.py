@@ -27,6 +27,8 @@ TEXT_EXTENSIONS = [
     'tcl',
     'd',
     'dat',
+    'rpt',
+    'est',
 ]
 
 # Configuration options allowed during job creation. Each option has a
