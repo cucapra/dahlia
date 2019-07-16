@@ -7,7 +7,7 @@ syn match fuseConstant "\v<(\-|\+)?[0-9]+(\.[0-9]+)?(e[0-9]+)?>"
 " Booleans
 syn keyword fuseConstant true false
 " Types
-syn keyword fuseType bit float bool bank double
+syn keyword fuseType ubit bit float bool bank double
 
 " Control structures
 syn keyword fuseKeyword if for while import
