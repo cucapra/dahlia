@@ -387,7 +387,7 @@ def stage_fpga_execute(db, config):
     """
     with work(db, state.HLS_FINISH, state.RUN, state.DONE) as task:
         # Do nothing in this stage if we're just running estimation.
-        if task['config'].get('estimate'):
+        if task['config'].get('estimate') or task['config'].get('skipexec'):
             task.log('skipping FPGA execution stage')
             return
 

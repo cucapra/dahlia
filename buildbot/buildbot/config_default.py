@@ -36,6 +36,7 @@ TEXT_EXTENSIONS = [
 CONFIG_OPTIONS = {
     'skipseashell': bool,
     'estimate': bool,
+    'skipexec': bool,
     'directives': str,
     'make': bool,
     'hwname': str,
