@@ -50,6 +50,7 @@ private class VivadoBackend extends CppLike {
   }
 
   def emitArrayDecl(ta: TArray, id: Id) =
+    vsep(bankPragmas(List(Decl(id, ta)))) <> line <>
     emitType(ta.typ) <+> id <> generateDims(ta.dims)
 
   def generateDims(dims: List[(Int, Int)]): Doc =
