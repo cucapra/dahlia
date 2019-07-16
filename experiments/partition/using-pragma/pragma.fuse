@@ -1,0 +1,36 @@
+import "../pragma.h" {}
+
+decl iterations: bit<32>;
+
+let A: bit<32>[32 bank 2][32 bank 2];
+let B: bit<32>[32 bank 2][32 bank 2];
+let res: bit<32>;
+
+// Create shrink views to access in simple contexts.
+view sh_A = A[_: bank 1][_: bank 1];
+view sh_B = B[_: bank 1][_: bank 1];
+
+while (iterations > 0) {
+  res := 0;
+  for (let i = 0..32) {
+    for (let j = 0..32) {
+      sh_A[i][j] := 0;
+      sh_B[i][j] := i + j;
+    }
+  }
+  ---
+  for (let i = 0..32) {
+    for (let j = 0..32) {
+      sh_A[i][j] := sh_B[i][j] + 1;
+    }
+  }
+  ---
+  for (let i = 0..32) {
+    for (let j = 0..32) {
+      let x = sh_B[i][j];
+    } combine {
+      res += x;
+    }
+  }
+  iterations := iterations - 1;
+}
