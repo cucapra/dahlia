@@ -10,7 +10,7 @@ import CompilerError._
 private class VivadoBackend extends CppLike {
   val CppPreamble: Doc = """
     |// Avoid using `ap_int` in "software" compilation.
-    |#ifdef __SDSVHLS__
+    |#ifdef __SDSCC__
     |#include "ap_int.h"
     |#else
     |template <int N> using ap_int = int;
