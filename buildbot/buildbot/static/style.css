@@ -1,6 +1,6 @@
 body {
     font-family: "Source Sans Pro", Verdana, Tahoma, Geneva, sans-serif;
-    max-width: 50rem;
+    max-width: 55rem;
     margin: 1rem auto;
 }
 
@@ -24,7 +24,10 @@ h2 a:hover, h3 a:hover {
 }
 
 th, td {
-    padding: 0.1rem 1rem;
+    padding: 0.1rem 0.5rem;
+}
+th:first-child, td:first-child {
+    padding-left: 0;
 }
 
 ul {
