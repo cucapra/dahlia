@@ -8,26 +8,11 @@ import Configuration._
 import CompilerError._
 
 private class IntelBackend extends CppLike {
-
+    
   def unroll(n: Int): Doc = n match {
            case 1 => emptyDoc
            case n => value(s"#pragma unroll $n\n")
      }
-
-
-  def bank(id: Id, banks: List[Int]): String = banks.zipWithIndex.foldLeft(""){
-    case (acc, (bank, dim)) =>
-      if (bank != 1) {
-        s"${acc}\n#pragma HLS ARRAY_PARTITION variable=$id factor=$bank dim=${dim + 1}"
-      } else {
-        acc
-      }
-  }
-
-  def bankPragmas(decls: List[Decl]): List[Doc] = decls
-    .collect({ case Decl(id, typ: TArray) => bank(id, typ.dims.map(_._2)) })
-    .withFilter(s => s != "")
-    .map(s => value(s))
 
   def emitFor(cmd: CFor): Doc =
     unroll(cmd.range.u) <+>
@@ -37,16 +22,32 @@ private class IntelBackend extends CppLike {
        else emptyDoc)
     }
 
-  def emitFuncHeader(func: FuncDef): Doc = {
-    vsep(bankPragmas(func.args))
-  }
+  def emitFuncHeader(func: FuncDef) = emptyDoc
 
   def emitArrayDecl(ta: TArray, id: Id) =
-    emitType(ta.typ) <+> id <> generateDims(ta.dims)
+
+    if (generateBanksInt(ta.dims) != 1) {
+      emitType(ta.typ) <+> s"__attribute__(numbanks(${generateBanksInt(ta.dims)})) " <> id <> generateDims(ta.dims)
+    }
+
+    else {
+      emitType(ta.typ) <+> id <> generateDims(ta.dims)  
+    }
+  
+    
+  
 
   def generateDims(dims: List[(Int, Int)]): Doc =
     ssep(dims.map(d => brackets(value(d._1))), emptyDoc)
+
+  def generateBanks(dims: List[(Int, Int)]): Doc =
+    //ssep(dims.map(d => brackets(value(d._0))), emptyDoc)
+    ssep(dims.map(d => brackets(value(d._2))), emptyDoc)
+
+  def generateBanksInt(dims: List[(Int, Int)]) =
+    dims.head._2
   
+
   def emitType(typ: Type) = typ match {
     case _:TVoid => "void"
     case _:TBool | _:TIndex | _:TStaticInt | _:TSizedInt => "int"
@@ -73,7 +74,7 @@ private class IntelBackendHeader extends IntelBackend {
   override def emitCmd(c: Command): Doc = emptyDoc
 
   override def emitFunc = { case FuncDef(id, args, _) =>
-    val as = hsep(args.map(d => emitDecl(d.id, d.typ)), comma)
+    val as = hsep(args.map(d => (emitDecl(d.id, d.typ))), comma)
     "void" <+> id <> parens(as) <> semi
   }
 
