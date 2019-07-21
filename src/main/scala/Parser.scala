@@ -26,7 +26,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
     "\"" ~> "[^\"]*".r <~ "\""
 
   // Atoms
-  lazy val uInt: P[Expr] = "[0-9]+".r ^^ { n => EInt(n.toInt) }
+  lazy val uInt: P[Expr] = "(-)?[0-9]+".r ^^ { n => EInt(n.toInt) }
   lazy val hex = "0x[0-9a-fA-F]+".r ^^ { n => Integer.parseInt(n.substring(2), 16) }
   lazy val octal = "0[0-7]+".r ^^ { n => Integer.parseInt(n.substring(1), 8) }
   lazy val float = "(-)?[0-9]+\\.[0-9]+".r ^^ { n => n.toFloat }
