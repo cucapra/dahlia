@@ -33,6 +33,8 @@ STATUS_STRINGS = {
     state.HLS_FINISH: "Synthesized",
     state.MAKE: "make",
     state.MAKE_PROGRESS: "make-ing",
+    state.AFI_START: "start AFI",
+    state.AFI: "generating AFI",
     state.RUN: "Running",
     state.DONE: "Done",
     state.FAIL: "Failed",

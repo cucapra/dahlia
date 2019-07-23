@@ -10,10 +10,11 @@
 #       COMPILE              |
 #         |                  |
 #    COMPILE_FINISH          |
-#         |                MAKE_PROGRESS
-#        HLS                 |
-#         |                  |
-#      HLS_FINISH -----------+
+#         |                MAKE_PROGRESS----+
+#        HLS                 |              |
+#         |                  |          STARTING_AFI (F1 ONLY)
+#         |                  |              |
+#      HLS_FINISH -----------+----------GENERATING_AFI (F1 ONLY)             
 #         |
 #        RUN
 #         |
@@ -34,3 +35,5 @@ MAKE_PROGRESS = "makeing"
 RUN = "fpga_executing"
 DONE = "done"
 FAIL = "failed"
+AFI_START = "starting_AFI"
+AFI = "generating_AFI"
