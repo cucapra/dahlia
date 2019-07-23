@@ -15,6 +15,10 @@ HLS_COMMAND_PREFIX = []
 # development environment and False in production.
 WORKER_THREADS = None
 
+# The number of jobs to process in parallel in the "make" stage (which is the
+# expensive, long-running one).
+PARALLELISM_MAKE = 1
+
 # Filename extensions to send as plain text for job file viewing.
 TEXT_EXTENSIONS = [
     'ss',
@@ -42,6 +46,7 @@ CONFIG_OPTIONS = {
     'hwname': str,
     'sdsflags': str,
     'platform': str,
+    'target': str,
 }
 
 # The name to use for compiled executables.
@@ -54,11 +59,23 @@ LOG_PREVIEW_LINES = 32
 # the synthesis step (or running an opaque Makefile), the latter of
 # which has to be really long because synthesis is so slow.
 COMPILE_TIMEOUT = 120
-SYNTHESIS_TIMEOUT = 3000
+SYNTHESIS_TIMEOUT = 9000
 
 # Default Xilinx target platform.
 DEFAULT_PLATFORM = 'zed'
+# Default F1 target 
+DEFAULT_F1_TARGET = 'sw_emu'
 
-# The number of jobs to process in parallel in the "make" stage (which is the
-# expensive, long-running one).
-PARALLELISM_MAKE = 1
+
+# Global switch for configuring buildbot. 
+# If set to f1, the buildbot is configured to run on f1. 
+# Otherwise, buildbot will use the sdsoc workflow.
+TOOLCHAIN = 'f1'
+
+# The S3 bucket to be used for f1 instance 
+# bucket-name
+S3_BUCKET = 'test-bucket-1025132741'
+# dcp-folder-name
+S3_DCP = 'DCPs'
+# logs-folder-name
+S3_LOG = 'SDAccel_log'
