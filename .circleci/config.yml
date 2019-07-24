@@ -3,7 +3,7 @@ jobs:
   build:
 
     docker:
-      - image: hseeberger/scala-sbt
+      - image: mozilla/sbt
     steps:
       - run:
           name: Install g++
