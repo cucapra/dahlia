@@ -726,6 +726,16 @@ class TypeCheckerSpec extends FunSpec {
           """ )
       }
     }
+
+    it("Require argument and parameter lengths to match") {
+      assertThrows[ArgLengthMismatch] {
+        typeCheck("""
+          def foo(a: bit<32>, b: bit<32>) {
+          }
+          foo(1);
+          """ )
+      }
+    }
   }
 
   describe("Function applications w/ externs") {
