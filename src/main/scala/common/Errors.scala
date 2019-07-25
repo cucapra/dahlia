@@ -22,6 +22,8 @@ object Errors {
     s"Expected type $exp in $construct, received: $actual.", pos)
   case class UnexpectedSubtype(pos: Position, con: String, exp: Type, actual: Type) extends TypeError(
     s"Expected subtype of $exp in $con, received: $actual.", pos)
+  case class ArgLengthMismatch(pos: Position, expected: Int, actual: Int) extends TypeError(
+    s"Application expected $expected arguments, received $actual.", pos)
 
   // Unrolling and banking errors
   case class UnrollRangeError(pos: Position, rSize: Int, uFactor: Int) extends TypeError(

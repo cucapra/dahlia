@@ -260,6 +260,10 @@ object TypeChecker {
     }
     case EApp(f, args) => env(f) match {
       case TFun(argTypes) => {
+        if (argTypes.length != args.length) {
+          throw ArgLengthMismatch(expr.pos, argTypes.length, args.length)
+        }
+
         // All functions return `void`.
         TVoid() -> args.zip(argTypes).foldLeft(env)({ case (e, (arg, expectedTyp)) => {
           val (typ, e1) = checkE(arg)(e);
@@ -267,7 +271,7 @@ object TypeChecker {
             throw UnexpectedSubtype(arg.pos, "parameter", expectedTyp, typ)
           }
           // If an array id is used as a parameter, consume it completely.
-          // This works correctly with capabilties.
+          // This works correctly with capabilities.
           (typ, arg) match {
             case (ta:TArray, EVar(gadget)) => {
               val consumeList = ta.dims.map(dim => 0.until(dim._2))
