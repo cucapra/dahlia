@@ -1,14 +1,15 @@
 package fuselang.backend
 
 import Cpp._
-
+//import org.bitbucket.inkytonik.kiama.output._
 import fuselang.common._
 import Syntax._
 import Configuration._
 import CompilerError._
 
 private class IntelBackend extends CppLike {
-    
+  import scala.language.implicitConversions
+
   def unroll(n: Int): Doc = n match {
            case 1 => emptyDoc
            case n => value(s"#pragma unroll $n\n")
@@ -20,40 +21,81 @@ private class IntelBackend extends CppLike {
       cmd.par <>
       (if (cmd.combine != CEmpty) line <> text("// combiner:") <@> cmd.combine
        else emptyDoc)
-    }
+    } 
 
   def emitFuncHeader(func: FuncDef) = emptyDoc
 
   def emitArrayDecl(ta: TArray, id: Id) =
 
     if (generateBanksInt(ta.dims) != 1) {
-      emitType(ta.typ) <+> s"__attribute__(numbanks(${generateBanksInt(ta.dims)})) " <> id <> generateDims(ta.dims)
+      emitType(ta.typ) <+> "*" <> id <+> s"__attribute__((numbanks(${generateBanksInt(ta.dims)}), bankwidth(" <>  s"${generateDimsInt(ta.dims)/generateBanksInt(ta.dims)}" <> "*sizeof(" <> emitType(ta.typ) <> "))))"
     }
 
     else {
-      emitType(ta.typ) <+> id <> generateDims(ta.dims)  
+      emitType(ta.typ) <+> "*" <> id// <> generateDims(ta.dims)  
+    }
+
+  def emitArrayDeclCmd(ta: TArray, id: Id) =
+
+    if (generateBanksInt(ta.dims) != 1) {
+      val arrayType: Doc = emitType(ta.typ)
+      arrayType <+> s"__attribute__((numbanks(${generateBanksInt(ta.dims)}), bankwidth(" <>  s"${generateDimsInt(ta.dims)/generateBanksInt(ta.dims)}" <> "*sizeof(" <> arrayType <> "))))" <+> id// <> generateDims(ta.dims)
+    }
+
+    else {
+      emitType(ta.typ) <+> id// <> generateDims(ta.dims)  
     }
   
-    
+  //used for decl: elements in fuse (pointers passed into the kernel)
+  override def emitDecl(id: Id, typ: Type): Doc = typ match {
+      case ta:TArray => "__global" <+> emitArrayDecl(ta, id)
+      case _ => "__global" <+> emitType(typ) <+> "*" <> id 
+    }
   
+  //used for let assignments
+  def emitCmdDecl(id: Id, typ: Type): Doc = typ match {
+      case ta:TArray => emitArrayDeclCmd(ta, id)
+      case _ => emitType(typ) <+> id
+    }
+
+ 
+  override implicit def emitCmd(c: Command): Doc = c match {
+      case CPar(c1, c2) => c1 <@> c2
+      case CSeq(c1, c2) => c1 <@> text("//---") <@> c2
+      case CLet(id, typ, init) =>
+        emitCmdDecl(id, typ.get) <>
+        (if (init.isDefined) space <> equal <+> emitExpr(init.get) else emptyDoc) <>
+        semi
+      case CIf(cond, cons, alt) =>
+        "if" <> parens(cond) <> scope (cons) <+> "else" <> scope(alt)
+      case f:CFor => emitFor(f)
+      case CWhile(cond, body) => "while" <> parens(cond) <+> scope(body)
+      case CUpdate(lhs, rhs) => lhs <+> "=" <+> rhs <> semi
+      case CReduce(rop, lhs, rhs) => lhs <+> rop.toString <+> rhs <> semi
+      case CExpr(e) => e <> semi
+      case CEmpty => emptyDoc
+      case _:CView | _:CSplit =>
+        throw Impossible("Views should not exist during codegen.")
+    }
 
   def generateDims(dims: List[(Int, Int)]): Doc =
     ssep(dims.map(d => brackets(value(d._1))), emptyDoc)
 
   def generateBanks(dims: List[(Int, Int)]): Doc =
-    //ssep(dims.map(d => brackets(value(d._0))), emptyDoc)
     ssep(dims.map(d => brackets(value(d._2))), emptyDoc)
 
   def generateBanksInt(dims: List[(Int, Int)]) =
-    dims.head._2
-  
+    dims.head._2  
+
+  def generateDimsInt(dims: List[(Int, Int)]) = 
+    dims.head._1
 
   def emitType(typ: Type) = typ match {
     case _:TVoid => "void"
     case _:TBool | _:TIndex | _:TStaticInt | _:TSizedInt => "int"
     case _:TFloat => "float"
     case _:TDouble => "double"
-    case TArray(typ, dims) => dims.foldLeft(emitType(typ))({ case (acc, _) => "buffer" <> angles(acc) })
+    case TArray(typ, _) => emitType(typ)
     case TRecType(n, _) => n
     case _:TFun => throw Impossible("Cannot emit function types")
     case TAlias(n) => n
@@ -74,8 +116,8 @@ private class IntelBackendHeader extends IntelBackend {
   override def emitCmd(c: Command): Doc = emptyDoc
 
   override def emitFunc = { case FuncDef(id, args, _) =>
-    val as = hsep(args.map(d => (emitDecl(d.id, d.typ))), comma)
-    "void" <+> id <> parens(as) <> semi
+    val as = hsep(args.map(d => (emitCmdDecl(d.id, d.typ))), comma)
+    "__kernel void" <+> id <> parens(as) <> semi
   }
 
   override def emitProg(p: Prog, c: Config) = {
