@@ -87,6 +87,8 @@ You can also download output files from a job:
 
     $ curl -O $BUILDBOT/jobs/d988ruiuAk4/files/code/compiled.o
 
+There is also a JSON list of all the files at `/jobs/$ID/files`.
+
 
 Makefiles
 ---------

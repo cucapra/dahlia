@@ -216,7 +216,7 @@ def job_log(name):
 
 
 @app.route('/jobs/<name>/files.html')
-def job_files(name):
+def job_files_html(name):
     job = _get(name)
     return flask.render_template(
         'files.html',
@@ -229,6 +229,12 @@ def job_files(name):
 def get_job(name):
     job = _get(name)
     return flask.jsonify(job)
+
+
+@app.route('/jobs/<name>/files')
+def get_job_files(name):
+    _get(name)
+    return flask.jsonify(list(list_files(name)))
 
 
 @app.route('/jobs/<name>/files/<path:filename>')
