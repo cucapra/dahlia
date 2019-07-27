@@ -107,6 +107,17 @@ def get_config(values):
     return config
 
 
+def list_files(job_name):
+    """Generate the paths to all the job's files.
+    """
+    job_dir = db.job_dir(job_name)
+    for dirpath, dirnames, filenames in os.walk(job_dir):
+        dp = os.path.relpath(dirpath, job_dir)
+        for fn in filenames:
+            if not fn.startswith('.'):
+                yield os.path.join(dp, fn)
+
+
 @app.route('/jobs', methods=['POST'])
 def add_job():
     config = get_config(request.values)
@@ -207,20 +218,10 @@ def job_log(name):
 @app.route('/jobs/<name>/files.html')
 def job_files(name):
     job = _get(name)
-
-    # Find all the job's files.
-    job_dir = db.job_dir(name)
-    paths = []
-    for dirpath, dirnames, filenames in os.walk(job_dir):
-        dp = os.path.relpath(dirpath, job_dir)
-        for fn in filenames:
-            if not fn.startswith('.'):
-                paths.append(os.path.join(dp, fn))
-
     return flask.render_template(
         'files.html',
         job=job,
-        files=paths,
+        files=list(list_files(name)),
     )
 
 
