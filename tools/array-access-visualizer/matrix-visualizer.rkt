@@ -6,14 +6,19 @@
          racket/draw)
 (require pict)
 
+(provide matrix-seq
+         arr-elem-len)
+
 ;; Define a sickly orange color for visualizing array accesses.
 (define creamsicle
   (make-object color% 255 153 83))
 
 ;; Define what a bare array element looks like
 (define elem-size 12)
-(define arr-elem
-  (filled-rectangle elem-size elem-size #:color "white"))
+(define (arr-elem opacity)
+  (let ([shading (make-color 169 169 169 opacity)])
+    (filled-rectangle elem-size elem-size #:color shading)))
+(define arr-elem-len (pict-width (arr-elem 1)))
 
 ;; Define what a marking for an array element looks like
 (define marking
@@ -45,13 +50,15 @@
      row-canvas
      (for/fold ([col-canvas (blank 0)])
                ([cur-col (in-range cols)])
+       (let* ([bank (matrix-bank cur-row cur-col row-banks col-banks)]
+              [elem (arr-elem (/ bank (* row-banks col-banks)))])
        (hc-append
         col-canvas
         (cc-superimpose
          (if (set-member? marks (list cur-row cur-col))
-             (mark-elem arr-elem)
-             arr-elem)
-         (scale (text (number->string (matrix-bank cur-row cur-col row-banks col-banks))) 0.6)))))))
+             (mark-elem elem)
+             elem)
+         (scale (text (number->string bank)) 0.6))))))))
 
 ;; Generate a sequence of [[marked-matrix]] using the given paramter
 ;; [[seq]] which is a list of sets.
@@ -64,7 +71,3 @@
                                                 #:col-banks col-bank
                                                 #:marks marks)) seq)]
     [_ raise-argument-error 'matrix-seq "list with two elements" (list dims banks)]))
-
-(provide matrix-seq
-         arr-elem ;; Used by smart layout.
-         )

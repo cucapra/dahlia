@@ -8,7 +8,7 @@
          pict)
 
 (require (only-in "matrix-visualizer.rkt"
-                  arr-elem))
+                  arr-elem-len))
 
 ;; Save a given pict with the name and a kind.
 ;; Usage: (save-pict pict "foo.png" 'png)
@@ -41,7 +41,7 @@
       [(not (= remainder 0))
        (split-list (append img-lst (build-list (- factor remainder) (lambda (_) (blank 0)))) factor)]
       [else (split-list img-lst factor)]))
-  
+
   (for/fold ([row-acc (blank 0)])
             ([row split])
     (define row-res
@@ -55,9 +55,8 @@
 ;; can be places in one row.
 (define (smart-layout img-lst)
   ;; Length of one array as defined in matrix-visualizer library
-  (let* ([elem-len (pict-width arr-elem)]
-         ;; Maximum elements in one row
-         [max-elems (* elem-len 96)]
+  (let* (;; Maximum elements in one row
+         [max-elems (* arr-elem-len 96)]
          ;; Length of the current image. Assumes that widthds of all elems is the same.
          [width (pict-width (car img-lst))]
          [factor (exact-floor (/ max-elems width))])

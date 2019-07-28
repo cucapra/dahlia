@@ -8,6 +8,12 @@
          racket/set
          "matrix-visualizer.rkt")
 
+(provide let/matrix
+         for
+         while
+         ---
+         (all-from-out "matrix-visualizer.rkt"))
+
 ;; Defines `get` that adds the given index to the current set of accesses
 ;; made by the array.
 (define/contract (get arr row col)
@@ -95,9 +101,3 @@
         [test body ... (---) (loop)]
         [else #f]))
     (loop)))
-
-(provide let/matrix
-         for
-         while
-         ---
-         (all-from-out "matrix-visualizer.rkt"))
