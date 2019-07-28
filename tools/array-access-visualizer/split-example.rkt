@@ -26,8 +26,7 @@
                   (V[B-v #:bank B-v][(/ L-a B-v) #:bank (/ B-a B-v)]) ])))
 
 (save-pict
-  (scale (smart-layout (merge-imgs A-simpl V-simpl)) 2) "split.png" 'png)
-
+  (scale (car (merge-imgs A-simpl V-simpl)) 2) "split.png" 'png)
 
 ; Show what splitting and parallelizing the inner loop looks like
 (define-values (A V)
@@ -46,7 +45,9 @@
   (let ([tmp-lst (merge-imgs A V)])
     (take tmp-lst (sub1 (length tmp-lst)))))
 
-(save-pict (scale (smart-layout img-lst) 2) "split-outer.png" 'png)
+(parameterize ([max-elems (* arr-elem-len 16)]
+               [separator? #f])
+  (save-pict (scale (smart-layout img-lst) 2) "split-outer.png" 'png))
 
 ; Show what splitting and parallelizing the outer loop looks like
 #|(define-values (A-outr V-outr)

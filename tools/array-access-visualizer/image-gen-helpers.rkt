@@ -10,6 +10,17 @@
 (require (only-in "matrix-visualizer.rkt"
                   arr-elem-len))
 
+(provide layout
+         smart-layout
+         save-pict
+         zip-with
+         max-elems
+         separator?)
+
+(define max-elems (make-parameter (* arr-elem-len 96)))
+
+(define separator? (make-parameter #t))
+
 ;; Save a given pict with the name and a kind.
 ;; Usage: (save-pict pict "foo.png" 'png)
 (define (save-pict the-pict name kind)
@@ -30,7 +41,9 @@
 
 ;; Generates an hline for separating two rows
 (define (separator len)
-  (colorize (hline len 8) "Red"))
+  (if (separator?)
+    (colorize (hline len 8) "Red")
+    (blank 8)))
 
 ;; Layout a given list of images by placing [[factor]] of them in each row
 ;; and creating as many vertically stacked rows as needed.
@@ -55,11 +68,10 @@
 ;; can be places in one row.
 (define (smart-layout img-lst)
   ;; Length of one array as defined in matrix-visualizer library
-  (let* (;; Maximum elements in one row
-         [max-elems (* arr-elem-len 96)]
-         ;; Length of the current image. Assumes that widthds of all elems is the same.
+  (let* (;; Length of the current image. Assumes that widthds of all elems is
+         ;; the same.
          [width (pict-width (car img-lst))]
-         [factor (exact-floor (/ max-elems width))])
+         [factor (exact-floor (/ (max-elems) width))])
     (if (zero? factor)
         (raise-result-error 'smart-layout
                             "Image element too big to be smart layout. Use layout instead"
@@ -76,8 +88,3 @@
                    [(e1 l1)
                     (e2 l2) ...]
            (cons (f e1 e2 ...) acc)))]))
-
-(provide layout
-         smart-layout
-         save-pict
-         zip-with)
