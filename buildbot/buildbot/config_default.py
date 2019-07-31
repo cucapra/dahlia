@@ -58,3 +58,7 @@ SYNTHESIS_TIMEOUT = 3000
 
 # Default Xilinx target platform.
 DEFAULT_PLATFORM = 'zed'
+
+# The number of jobs to process in parallel in the "make" stage (which is the
+# expensive, long-running one).
+PARALLELISM_MAKE = 1

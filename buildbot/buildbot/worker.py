@@ -418,11 +418,13 @@ def stage_fpga_execute(db, config):
         )
 
 
+STAGES = (stage_unpack, stage_make, stage_seashell, stage_hls,
+          stage_fpga_execute)
+
+
 def work_threads(db, config):
     """Get a list of (unstarted) Thread objects for processing tasks.
     """
-    out = []
-    for stage in (stage_unpack, stage_make, stage_seashell,
-                  stage_hls, stage_fpga_execute):
-        out.append(WorkThread(db, config, stage))
-    return out
+    stages = list(STAGES) + \
+        [stage_make for i in range(config['PARALLELISM_MAKE'] - 1)]
+    return [WorkThread(db, config, stage) for stage in stages]
