@@ -61,21 +61,16 @@ LOG_PREVIEW_LINES = 32
 COMPILE_TIMEOUT = 120
 SYNTHESIS_TIMEOUT = 9000
 
-# Default Xilinx target platform.
-DEFAULT_PLATFORM = 'zed'
-# Default F1 target 
-DEFAULT_F1_TARGET = 'sw_emu'
-
-
-# Global switch for configuring buildbot. 
-# If set to f1, the buildbot is configured to run on f1. 
-# Otherwise, buildbot will use the sdsoc workflow.
+# The Buildbot currently supports two backend toolchains: Xilinx's SDSoC
+# (for Zynq processors) and SDAccel (for AWS F1). Set this to "f1" for
+# deployment on F1; leave it as anything else for the SDSoC workflow.
 TOOLCHAIN = 'f1'
 
-# The S3 bucket to be used for f1 instance 
-# bucket-name
+# Options for SDSoC/Zynq.
+DEFAULT_PLATFORM = 'zed'  # Use the "platform" job config option to override.
+
+# Options for SDAccel/F1.
+DEFAULT_F1_TARGET = 'sw_emu'  # Use the "target" job config option to override.
 S3_BUCKET = 'test-bucket-1025132741'
-# dcp-folder-name
-S3_DCP = 'DCPs'
-# logs-folder-name
-S3_LOG = 'SDAccel_log'
+S3_DCP = 'DCPs'  # dcp-folder-name
+S3_LOG = 'SDAccel_log'  # logs-folder-name
