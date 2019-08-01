@@ -217,7 +217,8 @@ def stage_make(db, config):
     estimation data has been generated or a bitstream has been
     generated.
     """
-    # determine the stage to be run after make with toolchain configuration
+    # After this stage, transfer either to F1-style execution (i.e., AFI
+    # generation) or ordinary execution (for the Zynq toolchain).
     def stage_after_make(task):
         if config['TOOLCHAIN'] == 'f1' and task['target'] == 'hw':
             return state.AFI_START
@@ -232,20 +233,25 @@ def stage_make(db, config):
             task.log('WARNING: make stage is ignoring sdsflags={}'.format(
                 task['sdsflags']
             ))
-        # if toochain set to f1, use different make command.
+
         if config['TOOLCHAIN'] == 'f1':
-            proc = task.run(
-                ["sh", "-c", 'cd $AWS_FPGA_REPO_DIR ; \
-            source ./sdaccel_setup.sh > /dev/null ; \
-            echo $AWS_PLATFORM'],
-                capture=True)
+            # Get the AWS platform ID for F1 builds.
+            platform_script = (
+                'cd $AWS_FPGA_REPO_DIR ; '
+                'source ./sdaccel_setup.sh > /dev/null ; '
+                'echo $AWS_PLATFORM'
+            )
+            proc = task.run([platform_script], capture=True, shell = True)
             aws_platform = proc.stdout.decode('utf8').strip()
+
             make = [
                 'make',
                 'TARGET={}'.format(task['target']),
                 'DEVICE={}'.format(aws_platform),
             ]
+
         else:
+            # Simple make invocation for SDSoC.
             make = [
                 'make',
                 'ESTIMATE={}'.format(task['estimate']),
@@ -402,53 +408,67 @@ def stage_hls(db, config):
 
 
 def stage_afi(db, config):
-    """AFI stage: Create the AWS FPGA binary and AFI from the *.xclbin 
-    (Xilinx FPGA binary file)
+    """Work stage: create the AWS FPGA binary and AFI from the *.xclbin
+    (Xilinx FPGA binary file).
     """
-
     with work(db, state.AFI_START, state.AFI, state.HLS_FINISH) as task:
-        # clean all the generated files from previous runs.
+        # Clean up any generated files from previous runs.
         task.run(
-            ['sh', '-c', 'rm -rf to_aws *afi_id.txt \
+            ['rm -rf to_aws *afi_id.txt \
                 *.tar *agfi_id.txt manifest.txt'],
-            cwd=os.path.join(CODE_DIR, 'xclbin')
+            cwd=os.path.join(CODE_DIR, 'xclbin'),
+            shell = True
         )
-        # find the hw synthesis xclbin file.
+
+        # Find *.xclbin file from hardware synthesis.
         xcl_dir = os.path.join(task.dir, 'code', 'xclbin')
         xclbin_file_path = glob.glob(
             os.path.join(xcl_dir, '*hw.*.xclbin'))
         xclbin_file = os.path.basename(xclbin_file_path[0])
-        # generate AFI and aws binary.
-        task.run(
-            ['sh', '-c', 'cur=`pwd`; cd $AWS_FPGA_REPO_DIR ; \
-            source ./sdaccel_setup.sh > /dev/null; cd $cur/xclbin; \
-            $SDACCEL_DIR/tools/create_sdaccel_afi.sh \
-    	    -xclbin={} \
-            -s3_bucket={} \
-            -s3_dcp_key={} \
-            -s3_logs_key={}'.format(xclbin_file, config['S3_BUCKET'],
-                                    config['S3_DCP'], config['S3_LOG'])],
-            cwd=CODE_DIR
+
+        # Generate the AFI and AWS binary.
+        afi_script = (
+            'cur=`pwd` ; '
+            'cd $AWS_FPGA_REPO_DIR ; '
+            'source ./sdaccel_setup.sh > /dev/null ; '
+            'cd $cur/xclbin ; '
+            '$SDACCEL_DIR/tools/create_sdaccel_afi.sh '
+            '-xclbin={} '
+            '-s3_bucket={} '
+            '-s3_dcp_key={} '
+            '-s3_logs_key={}'.format(
+                xclbin_file,
+                config['S3_BUCKET'],
+                config['S3_DCP'],
+                config['S3_LOG'],
+            )
         )
-        # loops every 5 minutes to check if the AFI is ready.
+        task.run([afi_script], cwd=CODE_DIR, shell= True)
+
+        # Every 5 minutes, check if the AFI is ready.
         while True:
             time.sleep(300)
+
+            # Get the AFI ID.
             afi_id_files = glob.glob(os.path.join(xcl_dir, '*afi_id.txt'))
             with open(afi_id_files[0]) as f:
                 afi_id = json.loads(f.read())['FpgaImageId']
-                status_string = task.run(
-                    ['aws', 'ec2', 'describe-fpga-images',
-                     '--fpga-image-ids', afi_id],
-                    cwd=CODE_DIR,
-                    capture=True
-                )
-                status_json = json.loads(status_string.stdout)
-                # when the afi becomes available, exit the loop and enter
-                # execution stage.
-                status = status_json['FpgaImages'][0]['State']['Code']
-                task.log('AFI status: {}'.format(status))
-                if status == 'available':
-                    break
+
+            # Check the status of the AFI.
+            status_string = task.run(
+                ['aws', 'ec2', 'describe-fpga-images',
+                 '--fpga-image-ids', afi_id],
+                cwd=CODE_DIR,
+                capture=True
+            )
+            status_json = json.loads(status_string.stdout)
+
+            # When the AFI becomes available, exit the loop and enter
+            # execution stage.
+            status = status_json['FpgaImages'][0]['State']['Code']
+            task.log('AFI status: {}'.format(status))
+            if status == 'available':
+                break
 
 
 def stage_fpga_execute(db, config):
@@ -467,45 +487,49 @@ def stage_fpga_execute(db, config):
             task.log('skipping FPGA execution stage')
             return
 
-        # If configured to AFI, run seperate execution commands
         if config['TOOLCHAIN'] == 'f1':
+            # On F1, use the run either the real hardware-augmented
+            # binary or the emulation executable.
             if task['target'] == 'hw':
                 exe_cmd = ['sudo', 'sh', '-c',
                            'source /opt/xilinx/xrt/setup.sh ; ./host']
             else:
-                exe_cmd = ['sh', '-c', 'cur=`pwd`; cd $AWS_FPGA_REPO_DIR ;\
+                exe_cmd = ['cur=`pwd`; cd $AWS_FPGA_REPO_DIR ;\
                 source ./sdaccel_setup.sh > /dev/null; \
                 cd $cur; XCL_EMULATION_MODE={} ./host'.format(task['target'])]
             task.run(
                 exe_cmd,
-                cwd=CODE_DIR
+                cwd=CODE_DIR,
+                shell = True
             )
-            return
-        # Copy the compiled code (CPU binary + FPGA bitstream) to the
-        # Zynq board.
-        bin_dir = os.path.join(task.code_dir, 'sd_card')
-        bin_files = [os.path.join(bin_dir, f) for f in os.listdir(bin_dir)]
-        dest = '{}:{}'.format(ZYNQ_HOST, ZYNQ_DEST_DIR)
-        task.run(
-            ZYNQ_SSH_PREFIX + ['scp', '-r'] + bin_files + [dest],
-            timeout=1200
-        )
 
-        # Restart the FPGA and wait for it to come back up.
-        task.run(
-            ZYNQ_SSH_PREFIX + ['ssh', ZYNQ_HOST, '/sbin/reboot'],
-        )
-        task.log('waiting {} seconds for reboot'.format(ZYNQ_REBOOT_DELAY))
-        time.sleep(ZYNQ_REBOOT_DELAY)
+        else:
+            # Copy the compiled code (CPU binary + FPGA bitstream) to the
+            # Zynq board.
+            bin_dir = os.path.join(task.code_dir, 'sd_card')
+            bin_files = [os.path.join(bin_dir, f) for f in os.listdir(bin_dir)]
+            dest = '{}:{}'.format(ZYNQ_HOST, ZYNQ_DEST_DIR)
+            task.run(
+                ZYNQ_SSH_PREFIX + ['scp', '-r'] + bin_files + [dest],
+                timeout=1200
+            )
 
-        # Run the FPGA program and collect results
-        task.run(
-            ZYNQ_SSH_PREFIX + [
-                'ssh', ZYNQ_HOST,
-                'cd {}; ./{}'.format(ZYNQ_DEST_DIR, config['EXECUTABLE_NAME']),
-            ],
-            timeout=120
-        )
+            # Restart the FPGA and wait for it to come back up.
+            task.run(
+                ZYNQ_SSH_PREFIX + ['ssh', ZYNQ_HOST, '/sbin/reboot'],
+            )
+            task.log('waiting {} seconds for reboot'.format(ZYNQ_REBOOT_DELAY))
+            time.sleep(ZYNQ_REBOOT_DELAY)
+
+            # Run the FPGA program and collect results
+            task.run(
+                ZYNQ_SSH_PREFIX + [
+                    'ssh', ZYNQ_HOST,
+                    'cd {}; ./{}'.format(ZYNQ_DEST_DIR,
+                                         config['EXECUTABLE_NAME']),
+                ],
+                timeout=120
+            )
 
 
 STAGES = (stage_unpack, stage_make, stage_seashell, stage_hls,
