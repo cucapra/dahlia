@@ -46,7 +46,7 @@ CONFIG_OPTIONS = {
     'hwname': str,
     'sdsflags': str,
     'platform': str,
-    'target': str,
+    'mode': str,
 }
 
 # The name to use for compiled executables.
@@ -70,7 +70,7 @@ TOOLCHAIN = 'f1'
 DEFAULT_PLATFORM = 'zed'  # Use the "platform" job config option to override.
 
 # Options for SDAccel/F1.
-DEFAULT_F1_TARGET = 'sw_emu'  # Use the "target" job config option to override.
+DEFAULT_F1_MODE = 'sw_emu'  # Use the "mode" job config option to override.
 S3_BUCKET = 'test-bucket-1025132741'
 S3_DCP = 'DCPs'  # dcp-folder-name
 S3_LOG = 'SDAccel_log'  # logs-folder-name

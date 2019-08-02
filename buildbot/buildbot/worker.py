@@ -158,8 +158,8 @@ def _task_config(task, config):
 
     task['platform'] = task['config'].get('platform') or \
         config['DEFAULT_PLATFORM']
-    task['target'] = task['config'].get('target') or \
-        config['DEFAULT_F1_TARGET']
+    task['mode'] = task['config'].get('mode') or \
+        config['DEFAULT_F1_MODE']
 
 
 class WorkThread(threading.Thread):
@@ -220,7 +220,7 @@ def stage_make(db, config):
     # After this stage, transfer either to F1-style execution (i.e., AFI
     # generation) or ordinary execution (for the Zynq toolchain).
     def stage_after_make(task):
-        if config['TOOLCHAIN'] == 'f1' and task['target'] == 'hw':
+        if config['TOOLCHAIN'] == 'f1' and task['mode'] == 'hw':
             return state.AFI_START
         else:
             return state.HLS_FINISH
@@ -246,7 +246,7 @@ def stage_make(db, config):
 
             make = [
                 'make',
-                'TARGET={}'.format(task['target']),
+                'MODE={}'.format(task['mode']),
                 'DEVICE={}'.format(aws_platform),
             ]
 
@@ -490,13 +490,13 @@ def stage_fpga_execute(db, config):
         if config['TOOLCHAIN'] == 'f1':
             # On F1, use the run either the real hardware-augmented
             # binary or the emulation executable.
-            if task['target'] == 'hw':
+            if task['mode'] == 'hw':
                 exe_cmd = ['sudo', 'sh', '-c',
                            'source /opt/xilinx/xrt/setup.sh ; ./host']
             else:
                 exe_cmd = ['cur=`pwd`; cd $AWS_FPGA_REPO_DIR ;\
                 source ./sdaccel_setup.sh > /dev/null; \
-                cd $cur; XCL_EMULATION_MODE={} ./host'.format(task['target'])]
+                cd $cur; XCL_EMULATION_MODE={} ./host'.format(task['mode'])]
             task.run(
                 exe_cmd,
                 cwd=CODE_DIR,
