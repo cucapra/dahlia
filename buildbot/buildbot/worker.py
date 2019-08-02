@@ -447,7 +447,7 @@ def stage_afi(db, config):
 
         # Every 5 minutes, check if the AFI is ready.
         while True:
-            time.sleep(300)
+            time.sleep(config['AFI_CHECK_INTERVAL'])
 
             # Get the AFI ID.
             afi_id_files = glob.glob(os.path.join(xcl_dir, '*afi_id.txt'))
