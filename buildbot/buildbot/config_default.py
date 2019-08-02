@@ -74,6 +74,4 @@ DEFAULT_F1_MODE = 'sw_emu'  # Use the "mode" job config option to override.
 S3_BUCKET = 'test-bucket-1025132741'
 S3_DCP = 'DCPs'  # dcp-folder-name
 S3_LOG = 'SDAccel_log'  # logs-folder-name
-
-#sleep time between each AFI status check
-AFI_CHECK_INTERVAL = 300 
+AFI_CHECK_INTERVAL = 300  # Sleep time between each AFI status check.
