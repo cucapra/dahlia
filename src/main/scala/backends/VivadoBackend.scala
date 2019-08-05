@@ -31,6 +31,14 @@ private class VivadoBackend extends CppLike {
     .withFilter(s => s != "")
     .map(s => value(s))
 
+  override def emitLet(let: CLet): Doc = {
+    super.emitLet(let) <@>
+    (let.typ match {
+      case Some(t) => vsep(bankPragmas(List(Decl(let.id, t))))
+      case None => emptyDoc
+    })
+  }
+
   def emitFor(cmd: CFor): Doc =
     "for" <> emitRange(cmd.range) <+> scope {
       unroll(cmd.range.u) <>
@@ -47,8 +55,7 @@ private class VivadoBackend extends CppLike {
   }
 
   def emitArrayDecl(ta: TArray, id: Id) =
-    emitType(ta.typ) <+> id <> generateDims(ta.dims) <@>
-    vsep(bankPragmas(List(Decl(id, ta))))
+    emitType(ta.typ) <+> id <> generateDims(ta.dims)
 
   def generateDims(dims: List[(Int, Int)]): Doc =
     ssep(dims.map(d => brackets(value(d._1))), emptyDoc)
