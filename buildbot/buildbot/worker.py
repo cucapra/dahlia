@@ -500,10 +500,6 @@ def stage_fpga_execute(db, config):
             task.run(
                 exe_cmd,
                 cwd=CODE_DIR,
-<<<<<<< HEAD
-=======
-                shell=True,
->>>>>>> b7547323875d9e5308774eaa395648400ef99892
             )
 
         else:
