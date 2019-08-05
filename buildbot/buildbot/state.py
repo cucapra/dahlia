@@ -12,9 +12,9 @@
 #    COMPILE_FINISH          |
 #         |                MAKE_PROGRESS----+
 #        HLS                 |              |
-#         |                  |          STARTING_AFI (F1 ONLY)
+#         |                  |          AFI_START (F1 only)
 #         |                  |              |
-#      HLS_FINISH -----------+----------GENERATING_AFI (F1 ONLY)             
+#      HLS_FINISH -----------+-------------AFI (F1 only)
 #         |
 #        RUN
 #         |

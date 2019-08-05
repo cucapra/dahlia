@@ -241,7 +241,7 @@ def stage_make(db, config):
                 'source ./sdaccel_setup.sh > /dev/null ; '
                 'echo $AWS_PLATFORM'
             )
-            proc = task.run([platform_script], capture=True, shell = True)
+            proc = task.run([platform_script], capture=True, shell=True)
             aws_platform = proc.stdout.decode('utf8').strip()
 
             make = [
@@ -417,7 +417,7 @@ def stage_afi(db, config):
             ['rm -rf to_aws *afi_id.txt \
                 *.tar *agfi_id.txt manifest.txt'],
             cwd=os.path.join(CODE_DIR, 'xclbin'),
-            shell = True
+            shell=True,
         )
 
         # Find *.xclbin file from hardware synthesis.
@@ -443,7 +443,7 @@ def stage_afi(db, config):
                 config['S3_LOG'],
             )
         )
-        task.run([afi_script], cwd=CODE_DIR, shell= True)
+        task.run([afi_script], cwd=CODE_DIR, shell=True)
 
         # Every 5 minutes, check if the AFI is ready.
         while True:
@@ -500,6 +500,10 @@ def stage_fpga_execute(db, config):
             task.run(
                 exe_cmd,
                 cwd=CODE_DIR,
+<<<<<<< HEAD
+=======
+                shell=True,
+>>>>>>> b7547323875d9e5308774eaa395648400ef99892
             )
 
         else:
