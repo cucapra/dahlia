@@ -500,7 +500,7 @@ def stage_fpga_execute(db, config):
             task.run(
                 exe_cmd,
                 cwd=CODE_DIR,
-                timeout=1800
+                timeout=3600
             )
 
         else:
