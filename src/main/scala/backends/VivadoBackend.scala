@@ -39,7 +39,7 @@ private class VivadoBackend extends CppLike {
        else emptyDoc)
     }
 
-  def emitFuncHeader(func: FuncDef): Doc = {
+  def emitFuncHeader(func: FuncDef, entry: Boolean = false): Doc = {
     vsep(bankPragmas(func.args))
   }
 
@@ -68,7 +68,7 @@ private class VivadoBackend extends CppLike {
       vsep(p.includes.map(emitInclude)) <@>
       vsep(p.defs.map(emitDef)) <@>
       vsep(p.decors.map(d => text(d.value))) <@>
-      emitFunc(FuncDef(Id(c.kernelName), p.decls, Some(p.cmd)))
+      emitFunc(FuncDef(Id(c.kernelName), p.decls, Some(p.cmd)), true)
 
     super.pretty(layout).layout
   }
@@ -78,7 +78,7 @@ private class VivadoBackend extends CppLike {
 private class VivadoBackendHeader extends VivadoBackend {
   override def emitCmd(c: Command): Doc = emptyDoc
 
-  override def emitFunc = { case FuncDef(id, args, _) =>
+  override def emitFunc(func: FuncDef, entry: Boolean): Doc = func match { case FuncDef(id, args, _) =>
     val as = hsep(args.map(d => emitDecl(d.id, d.typ)), comma)
     "void" <+> id <> parens(as) <> semi
   }

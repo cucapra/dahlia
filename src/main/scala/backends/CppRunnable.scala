@@ -42,7 +42,7 @@ private class CppRunnable extends CppLike {
       }
     }
 
-  def emitFuncHeader(func: FuncDef) = emptyDoc
+  def emitFuncHeader(func: FuncDef, entry: Boolean = false) = emptyDoc
 
   /**
    * Emit code to parse the value for declaration `d`. Assumes that the
@@ -141,7 +141,7 @@ private class CppRunnable extends CppLike {
 private class CppRunnableHeader extends CppRunnable {
   override def emitCmd(c: Command): Doc = emptyDoc
 
-  override def emitFunc = { case FuncDef(id, args, _) =>
+  override def emitFunc(func: FuncDef, entry: Boolean): Doc = func match { case FuncDef(id, args, _) =>
     val as = hsep(args.map(d => emitDecl(d.id, d.typ)), comma)
     "void" <+> id <> parens(as) <> semi
   }
@@ -152,7 +152,7 @@ private class CppRunnableHeader extends CppRunnable {
     val declarations =
       vsep(includes.map(emitInclude)) <@>
       vsep (p.defs.map(emitDef)) <@>
-      emitFunc(FuncDef(Id(c.kernelName), p.decls, None))
+      emitFunc(FuncDef(Id(c.kernelName), p.decls, None), true)
 
     super.pretty(declarations).layout
   }
