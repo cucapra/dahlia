@@ -65,6 +65,15 @@ object Cpp {
      */
     def emitFuncHeader(func: FuncDef, entry: Boolean = false): Doc
 
+    /**
+     * Generate code for a "let" binding. (Might need to be followed by
+     * pragmas.)
+     */
+    def emitLet(let: CLet): Doc =
+      emitDecl(let.id, let.typ.get) <>
+      (if (let.e.isDefined) space <> equal <+> emitExpr(let.e.get) else emptyDoc) <>
+      semi
+
     implicit def IdToString(id: Id): Doc = value(id.v)
 
     def scope(doc: Doc): Doc =
@@ -106,10 +115,7 @@ object Cpp {
     implicit def emitCmd(c: Command): Doc = c match {
       case CPar(c1, c2) => c1 <@> c2
       case CSeq(c1, c2) => c1 <@> text("//---") <@> c2
-      case CLet(id, typ, init) =>
-        emitDecl(id, typ.get) <>
-        (if (init.isDefined) space <> equal <+> emitExpr(init.get) else emptyDoc) <>
-        semi
+      case l:CLet => emitLet(l)
       case CIf(cond, cons, alt) =>
         "if" <> parens(cond) <> scope (cons) <+> "else" <> scope(alt)
       case f:CFor => emitFor(f)
