@@ -40,6 +40,9 @@ private class VivadoBackend extends CppLike {
     }
 
   def emitFuncHeader(func: FuncDef, entry: Boolean = false): Doc = {
+    (if (entry)
+      vsep(func.args.map(arg => text(s"#pragma HLS INTERFACE ap_memory port=${arg.id}")))
+     else emptyDoc) <@>
     vsep(bankPragmas(func.args))
   }
 
