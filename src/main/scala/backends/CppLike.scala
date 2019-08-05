@@ -60,9 +60,10 @@ object Cpp {
     /**
      * Used to emit function headers. All C++ backends will convert the function
      * bodies in the same way but might require different pragrams for arguments
-     * or setup code.
+     * or setup code. `entry` distinguishes the top-level entry point
+     * function.
      */
-    def emitFuncHeader(func: FuncDef): Doc
+    def emitFuncHeader(func: FuncDef, entry: Boolean = false): Doc
 
     implicit def IdToString(id: Id): Doc = value(id.v)
 
@@ -127,11 +128,11 @@ object Cpp {
       case _ => emitType(typ) <+> id
     }
 
-    def emitFunc: FuncDef => Doc = { case func@FuncDef(id, args, bodyOpt) =>
+    def emitFunc(func: FuncDef, entry: Boolean = false): Doc = func match { case func@FuncDef(id, args, bodyOpt) =>
       val as = hsep(args.map(decl => emitDecl(decl.id, decl.typ)), comma)
       // If body is not defined, this is an extern. Elide the definition.
       bodyOpt.map(body => "void" <+> id <> parens(as) <+> scope {
-        emitFuncHeader(func) <@>
+        emitFuncHeader(func, entry) <@>
         body
       }).getOrElse(emptyDoc)
     }
