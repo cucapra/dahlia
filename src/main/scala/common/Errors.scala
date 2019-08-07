@@ -25,6 +25,10 @@ object Errors {
   case class ArgLengthMismatch(pos: Position, exp: Int, actual: Int) extends TypeError(
     s"Application expected $exp arguments, received $actual.", pos)
 
+  // Return statements
+  case class ReturnNotInFunc(pos: Position) extends TypeError(
+    s"Return statements are only allowed in fucntions.", pos)
+
   // Unrolling and banking errors
   case class UnrollRangeError(pos: Position, rSize: Int, uFactor: Int) extends TypeError(
     s"Cannot unroll range of size $rSize by factor $uFactor.", pos)
