@@ -105,8 +105,11 @@ object TypeChecker {
           .collect({ case Decl(id, t:TArray) => id -> t})
           .foldLeft(envWithArgs)({ case (env, (id, t)) => addPhysicalResource(id, t)(env)})
 
+        // Add the return type
+        val envWithRet = envWithResources.withReturn(ret)
+
         bodyOpt
-          .map(body => checkC(body)(envWithResources))
+          .map(body => checkC(body)(envWithRet))
           .getOrElse(envWithResources)
       }
       env2.add(id, TFun(args.map(_.typ), ret))
@@ -591,7 +594,18 @@ object TypeChecker {
       env2 merge env1
     }
     case CExpr(e) => checkE(e)._2
-    case CReturn(e) => checkE(e)._2
+    case CReturn(expr) => {
+      env.getReturn match {
+        case Some(retType) => {
+          val (t, e) = checkE(expr)
+          if (isSubtype(t, retType) == false) {
+            throw UnexpectedSubtype(expr.pos, "return", retType, t)
+          }
+          e
+        }
+        case None => throw ReturnNotInFunc(cmd.pos)
+      }
+    }
     case CEmpty => env
     case _:CDecorate => env
   }

@@ -140,12 +140,19 @@ object TypeEnv {
      */
     def getResources: Int
 
-    /** Convinience Methods */
+    /** Convenience Methods */
     def consumeWithGadget(gadget: Id, consumeList: ConsumeList)
                          (implicit pos: List[Position]) = {
       val (resName, resources) = this.getGadget(gadget).getSummary(consumeList)
       this.consumeResource(resName, resources)
     }
+
+    /**
+     * For function return types: if we're in a function, we keep track of
+     * it's return type. This is None when we're outside of any function.
+     */
+    def getReturn: Option[Type]
+    def withReturn(typ: Type): Environment
 
   }
 
@@ -153,7 +160,8 @@ object TypeEnv {
     typeMap: ScopedMap[Id, Type] = ScopedMap(),
     typeDefMap: Map[Id, Type] = Map(),
     phyRes: ScopedMap[Id, ArrayInfo] = ScopedMap(),
-    gadgetMap: ScopedMap[Id, Gadget] = ScopedMap())(implicit val res: Int) extends Environment {
+    gadgetMap: ScopedMap[Id, Gadget] = ScopedMap(),
+    retType: Option[Type] = None)(implicit val res: Int) extends Environment {
 
     /** Type definitions */
     def resolveType(typ: Type): Type = typ match {
@@ -218,14 +226,14 @@ object TypeEnv {
 
     /** Helper functions for ScopeManager */
     def addScope(resources: Int) = {
-      Env(typeMap.addScope, typeDefMap, phyRes.addScope, gadgetMap.addScope)(res * resources)
+      Env(typeMap.addScope, typeDefMap, phyRes.addScope, gadgetMap.addScope, retType)(res * resources)
     }
     def endScope(resources: Int) = {
       val scopes = for {
         (tScope, tMap) <- typeMap.endScope
         (_, pMap) <- phyRes.endScope
         (_, gMap) <- gadgetMap.endScope
-      } yield (Env(tMap, typeDefMap, pMap, gMap)(res / resources), tScope)
+      } yield (Env(tMap, typeDefMap, pMap, gMap, retType)(res / resources), tScope)
 
       scopes.getOrThrow(Impossible("Removed topmost scope"))
     }
@@ -236,6 +244,10 @@ object TypeEnv {
     }
 
     val getResources = res
+
+    def getReturn = retType
+
+    def withReturn(typ: Type) = this.copy(retType=Some(typ))
   }
 }
 
