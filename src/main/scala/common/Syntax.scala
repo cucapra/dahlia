@@ -53,7 +53,7 @@ object Syntax {
       case TArray(t, dims) =>
         s"$t" + dims.foldLeft("")({ case (acc, (d, b)) => s"$acc[$d bank $b]" })
       case TIndex(s, d) => s"idx($s, $d)"
-      case TFun(args) => s"${args.mkString("->")} -> void"
+      case TFun(args, ret) => s"${args.mkString("->")} -> ${ret}"
       case TRecType(n, _) => s"$n"
       case TAlias(n) => n.toString
     }
@@ -72,7 +72,7 @@ object Syntax {
   case class TBool() extends Type
   case class TFloat() extends Type
   case class TDouble() extends Type
-  case class TFun(args: List[Type]) extends Type
+  case class TFun(args: List[Type], ret: Type) extends Type
   case class TRecType(name: Id, fields: Map[Id, Type]) extends Type
   case class TAlias(name: Id) extends Type
   case class TArray(typ: Type, dims: List[(Int, Int)]) extends Type {
@@ -171,7 +171,7 @@ object Syntax {
    * Represents function definitions. A missing function body implies that
    * this is an extern function.
    */
-  case class FuncDef(id: Id, args: List[Decl], bodyOpt: Option[Command]) extends Definition
+  case class FuncDef(id: Id, args: List[Decl], retTy: Type, bodyOpt: Option[Command]) extends Definition
   case class RecordDef(name: Id, fields: Map[Id, Type]) extends Definition {
     fields.foreach({ case (f, t) => t match {
       case _:TArray => throw ArrayInRecord(name, f, t)
@@ -205,4 +205,3 @@ object Syntax {
     }
   }
 }
-

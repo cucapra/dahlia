@@ -116,7 +116,7 @@ private class CppRunnable extends CppLike {
       (startHelpers ::
       parseHelpers ::
       endHelpers ::
-      emitFunc(FuncDef(Id(c.kernelName), p.decls, Some(p.cmd))) ::
+      emitFunc(FuncDef(Id(c.kernelName), p.decls, TVoid(), Some(p.cmd))) ::
       Nil)
     }
 
@@ -141,9 +141,9 @@ private class CppRunnable extends CppLike {
 private class CppRunnableHeader extends CppRunnable {
   override def emitCmd(c: Command): Doc = emptyDoc
 
-  override def emitFunc(func: FuncDef, entry: Boolean): Doc = func match { case FuncDef(id, args, _) =>
+  override def emitFunc(func: FuncDef, entry: Boolean): Doc = func match { case FuncDef(id, args, ret, _) =>
     val as = hsep(args.map(d => emitDecl(d.id, d.typ)), comma)
-    "void" <+> id <> parens(as) <> semi
+    emitType(ret) <+> id <> parens(as) <> semi
   }
 
   override def emitProg(p: Prog, c: Config) = {
@@ -152,7 +152,7 @@ private class CppRunnableHeader extends CppRunnable {
     val declarations =
       vsep(includes.map(emitInclude)) <@>
       vsep (p.defs.map(emitDef)) <@>
-      emitFunc(FuncDef(Id(c.kernelName), p.decls, None), true)
+      emitFunc(FuncDef(Id(c.kernelName), p.decls, TVoid(), None), true)
 
     super.pretty(declarations).layout
   }

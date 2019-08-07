@@ -83,7 +83,7 @@ private class VivadoBackend extends CppLike {
       vsep(p.includes.map(emitInclude)) <@>
       vsep(p.defs.map(emitDef)) <@>
       vsep(p.decors.map(d => text(d.value))) <@>
-      emitFunc(FuncDef(Id(c.kernelName), p.decls, Some(p.cmd)), true)
+      emitFunc(FuncDef(Id(c.kernelName), p.decls, TVoid(), Some(p.cmd)), true)
 
     super.pretty(layout).layout
   }
@@ -93,15 +93,15 @@ private class VivadoBackend extends CppLike {
 private class VivadoBackendHeader extends VivadoBackend {
   override def emitCmd(c: Command): Doc = emptyDoc
 
-  override def emitFunc(func: FuncDef, entry: Boolean): Doc = func match { case FuncDef(id, args, _) =>
+  override def emitFunc(func: FuncDef, entry: Boolean): Doc = func match { case FuncDef(id, args, ret, _) =>
     val as = hsep(args.map(d => emitDecl(d.id, d.typ)), comma)
-    "void" <+> id <> parens(as) <> semi
+    emitType(ret) <+> id <> parens(as) <> semi
   }
 
   override def emitProg(p: Prog, c: Config) = {
     val declarations =
       vsep(p.includes.map(emitInclude) ++ p.defs.map(emitDef)) <@>
-      emitFunc(FuncDef(Id(c.kernelName), p.decls, None))
+      emitFunc(FuncDef(Id(c.kernelName), p.decls, TVoid(), None))
 
     super.pretty(declarations).layout
   }

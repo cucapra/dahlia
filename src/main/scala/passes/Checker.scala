@@ -41,7 +41,7 @@ object Checker {
     }
 
     def checkDef(defi: Definition)(implicit env: Env) = defi match {
-      case FuncDef(_, _, bodyOpt) => bodyOpt.map(checkC).getOrElse(env)
+      case FuncDef(_, _, _, bodyOpt) => bodyOpt.map(checkC).getOrElse(env)
       case _:RecordDef => env
     }
 

@@ -82,7 +82,7 @@ object TypeChecker {
     val Prog(includes, defs, _, decls, cmd) = p
 
     val allDefs = includes.flatMap(_.defs) ++ defs
-    val topFunc = FuncDef(Id(""), decls, Some(cmd))
+    val topFunc = FuncDef(Id(""), decls, TVoid(), Some(cmd))
 
     (allDefs ++ List(topFunc)).foldLeft(emptyEnv) {
       case (e, d) => checkDef(d, e)
@@ -90,7 +90,7 @@ object TypeChecker {
   }
 
   private def checkDef(defi: Definition, env: Environment) = defi match {
-    case FuncDef(id, args, bodyOpt) => {
+    case FuncDef(id, args, ret, bodyOpt) => {
       val (env2, _) = env.withScope(1) { newScope =>
 
         // Bind all declarations to the body.
@@ -109,7 +109,7 @@ object TypeChecker {
           .map(body => checkC(body)(envWithResources))
           .getOrElse(envWithResources)
       }
-      env2.add(id, TFun(args.map(_.typ)))
+      env2.add(id, TFun(args.map(_.typ), ret))
     }
     case RecordDef(name, fields) => {
       val rFields = fields.map({case (k, t) => k -> env.resolveType(t)})
@@ -259,13 +259,12 @@ object TypeChecker {
       checkB(t1, t2, op) -> env2
     }
     case EApp(f, args) => env(f) match {
-      case TFun(argTypes) => {
+      case TFun(argTypes, retType) => {
         if (argTypes.length != args.length) {
           throw ArgLengthMismatch(expr.pos, argTypes.length, args.length)
         }
 
-        // All functions return `void`.
-        TVoid() -> args.zip(argTypes).foldLeft(env)({ case (e, (arg, expectedTyp)) => {
+        retType -> args.zip(argTypes).foldLeft(env)({ case (e, (arg, expectedTyp)) => {
           val (typ, e1) = checkE(arg)(e);
           if (isSubtype(typ, expectedTyp) == false) {
             throw UnexpectedSubtype(arg.pos, "parameter", expectedTyp, typ)
