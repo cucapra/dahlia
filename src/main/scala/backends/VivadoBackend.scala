@@ -51,7 +51,7 @@ private class VivadoBackend extends CppLike {
     (if (entry)
       vsep(func.args.map(arg =>
         arg.typ match {
-          case _:TArray => text(s"#pragma HLS INTERFACE ap_memory port=${arg.id}")
+          case _:TArray => text(s"#pragma HLS INTERFACE s_axilite port=${arg.id}")
           case _ => emptyDoc
         }
       ))
