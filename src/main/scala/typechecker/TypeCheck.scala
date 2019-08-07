@@ -591,6 +591,7 @@ object TypeChecker {
       env2 merge env1
     }
     case CExpr(e) => checkE(e)._2
+    case CReturn(e) => checkE(e)._2
     case CEmpty => env
     case _:CDecorate => env
   }

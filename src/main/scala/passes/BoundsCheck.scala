@@ -95,6 +95,7 @@ object BoundsChecker {
     case CUpdate(lhs, rhs) => checkE(lhs) ; checkE(rhs)
     case CReduce(_, l, r) => checkE(l) ; checkE(r)
     case CExpr(e) => checkE(e)
+    case CReturn(e) => checkE(e)
     case CEmpty => ()
   }
 
