@@ -123,6 +123,7 @@ object Cpp {
       case CDecorate(value) => value
       case CUpdate(lhs, rhs) => lhs <+> "=" <+> rhs <> semi
       case CReduce(rop, lhs, rhs) => lhs <+> rop.toString <+> rhs <> semi
+      case CReturn(e) => "return" <+> e <> semi
       case CExpr(e) => e <> semi
       case CEmpty => emptyDoc
       case _:CView | _:CSplit =>

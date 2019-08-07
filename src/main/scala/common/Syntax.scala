@@ -163,6 +163,7 @@ object Syntax {
   case class CReduce(rop: ROp, lhs: Expr, rhs: Expr) extends Command {
     if (lhs.isLVal == false) throw UnexpectedLVal(lhs, "reduction")
   }
+  case class CReturn(exp: Expr) extends Command
   case class CExpr(exp: Expr) extends Command
   case object CEmpty extends Command
 

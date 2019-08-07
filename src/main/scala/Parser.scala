@@ -205,6 +205,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
     "let" ~> iden ~ (":" ~> typ).? ~ ("=" ~> expr).? ^^ {
       case id ~ t ~ exp => CLet(id, t, exp)
     } |
+    "return" ~> expr ^^ { case e => CReturn(e) } |
     view | splitView |
     expr ~ ":=" ~ expr ^^ { case l ~ _ ~ r => CUpdate(l, r) } |
     expr ~ rop ~ expr ^^ { case l ~ rop ~ r => CReduce(rop, l, r) } |

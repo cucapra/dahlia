@@ -127,6 +127,9 @@ object RewriteView {
     case CExpr(exp) => for {
       e1n <- rewriteExpr(exp)
     } yield CExpr(e1n)
+    case CReturn(exp) => for {
+      e1n <- rewriteExpr(exp)
+    } yield CReturn(e1n)
     case CEmpty => State.unit(c)
   }
 
