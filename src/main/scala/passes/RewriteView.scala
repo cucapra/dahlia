@@ -133,7 +133,7 @@ object RewriteView {
   def rewriteProg(p: Prog): Prog = {
     val emptyEnv = Map[Id, List[Expr] => Expr]()
     val fs = p.defs.map(defi => defi match {
-      case fdef@FuncDef(_, _, bOpt) => fdef.copy(bodyOpt = bOpt.map(b => rewriteC(b)(emptyEnv)._1))
+      case fdef@FuncDef(_, _, _, bOpt) => fdef.copy(bodyOpt = bOpt.map(b => rewriteC(b)(emptyEnv)._1))
       case _ => defi
     })
     val cmdn = rewriteC(p.cmd)(emptyEnv)._1

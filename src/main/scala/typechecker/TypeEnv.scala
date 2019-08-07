@@ -155,10 +155,10 @@ object TypeEnv {
     phyRes: ScopedMap[Id, ArrayInfo] = ScopedMap(),
     gadgetMap: ScopedMap[Id, Gadget] = ScopedMap())(implicit val res: Int) extends Environment {
 
-    /** Type defintions */
+    /** Type definitions */
     def resolveType(typ: Type): Type = typ match {
       case TAlias(n) => getType(n)
-      case TFun(args) => TFun(args.map(resolveType(_)))
+      case TFun(args, ret) => TFun(args.map(resolveType(_)), resolveType(ret))
       case arr@TArray(t, _) => arr.copy(typ = resolveType(t))
       case t => t
     }
