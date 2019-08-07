@@ -679,6 +679,21 @@ class TypeCheckerSpec extends FunSpec {
       }
     }
 
+    it("allow return values") {
+      typeCheck("""
+        def foo(): bit<10> { return 5; }
+        let res: bit<10> = foo();
+       """)
+    }
+
+    it("disallow ill-typed return values") {
+      assertThrows[UnexpectedSubtype] {
+        typeCheck("""
+          def foo(): bool { return 5; }
+         """)
+      }
+    }
+
     it("allow externs to be defined") {
       typeCheck("""
         def extern bar(a: bool);
