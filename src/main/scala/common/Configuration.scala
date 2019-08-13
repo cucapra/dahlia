@@ -12,6 +12,7 @@ object Configuration {
   sealed trait BackendOption
   final case object Vivado extends BackendOption
   final case object Cpp extends BackendOption
+  final case object Futil extends BackendOption
 
   val emptyConf = Config(null)
 
