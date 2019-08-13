@@ -132,13 +132,13 @@ object Futil {
 
   def program(name: String, struct: List[Structure], control: Control): String = {
     val langStr = "#lang racket/base"
-    val imports = List("\"../src/futil.rkt\"", "\"../src/visualizer.rkt\"")
+    val imports = List("futil")
     val importStr = imports.mkString("(require ", " ", ")")
 
     val structStr = struct.map(x => x.toString()).mkString("\n")
 
     val body = s"(define/module $name () ()\n ($structStr)\n$control)"
-    val execute = "(void (compute (main) '() #:memory (json->memory (benchmark-data-path))))"
+    val execute = "(parse-cmdline (main))"
     List(langStr, importStr, body, execute).mkString("\n\n")
   }
 
@@ -324,7 +324,6 @@ private class FutilBackendHelper {
           store)
         }
         case _ => throw NotImplemented("Haven't done all the iterators yet")
-          // emitCmdStructure(par)
       }
       // XXX(sam): obviously a hack
       case CExpr(EApp(Id("print_float_vec"), List(EVar(x)))) =>
