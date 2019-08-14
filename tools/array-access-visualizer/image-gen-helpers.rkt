@@ -27,7 +27,9 @@
 (define (save-pict the-pict path)
   (define bm (pict->bitmap the-pict))
   (define pdf (new pdf-dc% [output path]
-                           [interactive #f]))
+                           [interactive #f]
+                           [width (pict-width the-pict)]
+                           [height (pict-height the-pict)]))
   (send* pdf
     (start-doc "starting doc")
     (start-page)
