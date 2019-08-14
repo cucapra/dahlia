@@ -39,11 +39,11 @@ private class IntelBackend extends CppLike {
 
     if (generateBanksInt(ta.dims) != 1) {
       val arrayType: Doc = emitType(ta.typ)
-      arrayType <+> s"__attribute__((numbanks(${generateBanksInt(ta.dims)}), bankwidth(" <>  s"${generateDimsInt(ta.dims)/generateBanksInt(ta.dims)}" <> "*sizeof(" <> arrayType <> "))))" <+> id// <> generateDims(ta.dims)
+      arrayType <+> s"__attribute__((numbanks(${generateBanksInt(ta.dims)}), bankwidth(" <>  s"${generateDimsInt(ta.dims)/generateBanksInt(ta.dims)}" <> "*sizeof(" <> arrayType <> "))))" <+> id <> generateDims(ta.dims)
     }
 
     else {
-      emitType(ta.typ) <+> id// <> generateDims(ta.dims)  
+      emitType(ta.typ) <+> id// <> generateDims(ta.dims)  /
     }
   
   //used for decl: elements in fuse (pointers passed into the kernel)
@@ -78,6 +78,24 @@ private class IntelBackend extends CppLike {
         throw Impossible("Views should not exist during codegen.")
     }
 
+  override def emitFunc: FuncDef => Doc = { case func@FuncDef(id, args, bodyOpt) =>
+      val as = hsep(args.map(decl => emitCmdDecl(decl.id, decl.typ)), comma)
+      // If body is not defined, this is an extern. Elide the definition.
+      bodyOpt.map(body => "void" <+> id <> parens(as) <+> scope {
+        emitFuncHeader(func) <@>
+        body
+      }).getOrElse(emptyDoc)
+    }
+
+  def emitProgFunc: FuncDef => Doc = { case func@FuncDef(id, args, bodyOpt) =>
+      val as = hsep(args.map(decl => emitDecl(decl.id, decl.typ)), comma)
+      // If body is not defined, this is an extern. Elide the definition.
+      bodyOpt.map(body => "void" <+> id <> parens(as) <+> scope {
+        emitFuncHeader(func) <@>
+        body
+      }).getOrElse(emptyDoc)
+    }
+
   def generateDims(dims: List[(Int, Int)]): Doc =
     ssep(dims.map(d => brackets(value(d._1))), emptyDoc)
 
@@ -106,7 +124,7 @@ private class IntelBackend extends CppLike {
     val layout =
       vsep(p.includes.map(emitInclude)) <@>
       vsep(p.defs.map(emitDef)) <@>
-      "__kernel " <> emitFunc(FuncDef(Id(c.kernelName), p.decls, Some(p.cmd)))
+      "__kernel " <> emitProgFunc(FuncDef(Id(c.kernelName), p.decls, Some(p.cmd)))
 
     super.pretty(layout).layout
   }
