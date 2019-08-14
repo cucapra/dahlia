@@ -563,7 +563,7 @@ object TypeChecker {
          * [[s]] gets the type t[k0 bank k0][(d0 / k0) bank (b0 / k0)] ....
          */
         val viewDims = adims.zip(dims).flatMap({
-          case ((dim, bank), n) if n > 1 => {
+          case ((dim, bank), n) if n > 0 => {
             if (bank % n == 0) {
               List((n, n), (dim / n, bank / n))
             } else {
