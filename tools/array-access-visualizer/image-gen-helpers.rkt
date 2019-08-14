@@ -5,6 +5,7 @@
          racket/class
          racket/list
          racket/math
+         racket/draw
          pict)
 
 (require (only-in "matrix-visualizer.rkt"
@@ -22,10 +23,18 @@
 (define separator? (make-parameter #t))
 
 ;; Save a given pict with the name and a kind.
-;; Usage: (save-pict pict "foo.png" 'png)
-(define (save-pict the-pict name kind)
+;; Usage: (save-pict pict "foo.pdf")
+(define (save-pict the-pict path)
   (define bm (pict->bitmap the-pict))
-  (send bm save-file name kind))
+  (define pdf (new pdf-dc% [output path]
+                           [interactive #f]))
+  (send* pdf
+    (start-doc "starting doc")
+    (start-page)
+    (draw-bitmap bm 0 0)
+    (end-page)
+    (end-doc))
+  the-pict)
 
 ;; Given a list, create a list of lists, each of
 ;; size n. If the length of the list is not divisible by n, throws an error.
