@@ -1026,6 +1026,29 @@ class TypeCheckerSpec extends FunSpec {
     }
   }
 
+  describe("Loop pipelining") {
+    it("allowed on simple loop") {
+      typeCheck("""
+        for (let i = 0..4) pipeline {
+          let a = 1 + 2;
+          let b = 3 + 4;
+        }
+        """)
+    }
+
+    it("disallowed on sequenced loop") {
+      assertThrows[PipelineError] {
+        typeCheck("""
+          for (let i = 0..4) pipeline {
+            let a = 1 + 2
+            ---
+            let b = 3 + 4
+          }
+          """)
+      }
+    }
+  }
+
   describe("Records") {
     it("type can be defined") {
       typeCheck("""
