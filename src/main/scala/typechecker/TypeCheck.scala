@@ -494,7 +494,15 @@ object TypeChecker {
 
       nEnv.add(id, fullTyp)
     }
-    case CFor(range, _, par, combine) => {
+    case CFor(range, pipeline, par, combine) => {
+      // Only loops without sequencing may be pipelined.
+      par match {
+        case _: CSeq => if (pipeline) {
+          throw PipelineError(cmd.pos)
+        }
+        case _ => {}
+      }
+
       val iter = range.iter
       val (e1, binds) = env.withScope(range.u) { newScope =>
         // Add binding for iterator in a separate scope.
