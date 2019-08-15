@@ -12,19 +12,11 @@
       A V))
 
 #|============== bank-1d.pdf =================|#
-(let-values ([(A)
-  (let* ([B-a 4]
-         [B-v 2]
-         [L-a (* B-a 2)])
-    (let/matrix [ (A[1][L-a #:bank B-a] ) ]))])
+(let-values ([(A) (let/matrix [ (A[1][8 #:bank 4] ) ])])
   (save-pict (scale (car A) image-scale) "bank-1d.pdf"))
 
 #|============== bank-2d.pdf =================|#
-(let-values ([(A)
-  (let* ([B-a 4]
-         [B-v 2]
-         [L-a (* B-a 2)])
-    (let/matrix [ (V[B-v #:bank B-v][(/ L-a B-v) #:bank (/ B-a B-v)]) ]))])
+(let-values ([(A) (let/matrix [ (V[4 #:bank 2][4 #:bank 2]) ])])
   (save-pict
     (scale (car A) image-scale)
     "bank-2d.pdf"))
@@ -79,7 +71,6 @@
       (let/matrix [ (A[1][L-a #:bank B-a] ) ]
                   (for ([j (add1 (/ L-a B-a))])
                     (for* ([i (* j B-a)])
-                      (println (- L-a i))
                       (A[0][(- L-a i 1)])))))])
   (parameterize ([max-elems (* arr-elem-len 16)]
                  [separator? #f])
