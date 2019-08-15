@@ -41,6 +41,7 @@ private class VivadoBackend extends CppLike {
 
   def emitFor(cmd: CFor): Doc =
     "for" <> emitRange(cmd.range) <+> scope {
+      (if (cmd.pipeline) value(s"#pragma HLS PIPELINE\n") else emptyDoc) <>
       unroll(cmd.range.u) <>
       cmd.par <>
       (if (cmd.combine != CEmpty) line <> text("// combiner:") <@> cmd.combine
