@@ -73,7 +73,7 @@ object Checker {
         val e2 = nEnv.withScope(checkC(c2)(_))
         e1 merge e2
       }
-      case CFor(_, par, combine) => {
+      case CFor(_, _, par, combine) => {
         val e1 = env.withScope(checkC(par)(_))
         checkC(combine)(e1)
       }
