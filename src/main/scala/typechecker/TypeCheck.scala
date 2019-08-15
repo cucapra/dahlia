@@ -360,7 +360,7 @@ object TypeChecker {
       val (e3, _) = e1.withScope(1)(e => checkC(alt)(e))
       e2 merge e3
     }
-    case CWhile(cond, body) => {
+    case CWhile(cond, _, body) => {
       val (cTyp, e1) = checkE(cond)(env)
       if (cTyp != TBool()) {
         throw UnexpectedType(cond.pos, "while condition", TBool().toString, cTyp)

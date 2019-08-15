@@ -119,7 +119,7 @@ object Cpp {
       case CIf(cond, cons, alt) =>
         "if" <> parens(cond) <> scope (cons) <+> "else" <> scope(alt)
       case f:CFor => emitFor(f)
-      case CWhile(cond, body) => "while" <> parens(cond) <+> scope(body)
+      case CWhile(cond, _, body) => "while" <> parens(cond) <+> scope(body)
       case CDecorate(value) => value
       case CUpdate(lhs, rhs) => lhs <+> "=" <+> rhs <> semi
       case CReduce(rop, lhs, rhs) => lhs <+> rop.toString <+> rhs <> semi

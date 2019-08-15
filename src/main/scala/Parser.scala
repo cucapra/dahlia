@@ -216,7 +216,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
     block |
     cfor |
     conditional |
-    "while" ~> parens(expr) ~ block ^^ { case cond ~ body => CWhile(cond, body) } |
+    "while" ~> parens(expr) ~ "pipeline".? ~ block ^^ { case cond ~ pl ~ body => CWhile(cond, pl.isDefined, body) } |
     decor
   }
 

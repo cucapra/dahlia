@@ -77,7 +77,7 @@ object Checker {
         val e1 = env.withScope(checkC(par)(_))
         checkC(combine)(e1)
       }
-      case CWhile(cond, body) => {
+      case CWhile(cond, _, body) => {
         checkE(cond).withScope(checkC(body)(_))
       }
     }
