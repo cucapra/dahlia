@@ -64,6 +64,10 @@ object Errors {
   case class InsufficientResourcesInUnrollContext(exp: Int, ac: Int, expr: Expr)
     extends TypeError(s"Array access implies $ac safe writes are possible, but surrounding context requires $exp copies.", expr.pos)
 
+  // Pipelining error
+  case class PipelineError(pos: Position) extends TypeError(
+    "Pipelining is only allowed on non-sequenced loops.", pos)
+
   // Subtyping error
   case class NoJoin(pos: Position, cons: String, t1: Type, t2: Type) extends TypeError(
     s"$t1 and $t2 are incomparable. Cannot create a join for construct $cons.", pos)
