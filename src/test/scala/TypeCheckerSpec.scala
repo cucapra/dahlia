@@ -1027,7 +1027,7 @@ class TypeCheckerSpec extends FunSpec {
   }
 
   describe("Loop pipelining") {
-    it("allowed on simple loop") {
+    it("allowed on simple for loop") {
       typeCheck("""
         for (let i = 0..4) pipeline {
           let a = 1 + 2;
@@ -1036,10 +1036,33 @@ class TypeCheckerSpec extends FunSpec {
         """)
     }
 
-    it("disallowed on sequenced loop") {
+    it("disallowed on sequenced for loop") {
       assertThrows[PipelineError] {
         typeCheck("""
           for (let i = 0..4) pipeline {
+            let a = 1 + 2
+            ---
+            let b = 3 + 4
+          }
+          """)
+      }
+    }
+
+    it("allowed on simple while loop") {
+      typeCheck("""
+        let x = 10;
+        while (x < 100) pipeline {
+          let a = 1 + 2;
+          let b = 3 + 4;
+        }
+        """)
+    }
+
+    it("disallowed on sequenced while loop") {
+      assertThrows[PipelineError] {
+        typeCheck("""
+          let x = 10;
+          while (x < 100) pipeline {
             let a = 1 + 2
             ---
             let b = 3 + 4
