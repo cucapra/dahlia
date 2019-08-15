@@ -58,6 +58,12 @@ object Cpp {
     def emitFor(cmd: CFor): Doc
 
     /**
+     * Emit while loops.
+     */
+    def emitWhile(cmd: CWhile): Doc =
+      "while" <> parens(cmd.cond) <+> scope(cmd.body)
+
+    /**
      * Used to emit function headers. All C++ backends will convert the function
      * bodies in the same way but might require different pragrams for arguments
      * or setup code. `entry` distinguishes the top-level entry point
@@ -119,7 +125,7 @@ object Cpp {
       case CIf(cond, cons, alt) =>
         "if" <> parens(cond) <> scope (cons) <+> "else" <> scope(alt)
       case f:CFor => emitFor(f)
-      case CWhile(cond, _, body) => "while" <> parens(cond) <+> scope(body)
+      case w:CWhile => emitWhile(w)
       case CDecorate(value) => value
       case CUpdate(lhs, rhs) => lhs <+> "=" <+> rhs <> semi
       case CReduce(rop, lhs, rhs) => lhs <+> rop.toString <+> rhs <> semi
