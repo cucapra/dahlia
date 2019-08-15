@@ -159,8 +159,8 @@ private class FuseParser extends RegexParsers with PackratParsers {
     }
   }
   lazy val cfor: P[Command] = positioned {
-    "for" ~> crange ~ block ~ ("combine" ~> block).? ^^ {
-      case range ~ par ~ c => CFor(range, par, c.getOrElse(CEmpty))
+    "for" ~> crange ~ "pipeline".? ~ block ~ ("combine" ~> block).? ^^ {
+      case range ~ pl ~ par ~ c => CFor(range, pl.isDefined, par, c.getOrElse(CEmpty))
     }
   }
 

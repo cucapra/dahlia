@@ -108,7 +108,7 @@ object RewriteView {
       c1n <- rewriteC(c1)
       c2n <- rewriteC(c2)
     } yield CIf(e1n, c1n, c2n)
-    case cf@CFor(_, c1, c2) => for {
+    case cf@CFor(_, _, c1, c2) => for {
       c1n <- rewriteC(c1)
       c2n <- rewriteC(c2)
     } yield cf.copy(par = c1n, combine = c2n)

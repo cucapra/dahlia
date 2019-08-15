@@ -494,7 +494,7 @@ object TypeChecker {
 
       nEnv.add(id, fullTyp)
     }
-    case CFor(range, par, combine) => {
+    case CFor(range, _, par, combine) => {
       val iter = range.iter
       val (e1, binds) = env.withScope(range.u) { newScope =>
         // Add binding for iterator in a separate scope.

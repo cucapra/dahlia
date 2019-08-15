@@ -154,7 +154,7 @@ object Syntax {
   case class CView(id: Id, arrId: Id, dims: List[View]) extends Command
   case class CSplit(id: Id, arrId: Id, factors: List[Int]) extends Command
   case class CIf(cond: Expr, cons: Command, alt: Command) extends Command
-  case class CFor(range: CRange, par: Command, combine: Command) extends Command
+  case class CFor(range: CRange, pipeline: Boolean, par: Command, combine: Command) extends Command
   case class CWhile(cond: Expr, body: Command) extends Command
   case class CDecorate(value: String) extends Command
   case class CUpdate(lhs: Expr, rhs: Expr) extends Command {
