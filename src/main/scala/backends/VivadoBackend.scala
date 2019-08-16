@@ -58,6 +58,7 @@ private class VivadoBackend extends CppLike {
       }
 
   def emitFuncHeader(func: FuncDef, entry: Boolean = false): Doc = {
+    text(s"#pragma HLS INLINE") <@>
     (if (entry)
       vsep(func.args.map(arg =>
         arg.typ match {
