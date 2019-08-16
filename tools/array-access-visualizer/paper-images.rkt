@@ -83,7 +83,7 @@
              [L-a 6])
         (let/matrix [ (A[1][L-a #:bank B-a] ) ]
                     (for ([j (add1 (/ L-a B-a))])
-                      (for* ([i (- L-a (* j B-a))])
+                      (for* ([i (in-range (* j B-a) L-a)])
                         (A[0][i])))))])
   (parameterize ([max-elems (* arr-elem-len 6)]
                  [vspace 2]
