@@ -13,6 +13,7 @@
 
 (provide layout
          smart-layout
+         vspace
          save-pict
          zip-with
          max-elems
@@ -21,6 +22,8 @@
 (define max-elems (make-parameter (* arr-elem-len 96)))
 
 (define separator? (make-parameter #t))
+
+(define vspace (make-parameter 4))
 
 ;; Save a given pict with the name and a kind.
 ;; Usage: (save-pict pict "foo.pdf")
@@ -54,7 +57,7 @@
 (define (separator len)
   (if (separator?)
     (colorize (hline len 8) "Red")
-    (blank 8)))
+    (blank 0)))
 
 ;; Layout a given list of images by placing [[factor]] of them in each row
 ;; and creating as many vertically stacked rows as needed.
@@ -73,7 +76,7 @@
                 ([img row])
         (hc-append 10 col-acc img)))
     (define sep (separator (pict-width row-res)))
-    (vc-append 4 row-acc sep row-res)))
+    (vc-append (vspace) row-acc sep row-res)))
 
 ;; Layout that automatically tried to figure out how many list elements
 ;; can be places in one row.
