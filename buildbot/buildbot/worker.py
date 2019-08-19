@@ -487,7 +487,7 @@ def stage_fpga_execute(db, config):
             task.log('skipping FPGA execution stage')
             return
 
-       if config['TOOLCHAIN'] == 'f1':
+        if config['TOOLCHAIN'] == 'f1':
             # On F1, use the run either the real hardware-augmented
             # binary or the emulation executable.
             if task['mode'] == 'hw':
