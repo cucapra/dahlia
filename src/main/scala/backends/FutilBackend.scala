@@ -21,8 +21,8 @@ object Futil {
   case class Memory2d() extends Primitives {
     override def toString = "comp/memory2d"
   }
-  case class CounterUp() extends Primitives {
-    override def toString = "comp/counter-up"
+  case class Iterator() extends Primitives {
+    override def toString = "comp/iterator"
   }
   case class Register() extends Primitives {
     override def toString = "comp/reg"
@@ -32,6 +32,9 @@ object Futil {
   }
   case class Sub() extends Primitives {
     override def toString = "comp/sub"
+  }
+  case class TruncSub() extends Primitives {
+    override def toString = "comp/trunc-sub"
   }
   case class Mult() extends Primitives {
     override def toString = "comp/mult"
@@ -80,7 +83,13 @@ object Futil {
 
   sealed trait Control
   case class ParComp(c1: Control, c2: Control) extends Control {
-    override def toString(): String = s"$c1 $c2"
+    override def toString(): String = {
+      def f(c: Control) = c match {
+        case SeqComp(_, _) => s"($c)"
+        case _ => s"$c"
+      }
+      s"${f(c1)} ${f(c2)}"
+    }
   }
   case class SeqComp(c1: Control, c2: Control) extends Control {
     override def toString(): String = {
@@ -96,10 +105,9 @@ object Futil {
     def ++(a: Activate): Activate = Activate((this.ids ++ a.ids).distinct)
     override def toString(): String = ids.mkString("(!! ", " ", ")")
   }
-  case class WhileLoop(condition: (Component, String), body: SeqComp) extends Control {
+  case class WhileLoop(condition: Port, body: Control) extends Control {
     override def toString(): String = {
-      val (comp, port) = condition
-      s"(while (${comp.id} $port)\n($body))"
+      s"(while ($condition)\n($body))"
     }
   }
   case class NOP() extends Control {
@@ -164,13 +172,22 @@ private class FutilBackendHelper {
         val constComp = Futil.Component(const.id, const)
         val mem = Futil.Component(d.id, Futil.Memory2d())
         List(
-          Futil.NewComp(constComp),
           Futil.Connection(Futil.LonePort(constComp), Futil.CompPort(mem, "data-in")),
           Futil.NewComp(mem)
         )
       } else {
         throw NotImplemented("Don't yet support higher dimensional arrays.")
       }
+    }
+    case TBool() | TFloat() | TDouble() => {
+      val const = Futil.Constant(Id(s"${d.id}-init"), Futil.FNone())
+      val constComp = Futil.Component(const.id, const)
+      val reg = Futil.Register()
+      val regComp = Futil.Component(d.id, reg)
+      List(
+        Futil.Connection(Futil.LonePort(constComp), Futil.CompPort(regComp, "in")),
+        Futil.NewComp(regComp)
+      )
     }
     case x => throw NotImplemented(s"Type $x not implemented for decls.")
   }
@@ -213,13 +230,17 @@ private class FutilBackendHelper {
           case "-" => emitBinop("sub", Futil.Sub(), e1, e2)
           case "*" => emitBinop("mult", Futil.Mult(), e1, e2)
           case "/" => emitBinop("div", Futil.Div(), e1, e2)
-          case x => throw NotImplemented(s"Haven't implemented binop $x yet")
+          case "<" => emitBinop("lt", Futil.TruncSub(), e2, e1)
+          case ">" => emitBinop("lt", Futil.TruncSub(), e1, e2)
+          case x => throw NotImplemented(s"Haven't implemented binop $x yet.")
         }
       }
       case EVar(id) => id.typ match {
-        case _ =>
-          (Futil.CustomPort(s"${store(id)}", "out"), List(),
+        case _ => {
+          val portName = if (lhs) "in" else "out"
+          (Futil.CustomPort(s"${store(id)}", portName), List(),
             Futil.Activate(List(store(id))))
+        }
           // case Some(TIndex(_, _)) => (Futil.CustomPort(s"$id", "out"), List()) // XXX(sam) maybe should be diff
           // case Some(_) => (Futil.CustomPort(s"$id", "out"), List())
           // case N
@@ -236,9 +257,21 @@ private class FutilBackendHelper {
             Futil.Connection(port, gadgetIn),
             Futil.Connection(gadgetOut, Futil.CustomPort(s"$id", "addr"))
           )
-          val outPortName = if (lhs) "data-in" else "out"
-          (Futil.CustomPort(s"$id", outPortName), struct ++ addrStruct,
-            Futil.Activate(List(id, gadget.id)) ++ act)
+
+          if (lhs) {
+            val writeEn = Futil.Component(Futil.genName(s"$id-we"), Futil.Ident())
+            val writeIn = Futil.CompPort(writeEn, "in")
+            val writeOut = Futil.CompPort(writeEn, "out")
+            val writeStruct = List(
+              Futil.NewComp(writeEn),
+              Futil.Connection(writeOut, Futil.CustomPort(s"$id", "data-in")))
+            (writeIn, struct ++ addrStruct ++ writeStruct,
+              Futil.Activate(List(id, gadget.id, writeEn.id)) ++ act)
+          } else {
+            (Futil.CustomPort(s"$id", "out"), struct ++ addrStruct,
+              Futil.Activate(List(id, gadget.id)) ++ act)
+          }
+
         }
         case List(e1, e2) => {
           val (port1, struct1, act1) = emitExpr(e1)
@@ -262,10 +295,11 @@ private class FutilBackendHelper {
         }
         case _ => throw NotImplemented("Haven't done larger arrays yet. Sorry :(")
       }
+      case ECast(e, _) => emitExpr(e)
       case x => throw NotImplemented(s"No case for $x yet")
     }
 
-  def emitCmd(c: Command)(store: Store): (List[Futil.Structure], Futil.Control, Store) =
+  def emitCmd(c: Command)(implicit store: Store): (List[Futil.Structure], Futil.Control, Store) =
     c match {
       case CPar(c1, c2) => {
         val (struct1, con1, s1) = emitCmd(c1)(store)
@@ -302,22 +336,33 @@ private class FutilBackendHelper {
         val control = lActs ++ rActs
         (struct, control, store)
       }
-      case CFor(range, par, combine@_) => range match {
-        case CRange(id, 0, end, 1) => {
-          val iter = Futil.Component(Futil.genName(s"$id"), Futil.CounterUp())
+      case CFor(range, par, CEmpty) => range match {
+        case CRange(id, start, end, 1) => {
+          val iter = Futil.Component(Futil.genName(s"$id"), Futil.Iterator())
+
+          val iterStart = Futil.Constant(Id(s"${iter.id}-start"), Futil.FInt(start))
+          val startPort = Futil.LonePort(Futil.Component(iterStart.id, iterStart))
+
+          val iterIncr = Futil.Constant(Id(s"${iter.id}-incr"), Futil.FInt(1))
+          val incrPort = Futil.LonePort(Futil.Component(iterIncr.id, iterIncr))
+
+          val iterEnd = Futil.Constant(Id(s"${iter.id}-end"), Futil.FInt(end))
+          val endPort = Futil.LonePort(Futil.Component(iterEnd.id, iterEnd))
+
           val iterEn = Futil.Constant(Id(s"${iter.id}-en"), Futil.FInt(1))
           val enPort = Futil.LonePort(Futil.Component(iterEn.id, iterEn))
-          val iterData = Futil.Constant(Id(s"${iter.id}-data"), Futil.FInt(end))
-          val dataPort = Futil.LonePort(Futil.Component(iterData.id, iterData))
+
           val struct = List(
             Futil.NewComp(iter),
-            Futil.Connection(enPort, Futil.CompPort(iter, "en")),
-            Futil.Connection(dataPort, Futil.CompPort(iter, "in")))
+            Futil.Connection(startPort, Futil.CompPort(iter, "start")),
+            Futil.Connection(incrPort, Futil.CompPort(iter, "incr")),
+            Futil.Connection(endPort, Futil.CompPort(iter, "end")),
+            Futil.Connection(enPort, Futil.CompPort(iter, "en")))
           val (parStruct, parCon, _) = emitCmd(par)(store + (id -> iter.id))
           (struct ++ parStruct,
             Futil.SeqComp(
-              Futil.Activate(List(iterEn.id, iterData.id, iter.id)),  // init iter
-              Futil.WhileLoop((iter, "stop"),                         // until (iter stop) = 0
+              Futil.Activate(List(iterEn.id, iterStart.id, iterIncr.id, iterEnd.id, iter.id)),   // init iter
+              Futil.WhileLoop(Futil.CompPort(iter, "stop"),           // until (iter @ stop) = 0
                 Futil.SeqComp(
                   parCon,                                             // body
                   Futil.Activate(List(iter.id, iterEn.id))))),        // iter++
@@ -325,8 +370,27 @@ private class FutilBackendHelper {
         }
         case _ => throw NotImplemented("Haven't done all the iterators yet")
       }
+      case CWhile(cond, body) => {
+        val (port, condStruct, acts) = emitExpr(cond)(store)
+        val (bodyStruct, bodyCon, _) = emitCmd(body)(store)
+        val struct = bodyStruct ++ condStruct
+        val control =
+          Futil.SeqComp(
+            acts,
+            Futil.WhileLoop(port,
+              Futil.SeqComp(bodyCon, acts)))
+        (struct, control, store)
+      }
       // XXX(sam): obviously a hack
-      case CExpr(EApp(Id("print_float_vec"), List(EVar(x)))) =>
+      case CExpr(EApp(Id("print_vec"), List(EVar(x)))) =>
+        (List(),
+          Futil.MemPrint(x),
+          store)
+      case CExpr(EApp(Id("print_vec_2d"), List(EVar(x)))) =>
+        (List(),
+          Futil.MemPrint(x),
+          store)
+      case CExpr(EApp(Id("print_vec_3d"), List(EVar(x)))) =>
         (List(),
           Futil.MemPrint(x),
           store)
@@ -336,7 +400,11 @@ private class FutilBackendHelper {
   def emitProg(p: Prog, c: Config): String = {
     val _ = c
     val declStruct = p.decls.map(x => emitDecl(x)).foldLeft(List[Futil.Structure]())(_ ++ _)
-    val (cmdStruct, control, _) = emitCmd(p.cmd)(Map())
+    val store = declStruct.foldLeft(Map[Id, Id]())((store, struct) => struct match {
+      case Futil.NewComp(comp) => store + (comp.id -> comp.id)
+      case _ => store
+    })
+    val (cmdStruct, control, _) = emitCmd(p.cmd)(store)
     val struct = Futil.sortStructure(declStruct ++ cmdStruct).distinct
     Futil.program("main", struct, control)
   }
