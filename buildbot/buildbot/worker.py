@@ -495,7 +495,7 @@ def stage_fpga_execute(db, config):
                            'source /opt/xilinx/xrt/setup.sh ;\
                             ./{}'.format(config['EXECUTABLE_NAME'])]
             else:
-                exe_cmd = ['sh','-c','cur=`pwd`; cd $AWS_FPGA_REPO_DIR ;\
+                exe_cmd = ['sh', '-c', 'cur=`pwd`; cd $AWS_FPGA_REPO_DIR ;\
                 source ./sdaccel_setup.sh > /dev/null; \
                 cd $cur; XCL_EMULATION_MODE={} ./{}'.format(
                     task['mode'], 
