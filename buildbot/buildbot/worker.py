@@ -443,14 +443,14 @@ def stage_afi(db, config):
         )
         task.run([afi_script], cwd=CODE_DIR, shell=True)
 
+        # Get the AFI ID.
+        afi_id_files = glob.glob(os.path.join(xcl_dir, '*afi_id.txt'))
+        with open(afi_id_files[0]) as f:
+            afi_id = json.loads(f.read())['FpgaImageId']
+
         # Every 5 minutes, check if the AFI is ready.
         while True:
             time.sleep(config['AFI_CHECK_INTERVAL'])
-
-            # Get the AFI ID.
-            afi_id_files = glob.glob(os.path.join(xcl_dir, '*afi_id.txt'))
-            with open(afi_id_files[0]) as f:
-                afi_id = json.loads(f.read())['FpgaImageId']
 
             # Check the status of the AFI.
             status_string = task.run(
