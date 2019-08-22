@@ -235,15 +235,13 @@ def stage_make(db, config):
             ))
 
         if config['TOOLCHAIN'] == 'f1':
-            # Get the AWS platform ID for F1 builds.
-            platform_script = (
-                'cd $AWS_FPGA_REPO_DIR ; '
-                'source ./sdaccel_setup.sh > /dev/null ; '
-                'echo $AWS_PLATFORM'
+            # Configure current environment.
+            source_script = (
+                'source $AWS_FPGA_REPO_DIR/sdaccel_setup.sh ; '
             )
-            proc = task.run([platform_script], capture=True, shell=True)
-            aws_platform = proc.stdout.decode('utf8').strip()
+            proc = task.run([source_script], capture=True, shell=True)
 
+            aws_platform = os.environ('AWS_PLATFORM')
             make = [
                 'make',
                 'MODE={}'.format(task['mode']),
