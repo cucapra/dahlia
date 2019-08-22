@@ -494,6 +494,7 @@ def stage_fpga_execute(db, config):
             else:
                 exe_cmd = ['sh', '-c', 'source $AWS_FPGA_REPO_DIR/sdaccel_setup.sh > /dev/null;\
                 XCL_EMULATION_MODE={} ./host'.format(task['mode'])]
+
             task.run(
                 exe_cmd,
                 cwd=CODE_DIR,
