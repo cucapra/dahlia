@@ -1,5 +1,5 @@
 import "cassert" {
-  def extern assert(cond: bool);
+  def assert(cond: bool);
 }
 
 record point {
