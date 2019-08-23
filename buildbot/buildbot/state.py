@@ -7,9 +7,9 @@
 #         |                  |
 #    UNPACK_FINISH           |
 #         |                MAKE
-#       COMPILE              |
 #         |                  |
-#    COMPILE_FINISH          |
+#         |                  |
+#         |                  |
 #         |                MAKE_PROGRESS----+
 #        HLS                 |              |
 #         |                  |          AFI_START (F1 only)
@@ -26,8 +26,6 @@
 UPLOAD = "uploaded"
 UNPACK = "unpacking"
 UNPACK_FINISH = "unpacked"
-COMPILE = "seashelling"
-COMPILE_FINISH = "seashelled"
 HLS = "hlsing"
 HLS_FINISH = "hlsed"
 MAKE = "make"

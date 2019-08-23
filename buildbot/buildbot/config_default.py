@@ -1,9 +1,6 @@
 # The extensions to allow for uploaded code archives.
 UPLOAD_EXTENSIONS = ['zip']
 
-# The executable name for the Seashell compiler (seac).
-SEASHELL_COMPILER = 'fuse'
-
 # A prefix command to use *before* the invocations of Xilinx tools. For
 # example, if your deployment needs to execute the Xilinx tools on a different
 # machine or a different Docker container, a deployment could use this prefix
@@ -21,8 +18,6 @@ PARALLELISM_MAKE = 1
 
 # Filename extensions to send as plain text for job file viewing.
 TEXT_EXTENSIONS = [
-    'ss',
-    'sea'
     'c',
     'cpp',
     's',
@@ -38,7 +33,6 @@ TEXT_EXTENSIONS = [
 # Configuration options allowed during job creation. Each option has a
 # conversion function (i.e., type) used to translate the request value.
 CONFIG_OPTIONS = {
-    'skipseashell': bool,
     'estimate': bool,
     'skipexec': bool,
     'directives': str,

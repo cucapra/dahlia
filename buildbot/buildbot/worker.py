@@ -10,7 +10,6 @@ from . import state
 import json
 import glob
 
-SEASHELL_EXT = '.fuse'
 C_EXT = '.cpp'
 OBJ_EXT = '.o'
 C_MAIN = 'main.cpp'  # Currently, the host code *must* be named this.
@@ -271,58 +270,6 @@ def stage_make(db, config):
             cwd=CODE_DIR,
         )
 
-
-def stage_seashell(db, config):
-    """Work stage: compile Seashell code to HLS C.
-    """
-    compiler = config["SEASHELL_COMPILER"]
-    with work(db, state.UNPACK_FINISH, state.COMPILE,
-              state.COMPILE_FINISH) as task:
-        if task['config'].get('skipseashell'):
-            # Skip the Seashell stage. Instead, just try to guess which
-            # file contains the hardware function. For now, this
-            # guessing is very unintelligent: it just looks for some
-            # *.cpp file not named "main".
-            for name in os.listdir(task.code_dir):
-                base, ext = os.path.splitext(name)
-                if ext == C_EXT and base != 'main':
-                    c_name = name
-                    break
-            else:
-                raise WorkError(
-                    'No hardware source file found. Expected a file with '
-                    'extension {} and basename not `main`.'.format(C_EXT)
-                )
-
-            task.log('skipping Fuse compilation stage')
-            task['hw_basename'] = base
-            return
-
-        # Look for the Seashell source code.
-        for name in os.listdir(task.code_dir):
-            _, ext = os.path.splitext(name)
-            if ext == SEASHELL_EXT:
-                source_name = name
-                break
-        else:
-            raise WorkError('No Fuse source file found. Expected a file '
-                            'with extension {}'.format(SEASHELL_EXT))
-        task['seashell_main'] = name
-
-        # Run the Seashell compiler.
-        source_path = os.path.join(task.code_dir, source_name)
-        hls_code = task.run([compiler, source_path], capture=True).stdout
-
-        # A filename for the translated C code.
-        base, _ = os.path.splitext(source_name)
-        c_name = base + C_EXT
-        task['hw_basename'] = base
-
-        # Write the C code.
-        with open(os.path.join(task.code_dir, c_name), 'wb') as f:
-            f.write(hls_code)
-
-
 def _sds_cmd(prefix, task):
     """Make a sds++ command with all our standard arguments.
     """
@@ -360,7 +307,7 @@ def stage_hls(db, config):
     bitstream with HLS toolchain.
     """
     prefix = config["HLS_COMMAND_PREFIX"]
-    with work(db, state.COMPILE_FINISH, state.HLS, state.HLS_FINISH) as task:
+    with work(db, state.UNPACK_FINISH, state.HLS, state.HLS_FINISH) as task:
         _task_config(task, config)
         flags = shlex.split(task['sdsflags'])
         sds_cmd = _sds_cmd(prefix, task)
@@ -535,8 +482,7 @@ def stage_fpga_execute(db, config):
             )
 
 
-STAGES = (stage_unpack, stage_make, stage_seashell, stage_hls,
-          stage_fpga_execute)
+STAGES = (stage_unpack, stage_make, stage_hls, stage_fpga_execute)
 
 
 def work_threads(db, config):
