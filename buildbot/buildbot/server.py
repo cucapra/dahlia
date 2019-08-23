@@ -178,11 +178,6 @@ def jobs_html():
     )
 
 
-@app.route('/live.html')
-def live_html():
-    return flask.render_template('live.html')
-
-
 @app.route('/jobs/<name>.html', methods=['GET', 'POST'])
 def show_job(name):
     job = _get(name)

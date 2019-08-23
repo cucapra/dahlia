@@ -9,8 +9,6 @@ Running the Buildbot
 
 To set things up, get [pipenv][], and then type `pipenv install`.
 
-To use the "live" browser interface, you will also need to get [Yarn][] (or [npm][]) and type `yarn` then `yarn build` to set up the necessary JavaScript.
-
 The server keeps the data, including the database and the file trees for each job, in an `instance` directory here.
 
 We have different recommendations depending on whether you're running the buildbot locally (for development) or on a proper server.
