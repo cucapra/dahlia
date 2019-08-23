@@ -66,7 +66,8 @@ If the directory contains data files with `.data` extension, they'll be copied o
 
 You can also specify job configuration options as further POST parameters:
 
-- `skipseashell`, which lets you supply plain HLS C code as input.
+**NOTE(rachit)**: These options are out of date. Document them properly here.
+
 - `estimate`, to use the Xilinx toolchain's resource estimation facility. The job will skip synthesis and execution on the FPGA.
 - `skipexec`, to avoid actually trying to run the generated program. (Only necessary when `estimate` is false---estimate runs skip execution by default.)
 - `make`, to use a Makefile instead of the built-in compilation workflow (see below).
