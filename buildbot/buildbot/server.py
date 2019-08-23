@@ -111,7 +111,7 @@ def list_files(job_name):
     """Generate the paths to all the job's files.
     """
     job_dir = db.job_dir(job_name)
-    for dirpath, dirnames, filenames in os.walk(job_dir):
+    for dirpath, _, filenames in os.walk(job_dir):
         dp = os.path.relpath(dirpath, job_dir)
         for fn in filenames:
             if not fn.startswith('.'):

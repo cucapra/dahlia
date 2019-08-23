@@ -190,7 +190,7 @@ def should_make(task):
         return state.UNPACK_FINISH
 
 
-def stage_unpack(db, config):
+def stage_unpack(db, _):
     """Work stage: unpack source code.
     """
     with work(db, state.UPLOAD, state.UNPACK, should_make) as task:
@@ -273,7 +273,7 @@ def stage_make(db, config):
 def _sds_cmd(prefix, task):
     """Make a sds++ command with all our standard arguments.
     """
-    hw_basename, hw_c, hw_o = _hw_filenames(task)
+    hw_basename, hw_c, _ = _hw_filenames(task)
     sds_cmd_head = prefix + [
         'sds++',
         '-sds-pf', task['platform'],
@@ -311,7 +311,7 @@ def stage_hls(db, config):
         _task_config(task, config)
         flags = shlex.split(task['sdsflags'])
         sds_cmd = _sds_cmd(prefix, task)
-        hw_basename, hw_c, hw_o = _hw_filenames(task)
+        _, hw_c, hw_o = _hw_filenames(task)
 
         # Run Xilinx SDSoC compiler for hardware functions.
         task.run(
