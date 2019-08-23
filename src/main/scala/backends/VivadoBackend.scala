@@ -1,6 +1,8 @@
 package fuselang.backend
 
 import Cpp._
+import PrettyPrint.Doc
+import PrettyPrint.Doc._
 
 import fuselang.common._
 import Syntax._
@@ -43,7 +45,7 @@ private class VivadoBackend extends CppLike {
     if (enabled) value(s"#pragma HLS PIPELINE\n") else emptyDoc
 
   def emitFor(cmd: CFor): Doc =
-    "for" <> emitRange(cmd.range) <+> scope {
+    text("for") <> emitRange(cmd.range) <+> scope {
       emitPipeline(cmd.pipeline) <>
       unroll(cmd.range.u) <>
       cmd.par <>
@@ -52,7 +54,7 @@ private class VivadoBackend extends CppLike {
     }
 
   override def emitWhile(cmd: CWhile): Doc =
-      "while" <> parens(cmd.cond) <+> scope {
+      text("while") <> parens(cmd.cond) <+> scope {
         emitPipeline(cmd.pipeline) <>
         cmd.body
       }
@@ -70,22 +72,22 @@ private class VivadoBackend extends CppLike {
     vsep(bankPragmas(func.args))
   }
 
-  def emitArrayDecl(ta: TArray, id: Id) =
+  def emitArrayDecl(ta: TArray, id: Id): Doc =
     emitType(ta.typ) <+> id <> generateDims(ta.dims)
 
   def generateDims(dims: List[(Int, Int)]): Doc =
     ssep(dims.map(d => brackets(value(d._1))), emptyDoc)
 
-  def emitType(typ: Type) = typ match {
-    case _:TVoid => "void"
-    case _:TBool | _:TIndex | _:TStaticInt => "int"
-    case _:TFloat => "float"
-    case _:TDouble => "double"
-    case TSizedInt(s, un) => if (un) s"ap_uint<$s>" else s"ap_int<$s>"
+  def emitType(typ: Type): Doc = typ match {
+    case _:TVoid => text("void")
+    case _:TBool | _:TIndex | _:TStaticInt => text("int")
+    case _:TFloat => text("float")
+    case _:TDouble => text("double")
+    case TSizedInt(s, un) => text(if (un) s"ap_uint<$s>" else s"ap_int<$s>")
     case TArray(typ, _) => emitType(typ)
-    case TRecType(n, _) => n
+    case TRecType(n, _) => text(n.toString)
     case _:TFun => throw Impossible("Cannot emit function types")
-    case TAlias(n) => n
+    case TAlias(n) => text(n.toString)
   }
 
   def emitProg(p: Prog, c: Config): String = {
@@ -96,7 +98,7 @@ private class VivadoBackend extends CppLike {
       vsep(p.decors.map(d => text(d.value))) <@>
       emitFunc(FuncDef(Id(c.kernelName), p.decls, TVoid(), Some(p.cmd)), true)
 
-    super.pretty(layout).layout
+    layout.pretty
   }
 
 }
@@ -114,7 +116,7 @@ private class VivadoBackendHeader extends VivadoBackend {
       vsep(p.includes.map(emitInclude) ++ p.defs.map(emitDef)) <@>
       emitFunc(FuncDef(Id(c.kernelName), p.decls, TVoid(), None))
 
-    super.pretty(declarations).layout
+    declarations.pretty
   }
 }
 

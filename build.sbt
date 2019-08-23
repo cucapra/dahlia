@@ -6,7 +6,6 @@ scalaVersion := "2.12.8"
 libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.0.0" % "test",
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.1",
-  "org.bitbucket.inkytonik.kiama" %% "kiama" % "2.2.0",
   "com.github.scopt" %% "scopt" % "3.7.1",
   "com.outr" %% "scribe" % "2.7.2",
   "com.lihaoyi" %% "sourcecode" % "0.1.5"
@@ -43,7 +42,8 @@ getHeaders := {
   val jsonHppLoc = new File("src/main/resources/headers/json.hpp")
 
   if (!jsonHppLoc.exists()) {
-    val jsonHpp = new URL("https://raw.githubusercontent.com/nlohmann/json/develop/single_include/nlohmann/json.hpp")
+    val jsonHpp = new URL(
+      "https://raw.githubusercontent.com/nlohmann/json/develop/single_include/nlohmann/json.hpp")
     val cmd = Seq("wget", jsonHpp, "--directory-prefix", jsonHppLoc.toString)
     // sys.process DSL magic!
     jsonHpp #> jsonHppLoc !!
