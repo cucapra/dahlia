@@ -226,13 +226,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
       case None => TVoid()
     }
   }
-  lazy val externFuncDef: P[FuncDef] = positioned {
-    "def" ~ "extern" ~> iden ~ parens(repsep(args, ",")) ~ retTyp <~ ";" ^^ {
-      case fn ~ args ~ ret => FuncDef(fn, args, ret, None)
-    }
-  }
   lazy val funcDef: P[FuncDef] = positioned {
-    externFuncDef |
     "def" ~> iden ~ parens(repsep(args, ",")) ~ retTyp ~ block ^^ {
       case fn ~ args ~ ret ~ body => FuncDef(fn, args, ret, Some(body))
     }
@@ -240,6 +234,11 @@ private class FuseParser extends RegexParsers with PackratParsers {
   lazy val defs = funcDef | recordDef
 
   // Include
+  lazy val externFuncDef: P[FuncDef] = positioned {
+    "def" ~> iden ~ parens(repsep(args, ",")) ~ retTyp <~ ";" ^^ {
+      case fn ~ args ~ ret => FuncDef(fn, args, ret, None)
+    }
+  }
   lazy val include: P[Include] = positioned {
     "import" ~> stringVal ~ braces(externFuncDef.*) ^^ {
       case name ~ funcs => Include(name, funcs)
