@@ -27,8 +27,6 @@ STATUS_STRINGS = {
     state.UPLOAD: "Uploaded",
     state.UNPACK: "Unpacking",
     state.UNPACK_FINISH: "Unpacked",
-    state.COMPILE: "Compiling",
-    state.COMPILE_FINISH: "Compiled",
     state.HLS: "Synthesis",
     state.HLS_FINISH: "Synthesized",
     state.MAKE: "make",
