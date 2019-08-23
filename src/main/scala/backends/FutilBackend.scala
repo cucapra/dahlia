@@ -45,6 +45,9 @@ object Futil {
   case class Sqrt() extends Primitives {
     override def toString = "comp/sqrt"
   }
+  case class Lte() extends Primitives {
+    override def toString = "comp/lte"
+  }
   case class Constant(id: Id, v: Futil.Value) extends Primitives {
     override def toString = s"const $id $v : 32"
   }
@@ -236,6 +239,8 @@ private class FutilBackendHelper {
           case "/" => emitBinop("div", Futil.Div(), e1, e2)
           case "<" => emitBinop("lt", Futil.TruncSub(), e2, e1)
           case ">" => emitBinop("lt", Futil.TruncSub(), e1, e2)
+          case "<=" => emitBinop("lte", Futil.Lte(), e1, e2)
+          case ">=" => emitBinop("lte", Futil.Lte(), e2, e1)
           case x => throw NotImplemented(s"Haven't implemented binop $x yet.")
         }
       }
