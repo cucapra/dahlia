@@ -6,8 +6,5 @@
   "devDependencies": {
     "parcel": "^1.9.7",
     "typescript": "^3.0.1"
-  },
-  "scripts": {
-    "build": "parcel build -d buildbot/static --public-url /static client/live.ts"
   }
 }
