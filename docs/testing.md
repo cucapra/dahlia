@@ -52,7 +52,7 @@ To add a new test, create a fuse program `<src>` and import the `cassert` header
 
 ```
 import "cassert" {
-  def extern assert(cond: bool);
+  def assert(cond: bool);
 }
 ```
 
