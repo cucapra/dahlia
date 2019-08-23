@@ -103,7 +103,7 @@ class JobTask:
                     exc.filename,
                 ))
             except subprocess.TimeoutExpired as exc:
-                raise WorkError('timeout after {} seconds{}'.format(
+                raise WorkError('timeout after {} seconds'.format(
                     exc.timeout,
                 ))
 
