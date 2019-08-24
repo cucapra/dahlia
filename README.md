@@ -62,12 +62,3 @@ directory and the documentation files are stored in `docs/`.
 
 We use github pages to deploy the page. Read the README under `website/` for
 instructions.
-
-## Builbot
-
-Buildbot is our tool for generating the full workflow. We have an instance hosted
-on [Gorgonzola](http://gorgonzola.cs.cornell.edu:8000/). You need to be on the
-Cornell network to access it.
-
-For more information about using it, follow the README under the `buildbot/`
-directory.
