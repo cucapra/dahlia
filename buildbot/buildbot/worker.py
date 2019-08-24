@@ -445,14 +445,14 @@ def stage_afi(db, config):
         )
         task.run([afi_script], cwd=CODE_DIR, shell=True)
 
+        # Get the AFI ID.
+        afi_id_files = glob.glob(os.path.join(xcl_dir, '*afi_id.txt'))
+        with open(afi_id_files[0]) as f:
+            afi_id = json.loads(f.read())['FpgaImageId']
+
         # Every 5 minutes, check if the AFI is ready.
         while True:
             time.sleep(config['AFI_CHECK_INTERVAL'])
-
-            # Get the AFI ID.
-            afi_id_files = glob.glob(os.path.join(xcl_dir, '*afi_id.txt'))
-            with open(afi_id_files[0]) as f:
-                afi_id = json.loads(f.read())['FpgaImageId']
 
             # Check the status of the AFI.
             status_string = task.run(
@@ -495,13 +495,11 @@ def stage_fpga_execute(db, config):
                            'source /opt/xilinx/xrt/setup.sh ;\
                             ./{}'.format(config['EXECUTABLE_NAME'])]
             else:
-                exe_cmd = ['sh', '-c', 'cur=`pwd`; cd $AWS_FPGA_REPO_DIR ;\
-                source ./sdaccel_setup.sh > /dev/null; \
-                cd $cur; XCL_EMULATION_MODE={} ./{}'.format(
-                    task['mode'], 
+                exe_cmd = ['sh', '-c', 'source $AWS_FPGA_REPO_DIR/sdaccel_setup.sh > /dev/null;\
+                XCL_EMULATION_MODE={} ./{}'.format(
+                    task['mode'],
                     config['EXECUTABLE_NAME']
-                    )
-                ]
+                )]
             task.run(
                 exe_cmd,
                 cwd=CODE_DIR,

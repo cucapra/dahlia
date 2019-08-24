@@ -693,12 +693,6 @@ class TypeCheckerSpec extends FunSpec {
          """)
       }
     }
-
-    it("allow externs to be defined") {
-      typeCheck("""
-        def extern bar(a: bool);
-        """ )
-    }
   }
 
   describe("Function applications") {
@@ -748,28 +742,6 @@ class TypeCheckerSpec extends FunSpec {
           def foo(a: bit<32>, b: bit<32>) {
           }
           foo(1);
-          """ )
-      }
-    }
-  }
-
-  describe("Function applications w/ externs") {
-    it("require the correct types") {
-      assertThrows[UnexpectedSubtype] {
-        typeCheck("""
-          def extern bar(a: bool);
-          bar(1)
-          """ )
-      }
-    }
-
-    it("completely consume array parameters") {
-      assertThrows[AlreadyConsumed] {
-        typeCheck("""
-          def extern bar(a: bit<10>[10 bank 5]);
-          decl x: bit<10>[10 bank 5];
-          bar(x);
-          x[1]
           """ )
       }
     }
@@ -1362,10 +1334,10 @@ class TypeCheckerSpec extends FunSpec {
   }
 
   describe("Imports") {
-    it("adds externs into type checking scope") {
+    it("adds imported functions into type checking scope") {
       typeCheck("""
         import "print.cpp" {
-          def extern print_vect(f: float[4]);
+          def print_vect(f: float[4]);
         }
         decl a: float[4];
         print_vect(a);
