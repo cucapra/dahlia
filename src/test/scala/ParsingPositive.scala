@@ -129,16 +129,6 @@ class ParsingTests extends org.scalatest.FunSuite {
       """ )
   }
 
-  test("external functions") {
-    parseAst("""
-      def extern foo(a: bit<32>);
-      """ )
-
-    parseAst("""
-      def extern foo(a: bit<32>[10 bank 5], b: bool);
-      """ )
-  }
-
   test("records definitions") {
     parseAst("""
       record Point {
@@ -184,7 +174,7 @@ class ParsingTests extends org.scalatest.FunSuite {
       """ )
     parseAst("""
       import "print.h" {
-        def extern foo(a: bit<32>);
+        def foo(a: bit<32>);
       }
       """ )
   }

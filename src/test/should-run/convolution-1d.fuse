@@ -1,5 +1,5 @@
 import "cassert" {
-  def extern assert(cond: bool);
+  def assert(cond: bool);
 }
 
 def check_arr(a: bit<32>[8], b: bit<32>[8]) {

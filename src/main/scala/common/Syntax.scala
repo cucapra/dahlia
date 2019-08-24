@@ -170,9 +170,13 @@ object Syntax {
   sealed trait Definition extends Positional
   /**
    * Represents function definitions. A missing function body implies that
-   * this is an extern function.
+   * this is an imported function.
    */
-  case class FuncDef(id: Id, args: List[Decl], retTy: Type, bodyOpt: Option[Command]) extends Definition
+  case class FuncDef(
+    id: Id,
+    args: List[Decl],
+    retTy: Type,
+    bodyOpt: Option[Command]) extends Definition
   case class RecordDef(name: Id, fields: Map[Id, Type]) extends Definition {
     fields.foreach({ case (f, t) => t match {
       case _:TArray => throw ArrayInRecord(name, f, t)
@@ -181,7 +185,7 @@ object Syntax {
   }
 
   /**
-   * An include with the name of the module and external function definitions.
+   * An include with the name of the module and function definitions.
    */
   case class Include(name: String, defs: List[FuncDef]) extends Positional
 
