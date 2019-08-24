@@ -40,7 +40,7 @@ class WorkProc:
             if not thread.is_alive():
                 thread.start()
 
-    async def handle(self, client, _):
+    async def handle(self, client, addr):
         """Handle an incoming socket connection.
         """
         async for line in client.makefile('rb'):

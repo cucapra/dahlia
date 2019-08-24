@@ -482,7 +482,7 @@ def stage_fpga_execute(db, config):
             )
 
 
-STAGES = (stage_unpack, stage_make, stage_hls, stage_fpga_execute)
+STAGES = stage_unpack, stage_make, stage_hls, stage_fpga_execute
 
 
 def work_threads(db, config):
