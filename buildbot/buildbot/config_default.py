@@ -50,7 +50,7 @@ CONFIG_OPTIONS = {
 }
 
 # The name to use for compiled executables.
-EXECUTABLE_NAME = 'sdsoc'
+EXECUTABLE_NAME = 'exe'
 
 # The number of (recent) lines of the log to show on job pages.
 LOG_PREVIEW_LINES = 32
@@ -59,7 +59,7 @@ LOG_PREVIEW_LINES = 32
 # the synthesis step (or running an opaque Makefile), the latter of
 # which has to be really long because synthesis is so slow.
 COMPILE_TIMEOUT = 120
-SYNTHESIS_TIMEOUT = 9000
+SYNTHESIS_TIMEOUT = 20000
 
 # The Buildbot currently supports two backend toolchains: Xilinx's SDSoC
 # (for Zynq processors) and SDAccel (for AWS F1). Set this to "f1" for
