@@ -9,7 +9,7 @@ import CompilerError._
 
 private class VivadoBackend extends CppLike {
   val CppPreamble: Doc = """
-    |#include "ap_int.h"
+    |#include <ap_int.h>
   """.stripMargin.trim
 
   def unroll(n: Int): Doc = n match {
