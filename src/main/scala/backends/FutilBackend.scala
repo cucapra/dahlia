@@ -355,7 +355,7 @@ private class FutilBackendHelper {
         val control = lActs ++ rActs
         (struct, control, store)
       }
-      case CFor(range, par, comb) => range match {
+      case CFor(range, _, par, comb) => range match {
         case CRange(id, start, end, 1) => {
           val iter = Futil.Component(Futil.genName(s"$id"), Futil.Iterator())
 
@@ -393,7 +393,7 @@ private class FutilBackendHelper {
         }
         case _ => throw NotImplemented("Haven't done all the iterators yet")
       }
-      case CWhile(cond, body) => {
+      case CWhile(cond, _, body) => {
         val (port, condStruct, acts) = emitExpr(cond)(store)
         val (bodyStruct, bodyCon, _) = emitCmd(body)(store)
         val struct = bodyStruct ++ condStruct
