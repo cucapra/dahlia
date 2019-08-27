@@ -35,8 +35,12 @@ object BoundsChecker {
                         (s"$idxt is used for an array access. " +
                           "This might be out of bounds at runtime.", idx))
                     }
-                  case TStaticInt(v) => if (v >= size) throw IndexOutOfBounds(id)
-                  case t@TIndex(_, _) => if (t.maxVal >= size) throw IndexOutOfBounds(id)
+                  case TStaticInt(v) =>
+                    if (v >= size)
+                      throw IndexOutOfBounds(id, size, v, idx.pos)
+                  case t@TIndex(_, _) =>
+                    if (t.maxVal >= size)
+                      throw IndexOutOfBounds(id, size, t.maxVal, idx.pos)
                   case t => throw UnexpectedType(id.pos, "array access", s"[$t]", t)
                 })
               })
@@ -70,7 +74,7 @@ object BoundsChecker {
         }
 
       if (maxVal + pre > arrLen) {
-        throw IndexOutOfBounds(viewId)
+        throw IndexOutOfBounds(viewId, arrLen, maxVal + pre, viewId.pos)
       }
     }
   }
@@ -89,8 +93,8 @@ object BoundsChecker {
     }
     case _:CSplit => ()
     case CIf(cond, tbranch, fbranch) => checkE(cond) ; checkC(tbranch) ; checkC(fbranch)
-    case CFor(_, par, combine) => checkC(par) ; checkC(combine)
-    case CWhile(cond, body) => checkE(cond) ; checkC(body)
+    case CFor(_, _, par, combine) => checkC(par) ; checkC(combine)
+    case CWhile(cond, _, body) => checkE(cond) ; checkC(body)
     case _:CDecorate => ()
     case CUpdate(lhs, rhs) => checkE(lhs) ; checkE(rhs)
     case CReduce(_, l, r) => checkE(l) ; checkE(r)

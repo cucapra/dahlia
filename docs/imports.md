@@ -13,7 +13,7 @@ An `import` statement is written as follows:
 
 ```
 import "<module>" {
-  def extern <func1>(...);
+  def <func1>(...);
   ...
 }
 ```
@@ -32,7 +32,7 @@ An import statement simply compiles to a `#include`:
 
 ```
 import "<module>" {
-  def extern <func1>(...);
+  def <func1>(...);
   ...
 }
 ```

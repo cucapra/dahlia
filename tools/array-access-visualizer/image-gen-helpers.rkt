@@ -5,6 +5,7 @@
          racket/class
          racket/list
          racket/math
+         racket/draw
          pict)
 
 (require (only-in "matrix-visualizer.rkt"
@@ -12,6 +13,7 @@
 
 (provide layout
          smart-layout
+         vspace
          save-pict
          zip-with
          max-elems
@@ -21,11 +23,23 @@
 
 (define separator? (make-parameter #t))
 
+(define vspace (make-parameter 4))
+
 ;; Save a given pict with the name and a kind.
-;; Usage: (save-pict pict "foo.png" 'png)
-(define (save-pict the-pict name kind)
+;; Usage: (save-pict pict "foo.pdf")
+(define (save-pict the-pict path)
   (define bm (pict->bitmap the-pict))
-  (send bm save-file name kind))
+  (define pdf (new pdf-dc% [output path]
+                           [interactive #f]
+                           [width (pict-width the-pict)]
+                           [height (pict-height the-pict)]))
+  (send* pdf
+    (start-doc "starting doc")
+    (start-page)
+    (draw-bitmap bm 0 0)
+    (end-page)
+    (end-doc))
+  the-pict)
 
 ;; Given a list, create a list of lists, each of
 ;; size n. If the length of the list is not divisible by n, throws an error.
@@ -43,7 +57,7 @@
 (define (separator len)
   (if (separator?)
     (colorize (hline len 8) "Red")
-    (blank 8)))
+    (blank 0)))
 
 ;; Layout a given list of images by placing [[factor]] of them in each row
 ;; and creating as many vertically stacked rows as needed.
@@ -62,7 +76,7 @@
                 ([img row])
         (hc-append 10 col-acc img)))
     (define sep (separator (pict-width row-res)))
-    (vc-append 4 row-acc sep row-res)))
+    (vc-append (vspace) row-acc sep row-res)))
 
 ;; Layout that automatically tried to figure out how many list elements
 ;; can be places in one row.

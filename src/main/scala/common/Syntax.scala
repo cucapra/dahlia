@@ -154,8 +154,8 @@ object Syntax {
   case class CView(id: Id, arrId: Id, dims: List[View]) extends Command
   case class CSplit(id: Id, arrId: Id, factors: List[Int]) extends Command
   case class CIf(cond: Expr, cons: Command, alt: Command) extends Command
-  case class CFor(range: CRange, par: Command, combine: Command) extends Command
-  case class CWhile(cond: Expr, body: Command) extends Command
+  case class CFor(range: CRange, pipeline: Boolean, par: Command, combine: Command) extends Command
+  case class CWhile(cond: Expr, pipeline: Boolean, body: Command) extends Command
   case class CDecorate(value: String) extends Command
   case class CUpdate(lhs: Expr, rhs: Expr) extends Command {
     if (lhs.isLVal == false) throw UnexpectedLVal(lhs, "assignment")
@@ -170,9 +170,13 @@ object Syntax {
   sealed trait Definition extends Positional
   /**
    * Represents function definitions. A missing function body implies that
-   * this is an extern function.
+   * this is an imported function.
    */
-  case class FuncDef(id: Id, args: List[Decl], retTy: Type, bodyOpt: Option[Command]) extends Definition
+  case class FuncDef(
+    id: Id,
+    args: List[Decl],
+    retTy: Type,
+    bodyOpt: Option[Command]) extends Definition
   case class RecordDef(name: Id, fields: Map[Id, Type]) extends Definition {
     fields.foreach({ case (f, t) => t match {
       case _:TArray => throw ArrayInRecord(name, f, t)
@@ -181,7 +185,7 @@ object Syntax {
   }
 
   /**
-   * An include with the name of the module and external function definitions.
+   * An include with the name of the module and function definitions.
    */
   case class Include(name: String, defs: List[FuncDef]) extends Positional
 

@@ -108,11 +108,11 @@ object RewriteView {
       c1n <- rewriteC(c1)
       c2n <- rewriteC(c2)
     } yield CIf(e1n, c1n, c2n)
-    case cf@CFor(_, c1, c2) => for {
+    case cf@CFor(_, _, c1, c2) => for {
       c1n <- rewriteC(c1)
       c2n <- rewriteC(c2)
     } yield cf.copy(par = c1n, combine = c2n)
-    case cw@CWhile(_, c) => for {
+    case cw@CWhile(_, _, c) => for {
       cn <- rewriteC(c)
     } yield cw.copy(body = cn)
     case _:CDecorate => State.unit(c)

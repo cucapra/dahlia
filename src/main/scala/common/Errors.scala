@@ -33,8 +33,8 @@ object Errors {
   case class UnrollRangeError(pos: Position, rSize: Int, uFactor: Int) extends TypeError(
     s"Cannot unroll range of size $rSize by factor $uFactor.", pos)
 
-  case class IndexOutOfBounds(id : Id) extends TypeError(
-    s"Index out of bounds for `$id'", id.pos)
+  case class IndexOutOfBounds(id : Id, size: Int, mv: Int, pos: Position) extends TypeError(
+    s"Index out of bounds for `$id'. Memory size is $size, iterator max val is $mv", pos)
 
   case class IncorrectAccessDims(id: Id, exp: Int, actual: Int) extends TypeError(
     s"Incorrect number of dimensions used to access `$id'. Expected: $exp, actual: $actual.", id.pos)
@@ -63,6 +63,10 @@ object Errors {
     "Already written to this expression in this context.", e.pos)
   case class InsufficientResourcesInUnrollContext(exp: Int, ac: Int, expr: Expr)
     extends TypeError(s"Array access implies $ac safe writes are possible, but surrounding context requires $exp copies.", expr.pos)
+
+  // Pipelining error
+  case class PipelineError(pos: Position) extends TypeError(
+    "Pipelining is only allowed on non-sequenced loops.", pos)
 
   // Subtyping error
   case class NoJoin(pos: Position, cons: String, t1: Type, t2: Type) extends TypeError(

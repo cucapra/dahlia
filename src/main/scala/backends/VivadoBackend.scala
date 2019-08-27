@@ -39,15 +39,26 @@ private class VivadoBackend extends CppLike {
     })
   }
 
+  def emitPipeline(enabled: Boolean): Doc =
+    if (enabled) value(s"#pragma HLS PIPELINE\n") else emptyDoc
+
   def emitFor(cmd: CFor): Doc =
     "for" <> emitRange(cmd.range) <+> scope {
+      emitPipeline(cmd.pipeline) <>
       unroll(cmd.range.u) <>
       cmd.par <>
       (if (cmd.combine != CEmpty) line <> text("// combiner:") <@> cmd.combine
        else emptyDoc)
     }
 
+  override def emitWhile(cmd: CWhile): Doc =
+      "while" <> parens(cmd.cond) <+> scope {
+        emitPipeline(cmd.pipeline) <>
+        cmd.body
+      }
+
   def emitFuncHeader(func: FuncDef, entry: Boolean = false): Doc = {
+    text(s"#pragma HLS INLINE") <@>
     (if (entry)
       vsep(func.args.map(arg =>
         arg.typ match {

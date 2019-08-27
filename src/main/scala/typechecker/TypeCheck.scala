@@ -350,6 +350,16 @@ object TypeChecker {
     nEnv -> (pre.getOrElse(len) -> newBank)
   }
 
+  private def checkPipeline(enabled: Boolean, loop: Command, body: Command) {
+    // Only loops without sequencing may be pipelined.
+    body match {
+      case _: CSeq => if (enabled) {
+        throw PipelineError(loop.pos)
+      }
+      case _ => {}
+    }
+  }
+
   private def checkC(cmd: Command)
                     (implicit env:Environment): Environment = cmd match {
     case CPar(c1, c2) => checkC(c2)(checkC(c1))
@@ -360,7 +370,8 @@ object TypeChecker {
       val (e3, _) = e1.withScope(1)(e => checkC(alt)(e))
       e2 merge e3
     }
-    case CWhile(cond, body) => {
+    case CWhile(cond, pipeline, body) => {
+      checkPipeline(pipeline, cmd, body)
       val (cTyp, e1) = checkE(cond)(env)
       if (cTyp != TBool()) {
         throw UnexpectedType(cond.pos, "while condition", TBool().toString, cTyp)
@@ -494,7 +505,9 @@ object TypeChecker {
 
       nEnv.add(id, fullTyp)
     }
-    case CFor(range, par, combine) => {
+    case CFor(range, pipeline, par, combine) => {
+      checkPipeline(pipeline, cmd, par)
+
       val iter = range.iter
       val (e1, binds) = env.withScope(range.u) { newScope =>
         // Add binding for iterator in a separate scope.
@@ -563,7 +576,7 @@ object TypeChecker {
          * [[s]] gets the type t[k0 bank k0][(d0 / k0) bank (b0 / k0)] ....
          */
         val viewDims = adims.zip(dims).flatMap({
-          case ((dim, bank), n) if n > 1 => {
+          case ((dim, bank), n) if n > 0 => {
             if (bank % n == 0) {
               List((n, n), (dim / n, bank / n))
             } else {

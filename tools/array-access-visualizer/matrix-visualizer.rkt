@@ -23,7 +23,7 @@
 ;; Define what a marking for an array element looks like
 (define marking
   (let ([elem-size (- elem-size 2)])
-    (rectangle elem-size elem-size #:border-color creamsicle #:border-width 2)))
+    (rectangle elem-size elem-size #:border-color "black" #:border-width 2)))
 
 ;; Marks the given element
 (define (mark-elem elem)

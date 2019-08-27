@@ -22,8 +22,6 @@ important limitations.
 As an example, we'll be using the following fuse code:
 
 ```C
-def extern print_vector(c: float[4]);
-
 decl a: float[2][2];
 decl b: float[2][2];
 decl c: float[2][2];
@@ -69,8 +67,33 @@ and run the command:
 ```
 
 which will produce the desired output from adding the two matrices `a` and `b`.
-There will be no output because we aren't printing anything out. We can define
-a Fuse [extern](binders.md#functions) to see the output.
+There will be no output because we aren't printing anything out.
+
+We can define a C++ function to print the output of an array and `import`
+it into the fuse file:
+
+```C++
+
+void print_vector(vector<int> vec, int size) {
+  for (int i = 0; i < size; i++) {
+    std::cout << vec[i] << std::endl;
+  }
+}
+
+```
+
+and import it using:
+
+```
+import "printer.cpp" {
+  def print_vector(vec: bit<32>[10], size: bit<32>);
+}
+
+```
+
+Assuming that the C++ code was saved in a file called `printer.cpp`. Once
+imported, the function can be used as a normal function and used to see
+the output.
 
 ## Compiler Configuration
 

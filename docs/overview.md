@@ -4,7 +4,7 @@ title: Overview
 ---
 
 Fuse is a programming language for designing hardware accelerators.  It
-provides abstractions that guarantee hardware realizability after type
+provides abstractions that guarantee predictable hardware realizability after type
 checking.
 
 The goal of this project is to build an end-to-end pipeline for compiling
