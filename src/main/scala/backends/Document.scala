@@ -35,10 +35,10 @@ object PrettyPrint {
     /**
      * Format this Doc on `writer`.
      */
-    def format(writer: Writer) {
+    def format(writer: Writer): Unit = {
       type FmtState = (Int, Doc)
 
-      def spaces(n: Int) {
+      def spaces(n: Int): Unit = {
         var rem = n
         while (rem >= 16) { writer write "                "; rem -= 16 }
         if (rem >= 8)     { writer write "        "; rem -= 8 }

@@ -24,7 +24,7 @@ object Checker {
     /**
      * Top level function called on the AST.
      */
-    def check(p: Prog)
+    def check(p: Prog): Unit
 
     /**
      * Helper functions for checking sequences of the same element.
