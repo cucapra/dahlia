@@ -7,122 +7,112 @@ import Configuration._
 import CompilerError._
 
 object Futil {
-  sealed trait Primitives
-  case class Custom(name: String) extends Primitives {
-    override def toString = name
-  }
-  case class Ident() extends Primitives {
-    override def toString = "comp/id"
-  }
-  case class Memory(dims: List[Int]) extends Primitives {
-    override def toString = {
-      dims.map(x => x.toString()).mkString("(comp/memory ", " ", ")")
+  /* Primitives */
+  sealed trait Primitives {
+    override def toString = this match {
+      case Custom(name) => name
+      case Ident()      => "comp/id"
+      case Memory(dims) =>
+        dims.map(x => x.toString()).mkString("(comp/memory ", " ", ")")
+      case Iterator()      => "comp/iterator"
+      case Register()      => "comp/reg"
+      case Add()           => "comp/add"
+      case Sub()           => "comp/sub"
+      case TruncSub()      => "comp/trunc-sub"
+      case Mult()          => "comp/mult"
+      case Div()           => "comp/div"
+      case Sqrt()          => "comp/sqrt"
+      case Lte()           => "comp/lte"
+      case Constant(id, v) => s"const $id $v : 32"
     }
   }
-  case class Iterator() extends Primitives {
-    override def toString = "comp/iterator"
-  }
-  case class Register() extends Primitives {
-    override def toString = "comp/reg"
-  }
-  case class Add() extends Primitives {
-    override def toString = "comp/add"
-  }
-  case class Sub() extends Primitives {
-    override def toString = "comp/sub"
-  }
-  case class TruncSub() extends Primitives {
-    override def toString = "comp/trunc-sub"
-  }
-  case class Mult() extends Primitives {
-    override def toString = "comp/mult"
-  }
-  case class Div() extends Primitives {
-    override def toString = "comp/div"
-  }
-  case class Sqrt() extends Primitives {
-    override def toString = "comp/sqrt"
-  }
-  case class Lte() extends Primitives {
-    override def toString = "comp/lte"
-  }
-  case class Constant(id: Id, v: Futil.Value) extends Primitives {
-    override def toString = s"const $id $v : 32"
-  }
+  case class Custom(name: String) extends Primitives
+  case class Ident() extends Primitives
+  case class Memory(dims: List[Int]) extends Primitives
+  case class Iterator() extends Primitives
+  case class Register() extends Primitives
+  case class Add() extends Primitives
+  case class Sub() extends Primitives
+  case class TruncSub() extends Primitives
+  case class Mult() extends Primitives
+  case class Div() extends Primitives
+  case class Sqrt() extends Primitives
+  case class Lte() extends Primitives
+  case class Constant(id: Id, v: Futil.Value) extends Primitives
 
+  /* Futil Component */
   case class Component(id: Id, sub: Primitives)
 
-  sealed trait Value
-  case class FInt(v: Int) extends Value {
-    override def toString() = s"$v"
-  }
-  case class FFloat(v: String) extends Value {
-    override def toString() = s"$v"
-  }
-  case class FNone() extends Value {
-    override def toString() = "#f"
-  }
-
-  sealed trait Port
-  case class CompPort(c: Component, name: String) extends Port {
-    override def toString = s"${c.id} @ $name"
-  }
-  case class CustomPort(c: String, name: String) extends Port {
-    override def toString = s"$c @ $name"
-  }
-  case class LonePort(c: Component) extends Port {
-    override def toString = s"${c.sub}"
-  }
-
-  sealed trait Structure
-  case class NewComp(comp: Component) extends Structure {
-    override def toString = comp.sub match {
-      case Constant(_, _) => ""
-      case _              => s"[${comp.id} = new ${comp.sub}]"
+  /* Possible values of constants */
+  sealed trait Value {
+    override def toString() = this match {
+      case FInt(v)   => s"$v"
+      case FFloat(v) => s"$v"
+      case FNone()   => "#f"
     }
   }
-  case class Connection(input: Port, output: Port) extends Structure {
-    override def toString = s"[$input -> $output]"
-  }
+  case class FInt(v: Int) extends Value
+  case class FFloat(v: String) extends Value
+  case class FNone() extends Value
 
-  sealed trait Control
-  case class ParComp(c1: Control, c2: Control) extends Control {
-    override def toString(): String = {
-      def f(c: Control) = c match {
-        case SeqComp(_, _) => s"($c)"
-        case _             => s"$c"
+  /* Different ways to make ports */
+  sealed trait Port {
+    override def toString = this match {
+      case CompPort(c, name)   => s"${c.id} @ $name"
+      case CustomPort(c, name) => s"$c @ $name"
+      case LonePort(c)         => s"${c.sub}"
+    }
+  }
+  case class CompPort(c: Component, name: String) extends Port
+  case class CustomPort(c: String, name: String) extends Port
+  case class LonePort(c: Component) extends Port
+
+  /* Different types of structure */
+  sealed trait Structure {
+    override def toString = this match {
+      case NewComp(comp) =>
+        comp.sub match {
+          case Constant(_, _) => ""
+          case _              => s"[${comp.id} = new ${comp.sub}]"
+        }
+      case Connection(input, output) => s"[$input -> $output]"
+    }
+  }
+  case class NewComp(comp: Component) extends Structure
+  case class Connection(input: Port, output: Port) extends Structure
+
+  /* Different types of control  */
+  sealed trait Control {
+    override def toString = this match {
+      case ParComp(c1, c2) => {
+        def f(c: Control) = c match {
+          case SeqComp(_, _) => s"($c)"
+          case _             => s"$c"
+        }
+        s"${f(c1)} ${f(c2)}"
       }
-      s"${f(c1)} ${f(c2)}"
-    }
-  }
-  case class SeqComp(c1: Control, c2: Control) extends Control {
-    override def toString(): String = {
-      def f(c: Control) = c match {
-        case SeqComp(_, _) => s"$c"
-        case NOP()         => ""
-        case _             => s"[$c]"
+      case SeqComp(c1, c2) => {
+        def f(c: Control) = c match {
+          case SeqComp(_, _) => s"$c"
+          case NOP()         => ""
+          case _             => s"[$c]"
+        }
+        s"${f(c1)}\n${f(c2)}"
       }
-      s"${f(c1)}\n${f(c2)}"
+      case Activate(ids)              => ids.mkString("(!! ", " ", ")")
+      case WhileLoop(condition, body) => s"(while ($condition)\n($body))"
+      case NOP()                      => ""
+      case MemPrint(id)               => s"(mem-print $id)"
     }
   }
+  case class ParComp(c1: Control, c2: Control) extends Control
+  case class SeqComp(c1: Control, c2: Control) extends Control
   case class Activate(ids: List[Id]) extends Control {
     def ++(a: Activate): Activate = Activate((this.ids ++ a.ids).distinct)
-    override def toString(): String = ids.mkString("(!! ", " ", ")")
-
   }
-  case class WhileLoop(condition: Port, body: Control) extends Control {
-    override def toString(): String = {
-      s"(while ($condition)\n($body))"
-    }
-  }
-  case class NOP() extends Control {
-    override def toString(): String = ""
-  }
-  case class MemPrint(id: Id) extends Control {
-    override def toString(): String = {
-      s"(mem-print $id)"
-    }
-  }
+  case class WhileLoop(condition: Port, body: Control) extends Control
+  case class NOP() extends Control
+  case class MemPrint(id: Id) extends Control
 
   var idx: Map[String, Int] = Map();
   def genName(base: String): Id = {
@@ -138,10 +128,10 @@ object Futil {
     struct.sortWith(
       (s0, s1) =>
         (s0, s1) match {
-          case (Connection(_, _), Connection(_, _)) => false
-          case (NewComp(_), Connection(_, _))       => true
-          case (Connection(_, _), NewComp(_))       => false
-          case (NewComp(_), NewComp(_))             => true
+          case (_: Connection, _: Connection) => false
+          case (NewComp(_), Connection(_, _)) => true
+          case (Connection(_, _), NewComp(_)) => false
+          case (NewComp(_), NewComp(_))       => true
         }
     )
   }
@@ -247,20 +237,13 @@ private class FutilBackendHelper {
         }
       }
       case EVar(id) =>
-        id.typ match {
-          case _ => {
-            val portName = if (lhs) "in" else "out"
-            (
-              Futil.CustomPort(s"${store(id)}", portName),
-              List(),
-              Futil.Activate(List(store(id)))
-            )
-          }
-          // case Some(TIndex(_, _)) => (Futil.CustomPort(s"$id", "out"), List()) // XXX(sam) maybe should be diff
-          // case Some(_) => (Futil.CustomPort(s"$id", "out"), List())
-          // case N
-          // case None => throw Impossible(s"This one is definitely impossible: $expr")
-        }
+        val portName = if (lhs) "in" else "out"
+        (
+          Futil.CustomPort(s"${store(id)}", portName),
+          List(),
+          Futil.Activate(List(store(id)))
+        )
+
       case EArrAccess(id, idxs) => {
         // aggh scala you should be smarter
         val (ports, structs, acts) = idxs.map(e => emitExpr(e)).unzip3
