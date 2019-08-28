@@ -84,29 +84,42 @@ object Futil {
   /* Different types of control  */
   sealed trait Control {
     override def toString = this match {
-      case ParComp(c1, c2) => {
-        def f(c: Control) = c match {
-          case SeqComp(_, _) => s"($c)"
-          case _             => s"$c"
-        }
-        s"${f(c1)} ${f(c2)}"
+      case ParComp(items) => {
+        items
+          .map(
+            x =>
+              x match {
+                case _: SeqComp => s"($x)"
+                case _          => s"$x"
+              }
+          )
+          .mkString(" ")
       }
-      case SeqComp(c1, c2) => {
-        def f(c: Control) = c match {
-          case SeqComp(_, _) => s"$c"
-          case NOP()         => ""
-          case _             => s"[$c]"
-        }
-        s"${f(c1)}\n${f(c2)}"
+      case SeqComp(items) => {
+        items.map(x => s"[$x]").mkString("\n")
       }
       case Activate(ids)              => ids.mkString("(!! ", " ", ")")
       case WhileLoop(condition, body) => s"(while ($condition)\n($body))"
       case NOP()                      => ""
       case MemPrint(id)               => s"(mem-print $id)"
     }
+
+    def ---(c: Control): Control = (this, c) match {
+      case (seq0: SeqComp, seq1: SeqComp) => SeqComp(seq0.items ++ seq1.items)
+      case (seq: SeqComp, _)              => SeqComp(seq.items ++ List(c))
+      case (_, seq: SeqComp)              => SeqComp(this :: seq.items)
+      case _                              => SeqComp(List(this, c))
+    }
+
+    def <:>(c: Control): Control = (this, c) match {
+      case (par0: ParComp, par1: ParComp) => ParComp(par0.items ++ par1.items)
+      case (par0: ParComp, par1)          => ParComp(par0.items ++ List(par1))
+      case (par0, par1: ParComp)          => ParComp(par0 :: par1.items)
+      case _                              => ParComp(List(this, c))
+    }
   }
-  case class ParComp(c1: Control, c2: Control) extends Control
-  case class SeqComp(c1: Control, c2: Control) extends Control
+  case class ParComp(items: List[Control]) extends Control
+  case class SeqComp(items: List[Control]) extends Control
   case class Activate(ids: List[Id]) extends Control {
     def ++(a: Activate): Activate = Activate((this.ids ++ a.ids).distinct)
   }
@@ -145,7 +158,8 @@ object Futil {
     val imports = List("futil")
     val importStr = imports.mkString("(require ", " ", ")")
 
-    val structStr = struct.map(x => x.toString()).mkString("\n")
+    val structStr =
+      struct.map(x => x.toString()).filterNot(_ == "").mkString("\n")
 
     val body = s"(define/module $name () ()\n ($structStr)\n$control)"
     val execute = "(parse-cmdline (main))"
@@ -314,13 +328,12 @@ private class FutilBackendHelper {
       case CPar(c1, c2) => {
         val (struct1, con1, s1) = emitCmd(c1)
         val (struct2, con2, s2) = emitCmd(c2)(s1)
-        val control = Futil.ParComp(con1, con2)
-        (struct1 ++ struct2, control, s2)
+        (struct1 ++ struct2, con1 <:> con2, s2)
       }
       case CSeq(c1, c2) => {
         val (struct1, con1, s1) = emitCmd(c1)
         val (struct2, con2, s2) = emitCmd(c2)(s1)
-        (struct1 ++ struct2, Futil.SeqComp(con1, con2), s2)
+        (struct1 ++ struct2, con1 --- con2, s2)
       }
       case CLet(id, _, Some(e)) => {
         val reg = Futil.Component(Futil.genName(s"$id"), Futil.Register())
@@ -376,26 +389,18 @@ private class FutilBackendHelper {
             val (combStruct, combControl, _) = emitCmd(comb)(s1)
             (
               struct ++ parStruct ++ combStruct,
-              Futil.SeqComp(
-                Futil.Activate(
-                  List(
-                    iterEn.id,
-                    iterStart.id,
-                    iterIncr.id,
-                    iterEnd.id,
-                    iter.id
-                  )
-                ), // init iter
-                Futil.WhileLoop(
-                  Futil.CompPort(iter, "stop"), // until (iter @ stop) = 0
-                  Futil.SeqComp(
-                    parCon, // body
-                    Futil.SeqComp(
-                      combControl, // combine
-                      Futil.Activate(List(iter.id, iterEn.id)) // iter++
-                    )
-                  )
+              Futil.Activate(
+                List(
+                  iterEn.id,
+                  iterStart.id,
+                  iterIncr.id,
+                  iterEnd.id,
+                  iter.id
                 )
+              ) --- Futil.WhileLoop(
+                Futil.CompPort(iter, "stop"), // until (iter @ stop) = 0
+                (parCon --- combControl) ---
+                  Futil.Activate(List(iter.id, iterEn.id)) // iter++
               ),
               store
             )
@@ -407,10 +412,8 @@ private class FutilBackendHelper {
         val (bodyStruct, bodyCon, _) = emitCmd(body)(store)
         val struct = bodyStruct ++ condStruct
         val control =
-          Futil.SeqComp(
-            acts,
-            Futil.WhileLoop(port, Futil.SeqComp(bodyCon, acts))
-          )
+          acts --- (Futil.WhileLoop(port, bodyCon --- acts))
+
         (struct, control, store)
       }
       case CReduce(rop, lhs, rhs) => {
