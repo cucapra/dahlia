@@ -350,7 +350,7 @@ object TypeChecker {
     nEnv -> (pre.getOrElse(len) -> newBank)
   }
 
-  private def checkPipeline(enabled: Boolean, loop: Command, body: Command) {
+  private def checkPipeline(enabled: Boolean, loop: Command, body: Command) = {
     // Only loops without sequencing may be pipelined.
     body match {
       case _: CSeq => if (enabled) {
