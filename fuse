@@ -1,4 +1,1 @@
-#!/bin/bash
-
-here=`dirname $(readlink $0 || echo $0)`
-java -jar $here/target/scala-2.12/fuse.jar $@
+/home/rachit/git/fuse/target/scala-2.13/fuse.jar
