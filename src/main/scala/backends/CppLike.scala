@@ -119,8 +119,12 @@ object Cpp {
       case CPar(c1, c2) => c1 <@> c2
       case CSeq(c1, c2) => c1 <@> text("//---") <@> c2
       case l:CLet => emitLet(l)
-      case CIf(cond, cons, alt) =>
-        text("if") <> parens(cond) <> scope (cons) <+> text("else") <> scope(alt)
+      case CIf(cond, cons, alt) => {
+        text("if") <+> parens(cond) <+> scope (cons) <> (alt match {
+          case CEmpty => emptyDoc
+          case _ => space <> text("else") <+> scope(alt)
+        })
+      }
       case f:CFor => emitFor(f)
       case w:CWhile => emitWhile(w)
       case CDecorate(dec) => value(dec)
