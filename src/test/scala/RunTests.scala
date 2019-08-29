@@ -5,7 +5,7 @@ import scala.concurrent._
 import org.scalatest.Tag
 
 import java.nio.file.{Files, Paths, Path}
-import collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 import common._
 import Configuration.Config
@@ -65,8 +65,8 @@ class RunTests extends org.scalatest.AsyncFunSuite {
   for (file <- Files.newDirectoryStream(shouldRun).asScala
        if file.toString.matches(srcFilePattern)) {
          test(file.toString, SlowTest) {
-           val dataPath = Paths.get(file + ".data.json")
-           val outFile = tmpDir.resolve(file.getFileName + ".cpp")
+           val dataPath = Paths.get(file.toString + ".data.json")
+           val outFile = tmpDir.resolve(file.getFileName.toString + ".cpp")
 
            // Make sure data file is present
            assert(

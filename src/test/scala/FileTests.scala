@@ -1,7 +1,7 @@
 package fuselang
 
 import java.nio.file.{Files, Paths}
-import collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 import org.scalatest.FunSuite
 
