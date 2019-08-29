@@ -10,9 +10,9 @@ import Configuration._
 import CompilerError._
 
 private class VivadoBackend extends CppLike {
-  val CppPreamble: Doc = """
+  val CppPreamble: Doc = text("""
     |#include <ap_int.h>
-  """.stripMargin.trim
+  """.stripMargin.trim)
 
   def unroll(n: Int): Doc = n match {
     case 1 => emptyDoc
@@ -106,9 +106,10 @@ private class VivadoBackend extends CppLike {
 private class VivadoBackendHeader extends VivadoBackend {
   override def emitCmd(c: Command): Doc = emptyDoc
 
-  override def emitFunc(func: FuncDef, entry: Boolean): Doc = func match { case FuncDef(id, args, ret, _) =>
-    val as = commaSep(args.map(d => emitDecl(d.id, d.typ)))
-    emitType(ret) <+> id <> parens(as) <> semi
+  override def emitFunc(func: FuncDef, entry: Boolean): Doc = func match {
+    case FuncDef(id, args, ret, _) =>
+      val as = commaSep(args.map(d => emitDecl(d.id, d.typ)))
+      emitType(ret) <+> id <> parens(as) <> semi
   }
 
   override def emitProg(p: Prog, c: Config) = {
