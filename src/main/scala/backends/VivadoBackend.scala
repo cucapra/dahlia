@@ -22,7 +22,7 @@ private class VivadoBackend extends CppLike {
   def bank(id: Id, banks: List[Int]): String = banks.zipWithIndex.foldLeft(""){
     case (acc, (bank, dim)) =>
       if (bank != 1) {
-        s"${acc}\n#pragma HLS ARRAY_PARTITION variable=$id cyclic factor=$bank dim=${dim + 1}"
+        s"${acc}#pragma HLS ARRAY_PARTITION variable=$id cyclic factor=$bank dim=${dim + 1}"
       } else {
         acc
       }
@@ -42,7 +42,7 @@ private class VivadoBackend extends CppLike {
   }
 
   def emitPipeline(enabled: Boolean): Doc =
-    if (enabled) value(s"#pragma HLS PIPELINE\n") else emptyDoc
+    if (enabled) value(s"#pragma HLS PIPELINE") <> line else emptyDoc
 
   def emitFor(cmd: CFor): Doc =
     text("for") <> emitRange(cmd.range) <+> scope {
