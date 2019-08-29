@@ -47,27 +47,27 @@ object PrettyPrint {
         if (rem == 1)     { writer write " " }
       }
 
-      def fmt(k: Int, state: List[FmtState]): Unit = state match {
+      def fmt(state: List[FmtState]): Unit = state match {
         case List() => ()
-        case (_, DocNil) :: z => fmt(k, z)
-        case (i, DocCons(h, t)) :: z => fmt(k, (i, h) :: (i, t) :: z)
+        case (_, DocNil) :: z => fmt(z)
+        case (i, DocCons(h, t)) :: z => fmt((i, h) :: (i, t) :: z)
         case (_, DocText(t)) :: z => {
           writer.write(t)
-          fmt(k + t.length(), z)
+          fmt(z)
         }
-        case (i, DocNest(ii, d)) :: z => fmt(k, (i + ii, d) :: z)
+        case (i, DocNest(ii, d)) :: z => fmt((i + ii, d) :: z)
         case (i, DocBreak) :: z => {
           writer.write("\n")
           spaces(i)
-          fmt(i, z)
+          fmt(z)
         }
         case (_, DocSpace) :: z => {
-          writer.write(" "); fmt(k + 1, z)
+          writer.write(" "); fmt(z)
         }
         case _ => ()
       }
 
-      fmt(0, List((0, this)))
+      fmt(List((0, this)))
     }
   }
 
