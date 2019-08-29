@@ -107,7 +107,7 @@ private class VivadoBackendHeader extends VivadoBackend {
   override def emitCmd(c: Command): Doc = emptyDoc
 
   override def emitFunc(func: FuncDef, entry: Boolean): Doc = func match { case FuncDef(id, args, ret, _) =>
-    val as = hsep(args.map(d => emitDecl(d.id, d.typ)), comma)
+    val as = commaSep(args.map(d => emitDecl(d.id, d.typ)))
     emitType(ret) <+> id <> parens(as) <> semi
   }
 

@@ -22,6 +22,8 @@ object Cpp {
 
     val defaultIndent = 2
 
+    def commaSep(docs: List[Doc]) = hsep(docs, comma <> space)
+
     /**
      * Helper to generate a variable declaration with an initial value.
      */
@@ -34,7 +36,7 @@ object Cpp {
      */
     def cCall(f: String, tParam: Option[Doc], args: List[Doc]): Doc = {
       text(f) <> (if (tParam.isDefined) angles(tParam.get) else emptyDoc) <>
-      parens(hsep(args, comma))
+      parens(commaSep(args))
     }
 
     /**
@@ -90,7 +92,7 @@ object Cpp {
 
     implicit def emitExpr(e: Expr): Doc = e match {
       case ECast(e, typ) => parens(emitType(typ)) <> emitExpr(e)
-      case EApp(fn, args) => fn <> parens(hsep(args.map(emitExpr), comma))
+      case EApp(fn, args) => fn <> parens(commaSep(args.map(emitExpr)))
       case EInt(v, base) => value(emitBaseInt(v, base))
       case EFloat(f) => value(f)
       case EBool(b) => value(if(b) 1 else 0)
@@ -98,10 +100,10 @@ object Cpp {
       case EBinop(op, e1, e2) => parens(e1 <+> text(op.toString) <+> e2)
       case EArrAccess(id, idxs) =>
         id <> ssep(idxs.map(idx => brackets(emitExpr(idx))), emptyDoc)
-      case EArrLiteral(idxs) => braces(hsep(idxs.map(idx => emitExpr(idx)), comma))
+      case EArrLiteral(idxs) => braces(commaSep(idxs.map(idx => emitExpr(idx))))
       case ERecAccess(rec, field) => rec <> dot <> field
       case ERecLiteral(fs) => scope {
-        hsep(fs.toList.map({ case (id, expr) => dot <> id <+> equal <+> expr }), comma)
+        commaSep(fs.toList.map({ case (id, expr) => dot <> id <+> equal <+> expr }))
       }
     }
 
@@ -144,7 +146,7 @@ object Cpp {
 
     def emitFunc(func: FuncDef, entry: Boolean = false): Doc = func match {
       case func@FuncDef(id, args, ret, bodyOpt) =>
-        val as = hsep(args.map(decl => emitDecl(decl.id, decl.typ)), comma)
+        val as = commaSep(args.map(decl => emitDecl(decl.id, decl.typ)))
         // If body is not defined, this is an extern. Elide the definition.
         bodyOpt.map(body => emitType(ret) <+> id <> parens(as) <+> scope {
           emitFuncHeader(func, entry) <@>

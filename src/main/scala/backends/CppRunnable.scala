@@ -88,9 +88,9 @@ private class CppRunnable extends CppLike {
   private def recordHelpers: RecordDef => Doc = { case RecordDef(name, fields) =>
     text("void to_json") <>
     parens(text(s"nlohmann::json& j, const ${name}& r")) <+> scope {
-      text("j =") <+> text("nlohmann::json") <> braces(hsep({
+      text("j =") <+> text("nlohmann::json") <> braces(commaSep({
         fields.map({ case (id, _) => braces(quote(id) <> comma <+> text(s"r.$id"))}).toList
-      }, comma)) <> semi
+      })) <> semi
     } <@>
     text("void from_json") <>
     parens(text(s"const nlohmann::json& j, ${name}& r")) <+> scope {
@@ -148,7 +148,7 @@ private class CppRunnableHeader extends CppRunnable {
 
   override def emitFunc(func: FuncDef, entry: Boolean): Doc = func match {
     case FuncDef(id, args, ret, _) => {
-      val as = hsep(args.map(d => emitDecl(d.id, d.typ)), comma)
+      val as = commaSep(args.map(d => emitDecl(d.id, d.typ)))
       emitType(ret) <+> id <> parens(as) <> semi
     }
   }
