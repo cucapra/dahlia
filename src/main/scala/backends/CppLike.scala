@@ -80,7 +80,7 @@ object Cpp {
     implicit def IdToString(id: Id): Doc = value(id.v)
 
     def scope(doc: Doc): Doc =
-      lbrace <@> nest(doc, defaultIndent) <@> rbrace
+      lbrace <> nest(emptyDoc <@> doc, defaultIndent) <@> rbrace
 
     def emitBaseInt(v: Int, base: Int): String = base match {
       case 8 => s"0${Integer.toString(v, 8)}"
