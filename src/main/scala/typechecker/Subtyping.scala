@@ -42,7 +42,7 @@ import fuselang.common.Syntax._
 object Subtyping {
   def bitsNeeded(n: Int) = n match {
     case 0 => 1
-    case n => ceil(log10(n)/log10(2)).toInt + 1
+    case n => ceil(log10(n + 1)/log10(2)).toInt
   }
 
   def areEqual(t1: Type, t2: Type) = (t1, t2) match {
