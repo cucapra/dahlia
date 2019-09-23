@@ -50,6 +50,9 @@ object Syntax {
       case _: TDouble => "double"
       case TSizedInt(l, un) => s"${if (un) "u" else ""}bit<$l>"
       case TStaticInt(s) => s"static($s)"
+      case TStaticDouble(s) => s"static($s)"
+      case TSizedDouble(l, 0,un) => s"${if (un) "u" else ""}bit<$l>"
+      case TSizedDouble(l, i,un) => s"${if (un) "u" else ""}bit<$l,$i>"
       case TArray(t, dims) =>
         s"$t" + dims.foldLeft("")({ case (acc, (d, b)) => s"$acc[$d bank $b]" })
       case TIndex(s, d) => s"idx($s, $d)"
@@ -60,6 +63,7 @@ object Syntax {
   }
   // Types that can be upcast to Ints
   sealed trait IntType
+  //sealed trait IntType
   case class TSizedInt(len: Int, unsigned: Boolean) extends Type with IntType
   case class TStaticInt(v: Int) extends Type with IntType
   case class TIndex(static: (Int, Int), dynamic: (Int, Int)) extends Type with IntType {
@@ -67,6 +71,9 @@ object Syntax {
     // Therefore, the maximum value is one than the product of the interval ends.
     val maxVal: Int = static._2 * dynamic._2 - 1
   }
+  //actually I want TsizedInt to be subtype of TiszedDouble, but don't know how to do it.
+  case class TStaticDouble(v: Double) extends Type
+  case class TSizedDouble(len:Int,integer:Int,unsigned:Boolean) extends Type
   // Use case class instead of case object to get unique positions
   case class TVoid() extends Type
   case class TBool() extends Type
@@ -105,7 +112,7 @@ object Syntax {
     }
   }
   case class EInt(v: Int, base: Int = 10) extends Expr
-  case class EFloat(f: String) extends Expr
+  case class EDouble(f: Double) extends Expr
   case class EBool(v: Boolean) extends Expr
   case class EBinop(op: BOp, e1: Expr, e2: Expr) extends Expr
   case class EArrAccess(id: Id, idxs: List[Expr]) extends Expr with ConsumableAnnotation

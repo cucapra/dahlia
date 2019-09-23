@@ -1,6 +1,6 @@
 package fuselang.typechecker
 
-import scala.math.{max,log10,ceil,abs}
+import scala.math.{max,log10,ceil,abs,pow,round}
 import fuselang.common.Syntax._
 
 /**
@@ -42,8 +42,11 @@ import fuselang.common.Syntax._
 object Subtyping {
   def bitsNeeded(n: Int):Int = n match {
     case 0 => 1
-    case n if n > 0 => {println(n);ceil(log10(n + 1)/log10(2)).toInt}
+    case n if n > 0 => ceil(log10(n + 1)/log10(2)).toInt
     case n if n < 0 => bitsNeeded(abs(n)) + 1
+  }
+  def doubleBitsNeeded(n: Double, l:Int , i:Int):Boolean = (n,l,i) match {
+    case (n,l,i) => round((n - n.toInt)*pow(2,l-i))==(n - n.toInt)*pow(2,l-i) && bitsNeeded(n.toInt) < i 
   }
 
   def areEqual(t1: Type, t2: Type) = (t1, t2) match {
@@ -55,8 +58,11 @@ object Subtyping {
 
   def isSubtype(sub: Type, sup: Type): Boolean = (sub, sup) match {
     case (TSizedInt(v1, un1), TSizedInt(v2, un2)) => un1 == un2 && v1 <= v2
-    case (TStaticInt(v1), TSizedInt(v2,un2)) => ( (v1<0 && un2==false) | (v1>=0) ) && bitsNeeded(v1)<=v2    
-    //case (_:IntType, _:TSizedInt) => true
+    case (TStaticInt(v1), TSizedInt(v2,un2)) => ( (v1<0 && un2==false) | (v1>=0) ) && bitsNeeded(v1)<=v2   
+    case (TSizedInt(v1, un1), TSizedDouble(_,v2, un2)) => un1 == un2 && v1 <= v2
+    case (TSizedDouble(v1, i1, un1), TSizedDouble(v2, i2, un2)) => un1 == un2 && v1 <= v2 && i1 <= i2
+    case (TStaticInt(v1), TSizedDouble(_, i2, un2)) => ( (v1<0 && un2==false) | (v1>=0) ) && bitsNeeded(v1)<=i2  
+    case (TStaticDouble(v1), TSizedDouble(v2, i2, un2) ) => {println(v1,v2,i2,un2); ( (v1<0 && un2==false) | (v1>=0) ) && doubleBitsNeeded(v1,v2,i2)}
     case (_:TStaticInt, _:TIndex) => true
     case (TArray(tsub, subDims), TArray(tsup, supDims)) => {
       // Arrays are invariant
@@ -75,6 +81,8 @@ object Subtyping {
       if (un1 == un2) Some(TSizedInt(max(s1, s2), un1))
       else None
     case (TSizedInt(s, un), TStaticInt(v)) =>
+      Some(TSizedInt(max(s, bitsNeeded(v)), un))
+    case (TStaticInt(v), TSizedInt(s, un)) =>
       Some(TSizedInt(max(s, bitsNeeded(v)), un))
     case (st:TStaticInt, idx:TIndex) =>
       // Infer unsigned
@@ -98,6 +106,7 @@ object Subtyping {
 
   def safeCast(originalType: Type, castType: Type) = (originalType, castType) match {
     case (t1:IntType, t2:TSizedInt) =>  isSubtype(t1, t2)
+    case (t1:TStaticDouble, t2:TSizedDouble) =>  isSubtype(t1, t2)
     case (_:TFloat, _:TSizedInt) => false
     case (_:IntType, _:TFloat) => true
     case (_:TFloat, _:TDouble) => true
