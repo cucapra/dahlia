@@ -42,7 +42,7 @@ import fuselang.common.Syntax._
 object Subtyping {
   def bitsNeeded(n: Int):Int = n match {
     case 0 => 1
-    case n if n > 0 => {println(n);ceil(log10(n + 1)/log10(2)).toInt}
+    case n if n > 0 => ceil(log10(n + 1)/log10(2)).toInt
     case n if n < 0 => bitsNeeded(abs(n)) + 1
   }
 
@@ -55,7 +55,8 @@ object Subtyping {
 
   def isSubtype(sub: Type, sup: Type): Boolean = (sub, sup) match {
     case (TSizedInt(v1, un1), TSizedInt(v2, un2)) => un1 == un2 && v1 <= v2
-    case (TStaticInt(v1), TSizedInt(v2,un2)) => ( (v1<0 && un2==false) | (v1>=0) ) && bitsNeeded(v1)<=v2    
+    case (TStaticInt(v1), TSizedInt(v2,un2)) => ( (v1<0 && un2==false) | (v1>=0) ) && bitsNeeded(v1)<=v2 
+    case (_:TIndex,_:TSizedInt) => true   
     //case (_:IntType, _:TSizedInt) => true
     case (_:TStaticInt, _:TIndex) => true
     case (TArray(tsub, subDims), TArray(tsup, supDims)) => {
