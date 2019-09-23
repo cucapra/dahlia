@@ -1,6 +1,6 @@
 package fuselang.typechecker
 
-import scala.math.{max,log10,ceil}
+import scala.math.{max,log10,ceil,abs}
 import fuselang.common.Syntax._
 
 /**
@@ -40,9 +40,10 @@ import fuselang.common.Syntax._
  *  t2.
  */
 object Subtyping {
-  def bitsNeeded(n: Int) = n match {
+  def bitsNeeded(n: Int):Int = n match {
     case 0 => 1
-    case n => ceil(log10(n + 1)/log10(2)).toInt
+    case n if n > 0 => {println(n);ceil(log10(n + 1)/log10(2)).toInt}
+    case n if n < 0 => bitsNeeded(abs(n)) + 1
   }
 
   def areEqual(t1: Type, t2: Type) = (t1, t2) match {
@@ -54,7 +55,8 @@ object Subtyping {
 
   def isSubtype(sub: Type, sup: Type): Boolean = (sub, sup) match {
     case (TSizedInt(v1, un1), TSizedInt(v2, un2)) => un1 == un2 && v1 <= v2
-    case (_:IntType, _:TSizedInt) => true
+    case (TStaticInt(v1), TSizedInt(v2,un2)) => ( (v1<0 && un2==false) | (v1>=0) ) && bitsNeeded(v1)<=v2    
+    //case (_:IntType, _:TSizedInt) => true
     case (_:TStaticInt, _:TIndex) => true
     case (TArray(tsub, subDims), TArray(tsup, supDims)) => {
       // Arrays are invariant
