@@ -413,13 +413,13 @@ class TypeCheckerSpec extends FunSpec {
       typeCheck("""
               let bucket_idx = 10;
               ---
-              bucket_idx := 20;
+              bucket_idx := (20 as bit<4>);
          """ )
     }
 
     it("check for declarations used in both branches") {
       typeCheck("""
-              let test_var = 10;
+              let test_var:bit<32> = 10;
               {
                 test_var := 50;
                 ---
