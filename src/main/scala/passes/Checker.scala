@@ -46,7 +46,7 @@ object Checker {
     }
 
     def checkE(expr: Expr)(implicit env: Env): Env = expr match {
-      case _:EDouble | _:EInt | _:EBool | _:EVar => env
+      case _:ERational | _:EInt | _:EBool | _:EVar => env
       case ERecLiteral(fields) => checkESeq(fields.map(_._2))
       case EArrLiteral(idxs) => checkESeq(idxs)
       case EBinop(_, e1, e2) => checkESeq(Vector(e1, e2))

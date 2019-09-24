@@ -30,7 +30,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
   lazy val hex = "0x[0-9a-fA-F]+".r ^^ { n => Integer.parseInt(n.substring(2), 16) }
   lazy val octal = "0[0-7]+".r ^^ { n => Integer.parseInt(n.substring(1), 8) }
   //lazy val fixed = "f'(-)?[0-9]+\\.[0-9]+".r 
-  lazy val double = "(-)?[0-9]+\\.[0-9]+".r ^^ {n => EDouble(n.toDouble)}
+  lazy val rational = "(-)?[0-9]+\\.[0-9]+".r ^^ {r => ERational(r)}
   lazy val boolean = "true" ^^ { _ => true } | "false" ^^ { _ => false }
 
   lazy val arrLiteral: P[Expr] = positioned {
@@ -51,7 +51,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
     arrLiteral |
     eaa |
     recLiteral |
-    double |
+    rational |
     hex ^^ { case h => EInt(h, 16) } |
     octal ^^ { case o => EInt(o, 8) } |
     uInt |

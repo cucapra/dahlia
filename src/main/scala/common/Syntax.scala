@@ -105,7 +105,7 @@ object Syntax {
     }
   }
   case class EInt(v: Int, base: Int = 10) extends Expr
-  case class EDouble(d: Double) extends Expr
+  case class ERational(d: String) extends Expr
   case class EBool(v: Boolean) extends Expr
   case class EBinop(op: BOp, e1: Expr, e2: Expr) extends Expr
   case class EArrAccess(id: Id, idxs: List[Expr]) extends Expr with ConsumableAnnotation
