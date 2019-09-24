@@ -46,8 +46,11 @@ object Syntax {
     override def toString = this match {
       case _: TVoid => "void"
       case _: TBool => "bool"
+      case _: TRational => "rational"
       case _: TFloat => "float"
       case _: TDouble => "double"
+      case TFixed(t,i,true) => s"ufix<$t, ${if (t==i) "" else ",$i"}>"
+      case TFixed(t,i,false) => s"fix<$t, ${if (t==i) "" else ",$i"}>"
       case TSizedInt(l, un) => s"${if (un) "u" else ""}bit<$l>"
       case TStaticInt(s) => s"static($s)"
       case TArray(t, dims) =>
@@ -70,8 +73,11 @@ object Syntax {
   // Use case class instead of case object to get unique positions
   case class TVoid() extends Type
   case class TBool() extends Type
+
+  case class TRational(integer:Double) extends Type 
   case class TFloat() extends Type
   case class TDouble() extends Type
+  case class TFixed(ltotal:Int, lint:Int, unsigned:Boolean) extends Type
   case class TFun(args: List[Type], ret: Type) extends Type
   case class TRecType(name: Id, fields: Map[Id, Type]) extends Type
   case class TAlias(name: Id) extends Type

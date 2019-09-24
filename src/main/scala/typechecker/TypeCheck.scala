@@ -205,6 +205,7 @@ object TypeChecker {
       case (_:IntType, _:IntType) => TBool()
       case (_:TFloat, _:TFloat) => TBool()
       case (_:TDouble, _:TDouble) => TBool()
+      case (_:TRational, _:TRational) => TBool()
       case _ => throw BinopError(op, "float, integer, or double", t1, t2)
     }
     case _:NumOp =>
@@ -237,7 +238,7 @@ object TypeChecker {
   private def _checkE
     (expr: Expr)
     (implicit env: Environment): (Type, Environment) = expr match {
-    case ERational(_) => TDouble() -> env
+    case ERational(v) => TRational(v.toDouble) -> env
     case EInt(v, _) => TStaticInt(v) -> env
     case EBool(_) => TBool() -> env
     case ERecLiteral(_) => throw NotInBinder(expr.pos, "Record Literal")
