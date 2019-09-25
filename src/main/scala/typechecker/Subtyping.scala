@@ -63,14 +63,11 @@ object Subtyping {
       areEqual(tsup, tsub) && subDims == supDims
     }
     case (_:TFloat, _:TDouble) => true
-    case (_:TRational, _:TFloat) | (_:TFloat, _:TRational) => true
-    case (_:TRational, _:TDouble) | (_:TRational, _:TDouble) => true
+    case (_:TRational, _:TFloat) => true
+    case (_:TRational, _:TDouble) => true
     case (TRational(v1), TFixed(_,i2,un2)) => 
       ( (v1<0 && un2==false) | (v1>=0) ) && bitsNeeded(v1.toInt)<=i2 
-    case (TFixed(_,i2,un2), TRational(v1)) => 
-      ( (v1<0 && un2==false) | (v1>=0) ) && bitsNeeded(v1.toInt)<=i2 
-    
-    case (TFixed(t1,i1,un1), TFixed(t2,i2,un2) )=> (un1 == un2 && i1 <= i2 && (t1-i1)<=(t2-i2) )
+    case (TFixed(t1,i1,un1), TFixed(t2,i2,un2) ) => (un1 == un2 && i1 <= i2 && (t1-i1)<=(t2-i2) )
     case _ => areEqual(sub, sup)
   }
 

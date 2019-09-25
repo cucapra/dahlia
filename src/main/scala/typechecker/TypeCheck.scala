@@ -471,6 +471,7 @@ object TypeChecker {
       // have static types.
       val rTyp = typ.map(env.resolveType(_) match {
         case TStaticInt(v) => TSizedInt(bitsNeeded(v), false)
+        case _:TRational => TDouble()
         case t => t
       })
       val (t, e1) = checkE(exp)
@@ -484,6 +485,7 @@ object TypeChecker {
         case None => {
           val typ = t match {
             case TStaticInt(v) => TSizedInt(bitsNeeded(v), false)
+            case _:TRational => TDouble()
             case t => t
           }
           // Add inferred type to the AST Node.

@@ -74,7 +74,7 @@ object Syntax {
   case class TVoid() extends Type
   case class TBool() extends Type
 
-  case class TRational(integer:Double) extends Type 
+  case class TRational(value:Double) extends Type 
   case class TFloat() extends Type
   case class TDouble() extends Type
   case class TFixed(ltotal:Int, lint:Int, unsigned:Boolean) extends Type
