@@ -238,7 +238,7 @@ object TypeChecker {
   private def _checkE
     (expr: Expr)
     (implicit env: Environment): (Type, Environment) = expr match {
-    case ERational(v) => TRational(v.toDouble) -> env
+    case ERational(v) => TRational(v) -> env
     case EInt(v, _) => TStaticInt(v) -> env
     case EBool(_) => TBool() -> env
     case ERecLiteral(_) => throw NotInBinder(expr.pos, "Record Literal")
@@ -467,8 +467,9 @@ object TypeChecker {
     }
     case l@CLet(id, typ, Some(exp)) => {
       // Check if the explicit type is bound in scope. Also, if the type is
-      // a static int, upcast it to sized int. We do not allow variables to
-      // have static types.
+      // a static int, upcast it to sized int; if the type is rational, 
+      // upcast it to double. We do not allow variables to have 
+      // static or rational types.
       val rTyp = typ.map(env.resolveType(_) match {
         case TStaticInt(v) => TSizedInt(bitsNeeded(v), false)
         case _:TRational => TDouble()

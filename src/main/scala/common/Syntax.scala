@@ -49,8 +49,8 @@ object Syntax {
       case _: TRational => "rational"
       case _: TFloat => "float"
       case _: TDouble => "double"
-      case TFixed(t,i,true) => s"ufix<$t, ${if (t==i) "" else ",$i"}>"
-      case TFixed(t,i,false) => s"fix<$t, ${if (t==i) "" else ",$i"}>"
+      case TFixed(t,i,true) => s"ufix<$t${if (t==i) "" else ",i"}>"
+      case TFixed(t,i,false) => s"fix<$t${if (t==i) "" else ",i"}>"
       case TSizedInt(l, un) => s"${if (un) "u" else ""}bit<$l>"
       case TStaticInt(s) => s"static($s)"
       case TArray(t, dims) =>
@@ -74,7 +74,7 @@ object Syntax {
   case class TVoid() extends Type
   case class TBool() extends Type
 
-  case class TRational(value:Double) extends Type 
+  case class TRational(value:String) extends Type 
   case class TFloat() extends Type
   case class TDouble() extends Type
   case class TFixed(ltotal:Int, lint:Int, unsigned:Boolean) extends Type
