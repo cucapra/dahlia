@@ -74,12 +74,12 @@ object Subtyping {
   private def joinOfHelper(t1: Type, t2: Type, op: BOp): Option[Type] = (t1, t2) match {
     //XXX(Zhijing): what happens for multiplication? Overflow?
     case (TStaticInt(v1), TStaticInt(v2)) => op.toFun match {
-      case Some(fun) => Some(TStaticInt(fun(v1, v2)))
+      case Some(fun) => Some(TStaticInt(fun(v1.toDouble, v2.toDouble).toInt))
       case None => Some(TSizedInt(max(bitsNeeded(v1), bitsNeeded(v2)), false))
     }
     case (TRational(v1), TRational(v2)) => op.toFun match {
       //XXX(Zhijing):deprecated
-      case Some(fun) => Some(TRational(fun(v1.toDouble.toInt, v2.toDouble.toInt).toString))
+      case Some(fun) => Some(TRational(fun(v1.toDouble, v2.toDouble).toString))
       case None => 
         if (bitsNeeded(v1.toDouble.toInt)>bitsNeeded(v2.toDouble.toInt)) Some(TRational(v1))
         else Some(TRational(v2)) 

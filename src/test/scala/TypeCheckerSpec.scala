@@ -15,14 +15,19 @@ class TypeCheckerSpec extends FunSpec {
           typeCheck("decl a: bit<16>; let x: bit<8> = a;")
         }
       }
-      it("disallows using smaller range of fix int in assignment") {
+      it("disallows using smaller range of fix in assignment") {
         assertThrows[UnexpectedSubtype] {
-          typeCheck("decl a: fix<16>; let x: fix<8> = a;")
+          typeCheck("decl a: fix<16,8>; let x: fix<8,4> = a;")
         }
       }
       it("RHS type must be equal to LHS type") {
         assertThrows[UnexpectedSubtype] {
-          typeCheck("let x: bit<16> = true")
+          typeCheck("let x: bit<16> = true;")
+        }
+      }
+      it("RHS type must be equal to LHS type for computable numbers") {
+        assertThrows[NoJoin] {
+          typeCheck("let x: fix<2,2> = 2+2.1;")
         }
       }
     }
@@ -44,7 +49,7 @@ class TypeCheckerSpec extends FunSpec {
       }
       it("fix type requires correct type in assignment") {
         assertThrows[UnexpectedSubtype] {
-          typeCheck("let x: fix<2>; x := true;")
+          typeCheck("let x: fix<2,2>; x := true;")
         }
       }
       it("fix type has range checking") {
@@ -171,6 +176,9 @@ class TypeCheckerSpec extends FunSpec {
     it("comparisons on rational returns a boolean") {
       typeCheck("if (2.5 < 23.5) { 1 }")
     }
+    it("comparisons on float and rational a boolean"){
+      typeCheck("let x: float = 1.0; x < 10.0")
+    }
     it("can add sized int to sized int") {
       typeCheck("decl x: bit<64>; let y = 1; x + y;")
     }
@@ -197,7 +205,7 @@ class TypeCheckerSpec extends FunSpec {
     }
     it("cannot add fix dec and int") {
       assertThrows[NoJoin] {
-        typeCheck("decl f: fix<32>; f + 1")
+        typeCheck("decl f: fix<32,16>; f + 1")
       }
     }
     it("comparison not defined for memories") {
@@ -215,14 +223,14 @@ class TypeCheckerSpec extends FunSpec {
         typeCheck("1 || 2")
       }
     }
-    it("adding fix does NOT perform type level computation") {
+    it("adding static int does NOT perform type level computation") {
       typeCheck("let x = 1; let y = 2; let z = x + y;")
     }
     it("result of bit type addition upcast to subtype join") {
       typeCheck("decl x: bit<32>; decl y: bit<16>; let z = x + y")
     }
     it("result of fix type addition upcast to subtype join") {
-      typeCheck("decl x: fix<32>; decl y: fix<16>; let z = x + y")
+      typeCheck("decl x: fix<32,16>; decl y: fix<16,8>; let z = x + y")
     }
   }
 
@@ -1376,8 +1384,8 @@ class TypeCheckerSpec extends FunSpec {
     it("unsigned and signed fixed point types are incomparable") {
       assertThrows[NoJoin] {
         typeCheck("""
-          decl x: ufix<32>;
-          decl y: fix<32>;
+          decl x: ufix<32,16>;
+          decl y: fix<32,16>;
           let z = x + y;
           """ )
       }
@@ -1474,9 +1482,9 @@ class TypeCheckerSpec extends FunSpec {
     }
     it("safe to cast bit to fix as long as the integer length part is shorter") {
       typeCheck("""
-        decl x: fix<32>;
-        decl y: bit<32>;
-        (y as fix<32>) + x;
+        decl x: fix<32,16>;
+        decl y: bit<16>;
+        (y as fix<32,16>) + x;
         """ )
     }
     it("warning when casting float to bit type") {
@@ -1488,9 +1496,9 @@ class TypeCheckerSpec extends FunSpec {
     }
     it("warning when casting fix to bit type") {
       typeCheck("""
-        decl x: fix<32>;
-        decl y: bit<32>;
-        (x as bit<32>) + y
+        decl x: fix<32,16>;
+        decl y: bit<16>;
+        (x as bit<16>) + y
         """ )
     }
     it("safe to cast integer float to double") {

@@ -23,12 +23,17 @@ object Syntax {
     }
   }
 
-  object OpConstructor {
+  object OpConstructor {/*
     val add: (Int, Int) => Int = (_ + _)
     val mul: (Int, Int) => Int = (_ * _)
     val div: (Int, Int) => Int = (_ / _)
     val sub: (Int, Int) => Int = (_ - _)
-    val mod: (Int, Int) => Int = (_ % _)
+    val mod: (Int, Int) => Int = (_ % _)*/
+    val add: (Double, Double) => Double = (_ + _)
+    val mul: (Double, Double) => Double = (_ * _)
+    val div: (Double, Double) => Double = (_ / _)
+    val sub: (Double, Double) => Double = (_ - _)
+    val mod: (Double, Double) => Double = (_ % _)
   }
 
   import Annotations._
@@ -49,8 +54,7 @@ object Syntax {
       case _: TRational => "rational"
       case _: TFloat => "float"
       case _: TDouble => "double"
-      case TFixed(t,i,true) => s"ufix<$t${if (t==i) "" else s", $i"}>"
-      case TFixed(t,i,false) => s"fix<$t${if (t==i) "" else s", $i"}>"
+      case TFixed(t,i, un) => s"${if (un) "u" else ""}fix<$t,$i>"
       case TSizedInt(l, un) => s"${if (un) "u" else ""}bit<$l>"
       case TStaticInt(s) => s"static($s)"
       case TArray(t, dims) =>
@@ -92,8 +96,12 @@ object Syntax {
   sealed trait BOp extends Positional {
     val op: String;
     override def toString = this.op
-    def toFun: Option[(Int, Int) => Int] = this match {
-      case n:NumOp => Some(n.fun)
+    /*def toFun: Option[(Int, Int) => Int] = this match {
+      case n: NumOp => Some(n.fun)
+      case _ => None
+    }*/
+    def toFun: Option[(Double, Double) => Double] = this match {
+      case n: NumOp => Some(n.fun)
       case _ => None
     }
   }
@@ -101,7 +109,8 @@ object Syntax {
   case class EqOp(op: String) extends BOp
   case class CmpOp(op: String) extends BOp
   case class BoolOp(op: String) extends BOp
-  case class NumOp(op: String, fun: (Int, Int) => Int) extends BOp
+  case class NumOp(op: String, fun: (Double, Double) => Double) extends BOp 
+  //case class NumOp(op: String, fun: (Int, Int) => Int) extends BOp 
   case class BitOp(op: String) extends BOp
 
   sealed trait Expr extends Positional with TypeAnnotation {

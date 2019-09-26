@@ -205,11 +205,13 @@ object TypeChecker {
       case (_:IntType, _:IntType) => TBool()
       case (_:TFloat, _:TFloat) => TBool()
       case (_:TDouble, _:TDouble) => TBool()
-      case (_:TRational, _:TRational) => TBool()
-      case _ => throw BinopError(op, "float, integer, or double", t1, t2)
+      case (_:TRational|_:TDouble|_:TFloat|_:TFixed, _:TRational) => TBool()
+      case _ => throw BinopError(op, "float, integer, rational, or double", t1, t2)
     }
     case _:NumOp =>
       joinOf(t1, t2, op).getOrThrow(NoJoin(op.pos, op.toString, t1, t2))
+    //case _:DoubleOp =>
+    //  joinOf(t1, t2, op).getOrThrow(NoJoin(op.pos, op.toString, t1, t2))
     case _:BitOp => (t1, t2) match {
       case (_:TSizedInt, _:IntType) => t1
       case (TStaticInt(v), _:IntType) => TSizedInt(bitsNeeded(v), false)
