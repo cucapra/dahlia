@@ -94,7 +94,7 @@ object Cpp {
       case ECast(e, typ) => parens(emitType(typ)) <> emitExpr(e)
       case EApp(fn, args) => fn <> parens(commaSep(args.map(emitExpr)))
       case EInt(v, base) => value(emitBaseInt(v, base))
-      case EDouble(d) => value(d)
+      case ERational(d) => value(d)
       case EBool(b) => value(if(b) 1 else 0)
       case EVar(id) => value(id)
       case EBinop(op, e1, e2) => parens(e1 <+> text(op.toString) <+> e2)

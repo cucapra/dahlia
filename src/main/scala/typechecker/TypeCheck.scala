@@ -205,10 +205,13 @@ object TypeChecker {
       case (_:IntType, _:IntType) => TBool()
       case (_:TFloat, _:TFloat) => TBool()
       case (_:TDouble, _:TDouble) => TBool()
-      case _ => throw BinopError(op, "float, integer, or double", t1, t2)
+      case (_:TRational|_:TDouble|_:TFloat|_:TFixed, _:TRational) => TBool()
+      case _ => throw BinopError(op, "float, integer, rational, or double", t1, t2)
     }
     case _:NumOp =>
       joinOf(t1, t2, op).getOrThrow(NoJoin(op.pos, op.toString, t1, t2))
+    //case _:DoubleOp =>
+    //  joinOf(t1, t2, op).getOrThrow(NoJoin(op.pos, op.toString, t1, t2))
     case _:BitOp => (t1, t2) match {
       case (_:TSizedInt, _:IntType) => t1
       case (TStaticInt(v), _:IntType) => TSizedInt(bitsNeeded(v), false)
@@ -237,7 +240,7 @@ object TypeChecker {
   private def _checkE
     (expr: Expr)
     (implicit env: Environment): (Type, Environment) = expr match {
-    case EDouble(_) => TDouble() -> env
+    case ERational(v) => TRational(v) -> env
     case EInt(v, _) => TStaticInt(v) -> env
     case EBool(_) => TBool() -> env
     case ERecLiteral(_) => throw NotInBinder(expr.pos, "Record Literal")
@@ -466,10 +469,12 @@ object TypeChecker {
     }
     case l@CLet(id, typ, Some(exp)) => {
       // Check if the explicit type is bound in scope. Also, if the type is
-      // a static int, upcast it to sized int. We do not allow variables to
-      // have static types.
+      // a static int, upcast it to sized int; if the type is rational, 
+      // upcast it to double. We do not allow variables to have 
+      // static or rational types.
       val rTyp = typ.map(env.resolveType(_) match {
         case TStaticInt(v) => TSizedInt(bitsNeeded(v), false)
+        case _:TRational => TDouble()
         case t => t
       })
       val (t, e1) = checkE(exp)
@@ -483,6 +488,7 @@ object TypeChecker {
         case None => {
           val typ = t match {
             case TStaticInt(v) => TSizedInt(bitsNeeded(v), false)
+            case _:TRational => TDouble()
             case t => t
           }
           // Add inferred type to the AST Node.

@@ -20,10 +20,12 @@ private class CppRunnable extends CppLike {
   def emitType(typ: Type): Doc = typ match {
     case _:TVoid => text("void")
     case _:TBool => text("bool")
-    case _:TIndex | _:TStaticInt => text("int")
+    case _:TIndex => text("int")
+    case _:TStaticInt => throw Impossible("TStaticInt type should not exist")    
     case TSizedInt(_, un) => text(if (un) "unsigned int" else "int")
     case _:TFloat => text("float")
-    case _:TDouble => text("double")
+    case _:TDouble | _:TFixed => text("double")
+    case _:TRational => throw Impossible("Rational type should not exist")
     case TArray(typ, dims) =>
       dims.foldLeft(emitType(typ))({ case (acc, _) => text("vector") <> angles(acc) })
     case TRecType(n, _) => value(n)
@@ -60,7 +62,7 @@ private class CppRunnable extends CppLike {
     val typ = id.typ.get
 
     val (typeName, cTyp): (Doc, Doc) = typ match {
-      case _:TAlias | _:TRecType | _:TBool | _:IntType | _:TFloat => {
+      case _:TAlias | _:TRecType | _:TBool | _:IntType | _:TFloat | _:TFixed => {
         val typeName = emitType(typ)
         (quote(typeName), typeName)
       }

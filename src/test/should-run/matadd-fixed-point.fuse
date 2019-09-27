@@ -1,0 +1,25 @@
+import "cassert" {
+  def assert(cond: bool);
+}
+
+decl gold: fix<16,8>;
+decl a: fix<16,8>[2][2];
+decl b: fix<16,8>[2][2];
+decl c: fix<16,8>[2][2];
+
+for (let i = 0..2) {
+  for (let j = 0..2) {
+    c[i][j] := a[i][j] + b[i][j];
+  }
+}
+---
+let sum: fix<16,8> = 0.0;
+for (let i = 0..2) {
+  for (let j = 0..2) {
+    let v = c[i][j];
+  } combine {
+    sum += v;
+  }
+}
+
+assert(gold == sum)
