@@ -1,15 +1,14 @@
 name := "Fuse"
-version := "0.0.1"
+version := "0.0.2"
 
-scalaVersion := "2.12.8"
+scalaVersion := "2.13.0"
 
 libraryDependencies ++= Seq(
-  "org.scalatest" %% "scalatest" % "3.0.0" % "test",
-  "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.1",
-  "org.bitbucket.inkytonik.kiama" %% "kiama" % "2.2.0",
+  "org.scalatest" %% "scalatest" % "3.0.8" % "test",
+  "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2",
   "com.github.scopt" %% "scopt" % "3.7.1",
-  "com.outr" %% "scribe" % "2.7.2",
-  "com.lihaoyi" %% "sourcecode" % "0.1.5"
+  "com.outr" %% "scribe" % "2.7.9",
+  "com.lihaoyi" %% "sourcecode" % "0.1.7"
 )
 
 scalacOptions ++= Seq(
@@ -18,7 +17,6 @@ scalacOptions ++= Seq(
   "-feature",
   "-Ywarn-unused",
   "-Ywarn-value-discard",
-  "-Yno-adapted-args",
   "-Xfatal-warnings"
 )
 
@@ -43,7 +41,8 @@ getHeaders := {
   val jsonHppLoc = new File("src/main/resources/headers/json.hpp")
 
   if (!jsonHppLoc.exists()) {
-    val jsonHpp = new URL("https://raw.githubusercontent.com/nlohmann/json/develop/single_include/nlohmann/json.hpp")
+    val jsonHpp = new URL(
+      "https://raw.githubusercontent.com/nlohmann/json/develop/single_include/nlohmann/json.hpp")
     val cmd = Seq("wget", jsonHpp, "--directory-prefix", jsonHppLoc.toString)
     // sys.process DSL magic!
     jsonHpp #> jsonHppLoc !!

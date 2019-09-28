@@ -10,9 +10,9 @@ syn keyword fuseConstant true false
 syn keyword fuseType ubit bit float bool bank double
 
 " Control structures
-syn keyword fuseKeyword if for while import
+syn keyword fuseKeyword if else for while import
 " Binding variables
-syn keyword fuseKeyword let def decl extern as
+syn keyword fuseKeyword let def decl extern as decor
 syn keyword fuseKeyword unroll record combine
 syn keyword fuseKeyword view split
 

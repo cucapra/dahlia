@@ -1,6 +1,8 @@
 package fuselang.backend
 
 import Cpp._
+import PrettyPrint.Doc
+import PrettyPrint.Doc._
 
 import fuselang.common._
 import Syntax._
@@ -16,24 +18,26 @@ import CompilerError._
 private class CppRunnable extends CppLike {
 
   def emitType(typ: Type): Doc = typ match {
-    case _:TVoid => "void"
-    case _:TBool => "bool"
-    case _:TIndex | _:TStaticInt => "int"
-    case TSizedInt(_, un) => if (un) "unsigned int" else "int"
-    case _:TFloat => "float"
-    case _:TDouble => "double"
+    case _:TVoid => text("void")
+    case _:TBool => text("bool")
+    case _:TIndex => text("int")
+    case _:TStaticInt => throw Impossible("TStaticInt type should not exist")    
+    case TSizedInt(_, un) => text(if (un) "unsigned int" else "int")
+    case _:TFloat => text("float")
+    case _:TDouble | _:TFixed => text("double")
+    case _:TRational => throw Impossible("Rational type should not exist")
     case TArray(typ, dims) =>
-      dims.foldLeft(emitType(typ))({ case (acc, _) => "vector" <> angles(acc) })
-    case TRecType(n, _) => n
+      dims.foldLeft(emitType(typ))({ case (acc, _) => text("vector") <> angles(acc) })
+    case TRecType(n, _) => value(n)
     case _:TFun =>
       throw Impossible("Cannot emit function types")
-    case TAlias(n) => n
+    case TAlias(n) => value(n)
   }
 
-  def emitArrayDecl(ta: TArray, id: Id) = emitType(ta) <+> s"$id"
+  def emitArrayDecl(ta: TArray, id: Id) = emitType(ta) <+> text(s"$id")
 
   def emitFor(cmd: CFor): Doc =
-    "for" <> emitRange(cmd.range) <+> scope {
+    text("for") <> emitRange(cmd.range) <+> scope {
       cmd.par <> {
         if (cmd.combine != CEmpty)
           line <> text("// combiner:") <@> cmd.combine
@@ -58,14 +62,15 @@ private class CppRunnable extends CppLike {
     val typ = id.typ.get
 
     val (typeName, cTyp): (Doc, Doc) = typ match {
-      case _:TAlias | _:TRecType | _:TBool | _:IntType | _:TFloat => {
+      case _:TAlias | _:TRecType | _:TBool | _:IntType | _:TFloat | _:TFixed => {
         val typeName = emitType(typ)
         (quote(typeName), typeName)
       }
       case arr@TArray(_, dims) => {
-        val typeName = quote(s"${arr.typ}${dims.map(_ => "[]").mkString}")
+        val typeName = quote(text(s"${arr.typ}${dims.map(_ => "[]").mkString}"))
         val cType =
-          "n_dim_vec_t" <> angles(emitType(arr.typ) <> comma <+> dims.length.toString)
+          text("n_dim_vec_t") <>
+        angles(emitType(arr.typ) <> comma <+> value(dims.length))
         (typeName, cType)
       }
       case t =>
@@ -73,7 +78,7 @@ private class CppRunnable extends CppLike {
     }
 
     cBind(s"${id}",
-      cCall("get_arg", Some(cTyp), List(quote(id), typeName, "v")))
+      cCall("get_arg", Some(cTyp), List(quote(id), typeName, text("v"))))
 
   }}
 
@@ -83,15 +88,17 @@ private class CppRunnable extends CppLike {
    * See: https://github.com/nlohmann/json#basic-usage
    */
   private def recordHelpers: RecordDef => Doc = { case RecordDef(name, fields) =>
-    "void to_json" <> parens(s"nlohmann::json& j, const ${name}& r") <+> scope {
-      "j =" <+> "nlohmann::json" <> braces(hsep({
-        fields.map({ case (id, _) => braces(quote(id) <> comma <+> s"r.$id")}).toList
-      }, comma)) <> semi
+    text("void to_json") <>
+    parens(text(s"nlohmann::json& j, const ${name}& r")) <+> scope {
+      text("j =") <+> text("nlohmann::json") <> braces(commaSep({
+        fields.map({ case (id, _) => braces(quote(id) <> comma <+> text(s"r.$id"))}).toList
+      })) <> semi
     } <@>
-    "void from_json" <> parens(s"const nlohmann::json& j, ${name}& r") <+> scope {
+    text("void from_json") <>
+    parens(text(s"const nlohmann::json& j, ${name}& r")) <+> scope {
       vsep({
         fields.map({ case (id, _) =>
-          "j.at" <> parens(quote(id)) <> ".get_to" <> parens(s"r.$id") <> semi
+          text("j.at") <> parens(quote(id)) <> text(".get_to") <> parens(text(s"r.$id")) <> semi
         }).toList
       })
     }
@@ -126,24 +133,26 @@ private class CppRunnable extends CppLike {
     // Generate a main function that parses are kernel parameters and calls
     // the kernel function.
     val main = value("int main(int argc, char** argv)") <+> scope {
-      "using namespace flattening;" <@>
-      cBind("v", cCall("parse_data", None, List("argc", "argv"))) <> semi <@>
+      text("using namespace flattening;") <@>
+      cBind("v", cCall("parse_data", None, List(text("argc"), text("argv")))) <> semi <@>
       getArgs <@>
       cCall(c.kernelName, None, p.decls.map(decl => value(decl.id.v))) <> semi <@>
-      "return 0" <> semi
+      text("return 0") <> semi
     }
 
     // Emit string
-    super.pretty(kernel <@> main).layout
+    (kernel <@> main).pretty
   }
 }
 
 private class CppRunnableHeader extends CppRunnable {
   override def emitCmd(c: Command): Doc = emptyDoc
 
-  override def emitFunc(func: FuncDef, entry: Boolean): Doc = func match { case FuncDef(id, args, ret, _) =>
-    val as = hsep(args.map(d => emitDecl(d.id, d.typ)), comma)
-    emitType(ret) <+> id <> parens(as) <> semi
+  override def emitFunc(func: FuncDef, entry: Boolean): Doc = func match {
+    case FuncDef(id, args, ret, _) => {
+      val as = commaSep(args.map(d => emitDecl(d.id, d.typ)))
+      emitType(ret) <+> id <> parens(as) <> semi
+    }
   }
 
   override def emitProg(p: Prog, c: Config) = {
@@ -154,7 +163,7 @@ private class CppRunnableHeader extends CppRunnable {
       vsep (p.defs.map(emitDef)) <@>
       emitFunc(FuncDef(Id(c.kernelName), p.decls, TVoid(), None), true)
 
-    super.pretty(declarations).layout
+    declarations.pretty
   }
 }
 

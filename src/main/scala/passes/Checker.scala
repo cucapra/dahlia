@@ -24,7 +24,7 @@ object Checker {
     /**
      * Top level function called on the AST.
      */
-    def check(p: Prog)
+    def check(p: Prog): Unit
 
     /**
      * Helper functions for checking sequences of the same element.
@@ -46,7 +46,7 @@ object Checker {
     }
 
     def checkE(expr: Expr)(implicit env: Env): Env = expr match {
-      case _:EFloat | _:EInt | _:EBool | _:EVar => env
+      case _:ERational | _:EInt | _:EBool | _:EVar => env
       case ERecLiteral(fields) => checkESeq(fields.map(_._2))
       case EArrLiteral(idxs) => checkESeq(idxs)
       case EBinop(_, e1, e2) => checkESeq(Vector(e1, e2))

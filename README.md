@@ -1,12 +1,12 @@
-# Fuse
+# Dahlia
 
-[![CircleCI](https://circleci.com/gh/cucapra/seashell.svg?style=svg)](https://circleci.com/gh/cucapra/seashell)
+[![CircleCI](https://circleci.com/gh/cucapra/dahlia.svg?style=svg)](https://circleci.com/gh/cucapra/dahlia)
 
-Fuse is a programming language for designing hardware accelerators.
+Dahlia is a programming language for designing hardware accelerators.
 It provides abstractions that guarantee hardware realizability after type checking.
 For more details, see [the documentation][docs].
 
-Seashell is the reference compiler for compiling Fuse programs to various HLS
+Fuse is the reference compiler for compiling Dahlia programs to various HLS
 backends. Vivado HLS is the only currently supported backend.
 
 [docs]: https://capra.cs.cornell.edu/fuse
