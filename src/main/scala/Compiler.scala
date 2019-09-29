@@ -10,8 +10,8 @@ object Compiler {
 
   def toBackend(str: BackendOption): fuselang.backend.Backend = str match {
     case Vivado => backend.VivadoBackend
-    case Cpp => backend.CppRunnable
-    case Futil => backend.FutilBackend
+    case Cpp    => backend.CppRunnable
+    case Futil  => backend.futil.FutilBackend
   }
 
   def compileStringWithError(prog: String, c: Config = emptyConf) = {
@@ -33,16 +33,21 @@ object Compiler {
       scribe.debug(f.getStackTrace().mkString("\n"))
       f match {
         case _: Errors.TypeError => s"[${red("Type error")}] ${f.getMessage}"
-        case _: Errors.ParserError => s"[${red("Parsing error")}] ${f.getMessage}"
+        case _: Errors.ParserError =>
+          s"[${red("Parsing error")}] ${f.getMessage}"
         case _: CompilerError.Impossible =>
           s"[${red("Impossible")}] ${f.getMessage}. " +
-          "This should never trigger. Please report this as a bug."
+            "This should never trigger. Please report this as a bug."
         case _ => s"[${red("Error")}] ${f.getMessage}"
       }
     })
   }
 
-  def compileStringToFile(prog: String, c: Config, out: String): Either[String, Path] = {
+  def compileStringToFile(
+      prog: String,
+      c: Config,
+      out: String
+  ): Either[String, Path] = {
     import java.nio.file.{Files, Paths, StandardOpenOption}
 
     compileString(prog, c).map(p => {
@@ -51,7 +56,8 @@ object Compiler {
         p.toCharArray.map(_.toByte),
         StandardOpenOption.CREATE,
         StandardOpenOption.TRUNCATE_EXISTING,
-        StandardOpenOption.WRITE)
+        StandardOpenOption.WRITE
+      )
     })
   }
 
