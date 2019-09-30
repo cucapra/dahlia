@@ -11,8 +11,8 @@ object Futil {
 
   case class CompVar(name: String) extends Emitable {
     override def doc(): Doc = Doc.text(name)
-    def @@(port: String): CompPort = CompPort(this, port)
-    def ^^(suffix: String): CompVar = CompVar(s"$name$suffix")
+    def port(port: String): CompPort = CompPort(this, port)
+    def addSuffix(suffix: String): CompVar = CompVar(s"$name$suffix")
   }
   case class PortDef(id: CompVar, width: Int) extends Emitable {
     override def doc(): Doc = Doc.parens(id.doc <+> Doc.value(width))
@@ -89,14 +89,14 @@ object Futil {
 
   /***** control *****/
   sealed trait Control extends Emitable {
-    def ---(c: Control): Control = (this, c) match {
+    def seq(c: Control): Control = (this, c) match {
       case (seq0: SeqComp, seq1: SeqComp) => SeqComp(seq0.stmts ++ seq1.stmts)
       case (seq: SeqComp, _)              => SeqComp(seq.stmts ++ List(c))
       case (_, seq: SeqComp)              => SeqComp(this :: seq.stmts)
       case _                              => SeqComp(List(this, c))
     }
 
-    def <:>(c: Control): Control = (this, c) match {
+    def par(c: Control): Control = (this, c) match {
       case (par0: ParComp, par1: ParComp) => ParComp(par0.stmts ++ par1.stmts)
       case (par0: ParComp, par1)          => ParComp(par0.stmts ++ List(par1))
       case (par0, par1: ParComp)          => ParComp(par0 :: par1.stmts)
