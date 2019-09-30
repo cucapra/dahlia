@@ -22,8 +22,11 @@ object Futil {
   case class Namespace(name: String, comps: List[Component]) extends Emitable {
     override def doc(): Doc =
       Doc.parens(
-        Doc.text("define/namespace") <+> Doc.text(name) <@> Doc.vsep(
-          comps.map(_.doc)
+        Doc.text("define/namespace") <+> Doc.text(name) <@> Doc.nest(
+          Doc.vsep(
+            comps.map(_.doc)
+          ),
+          2
         )
       )
   }
@@ -104,15 +107,23 @@ object Futil {
     }
     override def doc(): Doc = this match {
       case SeqComp(stmts) =>
-        Doc.parens(Doc.text("seq") <@> Doc.vsep(stmts.map(_.doc)))
+        Doc.nest(Doc.parens(Doc.text("seq") <@> Doc.vsep(stmts.map(_.doc))), 1)
       case ParComp(stmts) =>
-        Doc.parens(Doc.text("par") <@> Doc.vsep(stmts.map(_.doc)))
+        Doc.nest(Doc.parens(Doc.text("par") <@> Doc.vsep(stmts.map(_.doc))), 1)
       case If(cond, trueBr, falseBr) =>
-        Doc.parens(Doc.text("if") <+> cond.doc <@> trueBr.doc <@> falseBr.doc)
+        Doc.parens(
+          Doc.text("if") <+> cond.doc
+            <@> Doc.nest(trueBr.doc, 4)
+            <@> Doc.nest(falseBr.doc, 4)
+        )
       case Ifen(cond, trueBr, falseBr) =>
-        Doc.parens(Doc.text("ifen") <+> cond.doc <@> trueBr.doc <@> falseBr.doc)
+        Doc.parens(
+          Doc.text("ifen") <+> cond.doc
+            <@> Doc.nest(trueBr.doc, 6)
+            <@> Doc.nest(falseBr.doc, 6)
+        )
       case While(cond, body) =>
-        Doc.parens(Doc.text("ifen") <+> cond.doc <@> body.doc)
+        Doc.parens(Doc.text("while") <+> cond.doc <@> Doc.nest(body.doc, 2))
       case Print(id) =>
         Doc.parens(Doc.text("print") <+> id.doc)
       case Enable(ids) =>
