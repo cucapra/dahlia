@@ -15,7 +15,7 @@ object Futil {
     def addSuffix(suffix: String): CompVar = CompVar(s"$name$suffix")
   }
   case class PortDef(id: CompVar, width: Int) extends Emitable {
-    override def doc(): Doc = parens(id.doc <+> value(width))
+    override def doc(): Doc = parens(text("port") <+> id.doc <+> value(width))
   }
 
   /**** definition statements *****/
