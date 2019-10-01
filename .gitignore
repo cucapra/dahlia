@@ -10,6 +10,9 @@ tags
 docs/*pdf
 
 ## Scala code completion engine Ensime
+ensime.sbt
+.ensime_cache
+.ensime
 .sbt-hydra-history
 .metals
 .bloop

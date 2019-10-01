@@ -1,34 +1,29 @@
 package fuselang.backend.futil
 
 import fuselang.backend.PrettyPrint.Doc
+import Doc._
 
 object Futil {
-
   sealed trait Emitable {
     def doc(): Doc
     def emit(): String = this.doc.pretty
   }
 
   case class CompVar(name: String) extends Emitable {
-    override def doc(): Doc = Doc.text(name)
+    override def doc(): Doc = text(name)
     def port(port: String): CompPort = CompPort(this, port)
     def addSuffix(suffix: String): CompVar = CompVar(s"$name$suffix")
   }
   case class PortDef(id: CompVar, width: Int) extends Emitable {
-    override def doc(): Doc = Doc.parens(id.doc <+> Doc.value(width))
+    override def doc(): Doc = parens(id.doc <+> value(width))
   }
 
   /**** definition statements *****/
   case class Namespace(name: String, comps: List[Component]) extends Emitable {
     override def doc(): Doc =
-      Doc.parens(
-        Doc.text("define/namespace") <+> Doc.text(name) <@> Doc.nest(
-          Doc.vsep(
-            comps.map(_.doc)
-          ),
-          2
-        )
-      )
+      parens(
+        text("define/namespace") <+> text(name)
+          <@> nest(vsep(comps.map(_.doc)), 2))
   }
   case class Component(
       name: String,
@@ -37,23 +32,23 @@ object Futil {
       structure: List[Structure],
       control: Control
   ) extends Emitable {
-    override def doc(): Doc = Doc.parens(
-      Doc.text("define/component")
-        <+> Doc.text(name)
-        <+> Doc.parens(Doc.hsep(inputs.map(_.doc)))
-        <+> Doc.parens(Doc.hsep(outputs.map(_.doc)))
-        <@> Doc.parens(Doc.vsep(structure.map(_.doc)))
-        <@> control.doc
-    )
+    override def doc(): Doc =
+      parens(
+        text("define/component")
+          <+> text(name)
+          <+> parens(hsep(inputs.map(_.doc)))
+          <+> parens(hsep(outputs.map(_.doc)))
+          <@> parens(vsep(structure.map(_.doc)))
+          <@> control.doc)
   }
 
   /***** structure *****/
   sealed trait Port extends Emitable {
     override def doc(): Doc = this match {
       case CompPort(id, name) =>
-        Doc.parens(Doc.text("@") <+> id.doc <+> Doc.text(name))
+        parens(text("@") <+> id.doc <+> text(name))
       case ThisPort(id) =>
-        Doc.parens(Doc.text("@") <+> Doc.text("this") <+> id.doc)
+        parens(text("@") <+> text("this") <+> id.doc)
     }
   }
 
@@ -63,13 +58,11 @@ object Futil {
   sealed trait Structure extends Emitable {
     override def doc(): Doc = this match {
       case CompDecl(id, comp) =>
-        Doc.brackets(Doc.text("new") <+> id.doc <+> comp.doc)
+        brackets(text("new") <+> id.doc <+> comp.doc)
       case LibDecl(id, ci) =>
-        Doc.brackets(
-          Doc.text("new-std") <+> id.doc <+> ci.doc
-        )
+        brackets(text("new-std") <+> id.doc <+> ci.doc)
       case Connect(src, dest) =>
-        Doc.brackets(Doc.text("->") <+> src.doc <+> dest.doc)
+        brackets(text("->") <+> src.doc <+> dest.doc)
     }
   }
   case class CompDecl(id: CompVar, comp: CompVar) extends Structure
@@ -78,13 +71,13 @@ object Futil {
 
   case class CompInst(id: String, args: List[Value]) extends Emitable {
     override def doc(): Doc =
-      Doc.parens(Doc.text(id) <+> Doc.hsep(args.map(_.doc)))
+      parens(text(id) <+> hsep(args.map(_.doc)))
   }
 
   sealed trait Value extends Emitable {
     override def doc(): Doc = this match {
-      case Num(v)  => Doc.value(v)
-      case VNone() => Doc.text("#f")
+      case Num(v)  => value(v)
+      case VNone() => text("#f")
     }
   }
   case class Num(v: Any) extends Value
@@ -92,6 +85,7 @@ object Futil {
 
   /***** control *****/
   sealed trait Control extends Emitable {
+
     def seq(c: Control): Control = (this, c) match {
       case (seq0: SeqComp, seq1: SeqComp) => SeqComp(seq0.stmts ++ seq1.stmts)
       case (seq: SeqComp, _)              => SeqComp(seq.stmts ++ List(c))
@@ -107,31 +101,29 @@ object Futil {
     }
     override def doc(): Doc = this match {
       case SeqComp(stmts) =>
-        Doc.nest(Doc.parens(Doc.text("seq") <@> Doc.vsep(stmts.map(_.doc))), 1)
+        nest(parens(text("seq") <@> vsep(stmts.map(_.doc))), 1)
       case ParComp(stmts) =>
-        Doc.nest(Doc.parens(Doc.text("par") <@> Doc.vsep(stmts.map(_.doc))), 1)
+        nest(parens(text("par") <@> vsep(stmts.map(_.doc))), 1)
       case If(cond, trueBr, falseBr) =>
-        Doc.parens(
-          Doc.text("if") <+> cond.doc
-            <@> Doc.nest(trueBr.doc, 4)
-            <@> Doc.nest(falseBr.doc, 4)
-        )
+        parens(
+          text("if") <+> cond.doc
+            <@> nest(trueBr.doc, 4)
+            <@> nest(falseBr.doc, 4))
       case Ifen(cond, trueBr, falseBr) =>
-        Doc.parens(
-          Doc.text("ifen") <+> cond.doc
-            <@> Doc.nest(trueBr.doc, 6)
-            <@> Doc.nest(falseBr.doc, 6)
-        )
+        parens(
+          text("ifen") <+> cond.doc
+            <@> nest(trueBr.doc, 6)
+            <@> nest(falseBr.doc, 6))
       case While(cond, body) =>
-        Doc.parens(Doc.text("while") <+> cond.doc <@> Doc.nest(body.doc, 2))
+        parens(text("while") <+> cond.doc <@> nest(body.doc, 2))
       case Print(id) =>
-        Doc.parens(Doc.text("print") <+> id.doc)
+        parens(text("print") <+> id.doc)
       case Enable(ids) =>
-        Doc.parens(Doc.text("enable") <+> Doc.hsep(ids.map(_.doc)))
+        parens(text("enable") <+> hsep(ids.map(_.doc)))
       case Disable(ids) =>
-        Doc.parens(Doc.text("disable") <+> Doc.hsep(ids.map(_.doc)))
+        parens(text("disable") <+> hsep(ids.map(_.doc)))
       case Empty() =>
-        Doc.parens(Doc.text("empty"))
+        parens(text("empty"))
     }
   }
   case class SeqComp(stmts: List[Control]) extends Control
@@ -141,8 +133,9 @@ object Futil {
   case class While(cond: Port, body: Control) extends Control
   case class Print(id: CompVar) extends Control
   case class Enable(ids: List[CompVar]) extends Control {
+
     def ++(en: Enable): Enable =
-      Enable(ids ++ (en.ids)) // XXX(sam) make distincts
+      Enable((ids ++ en.ids).distinct)
   }
   case class Disable(ids: List[CompVar]) extends Control
   case class Empty() extends Control
