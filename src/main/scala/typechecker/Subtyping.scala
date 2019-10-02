@@ -80,9 +80,9 @@ object Subtyping {
     case (TRational(v1), TRational(v2)) => op.toFun match {
       //XXX(Zhijing):deprecated
       case Some(fun) => Some(TRational(fun(v1.toDouble, v2.toDouble).toString))
-      case None => 
+      case None =>
         if (bitsNeeded(v1.toDouble.toInt)>bitsNeeded(v2.toDouble.toInt)) Some(TRational(v1))
-        else Some(TRational(v2)) 
+        else Some(TRational(v2))
     }
     case (TSizedInt(s1, un1), TSizedInt(s2, un2)) =>
       if (un1 == un2) Some(TSizedInt(max(s1, s2), un1))
@@ -96,10 +96,10 @@ object Subtyping {
     case (_:TFloat, _:TDouble) => Some(TDouble())
     case (_:TRational, _:TFloat) => Some(TFloat())
     case (_:TRational, _:TDouble) => Some(TDouble())
-    case (TRational(v1), TFixed(t2,i2,un2)) => 
+    case (TRational(v1), TFixed(t2,i2,un2)) =>
       Some(TFixed(max(i2, bitsNeeded(v1.toDouble.toInt))+t2-i2,
-        max(i2, bitsNeeded(v1.toDouble.toInt)), un2)) 
-    case (TFixed(t1,i1,un1), TFixed(t2,i2,un2)) => 
+        max(i2, bitsNeeded(v1.toDouble.toInt)), un2))
+    case (TFixed(t1,i1,un1), TFixed(t2,i2,un2)) =>
       if (un1 == un2) Some(TFixed(max(t1-i1,t2-i2)+max(i1,i2) ,max(i1, i2), un1))
       else None
     case (ti1:TIndex, ti2:TIndex) =>
@@ -121,11 +121,11 @@ object Subtyping {
     case (_:TFloat, _:TSizedInt) => false
     case (_:TDouble, _:TSizedInt) => false
     case (_:TRational, _:TSizedInt) => false
-    
+
     case (_:IntType, _:TFloat) => true
     case (_:TFloat, _:TDouble) => true
-    case (_:TRational, _:TDouble) => true 
-    case (TSizedInt(i1,un1), TFixed(_,i2,un2)) => (un1==un2 && i1 <= i2) 
+    case (_:TRational, _:TDouble) => true
+    case (TSizedInt(i1,un1), TFixed(_,i2,un2)) => (un1==un2 && i1 <= i2)
     case (t1, t2) => areEqual(t1, t2)
   }
 }

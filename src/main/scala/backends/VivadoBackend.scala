@@ -89,7 +89,7 @@ private class VivadoBackend extends CppLike {
   def emitArrayDecl(ta: TArray, id: Id): Doc =
     emitType(ta.typ) <+> id <> generateDims(ta.dims)
 
-  def generateDims(dims: List[(Int, Int)]): Doc =
+  def generateDims(dims: List[DimSpec]): Doc =
     ssep(dims.map(d => brackets(value(d._1))), emptyDoc)
 
   def emitType(typ: Type): Doc = typ match {
@@ -101,7 +101,7 @@ private class VivadoBackend extends CppLike {
     case _:TRational => throw Impossible("Rational type should not exist")
     case TSizedInt(s, un) => text(if (un) s"ap_uint<$s>" else s"ap_int<$s>")
     case TFixed(t,i,un) => text(if (un) s"ap_ufixed<$t,$i>" else s"ap_fixed<$t,$i>")
-    case TArray(typ, _) => emitType(typ)
+    case TArray(typ, _, _) => emitType(typ)
     case TRecType(n, _) => text(n.toString)
     case _:TFun => throw Impossible("Cannot emit function types")
     case TAlias(n) => text(n.toString)
