@@ -112,9 +112,9 @@ private class FuseParser extends RegexParsers with PackratParsers {
   lazy val expr = positioned (binOr)
 
   // Types
-  lazy val typIdx: P[(Int, Int)] =
-    brackets(number ~ "bank" ~ number) ^^ { case n ~ _ ~ b => (n, b) } |
-    brackets(number)^^ { n => (n, 1) }
+  lazy val typIdx: P[DimSpec] =
+    brackets(number ~ ("bank" ~> number).?) ^^ { case n ~ b => (n, b.getOrElse(1)) }
+
   lazy val atyp: P[Type] =
     "float" ^^ { _ => TFloat() } |
     "double" ^^ { _ => TDouble() } |
@@ -125,7 +125,9 @@ private class FuseParser extends RegexParsers with PackratParsers {
     "ufix" ~> angular(number~","~number ) ^^{ case s1~_~s2 => TFixed(s1,s2,true) } |
     iden ^^ { case id => TAlias(id) }
   lazy val typ: P[Type] =
-    atyp ~ rep1(typIdx) ^^ { case t ~ dims => TArray(t, dims) } |
+    atyp ~ braces(number).? ~ rep1(typIdx) ^^ { case t ~ p ~ dims =>
+      TArray(t, dims, p.getOrElse(1))
+    } |
     atyp
 
   // For loops

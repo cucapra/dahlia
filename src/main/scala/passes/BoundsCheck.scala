@@ -68,7 +68,7 @@ object BoundsChecker {
         id.typ
           .getOrThrow(Impossible(s"$id missing type in $e"))
           .matchOrError(id.pos, "array access", s"array type"){
-            case TArray(_, dims) =>
+            case TArray(_, dims, _) =>
               idxs
                 .map(idx => idx -> idx.typ)
                 .zip(dims)
@@ -98,7 +98,7 @@ object BoundsChecker {
     override def myCheckC: PF[(Command, Env), Env] = {
       case (c@CView(viewId, arrId, views), e) => {
         val typ = arrId.typ.getOrThrow(Impossible(s"$arrId is missing type in $c"))
-        typ.matchOrError(c.pos, "view", "array type"){ case TArray(_, dims) =>
+        typ.matchOrError(c.pos, "view", "array type"){ case TArray(_, dims, _) =>
           views.zip(dims).foreach({ case (view, (len, _)) =>
             checkView(len, viewId, view)
           })

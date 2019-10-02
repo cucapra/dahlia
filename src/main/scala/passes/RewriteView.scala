@@ -85,7 +85,7 @@ object RewriteView {
       val arrBanks = arrId
         .typ
         .getOrThrow(Impossible(s"$arrId is missing type in $c")) match {
-          case TArray(_, dims) => dims.map(_._2)
+          case TArray(_, dims, _) => dims.map(_._2)
           case t => throw Impossible(s"Array has type $t in $c")
         }
       val f = (es: List[Expr]) => {
