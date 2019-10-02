@@ -137,7 +137,7 @@ object TypeChecker {
    */
   private def getConsumeList(idxs: List[Expr], dims: List[(Int, Int)])
                             (implicit arrId: Id, env: Environment) = {
-    val (nEnv, bres, consume) = idxs.zipWithIndex.foldLeft((env, 1, IndexedSeq[Iterable[Int]]()))({
+    val (nEnv, bres, consume) = idxs.zipWithIndex.foldLeft((env, 1, IndexedSeq[Seq[Int]]()))({
       case ((env1, bres, consume), (idx, dim)) => checkE(idx)(env1) match {
         // Index is an index type.
         case (TIndex((s, e), _), env2) =>
@@ -469,8 +469,8 @@ object TypeChecker {
     }
     case l@CLet(id, typ, Some(exp)) => {
       // Check if the explicit type is bound in scope. Also, if the type is
-      // a static int, upcast it to sized int; if the type is rational, 
-      // upcast it to double. We do not allow variables to have 
+      // a static int, upcast it to sized int; if the type is rational,
+      // upcast it to double. We do not allow variables to have
       // static or rational types.
       val rTyp = typ.map(env.resolveType(_) match {
         case TStaticInt(v) => TSizedInt(bitsNeeded(v), false)
