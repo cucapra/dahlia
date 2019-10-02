@@ -20,6 +20,8 @@ scalacOptions ++= Seq(
   "-Xfatal-warnings"
 )
 
+scalacOptions in (Compile, console) ~= (_ filterNot (_ == "-Xfatal-warnings"))
+
 testOptions in Test += Tests.Argument("-oD")
 parallelExecution in Test := false
 logBuffered in Test := false
