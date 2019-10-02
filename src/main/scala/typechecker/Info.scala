@@ -11,28 +11,31 @@ object Info {
 
   case class ArrayInfo(
     id: Id,
+    // List of starting bank resources.
     avBanks: Map[Int, Seq[Int]],
-    conBanks: Map[Int, Seq[Int]],
+    // Bank resources that haven't been consumed yet.
+    remBanks: Map[Int, Seq[Int]],
+    // Source code locations that consumed a bank.
     conLocs: Map[(Int, Int), Position] = Map()) {
 
     private def consumeDim(dim: Int, resources: Seq[Int])
                           (implicit pos: Position) = {
       assertOrThrow(avBanks.contains(dim), UnknownDim(id, dim))
-      val (av, con) = (avBanks(dim), conBanks(dim))
+      val (av, rem) = (avBanks(dim), remBanks(dim))
 
       // Make sure banks exist.
       val diff = resources diff av
       assertOrThrow(diff.isEmpty, UnknownBank(id, diff.toSeq(0), dim))
 
       // Make sure banks are not already consumed.
-      val alreadyCon = con intersect resources
-      if (alreadyCon.isEmpty == false) {
-        val bank = alreadyCon.toSeq(0)
+      val alreadyCon = rem intersect resources
+      if (alreadyCon.isEmpty) {
+        val bank = resources.diff(rem).toSeq(0)
         throw AlreadyConsumed(id, dim, bank, conLocs((dim, bank)))
       }
 
       this.copy(
-        conBanks = conBanks + (dim -> con.concat(resources)),
+        remBanks = remBanks + (dim -> rem.diff(resources)),
         conLocs = conLocs ++ resources.map((dim, _) -> pos))
     }
 
@@ -44,22 +47,27 @@ object Info {
     }
 
     def merge(that: ArrayInfo) = {
-      val conBanks = this.conBanks.map({
-        case (dim, bankSet) => dim -> (that.conBanks(dim).concat(bankSet))
+      val remBanks = this.remBanks.map({
+        case (dim, bankSet) => dim -> (that.remBanks(dim).concat(bankSet))
       })
-      this.copy(conBanks = conBanks, conLocs = this.conLocs ++ that.conLocs)
+      this.copy(remBanks = remBanks, conLocs = this.conLocs ++ that.conLocs)
     }
 
-    override def toString = s"{$avBanks, $conBanks}"
+    override def toString = s"{$avBanks, $remBanks}"
   }
 
   object ArrayInfo {
-    def apply(id: Id, banks: Iterable[Int]): ArrayInfo = {
-      val banksWithIndex = banks.zipWithIndex
-      ArrayInfo(
-        id,
-        banksWithIndex.map({case (banks, i) => i -> 0.until(banks)}).toMap,
-        banksWithIndex.map({case (_, i) => i -> Seq[Int]()}).toMap)
+    def apply(id: Id, banks: Iterable[Int], ports: Int): ArrayInfo = {
+      // Generate resources for 0..i banks with `ports` copy of each resource.
+      val startResources =
+        banks
+          .zipWithIndex
+          .map({ case (banks, i) =>
+            i ->
+            List.tabulate(banks)(b => List.tabulate(ports)(_ => b)).flatten
+          }).toMap
+
+      ArrayInfo(id, startResources, startResources)
     }
   }
 }

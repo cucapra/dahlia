@@ -127,7 +127,7 @@ object TypeChecker {
   private def addPhysicalResource(id: Id, typ: TArray)
                                  (implicit env: Environment) = {
     env
-      .addResource(id, typ.dims.map(_._2))
+      .addResource(id, typ.dims.map(_._2), typ.ports)
       .addGadget(id, BaseGadget(id))
   }
 
@@ -165,7 +165,7 @@ object TypeChecker {
   private def checkLVal(e: Expr)(implicit env: Environment) = e match {
     case acc@EArrAccess(id, idxs) => env(id).matchOrError(e.pos, "array access", s"array") {
       // This only triggers for r-values. l-values are checked in checkLVal
-      case TArray(typ, dims, ports) => {
+      case TArray(typ, dims, _) => {
         if (dims.length != idxs.length) {
           throw IncorrectAccessDims(id, dims.length, idxs.length)
         }
@@ -298,7 +298,7 @@ object TypeChecker {
     }
     case acc@EArrAccess(id, idxs) => env(id).matchOrError(expr.pos, "array access", s"array type"){
       // This only triggers for r-values. l-values are checked in checkLVal
-      case TArray(typ, dims, ports) => {
+      case TArray(typ, dims, _) => {
         if (dims.length != idxs.length) {
           throw IncorrectAccessDims(id, dims.length, idxs.length)
         }
