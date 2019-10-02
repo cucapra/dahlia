@@ -38,7 +38,7 @@ object Gadgets {
      * to write a more fine grained transformer when the view is static
      * i.e. an aligned view is being used.
      */
-    def apply(underlying: Gadget, dims: List[(Int, Int)]): ViewGadget = {
+    def apply(underlying: Gadget, dims: List[DimSpec]): ViewGadget = {
       val transformer = (_: ConsumeList) => dims.map(_._2).map(0 until _)
       ViewGadget(underlying, transformer)
     }
@@ -52,8 +52,8 @@ object Gadgets {
      */
     def apply(
       underlying: Gadget,
-      arrayDims: List[(Int, Int)],
-      @deprecated("Not used", "0.0.1") splitDims: List[(Int, Int)]): ViewGadget = {
+      arrayDims: List[DimSpec],
+      @deprecated("Not used", "0.0.1") splitDims: List[DimSpec]): ViewGadget = {
         ViewGadget(underlying, arrayDims)
     }
   }

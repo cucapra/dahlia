@@ -167,7 +167,7 @@ object TypeEnv {
     def resolveType(typ: Type): Type = typ match {
       case TAlias(n) => getType(n)
       case TFun(args, ret) => TFun(args.map(resolveType(_)), resolveType(ret))
-      case arr@TArray(t, _) => arr.copy(typ = resolveType(t))
+      case arr@TArray(t, _, _) => arr.copy(typ = resolveType(t))
       case t => t
     }
     def addType(alias: Id, typ: Type) = typeDefMap.get(alias) match {

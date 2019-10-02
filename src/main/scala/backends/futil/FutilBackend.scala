@@ -30,7 +30,7 @@ private class FutilBackendHelper {
     *  represent the declaration `d`. Simply returns a `List[Structure]`.
     */
   def emitDecl(d: Decl): List[Structure] = d.typ match {
-    case TArray(_, dims) => {
+    case TArray(_, dims, _) => {
       val const =
         LibDecl(CompVar(s"${d.id}-init"), Stdlib.constant(VNone()))
       val mem = LibDecl(CompVar(s"${d.id}"), Stdlib.memory(dims.map(_._1)))
