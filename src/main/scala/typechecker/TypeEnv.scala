@@ -93,7 +93,7 @@ object TypeEnv {
      * For example, addResources("A", List(2, 2)) adds the set of resources
      * {A00, A01, A10, A11} to the environment.
      */
-    def addResource(name: Id, resources: Seq[Int]): Environment
+    def addResource(name: Id, resources: Seq[Int], ports: Int): Environment
 
     /**
      * Consume the physical resources implied by the access of this gadget.
@@ -188,8 +188,8 @@ object TypeEnv {
     def getGadget(id: Id) = gadgetMap.get(id).getOrThrow(Unbound(id))
 
     /** Managing physical resources */
-    def addResource(id: Id, banks: Seq[Int]) = {
-      val pRes = phyRes.add(id, ArrayInfo(id, banks)).getOrThrow(AlreadyBound(id))
+    def addResource(id: Id, banks: Seq[Int], ports: Int) = {
+      val pRes = phyRes.add(id, ArrayInfo(id, banks, ports)).getOrThrow(AlreadyBound(id))
       this.copy(phyRes = pRes)
     }
     def consumeResource(name: Id, resources: Seq[Seq[Int]])
@@ -201,7 +201,6 @@ object TypeEnv {
           this.copy(phyRes = phyRes.update(name, info.consumeResources(resources)))
       }
     }
-
 
     /** Helper functions for Mergable[Env] */
     def merge(env: Environment): Environment = env match {
