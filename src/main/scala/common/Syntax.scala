@@ -23,12 +23,7 @@ object Syntax {
     }
   }
 
-  object OpConstructor {/*
-    val add: (Int, Int) => Int = (_ + _)
-    val mul: (Int, Int) => Int = (_ * _)
-    val div: (Int, Int) => Int = (_ / _)
-    val sub: (Int, Int) => Int = (_ - _)
-    val mod: (Int, Int) => Int = (_ % _)*/
+  object OpConstructor {
     val add: (Double, Double) => Double = (_ + _)
     val mul: (Double, Double) => Double = (_ * _)
     val div: (Double, Double) => Double = (_ / _)
@@ -99,10 +94,6 @@ object Syntax {
   sealed trait BOp extends Positional {
     val op: String;
     override def toString = this.op
-    /*def toFun: Option[(Int, Int) => Int] = this match {
-      case n: NumOp => Some(n.fun)
-      case _ => None
-    }*/
     def toFun: Option[(Double, Double) => Double] = this match {
       case n: NumOp => Some(n.fun)
       case _ => None
@@ -112,8 +103,7 @@ object Syntax {
   case class EqOp(op: String) extends BOp
   case class CmpOp(op: String) extends BOp
   case class BoolOp(op: String) extends BOp
-  case class NumOp(op: String, fun: (Double, Double) => Double) extends BOp 
-  //case class NumOp(op: String, fun: (Int, Int) => Int) extends BOp 
+  case class NumOp(op: String, fun: (Double, Double) => Double) extends BOp
   case class BitOp(op: String) extends BOp
 
   sealed trait Expr extends Positional with TypeAnnotation {
