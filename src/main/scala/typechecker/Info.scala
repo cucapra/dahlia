@@ -11,11 +11,11 @@ object Info {
 
   case class ArrayInfo(
     id: Id,
-    avBanks: Map[Int, Set[Int]],
-    conBanks: Map[Int, Set[Int]],
+    avBanks: Map[Int, Seq[Int]],
+    conBanks: Map[Int, Seq[Int]],
     conLocs: Map[(Int, Int), Position] = Map()) {
 
-    private def consumeDim(dim: Int, resources: Set[Int])
+    private def consumeDim(dim: Int, resources: Seq[Int])
                           (implicit pos: Position) = {
       assertOrThrow(avBanks.contains(dim), UnknownDim(id, dim))
       val (av, con) = (avBanks(dim), conBanks(dim))
@@ -32,20 +32,20 @@ object Info {
       }
 
       this.copy(
-        conBanks = conBanks + (dim -> con.union(resources)),
+        conBanks = conBanks + (dim -> con.concat(resources)),
         conLocs = conLocs ++ resources.map((dim, _) -> pos))
     }
 
-    def consumeResources(resources: Iterable[Iterable[Int]])
+    def consumeResources(resources: Seq[Seq[Int]])
                         (implicit pos: List[Position]) = {
       resources.zipWithIndex.zip(pos).foldLeft(this) {
-        case (info, ((resource, dim), pos)) => info.consumeDim(dim, resource.toSet)(pos)
+        case (info, ((resource, dim), pos)) => info.consumeDim(dim, resource)(pos)
       }
     }
 
     def merge(that: ArrayInfo) = {
       val conBanks = this.conBanks.map({
-        case (dim, bankSet) => dim -> (that.conBanks(dim) union bankSet)
+        case (dim, bankSet) => dim -> (that.conBanks(dim).concat(bankSet))
       })
       this.copy(conBanks = conBanks, conLocs = this.conLocs ++ that.conLocs)
     }
@@ -58,8 +58,8 @@ object Info {
       val banksWithIndex = banks.zipWithIndex
       ArrayInfo(
         id,
-        banksWithIndex.map({case (banks, i) => i -> 0.until(banks).toSet}).toMap,
-        banksWithIndex.map({case (_, i) => i -> Set[Int]()}).toMap)
+        banksWithIndex.map({case (banks, i) => i -> 0.until(banks)}).toMap,
+        banksWithIndex.map({case (_, i) => i -> Seq[Int]()}).toMap)
     }
   }
 }

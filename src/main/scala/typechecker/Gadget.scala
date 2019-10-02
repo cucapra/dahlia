@@ -14,7 +14,7 @@ import fuselang.common.Syntax._
  */
 object Gadgets {
 
-  type ConsumeList = Iterable[Iterable[Int]]
+  type ConsumeList = Seq[Seq[Int]]
 
   trait Gadget {
     def getSummary(consume: ConsumeList): (Id, ConsumeList)
