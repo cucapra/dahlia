@@ -21,10 +21,18 @@ object Checker {
 
     type Env <: ScopeManager[Env]
 
+    val emptyEnv: Env
+
     /**
      * Top level function called on the AST.
      */
-    def check(p: Prog): Unit
+    def check(p: Prog): Unit = {
+      val Prog(_, defs, _, _, cmd) = p
+
+      defs.collect({ case FuncDef(_, _, _, bodyOpt) => bodyOpt.map(checkC(_)(emptyEnv)) })
+
+      checkC(cmd)(emptyEnv); ()
+    }
 
     /**
      * Helper functions for checking sequences of the same element.

@@ -1364,13 +1364,13 @@ class TypeCheckerSpec extends FunSpec {
         """ )
     }
     it("fix is not a subtype of double") {
-      assertThrows[UnexpectedSubtype] {      
+      assertThrows[UnexpectedSubtype] {
         typeCheck("""
           decl x: fix<3,2>;
           decl y: fix<3,2>;
           let z: double = x + y;
           """ )
-      }    
+      }
     }
     it("unsigned and signed bit types are incomparable") {
       assertThrows[NoJoin] {
@@ -1424,6 +1424,16 @@ class TypeCheckerSpec extends FunSpec {
         typeCheck("""
           decl a: bit<32>[10];
           let v = a[10];
+          """ )
+      }
+    }
+
+    it("nested expressions are checked") {
+      assertThrows[IndexOutOfBounds] {
+        typeCheck("""
+          decl a: bit<32>[10];
+          decl b: bit<32>[10];
+          let v = a[9] + b[10];
           """ )
       }
     }

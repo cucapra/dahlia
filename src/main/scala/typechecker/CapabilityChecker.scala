@@ -7,7 +7,6 @@ import Syntax._
 import Syntax.Annotations._
 import Errors._
 import CapabilityEnv._
-
 import Checker._
 
 object CapabilityChecker {
@@ -18,13 +17,8 @@ object CapabilityChecker {
 
     type Env = CapabilityEnv
 
-    def check(p: Prog): Unit = {
-      val Prog(_, defs, _, _, cmd) = p
+    val emptyEnv = CapabilityEnv.emptyEnv
 
-      defs.collect({ case FuncDef(_, _, _, bodyOpt) => bodyOpt.map(checkC(_)(emptyEnv)) })
-
-      checkC(cmd)(emptyEnv); ()
-    }
 
     override def myCheckE: PF[(Expr, Env), Env] = {
       case (acc@EArrAccess(_, idxs), env) => {
