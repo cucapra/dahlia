@@ -1,4 +1,4 @@
-package fuselang.typechecker
+package fuselang.common
 
 object EnvHelpers {
 

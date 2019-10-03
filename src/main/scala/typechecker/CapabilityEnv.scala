@@ -1,9 +1,9 @@
 package fuselang.typechecker
 
-import EnvHelpers._
 import fuselang.Utils._
 
 import fuselang.common._
+import EnvHelpers._
 import Syntax._
 import CompilerError._
 

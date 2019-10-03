@@ -1,12 +1,12 @@
-package fuselang.passes
+package fuselang.typechecker
 
 import scala.{PartialFunction => PF}
 
-import fuselang.typechecker.CapabilityEnv._
 import fuselang.common._
 import Syntax._
 import Syntax.Annotations._
 import Errors._
+import CapabilityEnv._
 
 import Checker._
 

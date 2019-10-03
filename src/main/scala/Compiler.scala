@@ -16,7 +16,7 @@ object Compiler {
 
   def compileStringWithError(prog: String, c: Config = emptyConf) = {
     val ast = FuseParser.parse(prog)
-    passes.CapabilityChecker.check(ast)
+    typechecker.CapabilityChecker.check(ast)
     typechecker.TypeChecker.typeCheck(ast)
     passes.BoundsChecker.check(ast);
     val rast = passes.RewriteView.rewriteProg(ast)
