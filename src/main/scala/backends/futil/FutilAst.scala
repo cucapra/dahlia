@@ -1,6 +1,6 @@
 package fuselang.backend.futil
 
-import fuselang.backend.PrettyPrint.Doc
+import fuselang.common.PrettyPrint.Doc
 import Doc._
 
 object Futil {

@@ -53,6 +53,10 @@ object Main {
       .action((_, c) => c.copy(header = true))
       .text("Generate header file instead of code. Default: false.")
 
+    opt[Unit]("pass-debug")
+      .action((_, c) => c.copy(passDebug = true))
+      .text("Show the AST after every compiler pass. Default: false.")
+
     cmd("run")
       .action((_, c) => c.copy(mode = Run, backend = Cpp))
       .text("Generate a runnable object file. Assumes GCC and required headers are available. Implies mode=c++.")
