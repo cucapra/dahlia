@@ -545,7 +545,7 @@ class TypeCheckerSpec extends FunSpec {
     }
 
     it("read cannot occur after write") {
-      assertThrows[InvalidCap] {
+      assertThrows[AlreadyConsumed] {
         typeCheck("""
               decl a: bit<32>[6 bank 6];
               for (let i = 0..6) {
@@ -557,7 +557,7 @@ class TypeCheckerSpec extends FunSpec {
     }
 
     it("write cannot occur after read") {
-      assertThrows[InvalidCap] {
+      assertThrows[AlreadyConsumed] {
         typeCheck("""
               decl a: bit<32>[6 bank 6];
               for (let i = 0..6) {

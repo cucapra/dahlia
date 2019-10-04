@@ -28,8 +28,9 @@ object Info {
       assertOrThrow(diff.isEmpty, UnknownBank(id, diff.toSeq(0), dim))
 
       // Make sure banks are not already consumed.
-      val alreadyCon = rem intersect resources
-      if (alreadyCon.isEmpty) {
+      val hasRequired = resources.forall(rem.contains(_))
+      scribe.debug((remBanks, resources, hasRequired).toString)
+      if (hasRequired == false) {
         val bank = resources.diff(rem).toSeq(0)
         throw AlreadyConsumed(id, dim, bank, conLocs((dim, bank)))
       }
@@ -48,7 +49,7 @@ object Info {
 
     def merge(that: ArrayInfo) = {
       val remBanks = this.remBanks.map({
-        case (dim, bankSet) => dim -> (that.remBanks(dim).concat(bankSet))
+        case (dim, bankSet) => dim -> (that.remBanks(dim).intersect(bankSet))
       })
       this.copy(remBanks = remBanks, conLocs = this.conLocs ++ that.conLocs)
     }
