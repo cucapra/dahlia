@@ -42,8 +42,9 @@ object Pretty {
   }
 
   implicit def emitId(id: Id)(implicit debug: Boolean): Doc = {
-    if (debug) brackets(value(id.v) <> colon <+> id.typ.map(emitTyp).getOrElse(emptyDoc))
-    else value(id.v)
+    val idv = value(id.v)
+    if (debug) id.typ.map(t => brackets(idv <> colon <+> emitTyp(t))).getOrElse(idv)
+    else idv
   }
 
   def emitTyp(t: Type): Doc = text(t.toString)
@@ -86,7 +87,7 @@ object Pretty {
 
     val sufDoc = suf match {
       case Aligned(f, e) => value(f) <+> text("*") <+> e
-      case Rotation(e) => e <+> text("!")
+      case Rotation(e) => e <> text("!")
     }
 
     sufDoc <+> colon <>
