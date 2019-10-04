@@ -19,19 +19,6 @@ private class VivadoBackend extends CppLike {
     case n => value(s"#pragma HLS UNROLL factor=$n skip_exit_check") <@> line
   }
 
-  def bank(id: Id, banks: List[Int]): List[Doc] = banks.zipWithIndex.map({
-    case (bank, dim) =>
-      if (bank != 1) {
-        text(
-          s"#pragma HLS ARRAY_PARTITION variable=$id cyclic factor=$bank dim=${dim + 1}")
-      } else {
-        emptyDoc
-      }
-  })
-
-  def bankPragmas(decls: List[Decl]): List[Doc] = decls
-    .collect({ case Decl(id, typ: TArray) => vsep(bank(id, typ.dims.map(_._2))) })
-
   def bankWarn(decls: List[Decl]) =
     decls.collect({ case Decl(id, typ: TArray) =>
       typ.dims.foreach({ case (_, bank) =>
@@ -40,6 +27,15 @@ private class VivadoBackend extends CppLike {
             s"Interfact array `${id}' is partitioned. SDAccel will generate incorrect hardware for partitioned interface arrays.")
       })
     })
+
+  def bank(id: Id, banks: List[Int]): Doc = vsep(banks.zipWithIndex.map({
+    case (1, _) => emptyDoc
+    case (bank, dim) =>
+      text(s"#pragma HLS ARRAY_PARTITION variable=$id cyclic factor=$bank dim=${dim + 1}")
+  }))
+
+  def bankPragmas(decls: List[Decl]): List[Doc] = decls
+    .collect({ case Decl(id, typ: TArray) => bank(id, typ.dims.map(_._2)) })
 
   override def emitLet(let: CLet): Doc = {
     super.emitLet(let) <@>
