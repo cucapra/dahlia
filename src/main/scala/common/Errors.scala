@@ -57,8 +57,6 @@ object Errors {
     s"Dynamic access of array `$id' requires unbanked dimension. Actual banking factor: $bf. Use a shrink view to create unbanked array.", id.pos)
 
   // Invalid Capability error
-  case class InvalidCap(expr: Expr, exp: Capability, actual: Capability) extends TypeError(
-    s"This expression requires $exp capability, but previous usage inferred $actual capability.", expr.pos)
   case class AlreadyWrite(e: Expr) extends TypeError(
     "Already written to this expression in this context.", e.pos)
   case class InsufficientResourcesInUnrollContext(exp: Int, ac: Int, expr: Expr)
