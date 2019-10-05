@@ -29,7 +29,8 @@ object Futil {
     override def doc(): Doc =
       parens(
         text("define/namespace") <+> text(name)
-          <> nest(emptyDoc <@> vsep(comps.map(_.doc)), 2))
+          <> nest(emptyDoc <@> vsep(comps.map(_.doc)), 2)
+      )
   }
   case class Component(
       name: String,
@@ -48,7 +49,9 @@ object Futil {
             emptyDoc
               <@> nest(parens(vsep(structure.map(_.doc))), 1)
               <@> control.doc,
-            1))
+            2
+          )
+      )
   }
 
   /***** structure *****/
