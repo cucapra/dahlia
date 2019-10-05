@@ -1,4 +1,4 @@
-package fuselang.typechecker
+package fuselang.common
 
 object EnvHelpers {
 
@@ -6,7 +6,7 @@ object EnvHelpers {
 
     /**
      * Open a new scope and run commands in it. When the scope ends, the
-     * bindings and capabilities bound in this scope are returned
+     * modified environment is returned.
      *
      * @param inScope Commands executed inside a new Scope level.
      */

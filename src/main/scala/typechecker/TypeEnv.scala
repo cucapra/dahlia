@@ -2,12 +2,12 @@ package fuselang.typechecker
 
 import scala.util.parsing.input.Position
 
-import Info._
-import ScopeMap._
-import Gadgets._
 import fuselang.Utils._
+import Info._
+import Gadgets._
 
 import fuselang.common._
+import ScopeMap._
 import Syntax._
 import Errors._
 import CompilerError._
