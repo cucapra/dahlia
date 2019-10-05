@@ -4,6 +4,12 @@ import fuselang.common.PrettyPrint.Doc
 import Doc._
 
 object Futil {
+
+  val debug = false
+
+  def brackets(d: Doc) =
+    if (debug) enclose(text("["), d, text("]")) else parens(d)
+
   sealed trait Emitable {
     def doc(): Doc
     def emit(): String = this.doc.pretty
@@ -23,7 +29,8 @@ object Futil {
     override def doc(): Doc =
       parens(
         text("define/namespace") <+> text(name)
-          <> nest(emptyDoc <@> vsep(comps.map(_.doc)), 2))
+          <> nest(emptyDoc <@> vsep(comps.map(_.doc)), 2)
+      )
   }
   case class Component(
       name: String,
@@ -42,7 +49,9 @@ object Futil {
             emptyDoc
               <@> nest(parens(vsep(structure.map(_.doc))), 1)
               <@> control.doc,
-            1))
+            2
+          )
+      )
   }
 
   /***** structure *****/
@@ -149,8 +158,8 @@ object Futil {
   case class Empty() extends Control
 }
 
+/** Represents all of the primitives in Futil. */
 object Stdlib {
-
   def constant(v: Futil.Value): Futil.CompInst =
     Futil.CompInst("const", List(v))
 
