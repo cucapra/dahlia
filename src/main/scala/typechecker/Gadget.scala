@@ -20,8 +20,16 @@ object Gadgets {
     def getSummary(consume: ConsumeList): (Id, ConsumeList)
   }
 
-  case class BaseGadget(resource: Id) extends Gadget {
-    def getSummary(consume: ConsumeList) = resource -> consume
+  case class BaseGadget(resource: Id, dim: List[DimSpec]) extends Gadget {
+    /**
+     * A base physical memory with `k` banks redirects access from bank `b` to
+     * to `b % k`.
+     */
+    def getSummary(consume: ConsumeList) =
+      resource ->
+      consume
+        .zip(dim)
+        .map({ case (resources, (_, banks)) => resources.map(_ % banks)})
   }
 
   case class ViewGadget(
