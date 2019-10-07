@@ -20,7 +20,9 @@ scalacOptions ++= Seq(
   "-Xfatal-warnings"
 )
 
-scalacOptions in (Compile, console) ~= (_ filterNot (_ == "-Xfatal-warnings"))
+// Disable options in sbt console.
+scalacOptions in (Compile, console) ~=
+  (_ filterNot ((Set("-Xfatal-warnings", "-Ywarn-unused").contains(_))))
 
 testOptions in Test += Tests.Argument("-oD")
 parallelExecution in Test := false
