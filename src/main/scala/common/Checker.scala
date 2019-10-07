@@ -7,6 +7,16 @@ import scala.{PartialFunction => PF}
 object Checker {
 
   /**
+   * Helper function for lifting checkE and checkC. Only we define a partial
+   * function that handles some of the cases in checkE or checkC that we
+   * care about, we can define the checkE for the Checker as:
+   *
+   * [[myCheckC.orElse(asPartial(checkE(_: Expr)(_: Env)))]]
+   *
+   */
+  def asPartial[A, B, C](f: (A, B) => C): PF[(A, B), C ] = { case (a, b) => f(a, b) }
+
+  /**
    * A checker is a compiler pass that collects information using some Environment
    * type and is only used for it's side effects. A Checker cannot modify the
    * AST beyond adding annotations on it.
@@ -90,16 +100,6 @@ object Checker {
       }
     }
 
-    /**
-     * Helper function for lifting checkE and checkC. Only we define a partial
-     * function that handles some of the cases in checkE or checkC that we
-     * care about, we can define the checkE for the Checker as:
-     *
-     * [[myCheckC.orElse(asPartial(checkE(_: Expr)(_: Env)))]]
-     *
-     */
-    def asPartial[A, B, C](f: (A, B) => C): PF[(A, B), C ] = { case (a, b) => f(a, b) }
-
   }
 
   /**
@@ -109,14 +109,33 @@ object Checker {
    */
   abstract class PartialChecker extends Checker {
 
-    def myCheckE: PF[(Expr, Env), Env] = asPartial(checkE(_: Expr)(_: Env))
+    // We create these two objects to get reference equality in the checkE
+    // conditional below.
+    private def defaultMyCheckE: PF[(Expr, Env), Env] =
+      asPartial(checkE(_: Expr)(_: Env))
 
-    def myCheckC: PF[(Command, Env), Env] = asPartial(checkC(_: Command)(_: Env))
+    private def defaultMyCheckC: PF[(Command, Env), Env] =
+      asPartial(checkC(_: Command)(_: Env))
 
-    override def checkE(expr: Expr)(implicit env: Env): Env =
-      myCheckE.orElse(asPartial(super.checkE(_: Expr)(_: Env)))((expr, env))
+    def myCheckE: PF[(Expr, Env), Env] = defaultMyCheckE
 
-    override def checkC(cmd: Command)(implicit env: Env): Env =
-      myCheckC.orElse(asPartial(super.checkC(_: Command)(_: Env)))((cmd, env))
+    def myCheckC: PF[(Command, Env), Env] = defaultMyCheckC
+
+    override def checkE(expr: Expr)(implicit env: Env): Env = {
+      // Don't create a new function if myCheckE was not overriden
+      if (myCheckE == defaultMyCheckE) {
+        myCheckE(expr, env)
+      } else {
+        myCheckE.orElse(asPartial(super.checkE(_: Expr)(_: Env)))((expr, env))
+      }
+    }
+
+    override def checkC(cmd: Command)(implicit env: Env): Env = {
+      if (myCheckC == defaultMyCheckC) {
+        myCheckC(cmd, env)
+      } else {
+        myCheckC.orElse(asPartial(super.checkC(_: Command)(_: Env)))((cmd, env))
+      }
+    }
   }
 }
