@@ -128,7 +128,7 @@ object TypeChecker {
                                  (implicit env: Environment) = {
     env
       .addResource(id, typ.dims.map(_._2), typ.ports)
-      .addGadget(id, BaseGadget(id))
+      .addGadget(id, BaseGadget(id, typ.dims))
   }
 
   /**
@@ -141,7 +141,7 @@ object TypeChecker {
       case ((env1, bres, consume), (idx, dim)) => checkE(idx)(env1) match {
         // Index is an index type.
         case (TIndex((s, e), _), env2) =>
-          if (dims(dim)._2 != e - s)
+          if ((e - s) % dims(dim)._2 != 0)
             throw BankUnrollInvalid(arrId, dims(dim)._2, e - s)(idx.pos)
           else
             (env2, bres * (e - s), Range(s, e) +: consume)
