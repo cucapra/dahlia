@@ -29,6 +29,7 @@ object Compiler {
     typechecker.CapabilityChecker.check(ast); showDebug(ast, "Capability Checking", c)
     typechecker.TypeChecker.typeCheck(ast); showDebug(ast, "Type Checking", c)
     passes.BoundsChecker.check(ast);  // Doesn't modify the AST.
+    passes.LoopChecker.check(ast);  // Doesn't modify the AST.
     val rast = passes.RewriteView.rewriteProg(ast); showDebug(rast, "Rewrite Views", c)
     toBackend(c.backend).emit(rast, c)
   }
