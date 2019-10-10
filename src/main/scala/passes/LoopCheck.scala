@@ -33,13 +33,14 @@ object LoopChecker {
     // Whether we need to check loop dependency depends on 
     // 1. if there is a loop
     // 2. if the loop needs unrolling
-    def needCheck: Boolean = res > 1
+    //def needCheck: Boolean = res>1//loop && res > 1
     
     // Helper functions for NameMap
     def addName(vid:Id, tid:Id):LEnv = NameMap.add(vid,tid) match{
       case None => {Impossible("NameMap has this view id before, redefinition");this}
       case Some(m) => LEnv(StateMap,m)
     }
+    // in the case of for loop i,  
     def getName(aid:Id):Id = NameMap.get(aid).getOrElse(aid)
     
     // Helper functions for StateMap
@@ -69,19 +70,19 @@ object LoopChecker {
       case _ => throw Impossible("No such state")
     }
     // Helper functions for ScopeManager
-    def withScope(inScope: LEnv => LEnv): LEnv = this
-    def withScope(resources: Int, loop: Boolean)(inScope: LEnv => LEnv): LEnv = {
+    def withScope(resources: Int = 1, loop: Boolean = false )(inScope: LEnv => LEnv): LEnv = {
       inScope(this.addScope(resources, loop)) match {
         case env:LEnv => env.endScope(resources, loop)
       }
     }
+    def withScope(inScope: LEnv => LEnv): LEnv = this//To satisfy envhelper
     def addScope(resources: Int, loop:Boolean) = {
       if (res * resources > 1 && loop == true)
         LEnv(StateMap.addScope, NameMap.addScope)(res * resources)
       else 
         LEnv(StateMap, NameMap.addScope)(res * resources)
     }
-    def endScope(resources: Int, loop:Boolean = false) = {
+    def endScope(resources: Int, loop:Boolean) = {
       val nmap = NameMap.endScope.get._2
       if (res > 1 && loop == true){
         val keys = StateMap.keys
