@@ -82,6 +82,13 @@ object Errors {
   case class AlreadyBound(id: Id) extends TypeError(
     s"`$id' already bound in scope", id.pos)
 
+  // Binding errors
+  case class LoopDepSequential(id: Id) extends TypeError(
+    s"`$id' cannot be used and then defined in an unrolled loop.", id.pos)
+
+  case class LoopDepMerge(id: Id) extends TypeError(
+    s"`$id' cannot be merged with conflit state. The execution order is non-deterministic.", id.pos)
+    
   // View errors
   case class InvalidShrinkWidth(pos: Position, bf: Int, width: Int) extends TypeError(
     s"Invalid shrinking factor for view. Expected factor of $bf (banking factor), received: $width", pos)
