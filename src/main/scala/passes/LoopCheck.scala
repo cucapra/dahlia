@@ -10,25 +10,25 @@ import ScopeMapExt._
 import Syntax._
 import Errors._
 import CompilerError._
-//import Logger._
 import Checker._
 import EnvHelpers._
 
 object LoopChecker {
 
   def check(p: Prog) = LCheck.check(p)
+  object States extends Enumeration{
+    type States = Value
+    val USE, DEF, DK = Value
+  }
+  import States._
 
   // Bounds checker environment doesn't need to track any information. Empty
   // environment that just runs the commands.
   private case class LEnv(
-    StateMap: ScopedMapExt[Id, Int] = ScopedMapExt(),
+    StateMap: ScopedMapExt[Id, States] = ScopedMapExt(),
     NameMap: ScopedMap[Id,Id] = ScopedMap())(implicit val res: Int) 
     extends ScopeManager[LEnv] {
     
-    //states 
-    val USE = 0
-    val DEF = 1
-    val DK = 2
     
     // Helper functions for NameMap
     def addName(vid:Id, tid:Id):LEnv = NameMap.add(vid,tid) match{
@@ -40,13 +40,13 @@ object LoopChecker {
     
     // Helper functions for StateMap
     def atDef(id:Id): LEnv = StateMap.get(id) match{
-      case None | Some(DK) => LEnv(StateMap+(id -> DEF), NameMap)//DK update to DEF
+      case None | Some(DK) => LEnv(StateMap+(id -> DEF), NameMap)
       case Some(DEF) => this 
       case Some(USE) => throw LoopDepSequential(id)
       case _ => throw Impossible("No such state")
     }
     def atDk(id:Id):LEnv = StateMap.get(id) match{
-      case None | Some(DEF) => LEnv(StateMap+(id->DK), NameMap)
+      case None | Some(DEF) => LEnv(StateMap+(id -> DK), NameMap)
       case Some(DK) => this
       case Some(USE) => throw LoopDepSequential(id) 
       case _ => throw Impossible("No such state")
@@ -58,13 +58,12 @@ object LoopChecker {
       case _ => throw Impossible("No such state")
     }
     //check and update the state table
-    def updateState(id:Id, state: Int):LEnv = {
+    def updateState(id:Id, state: States):LEnv = {
       if (res > 1){
         state match {
           case DK => atDk(id)
           case DEF => atDef(id)
           case USE => atUse(id)
-          case _ => throw Impossible("No such state")
         }
       }
       else
@@ -76,7 +75,8 @@ object LoopChecker {
         case env:LEnv => env.endScope(resources)
       }
     }
-    def withScope(inScope: LEnv => LEnv): LEnv = withScope(1)(inScope)//To satisfy envhelper
+    // To satisfy envhelper
+    def withScope(inScope: LEnv => LEnv): LEnv = withScope(1)(inScope)
     def addScope(resources: Int) = {
       LEnv(StateMap.addScope, NameMap.addScope)(res * resources)
     }
@@ -90,6 +90,16 @@ object LoopChecker {
       }
       outerenv
     }
+    
+    def mergeHelper(k: Id, v1: Option[States], v2: Option[States], env: LEnv): LEnv = (v1, v2) match {
+      case (None, None) => throw Impossible("No such merging")
+      case (None, Some(s)) =>  env.copy(StateMap = env.StateMap + (k->s) )
+      case (Some(DEF), Some(DK)) =>  env.copy(StateMap = env.StateMap + (k->DK) )
+      case (Some(DEF), Some(USE)) => throw LoopDepMerge(k)
+      case (Some(DK), Some(USE)) =>  throw LoopDepMerge(k)
+      case (v1, v2) => if (v1 == v2) env else mergeHelper(k, v2, v1, env)
+    }
+    
     // If statement
     def merge(that: LEnv): LEnv = {
       val m1 = this.StateMap
@@ -97,31 +107,7 @@ object LoopChecker {
       var env = LEnv(m1, NameMap)
       if (res > 1){
         for (k <- m1.keys){
-          val v = m1.get(k) 
-          env = m2.get(k) match{
-            case Some(DEF) => v match {
-              case Some(DEF) => env
-              case Some(USE) => throw LoopDepMerge(k)
-              case Some(DK) | None => env.copy(StateMap = env.StateMap + (k->DK) )
-              case _ => throw Impossible("No such state")
-            }
-            case Some(DK) => v match {
-              case Some(USE) =>throw LoopDepMerge(k)
-              case  Some(DK) | Some(DEF) | None => env.copy(StateMap = env.StateMap + (k->DK) )
-              case _ => throw Impossible("No such state")
-            }
-            case Some(USE) => v match {
-              case None | Some(USE) => env.copy(StateMap = env.StateMap + (k->USE) )
-              case Some(DK) | Some(DEF) => throw LoopDepMerge(k)
-              case _ => throw Impossible("No such state")
-            }
-            case None => v match {
-              case Some(DK) | Some(DEF) => env.copy(StateMap = env.StateMap + (k->DK) )
-              case Some(USE) => env
-              case _ => throw Impossible("No such state")
-            }
-            case _ => throw Impossible("No such state")
-          }
+          env = mergeHelper(k, m1.get(k), m2.get(k), env)
         }
       }
       env
@@ -136,23 +122,24 @@ object LoopChecker {
 
     def myCheckLVal(e: Expr, env: Env): Env = { e match 
       {
-        case EVar(id) => env.updateState(id, env.DEF)
-        case EArrAccess(id, _) => env.updateState(id, env.DEF)
-        case ERecAccess(rec, _) => println(rec); env//TODO: fix it
+        case EVar(id) => env.updateState(id, DEF)
+        case EArrAccess(id, _) => println("id");env.updateState(id, DEF)
+        case ERecAccess(rec, _) => myCheckLVal(rec, env)
         case _ => throw Impossible("Cannot be lhs value")
       }
     }
     
     override def myCheckE: PF[(Expr, Env), Env] = {
     // by default, this is rval
-      case (EVar(id), e) => e.updateState(id, e.USE)
-      case (EArrAccess(id, _), e) => e.updateState(id, e.USE)
+      case (EVar(id), e) => e.updateState(id, USE)
+      case (EArrAccess(id, _), e) => e.updateState(id, USE)
     }
     
     override def myCheckC: PF[(Command, Env), Env] = {
       case (CUpdate(lhs, rhs), e) => myCheckLVal(lhs,checkE(rhs)(e))
       case (CReduce(_, lhs, rhs), e) => myCheckLVal(lhs,checkE(rhs)(e))
-      case (CLet(id, _, eOpt), e) => myCheckLVal(EVar(id),checkE(eOpt.get)(e)) //TODO: None is deprecated. But what is None
+      case (CLet(id, _, None), e) => myCheckLVal(EVar(id), e) 
+      case (CLet(id, _, eOpt), e) => myCheckLVal(EVar(id), checkE(eOpt.get)(e) )
       case (_@CView(viewId, arrId, _), e) => {
         val id = e.getName(arrId)
         e.addName(viewId,id)
