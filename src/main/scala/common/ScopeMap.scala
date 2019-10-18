@@ -18,6 +18,11 @@ object ScopeMap {
         .map(map => s"<${map.map({case (k, v) => s"$k -> $v"}).mkString(", ")}>")
         .mkString(" => ")
 
+    def head = mapList.head
+
+    /**
+     * Returns first occurance of the binding for key in the scope chain.
+     */
     def get(key: K): Option[V] =
       mapList.find(map => map.get(key).isDefined).map(c => c(key))
 
@@ -29,6 +34,13 @@ object ScopeMap {
     def add(key: K, value: V): Option[ScopedMap[K, V]] = get(key) match {
       case Some(_) => None
       case None => Some(this.copy(mapList = mapList.head + (key -> value) :: mapList.tail))
+    }
+
+    /**
+     * Add key -> value binding to the topmost scope.
+     */
+    def addShadow(key: K, value: V): ScopedMap[K, V] = {
+      this.copy(mapList = mapList.head + (key -> value) :: mapList.tail)
     }
 
     /**
