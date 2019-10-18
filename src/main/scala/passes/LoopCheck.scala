@@ -20,7 +20,7 @@ object LoopChecker {
 
   def check(p: Prog) = LCheck.check(p)
 
-  // Bounds checker environment doesn't need to track any information. Empty
+  // Loop checker environment doesn't need to track any information. Empty
   // environment that just runs the commands.
   private case class LEnv(
     stateMap: ScopedMap[Id, States] = ScopedMap(),
