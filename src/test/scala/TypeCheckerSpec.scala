@@ -696,7 +696,7 @@ class TypeCheckerSpec extends FunSpec {
   }
 
 
-  describe("Loop denpendency in unrolled context") {
+  describe("Loop depedency in unrolled context") {
     it("use after define in an unrolled loop is not allowed") {
       assertThrows[LoopDepSequential] {
         typeCheck("""
