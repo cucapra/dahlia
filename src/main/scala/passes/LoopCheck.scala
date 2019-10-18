@@ -93,7 +93,8 @@ object LoopChecker {
     
     def mergeHelper(k: Id, v1: Option[States], v2: Option[States], env: LEnv): LEnv = (v1, v2) match {
       case (None, None) => throw Impossible("No such merging")
-      case (None, Some(s)) =>  env.copy(StateMap = env.StateMap + (k->s) )
+      case (None, Some(USE)) =>  env.copy(StateMap = env.StateMap + (k->USE) )
+      case (None, _) =>  env.copy(StateMap = env.StateMap + (k->DK) )
       case (Some(DEF), Some(DK)) =>  env.copy(StateMap = env.StateMap + (k->DK) )
       case (Some(DEF), Some(USE)) => throw LoopDepMerge(k)
       case (Some(DK), Some(USE)) =>  throw LoopDepMerge(k)
@@ -107,6 +108,7 @@ object LoopChecker {
       var env = LEnv(m1, NameMap)
       if (res > 1){
         for (k <- m1.keys){
+          println(m1.get(k), m2.get(k))
           env = mergeHelper(k, m1.get(k), m2.get(k), env)
         }
       }
@@ -162,7 +164,9 @@ object LoopChecker {
           val nEnv = checkE(cond)(someScope) 
           val e1 = nEnv.withScope(checkC(c1)(_))
           val e2 = nEnv.withScope(checkC(c2)(_))
-          e1 merge e2
+          val eres = e1 merge e2
+          println(e1.StateMap)
+          eres          
         })
       }
     }
