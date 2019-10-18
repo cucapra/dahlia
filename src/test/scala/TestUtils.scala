@@ -19,6 +19,7 @@ object TestUtils {
     CapabilityChecker.check(ast);
     val env = TypeChecker.typeCheck(ast);
     BoundsChecker.check(ast);
+    LoopChecker.check(ast);
     env
   }
 }

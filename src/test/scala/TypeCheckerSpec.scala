@@ -788,6 +788,118 @@ class TypeCheckerSpec extends FunSpec {
     }
   }
 
+
+  describe("Loop denpendency in unrolled context") {
+    it("use after define in an unrolled loop is not allowed") {
+      assertThrows[LoopDepSequential] {
+        typeCheck("""
+          decl a: bit<32>[10 bank 5];
+          for (let i = 0..10) unroll 5 {
+            let x = a[i]
+            ---
+            a[i] := 1
+          }
+          """ )
+      }
+    }
+    it("use after define in a nested unrolled loop is not allowed") {
+      assertThrows[LoopDepSequential] {
+        typeCheck("""
+          decl a: bit<32>[10 bank 5][10 bank 5];
+          for (let i = 0..10) unroll 5 {
+            a[i][0];
+            ---
+            for (let j = 0..10) unroll 5 {
+              a[i][j] := 1
+            }
+          }
+        """ )
+      }
+    }
+    it("condition in if is always a use") {
+      assertThrows[LoopDepSequential] {
+        typeCheck("""
+          decl a: bit<32>[10 bank 5];
+          for (let i = 0..10) unroll 5 {
+            let x = a[i]
+            ---
+            if (x > 10) {
+              x := 1
+            }
+          }
+          """ )
+      }
+    }
+    it("merging condition creates don't know state") {
+      assertThrows[LoopDepSequential] {
+        typeCheck("""
+          decl a: bit<32>[10 bank 5];
+          decl b: bit<32>[10 bank 5];
+          for (let i = 0..10) unroll 5 {
+            if (b[i] > 10) {
+              a[i] := 1
+            }
+            ---
+            a[i];
+          }
+          """ )
+      }
+    }
+    it("merging use and define is not allowed") {
+      assertThrows[LoopDepMerge] {
+        typeCheck("""
+          decl a: bit<32>[10 bank 5];
+          decl b: bit<32>[10 bank 5];
+          for (let i = 0..10) unroll 5 {
+            if (b[i] > 10) {
+              a[i] := 1
+            }else{
+              a[i];
+            }
+          }
+          """ )
+      }
+    }
+    it("define after use in an unrolled loop works") {
+      typeCheck("""
+        decl a: bit<32>[10 bank 5];
+        for (let i = 0..10) unroll 5 {
+          a[i] := 1;
+          ---
+          let x = a[i];
+        }
+        """ )
+    }
+    it("define after use in nested unrolled loop works") {
+      typeCheck("""
+        decl a: bit<32>[10 bank 5][10 bank 5];
+        for (let i = 0..10) unroll 5 {
+          for (let j = 0..10) unroll 5 {
+            a[i][j] := 1
+          }
+          ---
+          a[i][0];
+        }
+        """ )
+    }
+    it("don't know state can be transferred to defined state again") {
+      typeCheck("""
+        decl a: bit<32>[10 bank 5];
+        decl b: bit<32>[10 bank 5];
+        for (let i = 0..10) unroll 5 {
+          if (b[i] > 10) {
+            a[i] := 1;
+          }
+          ---
+          a[i] := 2;
+          ---
+          a[i];
+        }
+        """ )
+    }
+  }
+
+
   describe("Functions") {
     it("cannot have same name for multiple params") {
       assertThrows[AlreadyBound] {
