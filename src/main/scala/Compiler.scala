@@ -26,6 +26,7 @@ object Compiler {
 
   def compileStringWithError(prog: String, c: Config = emptyConf) = {
     val ast = FuseParser.parse(prog)
+    typechecker.WellFormedChecker.check(ast); showDebug(ast, "Well Formedness Checking", c)
     typechecker.CapabilityChecker.check(ast); showDebug(ast, "Capability Checking", c)
     typechecker.TypeChecker.typeCheck(ast); showDebug(ast, "Type Checking", c)
     passes.BoundsChecker.check(ast);  // Doesn't modify the AST.

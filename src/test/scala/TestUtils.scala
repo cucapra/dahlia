@@ -16,6 +16,7 @@ object TestUtils {
   def parseAst(s: String) = FuseParser.parse(s)
   def typeCheck(s: String) = {
     val ast = FuseParser.parse(s);
+    WellFormedChecker.check(ast);
     CapabilityChecker.check(ast);
     val env = TypeChecker.typeCheck(ast);
     BoundsChecker.check(ast);

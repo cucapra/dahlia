@@ -404,15 +404,11 @@ object TypeChecker {
       }
     }
     case l@CLet(id, typ, Some(EArrLiteral(idxs))) => {
-      val expTyp = typ.getOrThrow(ExplicitTypeMissing(l.pos, "Array literal", id))
-
+      val expTyp = typ.get
       env
         .resolveType(expTyp)
         .matchOrError(l.pos, "Let bound array literal", "array type") {
           case ta@TArray(elemTyp, dims) => {
-            assertOrThrow(dims.length == 1,
-              Unsupported(l.pos, "Multidimensional array literals"))
-
             assertOrThrow(dims(0)._1 == idxs.length,
               LiteralLengthMismatch(l.pos, dims(0)._1, idxs.length))
 
