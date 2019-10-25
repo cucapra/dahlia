@@ -243,8 +243,6 @@ object TypeChecker {
     case ERational(v) => TRational(v) -> env
     case EInt(v, _) => TStaticInt(v) -> env
     case EBool(_) => TBool() -> env
-    case ERecLiteral(_) => throw NotInBinder(expr.pos, "Record Literal")
-    case EArrLiteral(_) => throw NotInBinder(expr.pos, "Array Literal")
     case ECast(e, castType) => {
       val (typ, nEnv) = checkE(e)
       if (safeCast(typ, castType) == false) {
@@ -316,6 +314,7 @@ object TypeChecker {
         }
       }
     }
+    case _ => throw Impossible(s"well-formedness of $expr was not checked")
   }
 
   /**
@@ -492,12 +491,8 @@ object TypeChecker {
         }
       }
     }
-    case l@CLet(id, typ, None) => {
-      val fullTyp = typ
-        .map(env.resolveType(_))
-        .getOrThrow(ExplicitTypeMissing(l.pos,
-                                        "Let binding without initializer",
-                                        id))
+    case CLet(id, typ, None) => {
+      val fullTyp = env.resolveType(typ.get)
 
       // If this is an array literal, bind the physical resource too.
       val nEnv = fullTyp match {
