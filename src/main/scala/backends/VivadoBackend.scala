@@ -1,13 +1,13 @@
 package fuselang.backend
 
 import Cpp._
-import PrettyPrint.Doc
-import PrettyPrint.Doc._
 
 import fuselang.common._
 import Syntax._
 import Configuration._
 import CompilerError._
+import PrettyPrint.Doc
+import PrettyPrint.Doc._
 
 private class VivadoBackend extends CppLike {
   val CppPreamble: Doc = text("""
@@ -81,12 +81,12 @@ private class VivadoBackend extends CppLike {
   def emitType(typ: Type): Doc = typ match {
     case _:TVoid => text("void")
     case _:TBool | _:TIndex => text("int")
-    case _:TStaticInt => throw Impossible("TStaticInt type should not exist")    
+    case _:TStaticInt => throw Impossible("TStaticInt type should not exist")
     case _:TFloat => text("float")
     case _:TDouble => text("double")
-    case _:TRational => throw Impossible("Rational type should not exist")    
+    case _:TRational => throw Impossible("Rational type should not exist")
     case TSizedInt(s, un) => text(if (un) s"ap_uint<$s>" else s"ap_int<$s>")
-    case TFixed(t,i,un) => text(if (un) s"ap_ufixed<$t,$i>" else s"ap_fixed<$t,$i>") 
+    case TFixed(t,i,un) => text(if (un) s"ap_ufixed<$t,$i>" else s"ap_fixed<$t,$i>")
     case TArray(typ, _) => emitType(typ)
     case TRecType(n, _) => text(n.toString)
     case _:TFun => throw Impossible("Cannot emit function types")

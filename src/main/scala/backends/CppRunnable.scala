@@ -1,13 +1,13 @@
 package fuselang.backend
 
 import Cpp._
-import PrettyPrint.Doc
-import PrettyPrint.Doc._
 
 import fuselang.common._
 import Syntax._
 import Configuration._
 import CompilerError._
+import PrettyPrint.Doc
+import PrettyPrint.Doc._
 
 /**
  * Same as [[fuselang.backend.VivadoBackend]] except this creates a main

@@ -2,7 +2,7 @@
  * Lightweight library from the deprecated scala.text distribution.
  */
 
-package fuselang.backend
+package fuselang.common
 
 import java.io.Writer
 
@@ -84,6 +84,7 @@ object PrettyPrint {
 
     /** Common primitives */
     def semi: Doc = text(";")
+    def colon: Doc = text(":")
     def comma: Doc = text(",")
     def dot: Doc = text(".")
     def equal: Doc = text("=")
@@ -93,26 +94,31 @@ object PrettyPrint {
     /** A nested Doc, which will be indented as specified. */
     def nest(d: Doc, i: Int): Doc = DocNest(i, d)
 
-    def folddoc(ds: Seq[Doc], f: (Doc, Doc) => Doc) =
+    def folddoc(ds: Iterable[Doc], f: (Doc, Doc) => Doc) =
       if (ds.isEmpty) emptyDoc
       else ds.tail.foldLeft(ds.head)(f)
 
     /** Builder functions */
-    def hsep(ds: Seq[Doc], sep: Doc): Doc =
+    def hsep(ds: Iterable[Doc], sep: Doc): Doc =
       folddoc(ds, (_ <> sep <> _))
 
-    def ssep(ds: Seq[Doc], sep: Doc): Doc =
+    def ssep(ds: Iterable[Doc], sep: Doc): Doc =
       folddoc(ds, (_ <> sep <> _))
 
-    def hsep(ds: Seq[Doc]): Doc =
+    def hsep(ds: Iterable[Doc]): Doc =
       folddoc(ds, (_ <+> _))
 
-    def vsep(ds: Seq[Doc]): Doc =
+    def vsep(ds: Iterable[Doc]): Doc =
       folddoc(ds, (_ <@> _))
 
     def enclose(l: Doc, d: Doc, r: Doc) = l <> d <> r
 
     def surround(d: Doc, s: Doc) = enclose(s, d, s)
+
+    def commaSep(docs: List[Doc]) = hsep(docs, comma <> space)
+
+    def scope(doc: Doc, indent: Int = 2): Doc =
+      lbrace <> nest(emptyDoc <@> doc, indent) <@> rbrace
 
     /** Common functions **/
 
