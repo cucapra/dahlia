@@ -1,10 +1,10 @@
 package fuselang.backend
-import PrettyPrint.Doc._
-import PrettyPrint.Doc
 
 import fuselang.common._
 import Syntax._
 import CompilerError._
+import PrettyPrint.Doc._
+import PrettyPrint.Doc
 
 object Cpp {
   /**
@@ -22,7 +22,6 @@ object Cpp {
 
     val defaultIndent = 2
 
-    def commaSep(docs: List[Doc]) = hsep(docs, comma <> space)
 
     /**
      * Helper to generate a variable declaration with an initial value.
@@ -80,9 +79,6 @@ object Cpp {
       semi
 
     implicit def IdToString(id: Id): Doc = value(id.v)
-
-    def scope(doc: Doc): Doc =
-      lbrace <> nest(emptyDoc <@> doc, defaultIndent) <@> rbrace
 
     def emitBaseInt(v: Int, base: Int): String = base match {
       case 8 => s"0${Integer.toString(v, 8)}"

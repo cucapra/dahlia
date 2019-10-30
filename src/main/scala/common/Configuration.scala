@@ -24,6 +24,7 @@ object Configuration {
     mode: Mode = Compile,                 // Compilation mode
     compilerOpts: List[String] = List(),  // Extra options to the generateExec Compiler
     header: Boolean = false,              // Generate a header
+    passDebug: Boolean = false,           // Show AST after every state
     logLevel: scribe.Level = scribe.Level.Info
   )
 

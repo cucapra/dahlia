@@ -1,13 +1,13 @@
 package fuselang.backend
 
 import Cpp._
-import PrettyPrint.Doc
-import PrettyPrint.Doc._
 
 import fuselang.common._
 import Syntax._
 import Configuration._
 import CompilerError._
+import PrettyPrint.Doc
+import PrettyPrint.Doc._
 
 /**
  * Same as [[fuselang.backend.VivadoBackend]] except this creates a main
@@ -21,7 +21,7 @@ private class CppRunnable extends CppLike {
     case _:TVoid => text("void")
     case _:TBool => text("bool")
     case _:TIndex => text("int")
-    case _:TStaticInt => throw Impossible("TStaticInt type should not exist")    
+    case _:TStaticInt => throw Impossible("TStaticInt type should not exist")
     case TSizedInt(_, un) => text(if (un) "unsigned int" else "int")
     case _:TFloat => text("float")
     case _:TDouble | _:TFixed => text("double")
