@@ -158,7 +158,8 @@ object Cpp {
           )
           .getOrElse(emptyDoc)
 
-        text("extern") <+> quote(text("C")) <+> scope(body)
+        if (entry) text("extern") <+> quote(text("C")) <+> scope(body)
+        else body
     }
 
     def emitDef(defi: Definition): Doc = defi match {
