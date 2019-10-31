@@ -75,12 +75,13 @@ private class VivadoBackend extends CppLike {
           text(s"#pragma HLS INTERFACE m_axi port=${arg.id} offset=slave bundle=gmem") <@>
             text(s"#pragma HLS INTERFACE s_axilite port=${arg.id} bundle=control")
         }
-        case _ => emptyDoc
+        case _ =>
+          text(s"#pragma HLS INTERFACE s_axilite port=${arg.id} bundle=control")
       })
-    text(s"#pragma HLS INLINE") <@>
-    (if (entry)
-      vsep(argPragmas)
-     else emptyDoc) <>
+
+    if (entry) bankWarn(func.args)
+
+    (if (entry) vsep(argPragmas) else text(s"#pragma HLS INLINE")) <@>
       vsep(bankPragmas(func.args)) <@>
       text(s"#pragma HLS INTERFACE s_axilite port=return bundle=control") <@>
       emptyDoc
