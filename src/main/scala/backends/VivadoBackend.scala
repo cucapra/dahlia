@@ -60,16 +60,21 @@ private class VivadoBackend extends CppLike {
       }
 
   def emitFuncHeader(func: FuncDef, entry: Boolean = false): Doc = {
+    val argPragmas = func.args.map(arg =>
+      arg.typ match {
+        case _:TArray => {
+          text(s"#pragma HLS INTERFACE m_axi port=${arg.id} offset=slave bundle=gmem") <@>
+            text(s"#pragma HLS INTERFACE s_axilite port=${arg.id} bundle=control")
+        }
+        case _ => emptyDoc
+      })
     text(s"#pragma HLS INLINE") <@>
     (if (entry)
-      vsep(func.args.map(arg =>
-        arg.typ match {
-          case _:TArray => text(s"#pragma HLS INTERFACE s_axilite port=${arg.id}")
-          case _ => emptyDoc
-        }
-      ))
-     else emptyDoc) <@>
-    vsep(bankPragmas(func.args))
+      vsep(argPragmas)
+     else emptyDoc) <>
+      vsep(bankPragmas(func.args)) <@>
+      text(s"#pragma HLS INTERFACE s_axilite port=return bundle=control") <@>
+      emptyDoc
   }
 
   def emitArrayDecl(ta: TArray, id: Id): Doc =
