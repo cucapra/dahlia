@@ -1,13 +1,32 @@
-decl m1: float[32][32 bank 32];
-decl m2: float[32 bank 32][32];
-decl prod: float[32][32];
+decl m1_int: float[32][32];
+decl m2_int: float[32][32];
+decl prod_int: float[32][32];
 
-for (let i = 0..32) {
-  for (let j = 0..32) {
-    for(let k = 0..32) unroll 32 {
-      let mult = m1[i][k] * m2[k][j];
-    } combine {
-      prod[i][j] += mult;
+let m1: float[32][32 bank 32];
+let m2: float[32 bank 32][32];
+let prod: float[32][32];
+
+view m1_sh = m1[_:][_: bank 1];
+view m2_sh = m2[_: bank 1][_:];
+
+{
+  for (let i = 0..32) {
+    for (let j = 0..32) {
+      m1_sh[i][j] := m1_int[i][j];
+      m2_sh[i][j] := m2_int[i][j];
+    }
+  }
+
+  ---
+
+  for (let i = 0..32) {
+    for (let j = 0..32) {
+      for(let k = 0..32) unroll 32 {
+        let mult = m1[i][k] * m2[k][j];
+      } combine {
+        prod[i][j] += mult;
+      }
     }
   }
 }
+

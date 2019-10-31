@@ -1,7 +1,24 @@
-decl a: bit<64>[1024 bank 32];
-decl b: bit<64>[1024 bank 32];
-decl c: bit<64>[1024 bank 32];
+decl a_int: bit<64>[1024];
+decl b_int: bit<64>[1024];
+decl c_int: bit<64>[1024];
 
-for (let i = 0..1024) unroll 32 {
-  c[i] := a[i] + b[i];
+let a: bit<64>[1024 bank 32];
+let b: bit<64>[1024 bank 32];
+let c: bit<64>[1024 bank 32];
+
+view a_sh = a[_: bank 1];
+view b_sh = b[_: bank 1];
+view c_sh = c[_: bank 1];
+
+{
+  for (let i = 0..1024) {
+    a_sh[i] := a_int[i];
+    b_sh[i] := b_int[i];
+    c_sh[i] := c_int[i];
+  }
+  ---
+  for (let i = 0..1024) unroll 32 {
+    c[i] := a[i] + b[i];
+  }
 }
+
