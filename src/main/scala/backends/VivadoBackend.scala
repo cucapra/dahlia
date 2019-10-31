@@ -33,6 +33,15 @@ private class VivadoBackend extends CppLike {
     .withFilter(s => s != "")
     .map(s => value(s))
 
+  def bankWarn(decls: List[Decl]) =
+    decls.collect({ case Decl(id, typ: TArray) =>
+      typ.dims.foreach({ case (_, bank) =>
+        if (bank > 1)
+          throw BackendError(
+            s"Interfact array `${id}' is partitioned. SDAccel will generate incorrect hardware for partitioned interface arrays.")
+      })
+    })
+
   override def emitLet(let: CLet): Doc = {
     super.emitLet(let) <@>
     (let.typ match {
