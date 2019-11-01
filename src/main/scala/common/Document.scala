@@ -23,7 +23,6 @@ object PrettyPrint {
    * @version 1.0
    */
   abstract class Doc {
-    def <>(hd: Doc): Doc = DocCons(this, hd)
     def <@>(hd: Doc): Doc = {
       if (hd == DocNil) this
       else this <> DocBreak <> hd
