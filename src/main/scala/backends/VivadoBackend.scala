@@ -28,19 +28,29 @@ private class VivadoBackend extends CppLike {
       })
     })
 
-  def bank(id: Id, banks: List[Int]): Doc = vsep(banks.zipWithIndex.map({
-    case (1, _) => emptyDoc
-    case (bank, dim) =>
-      text(s"#pragma HLS ARRAY_PARTITION variable=$id cyclic factor=$bank dim=${dim + 1}")
-  }))
+  def bankAndResource(id: Id, ports: Int, banks: List[Int]): Doc = {
+    val bankPragma = banks.zipWithIndex.map({
+      case (1, _) => emptyDoc
+      case (bank, dim) =>
+        text(s"#pragma HLS ARRAY_PARTITION variable=$id cyclic factor=$bank dim=${dim + 1}")
+    })
+    val resource = ports match {
+      case 1 => "RAM_1P_BRAM"
+      case 2 => "RAM_T2P_BRAM"
+      case n => throw BackendError(
+        s"SDAccel does not support ${n}-ported memories.")
+    }
+    val resPragma = text(s"#pragma HLS resource variable=${id} core=${resource}")
+    vsep(resPragma :: bankPragma)
+  }
 
-  def bankPragmas(decls: List[Decl]): List[Doc] = decls
-    .collect({ case Decl(id, typ: TArray) => bank(id, typ.dims.map(_._2)) })
+  def memoryPragmas(decls: List[Decl]): List[Doc] = decls
+    .collect({ case Decl(id, typ: TArray) => bankAndResource(id, typ.ports, typ.dims.map(_._2)) })
 
   override def emitLet(let: CLet): Doc = {
     super.emitLet(let) <@>
     (let.typ match {
-      case Some(t) => vsep(bankPragmas(List(Decl(let.id, t))))
+      case Some(t) => vsep(memoryPragmas(List(Decl(let.id, t))))
       case None => emptyDoc
     })
   }
@@ -77,7 +87,7 @@ private class VivadoBackend extends CppLike {
     if (entry) bankWarn(func.args)
 
     (if (entry) vsep(argPragmas) else text(s"#pragma HLS INLINE")) <@>
-      vsep(bankPragmas(func.args)) <@>
+      vsep(memoryPragmas(func.args)) <@>
       text(s"#pragma HLS INTERFACE s_axilite port=return bundle=control") <@>
       emptyDoc
   }
