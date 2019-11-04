@@ -19,14 +19,17 @@ private class VivadoBackend extends CppLike {
     case n => value(s"#pragma HLS UNROLL factor=$n skip_exit_check") <@> line
   }
 
-  def bankWarn(decls: List[Decl]) =
-    decls.collect({ case Decl(id, typ: TArray) =>
+  def interfaceValid(decls: List[Decl]) =
+    decls.collect({ case Decl(id, typ: TArray) => {
+      if (typ.ports > 1)
+          throw BackendError(
+            s"Interfact array `${id}' is multiported. SDAccel might not respect porting pragma.")
       typ.dims.foreach({ case (_, bank) =>
         if (bank > 1)
           throw BackendError(
             s"Interfact array `${id}' is partitioned. SDAccel will generate incorrect hardware for partitioned interface arrays.")
       })
-    })
+    }})
 
   def bankAndResource(id: Id, ports: Int, banks: List[Int]): Doc = {
     val bankPragma = banks.zipWithIndex.map({
@@ -74,22 +77,27 @@ private class VivadoBackend extends CppLike {
       }
 
   def emitFuncHeader(func: FuncDef, entry: Boolean = false): Doc = {
-    val argPragmas = func.args.map(arg =>
-      arg.typ match {
-        case _:TArray => {
-          text(s"#pragma HLS INTERFACE m_axi port=${arg.id} offset=slave bundle=gmem") <@>
+    // Error if interface arrays were partitioned/ported.
+    if (entry) interfaceValid(func.args)
+
+    if (entry) {
+      val argPragmas = func.args.map(arg =>
+        arg.typ match {
+          case _:TArray => {
+            text(s"#pragma HLS INTERFACE m_axi port=${arg.id} offset=slave bundle=gmem") <@>
+              text(s"#pragma HLS INTERFACE s_axilite port=${arg.id} bundle=control")
+          }
+          case _ =>
             text(s"#pragma HLS INTERFACE s_axilite port=${arg.id} bundle=control")
-        }
-        case _ =>
-          text(s"#pragma HLS INTERFACE s_axilite port=${arg.id} bundle=control")
-      })
+        })
 
-    if (entry) bankWarn(func.args)
+      vsep(argPragmas) <@>
+        text(s"#pragma HLS INTERFACE s_axilite port=return bundle=control")
+    } else {
+      text(s"#pragma HLS INLINE") <@>
+      vsep(memoryPragmas(func.args))
+    }
 
-    (if (entry) vsep(argPragmas) else text(s"#pragma HLS INLINE")) <@>
-      vsep(memoryPragmas(func.args)) <@>
-      text(s"#pragma HLS INTERFACE s_axilite port=return bundle=control") <@>
-      emptyDoc
   }
 
   def emitArrayDecl(ta: TArray, id: Id): Doc =
