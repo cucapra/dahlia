@@ -28,6 +28,21 @@ testOptions in Test += Tests.Argument("-oD")
 parallelExecution in Test := false
 logBuffered in Test := false
 
+/* Store commit hash information */
+resourceGenerators in Compile += Def.task {
+  import scala.sys.process._
+  val file = (resourceManaged in Compile).value / "version.properties"
+  val gitHash = "git rev-parse --short HEAD".!!
+  val gitDiff = "git diff --stat".!!
+  val status = if (gitDiff.trim() != "") "dirty" else "clean"
+  println(gitDiff)
+  IO.writeLines(file, Seq(
+    s"git.status = $status",
+    s"build.date = ${new java.util.Date()}",
+    s"git.hash = $gitHash"))
+  Seq(file)
+}
+
 /* sbt-assembly configuration: build an executable jar. */
 assemblyOption in assembly := (assemblyOption in assembly).value.copy(
     prependShellScript = Some(sbtassembly.AssemblyPlugin.defaultShellScript)
