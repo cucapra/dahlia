@@ -87,7 +87,7 @@ object Errors {
     s"`$id' cannot be used and then defined in an unrolled loop.", id.pos)
 
   case class LoopDepMerge(id: Id) extends TypeError(
-    s"`$id' cannot be merged with conflit state. The execution order is non-deterministic.", id.pos)
+    s"`$id' cannot be merged with conflicting state. The execution order is non-deterministic.", id.pos)
     
   // View errors
   case class InvalidShrinkWidth(pos: Position, bf: Int, width: Int) extends TypeError(
