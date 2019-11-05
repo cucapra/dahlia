@@ -46,19 +46,18 @@ object Errors {
     s"`$id' does not have bank $bank in dimension $dim.", pos)
 
   case class BankUnrollInvalid(arrId: Id, bf: Int, uf: Int)(implicit pos: Position) extends TypeError(
-    s"Invalid parallel access on `$arrId`. Banking factor ($bf) not equal to unrolling factor ($uf). Create a shrink view `view v_$arrId = $arrId[_ : bank $uf]' and use it instead.", pos)
+    s"Invalid parallel access on `$arrId`. Banking factor ($bf) does not divide unrolling factor ($uf). ", pos)
 
-  case class AlreadyConsumed(id: Id, dim: Int, bank: Int, origLoc: Position)
+  case class AlreadyConsumed(id: Id, dim: Int, bank: Int, origLoc: Option[Position])
                             (implicit pos: Position) extends TypeError(
-    s"Bank $bank in dimension ${dim + 1} of physical resource `$id' already consumed.", pos,
-    s"\n[${origLoc.line}.${origLoc.column}] Last consume happened here:\n${origLoc.longString}")
+    s"Bank $bank in dimension ${dim + 1} of physical resource `$id' already consumed.",
+    pos,
+    origLoc.map(loc => s"\n[${loc.line}.${loc.column}] Last consume happened here:\n${loc.longString}").getOrElse(""))
 
   case class InvalidDynamicIndex(id:Id, bf:Int) extends TypeError(
     s"Dynamic access of array `$id' requires unbanked dimension. Actual banking factor: $bf. Use a shrink view to create unbanked array.", id.pos)
 
   // Invalid Capability error
-  case class InvalidCap(expr: Expr, exp: Capability, actual: Capability) extends TypeError(
-    s"This expression requires $exp capability, but previous usage inferred $actual capability.", expr.pos)
   case class AlreadyWrite(e: Expr) extends TypeError(
     "Already written to this expression in this context.", e.pos)
   case class InsufficientResourcesInUnrollContext(exp: Int, ac: Int, expr: Expr)

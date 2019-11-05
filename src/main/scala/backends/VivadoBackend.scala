@@ -19,24 +19,41 @@ private class VivadoBackend extends CppLike {
     case n => value(s"#pragma HLS UNROLL factor=$n skip_exit_check") <@> line
   }
 
-  def bank(id: Id, banks: List[Int]): String = banks.zipWithIndex.foldLeft(""){
-    case (acc, (bank, dim)) =>
-      if (bank != 1) {
-        s"${acc}#pragma HLS ARRAY_PARTITION variable=$id cyclic factor=$bank dim=${dim + 1}"
-      } else {
-        acc
-      }
+  def interfaceValid(decls: List[Decl]) =
+    decls.collect({ case Decl(id, typ: TArray) => {
+      if (typ.ports > 1)
+          throw BackendError(
+            s"Interfact array `${id}' is multiported. SDAccel might not respect porting pragma.")
+      typ.dims.foreach({ case (_, bank) =>
+        if (bank > 1)
+          throw BackendError(
+            s"Interfact array `${id}' is partitioned. SDAccel will generate incorrect hardware for partitioned interface arrays.")
+      })
+    }})
+
+  def bankAndResource(id: Id, ports: Int, banks: List[Int]): Doc = {
+    val bankPragma = banks.zipWithIndex.map({
+      case (1, _) => emptyDoc
+      case (bank, dim) =>
+        text(s"#pragma HLS ARRAY_PARTITION variable=$id cyclic factor=$bank dim=${dim + 1}")
+    })
+    val resource = ports match {
+      case 1 => "RAM_1P_BRAM"
+      case 2 => "RAM_T2P_BRAM"
+      case n => throw BackendError(
+        s"SDAccel does not support ${n}-ported memories.")
+    }
+    val resPragma = text(s"#pragma HLS resource variable=${id} core=${resource}")
+    vsep(resPragma :: bankPragma)
   }
 
-  def bankPragmas(decls: List[Decl]): List[Doc] = decls
-    .collect({ case Decl(id, typ: TArray) => bank(id, typ.dims.map(_._2)) })
-    .withFilter(s => s != "")
-    .map(s => value(s))
+  def memoryPragmas(decls: List[Decl]): List[Doc] = decls
+    .collect({ case Decl(id, typ: TArray) => bankAndResource(id, typ.ports, typ.dims.map(_._2)) })
 
   override def emitLet(let: CLet): Doc = {
     super.emitLet(let) <@>
     (let.typ match {
-      case Some(t) => vsep(bankPragmas(List(Decl(let.id, t))))
+      case Some(t) => vsep(memoryPragmas(List(Decl(let.id, t))))
       case None => emptyDoc
     })
   }
@@ -60,22 +77,33 @@ private class VivadoBackend extends CppLike {
       }
 
   def emitFuncHeader(func: FuncDef, entry: Boolean = false): Doc = {
-    text(s"#pragma HLS INLINE") <@>
-    (if (entry)
-      vsep(func.args.map(arg =>
+    // Error if interface arrays were partitioned/ported.
+    if (entry) interfaceValid(func.args)
+
+    if (entry) {
+      val argPragmas = func.args.map(arg =>
         arg.typ match {
-          case _:TArray => text(s"#pragma HLS INTERFACE s_axilite port=${arg.id}")
-          case _ => emptyDoc
-        }
-      ))
-     else emptyDoc) <@>
-    vsep(bankPragmas(func.args))
+          case _:TArray => {
+            text(s"#pragma HLS INTERFACE m_axi port=${arg.id} offset=slave bundle=gmem") <@>
+              text(s"#pragma HLS INTERFACE s_axilite port=${arg.id} bundle=control")
+          }
+          case _ =>
+            text(s"#pragma HLS INTERFACE s_axilite port=${arg.id} bundle=control")
+        })
+
+      vsep(argPragmas) <@>
+        text(s"#pragma HLS INTERFACE s_axilite port=return bundle=control")
+    } else {
+      text(s"#pragma HLS INLINE") <@>
+      vsep(memoryPragmas(func.args))
+    }
+
   }
 
   def emitArrayDecl(ta: TArray, id: Id): Doc =
     emitType(ta.typ) <+> id <> generateDims(ta.dims)
 
-  def generateDims(dims: List[(Int, Int)]): Doc =
+  def generateDims(dims: List[DimSpec]): Doc =
     ssep(dims.map(d => brackets(value(d._1))), emptyDoc)
 
   def emitType(typ: Type): Doc = typ match {
@@ -87,7 +115,7 @@ private class VivadoBackend extends CppLike {
     case _:TRational => throw Impossible("Rational type should not exist")
     case TSizedInt(s, un) => text(if (un) s"ap_uint<$s>" else s"ap_int<$s>")
     case TFixed(t,i,un) => text(if (un) s"ap_ufixed<$t,$i>" else s"ap_fixed<$t,$i>")
-    case TArray(typ, _) => emitType(typ)
+    case TArray(typ, _, _) => emitType(typ)
     case TRecType(n, _) => text(n.toString)
     case _:TFun => throw Impossible("Cannot emit function types")
     case TAlias(n) => text(n.toString)

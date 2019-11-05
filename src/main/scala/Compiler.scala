@@ -1,7 +1,8 @@
 package fuselang
 
 import scala.util.Try
-import java.nio.file.Path
+import scala.io.Source
+import java.nio.file.{Files, Paths, Path, StandardOpenOption}
 
 import common._
 import Configuration._
@@ -40,17 +41,25 @@ object Compiler {
   }
 
   def compileString(prog: String, c: Config): Either[String, String] = {
-    Try(compileStringWithError(prog, c)).toEither.left.map(f => {
-      scribe.debug(f.getStackTrace().mkString("\n"))
-      f match {
-        case _: Errors.TypeError => s"[${red("Type error")}] ${f.getMessage}"
+    Try(compileStringWithError(prog, c)).toEither.left.map(err => {
+      scribe.debug(err.getStackTrace().mkString("\n"))
+      err match {
+        case _: Errors.TypeError => s"[${red("Type error")}] ${err.getMessage}"
         case _: Errors.ParserError =>
-          s"[${red("Parsing error")}] ${f.getMessage}"
+          s"[${red("Parsing error")}] ${err.getMessage}"
         case _: CompilerError.Impossible =>
-          s"[${red("Impossible")}] ${f.getMessage}. " +
+          s"[${red("Impossible")}] ${err.getMessage}. " +
             "This should never trigger. Please report this as a bug."
-        case _ => s"[${red("Error")}] ${f.getMessage}"
+        case _ => s"[${red("Error")}] ${err.getMessage}"
       }
+    }).map(out => {
+      // Get metadata about the compiler build.
+      val version = getClass.getResourceAsStream("/version.properties")
+      val meta = Source.fromInputStream(version)
+                       .getLines
+                       .filter(l => l.trim != "")
+                       .mkString(", ")
+      s"// $meta\n" + out
     })
   }
 
@@ -59,7 +68,6 @@ object Compiler {
       c: Config,
       out: String
   ): Either[String, Path] = {
-    import java.nio.file.{Files, Paths, StandardOpenOption}
 
     compileString(prog, c).map(p => {
       Files.write(

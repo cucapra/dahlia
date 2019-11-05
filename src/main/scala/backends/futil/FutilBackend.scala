@@ -1,7 +1,6 @@
 package fuselang.backend.futil
 
 import fuselang.backend.futil.Futil._
-// import fuselang.backend.futil.Lib
 
 import fuselang.common._
 import Syntax._
@@ -11,6 +10,7 @@ import CompilerError._
 
 private class FutilBackendHelper {
 
+  /** Helper for generating unique names. */
   var idx: Map[String, Int] = Map();
   def genName(base: String): CompVar = {
     // update idx
@@ -21,10 +21,16 @@ private class FutilBackendHelper {
     CompVar(s"$base${idx(base)}")
   }
 
+  /** Store mappings from Dahlia variables to
+    * generated Futil variables.
+    */
   type Store = Map[CompVar, CompVar]
 
+  /** `emitDecl(d)` computes the structure that is needed to
+    *  represent the declaration `d`. Simply returns a `List[Structure]`.
+    */
   def emitDecl(d: Decl): List[Structure] = d.typ match {
-    case TArray(_, dims) => {
+    case TArray(_, dims, _) => {
       val const =
         LibDecl(CompVar(s"${d.id}-init"), Stdlib.constant(VNone()))
       val mem = LibDecl(CompVar(s"${d.id}"), Stdlib.memory(dims.map(_._1)))
@@ -41,13 +47,17 @@ private class FutilBackendHelper {
     case x => throw NotImplemented(s"Type $x not implemented for decls.")
   }
 
-  def emitBinop(binop: CompInst, e1: Expr, e2: Expr)(
+  /** `emitBinop` is a helper function to generate the structure
+    *  for `e1 binop e2`. The return type is described in `emitExpr`.
+    */
+  def emitBinop(compName: String, e1: Expr, e2: Expr)(
       implicit store: Store
   ): (Port, List[Structure], Enable) = {
+    val binop = Stdlib.op(s"comp/$compName");
     val (e1port, e1struct, act1) = emitExpr(e1)
     val (e2port, e2struct, act2) = emitExpr(e2)
 
-    val comp = LibDecl(genName(s"${binop.id}"), binop)
+    val comp = LibDecl(genName(compName), binop)
     val struct = List(comp,
                       Connect(e1port, comp.id.port("left")),
                       Connect(e2port, comp.id.port("right")))
@@ -56,6 +66,14 @@ private class FutilBackendHelper {
      Enable(List(comp.id)) ++ act1 ++ act2)
   }
 
+  /** `emitExpr(expr, lhs)(implicit store)` calculates the necessary structure
+    *  to compute `expr`. It return the triple (Port, List[Structure], Enable).
+    *  If `lhs = false`, then `Port` is the port that will hold the output
+    *  of computing this expression. If `lhs = true`, then `Port` represents
+    *  the port that can be used to put a value into the location represented by
+    *  `expr`. `Enable` is the list of components that need to be activated to
+    *  "activate" this expression.
+    */
   def emitExpr(expr: Expr, lhs: Boolean = false)(
       implicit store: Store
   ): (Port, List[Structure], Enable) =
@@ -71,17 +89,17 @@ private class FutilBackendHelper {
       case EBinop(op, e1, e2) => {
         val compName =
           op.op match {
-            case "+"  => "comp/add"
-            case "-"  => "comp/sub"
-            case "*"  => "comp/mult"
-            case "/"  => "comp/div"
-            case "<"  => "comp/lt"
-            case ">"  => "comp/gt"
-            case "<=" => "comp/lte"
-            case ">=" => "comp/gte"
+            case "+"  => "add"
+            case "-"  => "sub"
+            case "*"  => "mult"
+            case "/"  => "div"
+            case "<"  => "lt"
+            case ">"  => "gt"
+            case "<=" => "lte"
+            case ">=" => "gte"
             case x    => throw NotImplemented(s"Haven't implemented binop $x yet.")
           }
-        emitBinop(Stdlib.op(compName), e1, e2)
+        emitBinop(compName, e1, e2)
       }
       case EVar(id) =>
         val portName = if (lhs) "in" else "out"
@@ -164,6 +182,14 @@ private class FutilBackendHelper {
         val control = lActs ++ rActs
         (struct, control, store)
       }
+      case CIf(cond, tbranch, fbranch) => {
+        val (port, condStruct, acts) = emitExpr(cond)
+        val (tStruct, tCon, _) = emitCmd(tbranch)
+        val (fStruct, fCon, _) = emitCmd(fbranch)
+        val struct = condStruct ++ tStruct ++ fStruct
+        val control = acts.seq(If(port, tCon, fCon))
+        (struct, control, store)
+      }
       case CFor(range, _, par, comb) =>
         range match {
           case CRange(id, start, end, 1) => {
@@ -208,8 +234,7 @@ private class FutilBackendHelper {
         val (bodyStruct, bodyCon, _) = emitCmd(body)
         val struct = bodyStruct ++ condStruct
         val control =
-          acts.seq((While(port, bodyCon.seq(acts))))
-
+          acts.seq(While(port, bodyCon.seq(acts)))
         (struct, control, store)
       }
       case CReduce(rop, lhs, rhs) => {

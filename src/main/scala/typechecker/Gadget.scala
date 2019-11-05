@@ -14,14 +14,22 @@ import fuselang.common.Syntax._
  */
 object Gadgets {
 
-  type ConsumeList = Iterable[Iterable[Int]]
+  type ConsumeList = Seq[Seq[Int]]
 
   trait Gadget {
     def getSummary(consume: ConsumeList): (Id, ConsumeList)
   }
 
-  case class BaseGadget(resource: Id) extends Gadget {
-    def getSummary(consume: ConsumeList) = resource -> consume
+  case class BaseGadget(resource: Id, dim: List[DimSpec]) extends Gadget {
+    /**
+     * A base physical memory with `k` banks redirects access from bank `b` to
+     * to `b % k`.
+     */
+    def getSummary(consume: ConsumeList) =
+      resource ->
+      consume
+        .zip(dim)
+        .map({ case (resources, (_, banks)) => resources.map(_ % banks)})
   }
 
   case class ViewGadget(
@@ -38,7 +46,7 @@ object Gadgets {
      * to write a more fine grained transformer when the view is static
      * i.e. an aligned view is being used.
      */
-    def apply(underlying: Gadget, dims: List[(Int, Int)]): ViewGadget = {
+    def apply(underlying: Gadget, dims: List[DimSpec]): ViewGadget = {
       val transformer = (_: ConsumeList) => dims.map(_._2).map(0 until _)
       ViewGadget(underlying, transformer)
     }
@@ -52,8 +60,8 @@ object Gadgets {
      */
     def apply(
       underlying: Gadget,
-      arrayDims: List[(Int, Int)],
-      @deprecated("Not used", "0.0.1") splitDims: List[(Int, Int)]): ViewGadget = {
+      arrayDims: List[DimSpec],
+      @deprecated("Not used", "0.0.1") splitDims: List[DimSpec]): ViewGadget = {
         ViewGadget(underlying, arrayDims)
     }
   }

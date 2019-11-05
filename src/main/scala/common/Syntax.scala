@@ -23,12 +23,7 @@ object Syntax {
     }
   }
 
-  object OpConstructor {/*
-    val add: (Int, Int) => Int = (_ + _)
-    val mul: (Int, Int) => Int = (_ * _)
-    val div: (Int, Int) => Int = (_ / _)
-    val sub: (Int, Int) => Int = (_ - _)
-    val mod: (Int, Int) => Int = (_ % _)*/
+  object OpConstructor {
     val add: (Double, Double) => Double = (_ + _)
     val mul: (Double, Double) => Double = (_ * _)
     val div: (Double, Double) => Double = (_ / _)
@@ -57,8 +52,8 @@ object Syntax {
       case TFixed(t,i, un) => s"${if (un) "u" else ""}fix<$t,$i>"
       case TSizedInt(l, un) => s"${if (un) "u" else ""}bit<$l>"
       case TStaticInt(s) => s"static($s)"
-      case TArray(t, dims) =>
-        s"$t" + dims.foldLeft("")({ case (acc, (d, b)) => s"$acc[$d bank $b]" })
+      case TArray(t, dims, p) =>
+        s"$t{$p}" + dims.foldLeft("")({ case (acc, (d, b)) => s"$acc[$d bank $b]" })
       case TIndex(s, d) => s"idx($s, $d)"
       case TFun(args, ret) => s"${args.mkString("->")} -> ${ret}"
       case TRecType(n, _) => s"$n"
@@ -78,17 +73,20 @@ object Syntax {
   case class TVoid() extends Type
   case class TBool() extends Type
 
-  case class TRational(value:String) extends Type 
+  case class TRational(value:String) extends Type
   case class TFloat() extends Type
   case class TDouble() extends Type
   case class TFixed(ltotal:Int, lint:Int, unsigned:Boolean) extends Type
   case class TFun(args: List[Type], ret: Type) extends Type
   case class TRecType(name: Id, fields: Map[Id, Type]) extends Type
   case class TAlias(name: Id) extends Type
-  case class TArray(typ: Type, dims: List[(Int, Int)]) extends Type {
+
+  // Each dimension has a length and a bank
+  type DimSpec = (Int, Int)
+  case class TArray(typ: Type, dims: List[DimSpec], ports: Int) extends Type {
     dims.zipWithIndex.foreach({ case ((len, bank), dim) =>
       if (bank > len || len % bank != 0) {
-        throw MalformedType(s"Dimension $dim of TArray is malformed. Length $len, banking factor $bank. Full type $this")
+        throw MalformedType(s"Dimension $dim of TArray is malformed. Full type: $this")
       }
     })
   }
@@ -96,10 +94,6 @@ object Syntax {
   sealed trait BOp extends Positional {
     val op: String;
     override def toString = this.op
-    /*def toFun: Option[(Int, Int) => Int] = this match {
-      case n: NumOp => Some(n.fun)
-      case _ => None
-    }*/
     def toFun: Option[(Double, Double) => Double] = this match {
       case n: NumOp => Some(n.fun)
       case _ => None
@@ -109,8 +103,7 @@ object Syntax {
   case class EqOp(op: String) extends BOp
   case class CmpOp(op: String) extends BOp
   case class BoolOp(op: String) extends BOp
-  case class NumOp(op: String, fun: (Double, Double) => Double) extends BOp 
-  //case class NumOp(op: String, fun: (Int, Int) => Int) extends BOp 
+  case class NumOp(op: String, fun: (Double, Double) => Double) extends BOp
   case class BitOp(op: String) extends BOp
 
   sealed trait Expr extends Positional with TypeAnnotation {

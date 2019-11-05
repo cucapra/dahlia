@@ -12,7 +12,8 @@ object PrettyPrint {
   case object DocSpace extends Doc
   case class DocText(txt: String) extends Doc
   case class DocNest(indent: Int, doc: Doc) extends Doc
-  case class DocCons(hd: Doc, tl: Doc) extends Doc
+  case class DocCons(hd: Doc, tl: Doc) extends Doc {
+  }
 
   /**
    * A basic pretty-printing library, based on Lindig's strict version
@@ -22,8 +23,15 @@ object PrettyPrint {
    * @version 1.0
    */
   abstract class Doc {
-    def <>(hd: Doc): Doc = DocCons(this, hd)
-    def <@>(hd: Doc): Doc = this <> DocBreak <> hd
+    def <@>(hd: Doc): Doc = {
+      if (hd == DocNil) this
+      else this <> DocBreak <> hd
+    }
+    def <>(hd: Doc): Doc = (this, hd) match {
+      case (_, DocNil) => this
+      case (DocNil, _) => hd
+      case _ => new DocCons(this, hd)
+    }
     def <+>(hd: Doc): Doc = this <> DocSpace <> hd
 
     def pretty: String = {

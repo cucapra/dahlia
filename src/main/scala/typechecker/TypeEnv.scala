@@ -93,7 +93,7 @@ object TypeEnv {
      * For example, addResources("A", List(2, 2)) adds the set of resources
      * {A00, A01, A10, A11} to the environment.
      */
-    def addResource(name: Id, resources: Iterable[Int]): Environment
+    def addResource(name: Id, resources: Seq[Int], ports: Int): Environment
 
     /**
      * Consume the physical resources implied by the access of this gadget.
@@ -103,7 +103,7 @@ object TypeEnv {
      * @param gadget Name of the gadget causing the consume.
      * @param banks Banks to be consumed for each dimension
      */
-    def consumeResource(name: Id, resources: Iterable[Iterable[Int]])
+    def consumeResource(name: Id, resources: Seq[Seq[Int]])
                        (implicit pos: List[Position]): Environment
 
     /**
@@ -167,7 +167,7 @@ object TypeEnv {
     def resolveType(typ: Type): Type = typ match {
       case TAlias(n) => getType(n)
       case TFun(args, ret) => TFun(args.map(resolveType(_)), resolveType(ret))
-      case arr@TArray(t, _) => arr.copy(typ = resolveType(t))
+      case arr@TArray(t, _, _) => arr.copy(typ = resolveType(t))
       case t => t
     }
     def addType(alias: Id, typ: Type) = typeDefMap.get(alias) match {
@@ -188,11 +188,11 @@ object TypeEnv {
     def getGadget(id: Id) = gadgetMap.get(id).getOrThrow(Unbound(id))
 
     /** Managing physical resources */
-    def addResource(id: Id, banks: Iterable[Int]) = {
-      val pRes = phyRes.add(id, ArrayInfo(id, banks)).getOrThrow(AlreadyBound(id))
+    def addResource(id: Id, banks: Seq[Int], ports: Int) = {
+      val pRes = phyRes.add(id, ArrayInfo(id, banks, ports)).getOrThrow(AlreadyBound(id))
       this.copy(phyRes = pRes)
     }
-    def consumeResource(name: Id, resources: Iterable[Iterable[Int]])
+    def consumeResource(name: Id, resources: Seq[Seq[Int]])
                        (implicit pos: List[Position]): Environment = {
       phyRes.get(name) match {
         case None =>
@@ -201,7 +201,6 @@ object TypeEnv {
           this.copy(phyRes = phyRes.update(name, info.consumeResources(resources)))
       }
     }
-
 
     /** Helper functions for Mergable[Env] */
     def merge(env: Environment): Environment = env match {

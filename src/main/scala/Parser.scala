@@ -29,7 +29,6 @@ private class FuseParser extends RegexParsers with PackratParsers {
   lazy val uInt: P[Expr] = "(-)?[0-9]+".r ^^ { n => EInt(n.toInt) }
   lazy val hex = "0x[0-9a-fA-F]+".r ^^ { n => Integer.parseInt(n.substring(2), 16) }
   lazy val octal = "0[0-7]+".r ^^ { n => Integer.parseInt(n.substring(1), 8) }
-  //lazy val fixed = "f'(-)?[0-9]+\\.[0-9]+".r 
   lazy val rational = "(-)?[0-9]+\\.[0-9]+".r ^^ {r => ERational(r)}
   lazy val boolean = "true" ^^ { _ => true } | "false" ^^ { _ => false }
 
@@ -112,9 +111,9 @@ private class FuseParser extends RegexParsers with PackratParsers {
   lazy val expr = positioned (binOr)
 
   // Types
-  lazy val typIdx: P[(Int, Int)] =
-    brackets(number ~ "bank" ~ number) ^^ { case n ~ _ ~ b => (n, b) } |
-    brackets(number)^^ { n => (n, 1) }
+  lazy val typIdx: P[DimSpec] =
+    brackets(number ~ ("bank" ~> number).?) ^^ { case n ~ b => (n, b.getOrElse(1)) }
+
   lazy val atyp: P[Type] =
     "float" ^^ { _ => TFloat() } |
     "double" ^^ { _ => TDouble() } |
@@ -125,7 +124,9 @@ private class FuseParser extends RegexParsers with PackratParsers {
     "ufix" ~> angular(number~","~number ) ^^{ case s1~_~s2 => TFixed(s1,s2,true) } |
     iden ^^ { case id => TAlias(id) }
   lazy val typ: P[Type] =
-    atyp ~ rep1(typIdx) ^^ { case t ~ dims => TArray(t, dims) } |
+    atyp ~ braces(number).? ~ rep1(typIdx) ^^ { case t ~ p ~ dims =>
+      TArray(t, dims, p.getOrElse(1))
+    } |
     atyp
 
   // For loops

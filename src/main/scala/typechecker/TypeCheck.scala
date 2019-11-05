@@ -127,21 +127,21 @@ object TypeChecker {
   private def addPhysicalResource(id: Id, typ: TArray)
                                  (implicit env: Environment) = {
     env
-      .addResource(id, typ.dims.map(_._2))
-      .addGadget(id, BaseGadget(id))
+      .addResource(id, typ.dims.map(_._2), typ.ports)
+      .addGadget(id, BaseGadget(id, typ.dims))
   }
 
   /**
    * Generate a ConsumeList corresponding to the underlying memory type and
    * the index accessors.
    */
-  private def getConsumeList(idxs: List[Expr], dims: List[(Int, Int)])
+  private def getConsumeList(idxs: List[Expr], dims: List[DimSpec])
                             (implicit arrId: Id, env: Environment) = {
-    val (nEnv, bres, consume) = idxs.zipWithIndex.foldLeft((env, 1, IndexedSeq[Iterable[Int]]()))({
+    val (nEnv, bres, consume) = idxs.zipWithIndex.foldLeft((env, 1, IndexedSeq[Seq[Int]]()))({
       case ((env1, bres, consume), (idx, dim)) => checkE(idx)(env1) match {
         // Index is an index type.
         case (TIndex((s, e), _), env2) =>
-          if (dims(dim)._2 != e - s)
+          if ((e - s) % dims(dim)._2 != 0)
             throw BankUnrollInvalid(arrId, dims(dim)._2, e - s)(idx.pos)
           else
             (env2, bres * (e - s), Range(s, e) +: consume)
@@ -165,7 +165,7 @@ object TypeChecker {
   private def checkLVal(e: Expr)(implicit env: Environment) = e match {
     case acc@EArrAccess(id, idxs) => env(id).matchOrError(e.pos, "array access", s"array") {
       // This only triggers for r-values. l-values are checked in checkLVal
-      case TArray(typ, dims) => {
+      case TArray(typ, dims, _) => {
         if (dims.length != idxs.length) {
           throw IncorrectAccessDims(id, dims.length, idxs.length)
         }
@@ -298,7 +298,7 @@ object TypeChecker {
     }
     case acc@EArrAccess(id, idxs) => env(id).matchOrError(expr.pos, "array access", s"array type"){
       // This only triggers for r-values. l-values are checked in checkLVal
-      case TArray(typ, dims) => {
+      case TArray(typ, dims, _) => {
         if (dims.length != idxs.length) {
           throw IncorrectAccessDims(id, dims.length, idxs.length)
         }
@@ -322,8 +322,8 @@ object TypeChecker {
    * Checks a given simple view and returns the dimensions for the view along
    * with an updated environment.
    */
-  private def checkView(view: View, arrDim: (Int, Int))
-                       (implicit env: Environment): (Environment, (Int, Int)) = {
+  private def checkView(view: View, arrDim: DimSpec)
+                       (implicit env: Environment): (Environment, DimSpec) = {
 
     val View(suf, pre, shrink) = view
     val (len, bank) = arrDim
@@ -391,7 +391,7 @@ object TypeChecker {
       val (t1, e1) = checkLVal(l)
       val (ta, e2) = checkE(r)(e1)
       (t1, ta) match {
-        case (t1, TArray(t2, dims)) =>
+        case (t1, TArray(t2, dims, _)) =>
           if (isSubtype(t2, t1) == false ||
               dims.length != 1 ||
               dims(0)._1 != dims(0)._2) {
@@ -409,7 +409,7 @@ object TypeChecker {
       env
         .resolveType(expTyp)
         .matchOrError(l.pos, "Let bound array literal", "array type") {
-          case ta@TArray(elemTyp, dims) => {
+          case ta@TArray(elemTyp, dims, _) => {
             assertOrThrow(dims.length == 1,
               Unsupported(l.pos, "Multidimensional array literals"))
 
@@ -469,8 +469,8 @@ object TypeChecker {
     }
     case l@CLet(id, typ, Some(exp)) => {
       // Check if the explicit type is bound in scope. Also, if the type is
-      // a static int, upcast it to sized int; if the type is rational, 
-      // upcast it to double. We do not allow variables to have 
+      // a static int, upcast it to sized int; if the type is rational,
+      // upcast it to double. We do not allow variables to have
       // static or rational types.
       val rTyp = typ.map(env.resolveType(_) match {
         case TStaticInt(v) => TSizedInt(bitsNeeded(v), false)
@@ -525,13 +525,13 @@ object TypeChecker {
       val vecBinds = binds
         .withFilter({ case (id, _) => id != iter })
         .map({ case (id, typ) =>
-          id -> TArray(typ, List((range.u, range.u)))
+          id -> TArray(typ, List((range.u, range.u)), 1)
         })
 
       e1.withScope(1)(e2 => checkC(combine)(e2 ++ vecBinds))._1
     }
     case view@CView(id, arrId, vdims) => env(arrId) match {
-      case TArray(typ, adims) => {
+      case TArray(typ, adims, port) => {
         // Check if the view is defined inside an unroll
         if (env.getResources != 1) {
           throw ViewInsideUnroll(view.pos, arrId)
@@ -543,7 +543,7 @@ object TypeChecker {
         }
 
         // Check all dimensions in the view are well formed.
-        val (env1, ndims) = adims.zip(vdims).foldLeft(env -> List[(Int, Int)]())({
+        val (env1, ndims) = adims.zip(vdims).foldLeft(env -> List[DimSpec]())({
           case ((env, dims), (arrDim, view)) =>
             val (nEnv, dim) = checkView(view, arrDim)(env)
             (nEnv, dim :: dims)
@@ -553,7 +553,7 @@ object TypeChecker {
         val nEnv = env1.addGadget(id, ViewGadget(env1.getGadget(arrId), adims))
 
         // Annotate the ids in the expressions
-        val viewTyp = TArray(typ, ndims.reverse)
+        val viewTyp = TArray(typ, ndims.reverse, port)
         id.typ = Some(viewTyp)
         arrId.typ = Some(env(arrId))
 
@@ -564,7 +564,7 @@ object TypeChecker {
       case t => throw UnexpectedType(cmd.pos, "view", "array", t)
     }
     case view@CSplit(id, arrId, dims) => env(arrId) match {
-      case TArray(typ, adims) => {
+      case TArray(typ, adims, ports) => {
         if (env.getResources != 1) {
           throw ViewInsideUnroll(view.pos, arrId)
         }
@@ -597,7 +597,7 @@ object TypeChecker {
           ViewGadget(env.getGadget(arrId), adims , viewDims))
 
         // Annotate the ids in the expressions
-        val viewTyp = TArray(typ, viewDims)
+        val viewTyp = TArray(typ, viewDims, ports)
         id.typ = Some(viewTyp)
         arrId.typ = Some(env(arrId))
 

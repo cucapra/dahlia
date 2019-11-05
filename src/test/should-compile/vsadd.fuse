@@ -1,7 +1,21 @@
-decl a: float[1024 bank 32 ];
-decl c: float[1024 bank 32 ];
+decl a_int: float[1024];
+decl c_int: float[1024];
 decl b: float;
 
-for (let i = 0..1024) unroll 32 {
-  c[i] := a[i] + b;
+let a: float[1024 bank 32 ];
+let c: float[1024 bank 32 ];
+
+view a_sh = a[_: bank 1];
+view c_sh = c[_: bank 1];
+
+{
+  for (let i = 0..1024) {
+    a_sh[i] := a_int[i];
+    c_sh[i] := c_int[i];
+  }
+  ---
+  for (let i = 0..1024) unroll 32 {
+    c[i] := a[i] + b;
+  }
 }
+

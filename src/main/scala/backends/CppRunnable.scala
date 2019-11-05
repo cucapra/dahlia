@@ -26,7 +26,7 @@ private class CppRunnable extends CppLike {
     case _:TFloat => text("float")
     case _:TDouble | _:TFixed => text("double")
     case _:TRational => throw Impossible("Rational type should not exist")
-    case TArray(typ, dims) =>
+    case TArray(typ, dims, _) =>
       dims.foldLeft(emitType(typ))({ case (acc, _) => text("vector") <> angles(acc) })
     case TRecType(n, _) => value(n)
     case _:TFun =>
@@ -66,7 +66,7 @@ private class CppRunnable extends CppLike {
         val typeName = emitType(typ)
         (quote(typeName), typeName)
       }
-      case arr@TArray(_, dims) => {
+      case arr@TArray(_, dims, _) => {
         val typeName = quote(text(s"${arr.typ}${dims.map(_ => "[]").mkString}"))
         val cType =
           text("n_dim_vec_t") <>

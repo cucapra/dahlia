@@ -4,6 +4,12 @@ import fuselang.common.PrettyPrint.Doc
 import Doc._
 
 object Futil {
+
+  val debug = false
+
+  def brackets(d: Doc) =
+    if (debug) enclose(text("["), d, text("]")) else parens(d)
+
   sealed trait Emitable {
     def doc(): Doc
     def emit(): String = this.doc.pretty
@@ -23,7 +29,8 @@ object Futil {
     override def doc(): Doc =
       parens(
         text("define/namespace") <+> text(name)
-          <@> nest(vsep(comps.map(_.doc)), 2))
+          <> nest(emptyDoc <@> vsep(comps.map(_.doc)), 2)
+      )
   }
   case class Component(
       name: String,
@@ -38,8 +45,13 @@ object Futil {
           <+> text(name)
           <+> parens(hsep(inputs.map(_.doc)))
           <+> parens(hsep(outputs.map(_.doc)))
-          <@> parens(vsep(structure.map(_.doc)))
-          <@> control.doc)
+          <> nest(
+            emptyDoc
+              <@> nest(parens(vsep(structure.map(_.doc))), 1)
+              <@> control.doc,
+            2
+          )
+      )
   }
 
   /***** structure *****/
@@ -107,15 +119,20 @@ object Futil {
       case If(cond, trueBr, falseBr) =>
         parens(
           text("if") <+> cond.doc
-            <@> nest(trueBr.doc, 4)
-            <@> nest(falseBr.doc, 4))
+            <> nest(emptyDoc <@> brackets(trueBr.doc), 4)
+            <> nest(emptyDoc <@> brackets(falseBr.doc), 4)
+        )
       case Ifen(cond, trueBr, falseBr) =>
         parens(
           text("ifen") <+> cond.doc
-            <@> nest(trueBr.doc, 6)
-            <@> nest(falseBr.doc, 6))
+            <> nest(emptyDoc <@> trueBr.doc, 6)
+            <> nest(emptyDoc <@> falseBr.doc, 6)
+        )
       case While(cond, body) =>
-        parens(text("while") <+> cond.doc <@> nest(body.doc, 2))
+        parens(
+          text("while") <+> cond.doc
+            <> nest(emptyDoc <@> body.doc, 2)
+        )
       case Print(id) =>
         parens(text("print") <+> id.doc)
       case Enable(ids) =>
@@ -141,8 +158,8 @@ object Futil {
   case class Empty() extends Control
 }
 
+/** Represents all of the primitives in Futil. */
 object Stdlib {
-
   def constant(v: Futil.Value): Futil.CompInst =
     Futil.CompInst("const", List(v))
 

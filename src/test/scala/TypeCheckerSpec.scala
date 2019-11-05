@@ -8,7 +8,6 @@ import org.scalatest.FunSpec
 class TypeCheckerSpec extends FunSpec {
 
   describe("Let bindings") {
-
     describe("with explicit type and initializer") {
       it("disallows using smaller sized int in assignment") {
         assertThrows[UnexpectedSubtype] {
@@ -119,7 +118,6 @@ class TypeCheckerSpec extends FunSpec {
   }
 
   describe("Variables scoping") {
-
     describe("shadowing variables not allowed") {
       it("in top level") {
         assertThrows[AlreadyBound] {
@@ -395,6 +393,101 @@ class TypeCheckerSpec extends FunSpec {
     }
   }
 
+  describe("Multi-ported Memories") {
+    it("without an annotaion default to single port") {
+      assertThrows[AlreadyConsumed] {
+        typeCheck("""
+          decl a: bit<32>[10];
+          a[0]; a[1]
+          """ )
+      }
+    }
+
+    it("multiple writes consume resources") {
+      typeCheck("""
+        decl a: bit<32>{2}[10];
+        a[0] := 0;
+        a[1] := 1;
+        """ )
+    }
+
+    it("multiple reads from different locations consume resources") {
+      typeCheck("""
+        decl a: bit<32>{2}[10];
+        a[0];
+        a[1];
+        """ )
+    }
+
+    it("multiple reads from same locations don't consume resources") {
+      typeCheck("""
+        decl a: bit<32>{2}[10];
+        a[0];
+        a[1];
+        a[0];
+        a[1];
+        """ )
+    }
+
+    it("allow reads and writes to the same location") {
+      typeCheck("""
+        decl a: bit<32>{2}[10];
+        a[0] := 1;
+        let x = a[0];
+        """ )
+    }
+
+    it("disallow writes to the same location") {
+      assertThrows[AlreadyWrite] {
+        typeCheck("""
+          decl a: bit<32>{2}[10];
+          a[0] := 1;
+          a[0] := 2;
+          """ )
+      }
+    }
+
+    it("each bank gets multiple ports") {
+      typeCheck("""
+        decl a: bit<32>{2}[10 bank 2];
+        // Bank 0
+        a[0] := 0;
+        a[2] := 2;
+        // Bank 1
+        a[1] := 1;
+        a[3] := 3;
+        """ )
+    }
+
+    it("index types only consume one port") {
+      typeCheck("""
+        decl a: bit<32>{2}[10];
+        for (let i = 0..10) { a[i] := 1 }
+        a[0] := 2
+        """ )
+    }
+
+    it("regenerate after ---") {
+      typeCheck("""
+        decl a: bit<32>{2}[10];
+        a[1] := 1;
+        a[0] := 2;
+        ---
+        a[1] := 3;
+        a[0] := 4;
+        """ )
+    }
+
+    it("allow more unrolling than banks") {
+      typeCheck("""
+        decl a: bit<32>{2}[8 bank 2];
+        for (let i = 0..8) unroll 4 {
+          a[i] := 1
+        }
+        """ )
+    }
+  }
+
   describe("Banking factor not equal to unrolling factor") {
     it("bank not equal") {
       assertThrows[BankUnrollInvalid] {
@@ -545,7 +638,7 @@ class TypeCheckerSpec extends FunSpec {
     }
 
     it("read cannot occur after write") {
-      assertThrows[InvalidCap] {
+      assertThrows[AlreadyConsumed] {
         typeCheck("""
               decl a: bit<32>[6 bank 6];
               for (let i = 0..6) {
@@ -557,7 +650,7 @@ class TypeCheckerSpec extends FunSpec {
     }
 
     it("write cannot occur after read") {
-      assertThrows[InvalidCap] {
+      assertThrows[AlreadyConsumed] {
         typeCheck("""
               decl a: bit<32>[6 bank 6];
               for (let i = 0..6) {
