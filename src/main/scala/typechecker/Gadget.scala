@@ -47,7 +47,15 @@ object Gadgets {
      * i.e. an aligned view is being used.
      */
     def apply(underlying: Gadget, dims: List[DimSpec]): ViewGadget = {
-      val transformer = (_: ConsumeList) => dims.map(_._2).map(0 until _)
+      val transformer: ConsumeList => ConsumeList = (cl: ConsumeList) => {
+        // Consume at least all of the banks.
+        val allBanks =  dims.map(_._2).map(0 until _)
+        cl.zip(allBanks).map({
+          // Remove all the common elements and consume at least the entire array.
+          // This handles the case when the consume list is larger than all.
+          case (cl, all) => cl.diff(all).appendedAll(all)
+        })
+      }
       ViewGadget(underlying, transformer)
     }
 

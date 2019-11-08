@@ -1050,6 +1050,18 @@ class TypeCheckerSpec extends FunSpec {
           """ )
       }
     }
+    it("throw an error if require more resources than the underlying array.") {
+      assertThrows[AlreadyConsumed] {
+        typeCheck("""
+          decl m1: double[64][64];
+
+          view m1_v = m1[_:][_:];
+          for (let i = 0..64) unroll 64 {
+            let temp_x = m1_v[i][1];
+          }
+          """ )
+      }
+    }
   }
 
   describe("Split views") {
