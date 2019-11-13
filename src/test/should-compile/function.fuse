@@ -1,6 +1,6 @@
-def bar(a: bit<10>[10 bank 5]) {
+def bar(a: bit<10>[10]) {
   a[1] := 10;
 }
 
-let x: bit<10>[10 bank 5];
+let x: bit<10>[10];
 bar(x);
