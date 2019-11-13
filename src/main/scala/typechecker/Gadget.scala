@@ -1,6 +1,8 @@
 package fuselang.typechecker
 
-import fuselang.common.Syntax._
+import fuselang.common._
+import Syntax._
+import CompilerError._
 
 /**
  * A _gadget_ represents a unit of hardware that adapts memory indices. Program
@@ -17,60 +19,112 @@ object Gadgets {
   type ConsumeList = Seq[Seq[Int]]
 
   trait Gadget {
-    def getSummary(consume: ConsumeList): (Id, ConsumeList)
+    // Return the name of the resource, the list of banks to be consumed,
+    // and a trace of transformations done on the original resource.
+    def getSummary(consume: ConsumeList): (Id, List[Int], List[String])
   }
 
-  case class BaseGadget(resource: Id, dim: List[DimSpec]) extends Gadget {
+  case class ResourceGadget(resource: Id, banks: List[Int]) extends Gadget {
+    private def cross[A](acc: Seq[List[A]], l: Seq[A]): Seq[List[A]] = {
+      for { a <- acc; el <- l } yield a :+ el
+    }
+
+    private def hyperBankToBank(hyperBanks: List[Int]) = {
+      if (hyperBanks.length != banks.length)
+        throw Impossible("hyperbank size is different from original banking")
+
+      hyperBanks.zip(banks).foldLeft(0)({
+        case (acc, (hb, b)) => b * acc + hb
+      })
+    }
+    /**
+     * The root for all gadgets. Maps a multidimensional consume list to
+     * corresponding one dimensional banks.
+     */
+    def getSummary(consume: ConsumeList) = {
+      // Transform consumelist into a List[List[A]] where the inner list
+      // represents a sequence of banks for the dimension. These are
+      // latter transformed to 1D banks.
+      val hyperBanks: Seq[List[Int]] = consume.tail.foldLeft(consume.head.map(List(_)))({
+        case (acc, banks) => cross(acc, banks)
+      })
+
+      val outRes = hyperBanks.map(hyperBankToBank).toList
+
+      (resource, outRes, List(outRes.toString))
+    }
+  }
+
+  case class MultiDimGadget(underlying: Gadget, dim: List[DimSpec]) extends Gadget {
     /**
      * A base physical memory with `k` banks redirects access from bank `b` to
      * to `b % k`.
      */
-    def getSummary(consume: ConsumeList) =
-      resource ->
-      consume
+    def getSummary(consume: ConsumeList) = {
+      val resourceTransform = consume
         .zip(dim)
         .map({ case (resources, (_, banks)) => resources.map(_ % banks)})
+
+      val (res, sum, trace) = underlying.getSummary(resourceTransform)
+      (res, sum, resourceTransform.toString :: trace)
+    }
   }
 
   case class ViewGadget(
     underlying: Gadget,
     transformer: ConsumeList => ConsumeList) extends Gadget {
-      def getSummary(consume: ConsumeList) = underlying.getSummary(transformer(consume))
-    }
-
-  object ViewGadget {
-
-    /**
-     * Creates a conservative simple view that fully consumes the array
-     * regardless of how fine grain the accessors were. It is possible
-     * to write a more fine grained transformer when the view is static
-     * i.e. an aligned view is being used.
-     */
-    def apply(underlying: Gadget, dims: List[DimSpec]): ViewGadget = {
-      val transformer: ConsumeList => ConsumeList = (cl: ConsumeList) => {
-        // Consume at least all of the banks.
-        val allBanks =  dims.map(_._2).map(0 until _)
-        cl.zip(allBanks).map({
-          // Remove all the common elements and consume at least the entire array.
-          // This handles the case when the consume list is larger than all.
-          case (cl, all) => cl.diff(all).appendedAll(all)
-        })
+      def getSummary(consume: ConsumeList) = {
+        val outRes = transformer(consume)
+        val (res, sum, trace) = underlying.getSummary(outRes)
+        (res, sum, outRes.toString :: trace)
       }
-      ViewGadget(underlying, transformer)
     }
 
-    /**
-     * Creates logic for a split view. A split view always has an even number
-     * of dimensions which are grouped. For now, the implementation simply
-     * consumes the entire underlying array. It is possible to refine this
-     * when static accessors are used. For now, we ignore the [[splitDims]]
-     * parameter completely.
-     */
-    def apply(
-      underlying: Gadget,
-      arrayDims: List[DimSpec],
-      @deprecated("Not used", "0.0.1") splitDims: List[DimSpec]): ViewGadget = {
-        ViewGadget(underlying, arrayDims)
+
+  /**
+   * Creates a conservative simple view that fully consumes the array
+   * regardless of how fine grain the accessors were. It is possible
+   * to write a more fine grained transformer when the view is static
+   * i.e. an aligned view is being used.
+   */
+  def viewGadget(underlying: Gadget, shrinks: List[Int], arrDims: List[DimSpec]): ViewGadget = {
+    // Multiply the resource requirements by the origBanking / shrink.
+    // This simulates that shrinking "connects" multiple banks into a
+    // single one.
+    val resourceMultipliers: List[Int] = shrinks.zip(arrDims).map({
+      case (shrink, (_, oldBank)) => oldBank / shrink
+    })
+
+    val transformer: ConsumeList => ConsumeList = (cl: ConsumeList) => {
+      // For a shrink view, require each resource implied by one bank.
+      // If a view shrinks by a factor of `k`, then the requiring bank `b`
+      // is transformed into requiring `b + 0`, `b + 1`, ... `b + k - 1`.
+      val reqs = cl.zip(resourceMultipliers).map({
+        case (req, mul) => req.map(b => 0.until(mul).map(k => mul * b + k)).flatten
+      })
+
+      // Consume at least all of the banks.
+      val allBanks =  arrDims.map(_._2).map(0 until _)
+      reqs.zip(allBanks).map({
+        // Remove all the common elements and consume at least the entire array.
+        // This handles the case when the consume list is larger than all.
+        case (cl, all) => cl.diff(all).appendedAll(all)
+      })
     }
+    ViewGadget(underlying, transformer)
+  }
+
+  /**
+   * Creates logic for a split view. A split view always has an even number
+   * of dimensions which are grouped. For now, the implementation simply
+   * consumes the entire underlying array. It is possible to refine this
+   * when static accessors are used. For now, we ignore the [[splitDims]]
+   * parameter completely.
+   */
+  def splitGadget(
+    underlying: Gadget,
+    arrayDims: List[DimSpec],
+    @deprecated("Not used", "0.0.1") splitDims: List[DimSpec]): ViewGadget = {
+      viewGadget(underlying, arrayDims.map(_._2), arrayDims)
   }
 }

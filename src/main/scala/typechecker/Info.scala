@@ -14,49 +14,41 @@ object Info {
   case class ArrayInfo(
     id: Id,
     // List of starting bank resources.
-    avBanks: Map[Int, MultiSet[Int]],
+    avBanks: MultiSet[Int],
     // Bank resources that haven't been consumed yet.
-    remBanks: Map[Int, MultiSet[Int]],
+    remBanks: MultiSet[Int],
     // Source code locations that consumed a bank.
-    conLocs: Map[(Int, Int), Position] = Map()) {
+    conLocs: Map[Int, MultiSet[Position]] = Map()) {
 
-    private def consumeDim(dim: Int, resources: Seq[Int])
-                          (implicit pos: Position) = {
-
-      assertOrThrow(avBanks.contains(dim), UnknownDim(id, dim))
-      val (av, rem) = (avBanks(dim), remBanks(dim))
+    def consumeResources(resources: Seq[Int])
+                        (implicit pos: Position, trace: List[String]) = {
 
       // Make sure banks exist.
-      val missingBank = resources.find(!av.containsAtLeast(_, 1))
-      scribe.debug((resources, av, missingBank).toString)
-      assertOrThrow(missingBank.isEmpty, UnknownBank(id, missingBank.get, dim))
+      val missingBank = resources.find(!avBanks.containsAtLeast(_, 1))
+      assertOrThrow(missingBank.isEmpty, UnknownBank(id, missingBank.head))
 
-      // Check if required resources are available
+      val newConLocs =
+        conLocs ++ resources.foldLeft(conLocs){
+          case (newConLocs, res) =>
+            newConLocs + (res -> newConLocs.getOrElse(res, emptyMultiSet[Position]).add(pos))
+        }
+
+
+      // Calculate multi-set difference b/w required resource and available
+      // resources.
       val resourceMS = fromSeq(resources)
-      val afterConsume = rem.diff(resourceMS)
+      val afterConsume = remBanks.diff(resourceMS)
       val hasRequired = afterConsume.forall({case (_, v) => v >= 0 })
-      //scribe.debug((remBanks, resources, hasRequired).toString)
       if (hasRequired == false) {
         val bank = afterConsume.find({ case (_, v) => v < 0 }).get._1
-        throw AlreadyConsumed(id, dim, bank, conLocs.get((dim, bank)))
+        throw AlreadyConsumed(id, bank, avBanks.getCount(bank), newConLocs(bank))
       }
 
-      this.copy(
-        remBanks = remBanks + (dim -> afterConsume),
-        conLocs = conLocs ++ resources.map((dim, _) -> pos))
-    }
-
-    def consumeResources(resources: Seq[Seq[Int]])
-                        (implicit pos: List[Position]) = {
-      resources.zipWithIndex.zip(pos).foldLeft(this) {
-        case (info, ((resource, dim), pos)) => info.consumeDim(dim, resource)(pos)
-      }
+      this.copy(remBanks = afterConsume, conLocs = newConLocs)
     }
 
     def merge(that: ArrayInfo) = {
-      val remBanks = this.remBanks.map({
-        case (dim, bankMSet) => dim -> (that.remBanks(dim).zipWith(bankMSet, Math.min))
-      })
+      val remBanks = this.remBanks.zipWith(that.remBanks, Math.min)
       this.copy(remBanks = remBanks, conLocs = this.conLocs ++ that.conLocs)
     }
 
@@ -64,15 +56,24 @@ object Info {
   }
 
   object ArrayInfo {
+    private def cross[A](acc: List[List[A]], l: List[A]): List[List[A]] =
+      for { a <- acc; el <- l } yield a :+ el
+
+    private def hyperBankToBank(maxBanks: Iterable[Int])(hyperBank: Seq[Int]) =
+      hyperBank.zip(maxBanks).foldLeft(0)({
+        case (acc, (hb, maxBank)) => acc * maxBank + hb
+      })
+
     def apply(id: Id, banks: Iterable[Int], ports: Int): ArrayInfo = {
-      // Generate resources for 0..i banks with `ports` copy of each resource.
-      val startResources =
+      val startResources: MultiSet[Int] = fromSeq(
         banks
-          .zipWithIndex
-          .map({ case (banks, i) =>
-            i ->
-            fromSeq(List.tabulate(banks)(b => List.tabulate(ports)(_ => b)).flatten)
-          }).toMap
+          .map(b => List.tabulate(b)(identity))
+          .foldLeft(List(List[Int]()))({
+            case (acc, b) => cross(acc, b)
+          })
+          .map(hyperBankToBank(banks))
+          .map(b => List.tabulate(ports)(_ => b))
+          .flatten)
 
       ArrayInfo(id, startResources, startResources)
     }

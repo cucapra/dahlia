@@ -45,14 +45,14 @@ import Logger.PositionalLoggable
  * 1. The physical affine resources implied by the type. For example, the
  *    type bit<32>[10 bank 5][4 bank 4] implies that the memory has 5 affine
  *    resources in the first dimension and 4 in the second.
- * 2. A default gadget for this memory ([[Gadgets.BaseGadget]]). All possible
- *    compositions of gadgets have a [[Gadgets.BaseGadget]] at their root.
+ * 2. A default gadget for this memory ([[Gadgets.ResourceGadget]]). All possible
+ *    compositions of gadgets have a [[Gadgets.ResourceGadget]] at their root.
  *
  * '''Gadget Creation'''
  *
  * Gadgets are created in two places:
  *
- * 1. Default ([[Gadgets.BaseGadget]]) when a memory definition is reached.
+ * 1. Default ([[Gadgets.ResourceGadget]]) when a memory definition is reached.
  * 2. View ([[Gadgets.ViewGadget]]) when a view is created. A view gadget is
  *    built on top of another gadget itself which might come from a memory
  *    or another gadget itself. This creates a hierarchy of gadgets.
@@ -126,9 +126,10 @@ object TypeChecker {
    */
   private def addPhysicalResource(id: Id, typ: TArray)
                                  (implicit env: Environment) = {
+    val banks = typ.dims.map(_._2)
     env
-      .addResource(id, typ.dims.map(_._2), typ.ports)
-      .addGadget(id, BaseGadget(id, typ.dims))
+      .addResource(id, banks , typ.ports)
+      .addGadget(id, MultiDimGadget(ResourceGadget(id, banks), typ.dims))
   }
 
   /**
@@ -164,7 +165,7 @@ object TypeChecker {
 
   private def checkLVal(e: Expr)(implicit env: Environment) = e match {
     case acc@EArrAccess(id, idxs) => env(id).matchOrError(e.pos, "array access", s"array") {
-      // This only triggers for r-values. l-values are checked in checkLVal
+      // This only triggers for l-values.
       case TArray(typ, dims, _) => {
         if (dims.length != idxs.length) {
           throw IncorrectAccessDims(id, dims.length, idxs.length)
@@ -179,7 +180,7 @@ object TypeChecker {
             if (bres != env.getResources)
               throw InsufficientResourcesInUnrollContext(env.getResources, bres, e)
             // Consume the resources required by this gadget.
-            typ -> e1.consumeWithGadget(id, consumeList)(idxs.map(_.pos))
+            typ -> e1.consumeWithGadget(id, consumeList)(acc.pos)
           }
           case con => throw Impossible(s"$acc in write position has $con annotation")
         }
@@ -280,7 +281,7 @@ object TypeChecker {
           (typ, arg) match {
             case (ta:TArray, EVar(gadget)) => {
               val consumeList = ta.dims.map(dim => 0.until(dim._2))
-              e1.consumeWithGadget(gadget, consumeList)(ta.dims.map(_ => gadget.pos))
+              e1.consumeWithGadget(gadget, consumeList)(arg.pos)
             }
             case (_:TArray, expr) => throw Impossible(s"Type of $expr is $typ")
             case _ => e1
@@ -311,7 +312,7 @@ object TypeChecker {
           case Some(Annotations.ShouldConsume) => {
             val (e1, _, consumeList) = getConsumeList(idxs, dims)(id, env)
             // Consume the resources required by this gadget.
-            typ -> e1.consumeWithGadget(id, consumeList)(idxs.map(_.pos))
+            typ -> e1.consumeWithGadget(id, consumeList)(acc.pos)
           }
         }
       }
@@ -319,11 +320,11 @@ object TypeChecker {
   }
 
   /**
-   * Checks a given simple view and returns the dimensions for the view along
-   * with an updated environment.
+   * Checks a given simple view and returns the dimensions for the view,
+   * shrink factors, and an updated environment.
    */
   private def checkView(view: View, arrDim: DimSpec)
-                       (implicit env: Environment): (Environment, DimSpec) = {
+                       (implicit env: Environment): (Environment, Int, DimSpec) = {
 
     val View(suf, pre, shrink) = view
     val (len, bank) = arrDim
@@ -350,7 +351,7 @@ object TypeChecker {
       case _:IntType => () // IntTypes are valid
     }
 
-    nEnv -> (pre.getOrElse(len) -> newBank)
+    (nEnv, newBank, (pre.getOrElse(len) -> newBank))
   }
 
   private def checkPipeline(enabled: Boolean, loop: Command, body: Command) = {
@@ -543,14 +544,14 @@ object TypeChecker {
         }
 
         // Check all dimensions in the view are well formed.
-        val (env1, ndims) = adims.zip(vdims).foldLeft(env -> List[DimSpec]())({
-          case ((env, dims), (arrDim, view)) =>
-            val (nEnv, dim) = checkView(view, arrDim)(env)
-            (nEnv, dim :: dims)
+        val (env1, shrinks, ndims) = adims.zip(vdims).foldLeft((env, List[Int](), List[DimSpec]()))({
+          case ((env, shrinks, dims), (arrDim, view)) =>
+            val (nEnv, shrink, dim) = checkView(view, arrDim)(env)
+            (nEnv, shrink :: shrinks, dim :: dims)
         })
 
         // Fully consume the array
-        val nEnv = env1.addGadget(id, ViewGadget(env1.getGadget(arrId), adims))
+        val nEnv = env1.addGadget(id, viewGadget(env1.getGadget(arrId), shrinks.reverse, adims))
 
         // Annotate the ids in the expressions
         val viewTyp = TArray(typ, ndims.reverse, port)
@@ -594,7 +595,7 @@ object TypeChecker {
 
         // Create a gadget for the view
         val nEnv = env.addGadget(id,
-          ViewGadget(env.getGadget(arrId), adims , viewDims))
+          splitGadget(env.getGadget(arrId), adims , viewDims))
 
         // Annotate the ids in the expressions
         val viewTyp = TArray(typ, viewDims, ports)

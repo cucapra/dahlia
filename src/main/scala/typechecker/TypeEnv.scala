@@ -103,8 +103,8 @@ object TypeEnv {
      * @param gadget Name of the gadget causing the consume.
      * @param banks Banks to be consumed for each dimension
      */
-    def consumeResource(name: Id, resources: Seq[Seq[Int]])
-                       (implicit pos: List[Position]): Environment
+    def consumeResource(name: Id, resources: List[Int])
+                       (implicit pos: Position, trace: List[String]): Environment
 
     /**
      * Create a new Environment with all the bindings in [[binds]] added to the
@@ -142,8 +142,9 @@ object TypeEnv {
 
     /** Convenience Methods */
     def consumeWithGadget(gadget: Id, consumeList: ConsumeList)
-                         (implicit pos: List[Position]) = {
-      val (resName, resources) = this.getGadget(gadget).getSummary(consumeList)
+                         (implicit pos: Position) = {
+      val (resName, resources, trace) = this.getGadget(gadget).getSummary(consumeList)
+      implicit val t = trace
       this.consumeResource(resName, resources)
     }
 
@@ -192,8 +193,8 @@ object TypeEnv {
       val pRes = phyRes.add(id, ArrayInfo(id, banks, ports)).getOrThrow(AlreadyBound(id))
       this.copy(phyRes = pRes)
     }
-    def consumeResource(name: Id, resources: Seq[Seq[Int]])
-                       (implicit pos: List[Position]): Environment = {
+    def consumeResource(name: Id, resources: List[Int])
+                       (implicit pos: Position, trace: List[String]): Environment = {
       phyRes.get(name) match {
         case None =>
           throw Impossible(s"No physical resource named $name.")

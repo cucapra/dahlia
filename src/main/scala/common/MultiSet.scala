@@ -1,8 +1,10 @@
 package fuselang.common
 
+import scala.collection.immutable.Map
 
 object MultiSet {
 
+  def emptyMultiSet[K]() = MultiSet[K](Map[K, Int]())
 
   def fromSeq[K](seq: Seq[K]): MultiSet[K] =
     MultiSet(seq.foldLeft(Map[K, Int]())({ case (ms, v) =>
@@ -37,9 +39,17 @@ object MultiSet {
          k -> (if (that.setMap.contains(k)) (v - that.setMap(k)) else v)
       }}))
 
+    def add(key: K) = MultiSet(setMap + (key -> (setMap.getOrElse(key, 0) + 1)))
+
+    def remove(key: K) = MultiSet(setMap + (key -> (setMap.getOrElse(key, 0) - 1)))
+
+    def keys = setMap.keys
+
     def forall = setMap.forall _
 
     def find = setMap.find _
+
+    def getCount(k: K): Int = setMap(k)
 
   }
 

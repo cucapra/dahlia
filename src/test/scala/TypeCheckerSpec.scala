@@ -1062,6 +1062,31 @@ class TypeCheckerSpec extends FunSpec {
           """ )
       }
     }
+    it("with shrink require more resources than consume list") {
+      assertThrows[AlreadyConsumed] {
+        typeCheck("""
+          decl m1: double{2}[64 bank 2];
+
+          view m1_v = m1[_: bank 1];
+          for (let i = 0..64) unroll 4 {
+            let temp_x = m1_v[i];
+          }
+          """ )
+      }
+    }
+    it("with multiple dimensions share ports") {
+      assertThrows[AlreadyConsumed] {
+        typeCheck("""
+          decl m1: double{2}[64][64];
+
+          for (let i = 0..64) unroll 2 {
+            for (let j = 0..64) unroll 2 {
+              let temp_x = m1[i][j];
+            }
+          }
+          """ )
+      }
+    }
   }
 
   describe("Split views") {

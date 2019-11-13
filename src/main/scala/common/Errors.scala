@@ -1,6 +1,7 @@
 package fuselang.common
 
 import Syntax._
+import MultiSet._
 import scala.util.parsing.input.Position
 
 object Errors {
@@ -42,17 +43,19 @@ object Errors {
   case class UnknownDim(id: Id, dim: Int)(implicit pos: Position) extends TypeError(
     s"`$id' does not have dimension $dim", pos)
 
-  case class UnknownBank(id: Id, bank: Int, dim: Int)(implicit pos: Position) extends TypeError(
-    s"`$id' does not have bank $bank in dimension $dim.", pos)
+  case class UnknownBank(id: Id, bank: Int)(implicit pos: Position) extends TypeError(
+    s"Physical resource `$id' does not have bank $bank.", pos)
 
   case class BankUnrollInvalid(arrId: Id, bf: Int, uf: Int)(implicit pos: Position) extends TypeError(
     s"Invalid parallel access on `$arrId`. Banking factor ($bf) does not divide unrolling factor ($uf). ", pos)
 
-  case class AlreadyConsumed(id: Id, dim: Int, bank: Int, origLoc: Option[Position])
-                            (implicit pos: Position) extends TypeError(
-    s"Bank $bank in dimension ${dim + 1} of physical resource `$id' already consumed.",
+  case class AlreadyConsumed(id: Id, bank: Int, origRes: Int, conLocs: MultiSet[Position])
+                            (implicit pos: Position, trace: List[String]) extends TypeError(
+    s"Bank $bank for physical resource `$id' already consumed. It originally had ${origRes} resources.\n\nLast gadget transformation trace was:\n${trace.mkString("\n")}.\n\nLocations that consumed this bank:",
     pos,
-    origLoc.map(loc => s"\n[${loc.line}.${loc.column}] Last consume happened here:\n${loc.longString}").getOrElse(""))
+    conLocs.setMap.toList.map({
+      case (loc, counts) => s"\n[${loc.line}.${loc.column}] Required $counts resource(s):\n${loc.longString}"
+    }).mkString(""))
 
   case class InvalidDynamicIndex(id:Id, bf:Int) extends TypeError(
     s"Dynamic access of array `$id' requires unbanked dimension. Actual banking factor: $bf. Use a shrink view to create unbanked array.", id.pos)
@@ -88,7 +91,7 @@ object Errors {
 
   case class LoopDepMerge(id: Id) extends TypeError(
     s"`$id' cannot be merged with conflicting state. The execution order is non-deterministic.", id.pos)
-    
+
   // View errors
   case class InvalidShrinkWidth(pos: Position, bf: Int, width: Int) extends TypeError(
     s"Invalid shrinking factor for view. Expected factor of $bf (banking factor), received: $width", pos)
