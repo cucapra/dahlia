@@ -92,6 +92,12 @@ object Errors {
   case class LoopDepMerge(id: Id) extends TypeError(
     s"`$id' cannot be merged with conflicting state. The execution order is non-deterministic.", id.pos)
 
+  case class LoopDynamicAccess(expr: Expr, used: Id) extends TypeError(
+    s"Access depends on a loop iteration variable",
+    expr.pos,
+    s"\n[${used.pos.line}.${used.pos.column}] Last update was here:\n${used.pos.longString}"
+  )
+
   // View errors
   case class InvalidShrinkWidth(pos: Position, bf: Int, width: Int) extends TypeError(
     s"Invalid shrinking factor for view. Expected factor of $bf (banking factor), received: $width", pos)

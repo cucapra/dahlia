@@ -1779,4 +1779,82 @@ class TypeCheckerSpec extends FunSpec {
         """ )
     }
   }
+
+  describe("Array access dependent on loop iteration variables") {
+    it("assignments in both branches of a conditional can override variable that depends on loop iteration") {
+      typeCheck("""
+      let foo: float[2];
+      for (let j = 0..2) unroll 2 {
+        let y: bit<100> = j + 1;
+        for (let i = 0..2) unroll 2 {
+          if (true) {
+            y := 10;
+          } else {
+            y := 20;
+          }
+          foo[1 + y];
+        }
+      }""")
+    }
+    it("single branche conditional does not override variable that depends on loop iteration") {
+      assertThrows[TypeError] {
+        typeCheck("""
+          let foo: float[2];
+          for (let j = 0..2) unroll 2 {
+            let y: bit<100> = j + 1;
+            for (let i = 0..2) unroll 2 {
+              if (true) {
+                y := 10;
+              }
+              foo[1 + y];
+            }
+          }""")
+      }
+    }
+    it("can't have array access that depends on loop iterator") {
+      assertThrows[TypeError] {
+        typeCheck("""
+          let foo: float[2];
+          for (let j = 0..2) unroll 2 {
+            let y: bit<100> = j + 1;
+            for (let i = 0..2) unroll 2 {
+              foo[1 + y];
+            }
+          }""")
+      }
+    }
+    it("Chain of assignments that leads back to loop iterator") {
+      assertThrows[TypeError] {
+        typeCheck("""
+          let foo: float[2];
+          for (let j = 0..2) unroll 2 {
+            let y: bit<100> = j + 1;
+            let x: bit<100> = y - 1;
+            let z: bit<100> = x + 1;
+            let a: bit<100> = z - 1;
+            for (let i = 0..2) unroll 2 {
+              foo[1 + a];
+            }
+          }""")
+      }
+    }
+    it("Chain of assignments that leads back to loop iterator + conditional overwriting of last var") {
+      typeCheck("""
+        let foo: float[2];
+        for (let j = 0..2) unroll 2 {
+          let y: bit<100> = j + 1;
+          let x: bit<100> = y - 1;
+          let z: bit<100> = x + 1;
+          let a: bit<100> = z - 1;
+          for (let i = 0..2) unroll 2 {
+            if (true) {
+              a := 0;
+            } else {
+              a := 1;
+            }
+            foo[1 + a];
+          }
+        }""")
+    }
+  }
 }
