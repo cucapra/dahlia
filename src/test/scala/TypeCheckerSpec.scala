@@ -817,18 +817,16 @@ class TypeCheckerSpec extends FunSpec {
       }
     }
     it("condition in if is always a use") {
-      assertThrows[LoopDepSequential] {
-        typeCheck("""
-          decl a: bit<32>[10 bank 5];
-          for (let i = 0..10) unroll 5 {
-            let x = a[i]
-            ---
-            if (x > 10) {
-              x := 1
-            }
+      typeCheck("""
+        decl a: bit<32>[10 bank 5];
+        for (let i = 0..10) unroll 5 {
+          let x = a[i];
+          ---
+          if (x > 10) {
+            x := 1
           }
-          """ )
-      }
+        }
+        """ )
     }
     it("merging condition creates don't know state") {
       assertThrows[LoopDepSequential] {
@@ -896,6 +894,19 @@ class TypeCheckerSpec extends FunSpec {
           a[i];
         }
         """ )
+    }
+    it("don't know state is fine as long as the loop execution ends"){
+      typeCheck("""
+      let b1min = 10;
+      for(let i = 0..2) unroll 2 {
+        b1min := 1;
+        if (true) {
+          let newbmin = b1min;
+          b1min := 0;
+        }
+      }
+      b1min :=10;
+      """)
     }
   }
 

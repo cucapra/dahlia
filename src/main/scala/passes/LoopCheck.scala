@@ -152,12 +152,10 @@ object LoopChecker {
         e1.withScope(1)(env => checkC(body)(env))
       }
       case (CIf(cond, c1, c2), e) => {
-        e.withScope( someScope =>{
-          val nEnv = checkE(cond)(someScope)
-          val e1 = nEnv.withScope(checkC(c1)(_))
-          val e2 = nEnv.withScope(checkC(c2)(_))
-          e1 merge e2
-        })
+        val nEnv = checkE(cond)(e)
+        val e1 = checkC(c1)(nEnv)
+        val e2 = checkC(c2)(nEnv)
+        e1 merge e2
       }
     }
   }
