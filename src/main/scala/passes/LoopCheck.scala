@@ -67,10 +67,17 @@ object LoopChecker {
     }
     // Helper functions for ScopeManager
     def withScope(resources: Int)(inScope: LEnv => LEnv): LEnv = {
-      inScope(this.addScope(resources)) match {
-        case env:LEnv => env.endScope(resources)
+      if (resources == 1){
+          inScope(this.addNameScope) match {
+            case env:LEnv => env.endNameScope
+          }
+      }else{
+          inScope(this.addScope(resources)) match {
+            case env:LEnv => env.endScope(resources)
+          }
       }
     }
+    
     // To satisfy envhelper
     def withScope(inScope: LEnv => LEnv): LEnv = withScope(1)(inScope)
     def addScope(resources: Int) = {
@@ -85,6 +92,13 @@ object LoopChecker {
         outerenv = outerenv.updateState(k, innermap(k))
       }
       outerenv
+    }
+    def addNameScope = {
+      LEnv(stateMap, nameMap.addScope)
+    }
+    def endNameScope = {
+      val nmap = nameMap.endScope.get._2
+      LEnv(stateMap, nmap)
     }
 
     def mergeHelper(k: Id, v1: Option[States], v2: Option[States], env: LEnv): LEnv = (v1, v2) match {
@@ -152,10 +166,12 @@ object LoopChecker {
         e1.withScope(1)(env => checkC(body)(env))
       }
       case (CIf(cond, c1, c2), e) => {
-        val nEnv = checkE(cond)(e)
-        val e1 = checkC(c1)(nEnv)
-        val e2 = checkC(c2)(nEnv)
-        e1 merge e2
+        e.withScope( someScope =>{
+          val nEnv = checkE(cond)(someScope)
+          val e1 = nEnv.withScope(checkC(c1)(_))
+          val e2 = nEnv.withScope(checkC(c2)(_))
+          e1 merge e2
+        })
       }
     }
   }
