@@ -37,10 +37,12 @@ object LoopChecker {
     def getName(aid:Id):Id = nameMap.get(aid).getOrElse(aid)
 
     // Helper functions for stateMap
-    def atDef(id:Id): LEnv = stateMap.head.get(id) match{
+    def atDef(id:Id): LEnv = {
+    stateMap.head.get(id) match{
       case None | Some(DontKnow) => LEnv(stateMap.addShadow(id, Def), nameMap)
       case Some(Def) => this
       case Some(Use) => throw LoopDepSequential(id)
+    }
     }
     def atDk(id:Id):LEnv = stateMap.head.get(id) match{
       case None | Some(Def) => LEnv(stateMap.addShadow(id, DontKnow), nameMap)
@@ -57,9 +59,9 @@ object LoopChecker {
     def updateState(id:Id, state: States):LEnv = {
       if (res > 1){
         state match {
-          case DontKnow => atDk(id)
-          case Def => atDef(id)
-          case Use => atUse(id)
+          case DontKnow => atDk(this.getName(id))
+          case Def => atDef(this.getName(id))
+          case Use => atUse(this.getName(id))
         }
       }
       else
@@ -67,14 +69,9 @@ object LoopChecker {
     }
     // Helper functions for ScopeManager
     def withScope(resources: Int)(inScope: LEnv => LEnv): LEnv = {
-      inScope(this.addScope(resources)) match {
-        case env:LEnv => env.endScope(resources)
-      }
-    }
-    def withScope(loop: Boolean, resources: Int)(inScope: LEnv => LEnv): LEnv = {
-      if (loop == false){
-          inScope(this.addIfScope) match {
-            case env:LEnv => env.endIfScope
+      if (resources == 1){
+          inScope(this.addNameScope) match {
+            case env:LEnv => env.endNameScope
           }
       }else{
           inScope(this.addScope(resources)) match {
@@ -98,10 +95,10 @@ object LoopChecker {
       }
       outerenv
     }
-    def addIfScope = {
+    def addNameScope = {
       LEnv(stateMap, nameMap.addScope)
     }
-    def endIfScope = {
+    def endNameScope = {
       val nmap = nameMap.endScope.get._2
       LEnv(stateMap, nmap)
     }
@@ -171,10 +168,10 @@ object LoopChecker {
         e1.withScope(1)(env => checkC(body)(env))
       }
       case (CIf(cond, c1, c2), e) => {
-        e.withScope(false, 1)( someScope =>{
+        e.withScope( someScope =>{
           val nEnv = checkE(cond)(someScope)
-          val e1 = nEnv.withScope(false, 1)(checkC(c1)(_))
-          val e2 = nEnv.withScope(false, 1)(checkC(c2)(_))
+          val e1 = nEnv.withScope(checkC(c1)(_))
+          val e2 = nEnv.withScope(checkC(c2)(_))
           e1 merge e2
         })
       }

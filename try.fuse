@@ -1,0 +1,12 @@
+let sum: bit<32>[128 bank 2];
+let bucket: bit<32>[128 bank 2][16];
+  let sum_tmp: bit<32> = 0;
+  view sumshift = sum[1!:];
+  for (let radix_id = 0..128) unroll 2 {  // HACK wasted: upper bound is 127.
+    sum_tmp := sum[radix_id];
+    ---
+    if(radix_id != 0){//??????sum shfit is sum
+      sumshift[radix_id] := sum_tmp + bucket[radix_id][15];
+    }
+  }
+
