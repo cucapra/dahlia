@@ -793,9 +793,9 @@ class TypeCheckerSpec extends FunSpec {
     it("use after define in an unrolled loop is not allowed") {
       assertThrows[LoopDepSequential] {
         typeCheck("""
-          decl a: bit<32>[10 bank 5];
-          for (let i = 0..10) unroll 5 {
-            let x = a[i]
+          let a: bit<32>{2}[10];
+          for (let i = 0..10) unroll 2 {
+            let x = a[i+1]
             ---
             a[i] := 1
           }

@@ -19,7 +19,7 @@ object ScopeMap {
         .mkString(" => ")
 
     def head = mapList.head
-
+    def length = mapList.length - 1
     /**
      * Returns first occurance of the binding for key in the scope chain.
      */
