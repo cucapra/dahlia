@@ -20,6 +20,7 @@ object TestUtils {
     val env = TypeChecker.typeCheck(ast);
     BoundsChecker.check(ast);
     LoopChecker.check(ast);
+    DependentLoops.check(ast);
     env
   }
 }

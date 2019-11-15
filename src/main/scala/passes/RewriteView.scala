@@ -28,7 +28,10 @@ object RewriteView {
   type Env = Map[Id, List[Expr] => Expr]
 
   private def rewriteExpr(e: Expr): State[Env, Expr] = e match {
-    case EVar(_) | EInt(_, _) | ERational(_) | EBool(_) | _:ERecAccess => State.unit(e)
+    case EVar(_) | EInt(_, _) | ERational(_) | EBool(_) => State.unit(e)
+    case erec@ERecAccess(rec, _) => for {
+      recn <- rewriteExpr(rec)
+    } yield erec.copy(rec = recn)
     case ec@ECast(e, _) => for {
       en <- rewriteExpr(e)
     } yield ec.copy(e = en)
