@@ -37,12 +37,10 @@ object LoopChecker {
     def getName(aid:Id):Id = nameMap.get(aid).getOrElse(aid)
 
     // Helper functions for stateMap
-    def atDef(id:Id): LEnv = {
-    stateMap.head.get(id) match{
+    def atDef(id:Id): LEnv = stateMap.head.get(id) match{
       case None | Some(DontKnow) => LEnv(stateMap.addShadow(id, Def), nameMap)
       case Some(Def) => this
       case Some(Use) => throw LoopDepSequential(id)
-    }
     }
     def atDk(id:Id):LEnv = stateMap.head.get(id) match{
       case None | Some(Def) => LEnv(stateMap.addShadow(id, DontKnow), nameMap)
