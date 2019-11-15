@@ -57,9 +57,9 @@ object LoopChecker {
     def updateState(id:Id, state: States):LEnv = {
       if (res > 1){
         state match {
-          case DontKnow => atDk(id)
-          case Def => atDef(id)
-          case Use => atUse(id)
+          case DontKnow => atDk(this.getName(id))
+          case Def => atDef(this.getName(id))
+          case Use => atUse(this.getName(id))
         }
       }
       else
