@@ -788,7 +788,6 @@ class TypeCheckerSpec extends FunSpec {
     }
   }
 
-
   describe("Loop depedency in unrolled context") {
     it("use after define in an unrolled loop is not allowed") {
       assertThrows[LoopDepSequential] {
@@ -815,6 +814,41 @@ class TypeCheckerSpec extends FunSpec {
           }
         """ )
       }
+    }    
+    it("skip loop dependency check when indexing is the same") {
+      typeCheck("""
+        decl a: bit<32>[10 bank 2];
+        for (let i = 0..10) unroll 2 {
+          let x = a[i]
+          ---
+          a[i] := 1
+        }
+        """ )
+    }
+    it("skip loop dependency check when indexing is the same in a nested unrolled loop") {
+      typeCheck("""
+      decl a: bit<32>{2}[10][10 bank 2];
+        for (let i = 0..6) unroll 2 {
+          for (let j = 0..10) unroll 2 {
+            let x = a[i][j]
+            ---
+            a[i][j] := 1
+          }
+        }
+        """ )
+    }   
+    it("no skip on loop dependency check when encountered a view") {
+      assertThrows[LoopDepSequential] {
+        typeCheck("""
+          decl a: bit<32>{2}[10 bank 2];
+          view a_v = a[1!: bank 2];
+          for (let i = 0..10) unroll 2 {
+            let x = a[i]
+            ---
+            a_v[i] := 1
+          }
+          """ )
+      }
     }
     it("condition in if is always a use") {
       typeCheck("""
@@ -831,14 +865,14 @@ class TypeCheckerSpec extends FunSpec {
     it("merging condition creates don't know state") {
       assertThrows[LoopDepSequential] {
         typeCheck("""
-          decl a: bit<32>[10 bank 5];
-          decl b: bit<32>[10 bank 5];
-          for (let i = 0..10) unroll 5 {
+          decl a: bit<32>;
+          decl b: bit<32>[10 bank 2];
+          for (let i = 0..10) unroll 2 {
             if (b[i] > 10) {
-              a[i] := 1
+              a := 1
             }
             ---
-            a[i];
+            a;
           }
           """ )
       }
