@@ -115,12 +115,11 @@ object LoopChecker {
       outerenv
     }
     def addNameScope = {
-      LEnv(stateMap, nameMap.addScope, exprMap.addScope)
+      LEnv(stateMap, nameMap.addScope, exprMap)
     }
     def endNameScope = {
       val nmap = nameMap.endScope.get._2
-      val emap = exprMap.endScope.get._2
-      LEnv(stateMap, nmap, emap)
+      LEnv(stateMap, nmap, exprMap)
     }
 
     def mergeHelper(k: Id, v1:  Option[States], v2: Option[States], env: LEnv): LEnv = (v1, v2) match {
