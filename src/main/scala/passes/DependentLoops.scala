@@ -40,7 +40,14 @@ object DependentLoops {
     loopVars: Set[Id],
     depVars: Set[Id]
   ) extends ScopeManager[DepEnv] {
-    def withScope(inScope: DepEnv => DepEnv): DepEnv = inScope(this)
+    def withScope(inScope: DepEnv => DepEnv): DepEnv = {
+      inScope(this)
+    }
+
+    def forgetScope(inScope: DepEnv => DepEnv): DepEnv = {
+      inScope(this)
+      this
+    }
 
     def merge(that: DepEnv): DepEnv = DepEnv(this.loopVars ++ that.loopVars, this.depVars ++ that.depVars)
 
@@ -84,11 +91,11 @@ object DependentLoops {
     override def myCheckC: PF[(Command, Env), Env] = {
       case (CFor(range, _, par, _), env) => {
         if (range.u > 1) {
-          env.withScope(e1 =>
+          env.forgetScope(e1 =>
             checkC(par)(e1.addLoopVar(range.iter))
           )
         } else {
-          env.withScope(e1 =>
+          env.forgetScope(e1 =>
             checkC(par)(e1)
           )
         }
