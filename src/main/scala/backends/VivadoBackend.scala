@@ -15,8 +15,8 @@ private class VivadoBackend extends CppLike {
   """.stripMargin.trim)
 
   def unroll(n: Int): Doc = n match {
-    case 1 => emptyDoc
-    case n => value(s"#pragma HLS UNROLL factor=$n skip_exit_check") <@> line
+    case 1 => value(s"#pragma HLS LOOP_FLATTEN off")
+    case n => value(s"#pragma HLS LOOP_FLATTEN off") <@> value(s"#pragma HLS UNROLL factor=$n skip_exit_check") <@> line
   }
 
   def interfaceValid(decls: List[Decl]) =
