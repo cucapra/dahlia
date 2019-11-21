@@ -12,7 +12,7 @@
    A V))
 
 #|============== bank-1d.pdf =================|#
-(let-values ([(A) (let/matrix [ (A[1][8 #:bank 4] ) ])])
+(let-values ([(A) (let/matrix [ (A[1][16 #:bank 8] ) ])])
   (save-pict (scale (car A) image-scale) "bank-1d.pdf"))
 
 #|============== bank-2d.pdf =================|#
