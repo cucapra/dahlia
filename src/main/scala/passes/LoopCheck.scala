@@ -136,10 +136,10 @@ object LoopChecker {
     def merge(that: LEnv): LEnv = {
       val m1 = this.stateMap
       val m2 = that.stateMap
-      val res = m1.head.keys.foldLeft[LEnv](LEnv(m1, nameMap, exprMap))({
+      val result = m1.head.keys.foldLeft[LEnv](LEnv(m1, nameMap, exprMap))({
         case (env, k) => mergeHelper(k, m1.get(k), m2.get(k), env)
       })
-      res
+      result
     }
   }
 
