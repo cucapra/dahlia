@@ -14,10 +14,7 @@ private class VivadoBackend extends CppLike {
     |#include <ap_int.h>
   """.stripMargin.trim)
 
-  def unroll(n: Int): Doc = n match {
-    case 1 => emptyDoc
-    case n => value(s"#pragma HLS UNROLL factor=$n skip_exit_check") <@> line
-  }
+  def unroll(n: Int): Doc = value(s"#pragma HLS UNROLL factor=$n skip_exit_check") <@> line
 
   def interfaceValid(decls: List[Decl]) =
     decls.collect({ case Decl(id, typ: TArray) => {
