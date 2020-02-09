@@ -47,6 +47,9 @@ object Info {
       this.copy(remBanks = afterConsume, conLocs = newConLocs)
     }
 
+    // Return a copy of the physical resource with all the resources available.
+    def toFresh = this.copy(remBanks = avBanks, conLocs = Map())
+
     def merge(that: ArrayInfo) = {
       val remBanks = this.remBanks.zipWith(that.remBanks, Math.min)
       this.copy(remBanks = remBanks, conLocs = this.conLocs ++ that.conLocs)
