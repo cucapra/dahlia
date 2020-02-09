@@ -296,7 +296,7 @@ class TypeCheckerSpec extends FunSpec {
         """ )
     }
     it("can create different capabilities in branches") {
-      // See discussion in: https://github.com/cucapra/seashell/pull/81
+      // See discussion in: https://github.com/cucapra/dahlia/pull/81
         typeCheck("""
           decl a: bit<10>[2 bank 2];
           if (true) {
@@ -386,10 +386,25 @@ class TypeCheckerSpec extends FunSpec {
         let sum: bit<64> = 0;
         for (let i = 0..10) unroll 5  {
           let x = a[i]
+        } combine {
+          sum += x;
+        }
+          """ )
+    }
+
+    it("variables defined act as consumable arrays") {
+      assertThrows[AlreadyConsumed] {
+        typeCheck("""
+          decl a: bit<64>[10 bank 5];
+          let sum: bit<64> = 0;
+          for (let i = 0..10) unroll 5  {
+            let x = a[i]
           } combine {
             sum += x;
+            x[0];
           }
           """ )
+      }
     }
   }
 
@@ -814,7 +829,7 @@ class TypeCheckerSpec extends FunSpec {
           }
         """ )
       }
-    }    
+    }
     it("skip loop dependency check when indexing is the same") {
       typeCheck("""
         decl a: bit<32>[10 bank 2];
@@ -836,7 +851,7 @@ class TypeCheckerSpec extends FunSpec {
           }
         }
         """ )
-    }   
+    }
     it("no skip on loop dependency check when encountered a view") {
       assertThrows[LoopDepSequential] {
         typeCheck("""
@@ -1131,6 +1146,15 @@ class TypeCheckerSpec extends FunSpec {
           }
           """ )
       }
+    }
+    it("can cross sequential composition boundary") {
+      typeCheck("""
+        let A: float[10 bank 4];
+        view m1 = A[_: bank 2];
+        m1[0];
+        ---
+        m1[1]
+        """ )
     }
   }
 
