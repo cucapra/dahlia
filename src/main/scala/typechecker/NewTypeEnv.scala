@@ -72,7 +72,7 @@ object NewTypeEnv {
      * @returns A new environment without the topmost scope and a Scope
      *          containing all bindings in the topmost scope.
      */
-    def withScope(inScope: Environment => Environment): (Environment, Map[Id, Type])
+    def withScope(inScope: Environment => Environment): Environment
 
     /**
      * For function return types: if we're in a function, we keep track of
@@ -114,8 +114,8 @@ object NewTypeEnv {
     }
     def endScope = {
       val scopes = for {
-        (tScope, tMap) <- typeMap.endScope
-      } yield (Env(tMap, typeDefMap, retType), tScope)
+        (_, tMap) <- typeMap.endScope
+      } yield Env(tMap, typeDefMap, retType)
 
       scopes.getOrThrow(Impossible("Removed topmost scope"))
     }

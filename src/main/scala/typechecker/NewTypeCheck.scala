@@ -90,7 +90,7 @@ object NewTypeChecker {
 
   private def checkDef(defi: Definition, env: Environment) = defi match {
     case FuncDef(id, args, ret, bodyOpt) => {
-      val (env2, _) = env.withScope { newScope =>
+      val env2 = env.withScope { newScope =>
 
         // Bind all declarations to the body.
         val envWithArgs = args.foldLeft(newScope)({ case (env, Decl(id, typ)) =>
@@ -242,8 +242,8 @@ object NewTypeChecker {
     case CIf(cond, cons, alt) => {
       val (cTyp, e1) = checkE(cond)(env)
       cTyp.matchOrError(cond.pos, "if condition", "bool"){ case _:TBool => () }
-      val (e2, _) = e1.withScope(e => checkC(cons)(e))
-      val (e3, _) = e1.withScope(e => checkC(alt)(e))
+      val e2 = e1.withScope(e => checkC(cons)(e))
+      val e3 = e1.withScope(e => checkC(alt)(e))
       // No binding updates need to be reflected.
       e1
     }
@@ -253,7 +253,7 @@ object NewTypeChecker {
       if (cTyp != TBool()) {
         throw UnexpectedType(cond.pos, "while condition", TBool().toString, cTyp)
       }
-      e1.withScope(e => checkC(body)(e))._1
+      e1.withScope(e => checkC(body)(e))
     }
     case CUpdate(lhs, rhs) => {
       val (t1, e1) = checkE(lhs)
@@ -263,19 +263,10 @@ object NewTypeChecker {
     }
     case CReduce(rop, l, r) => {
       val (t1, e1) = checkE(l)
-      val (ta, e2) = checkE(r)(e1)
-      (t1, ta) match {
-        case (t1, TArray(t2, dims, _)) =>
-          if (isSubtype(t2, t1) == false ||
-              dims.length != 1 ||
-              dims(0)._1 != dims(0)._2) {
-            throw UnexpectedType(r.pos, s"reduction operator $rop", "fully banked array", ta)
-          } else {
-            e2
-          }
-        case _ =>
-          throw UnexpectedType(r.pos, s"reduction operator $rop", "fully banked array", ta)
-      }
+      val (t2, e2) = checkE(r)(e1)
+
+      if (isSubtype(t2, t1)) e2
+      else throw UnexpectedSubtype(r.pos, "reduction operator", t1, t2)
     }
     case l@CLet(id, typ, Some(EArrLiteral(idxs))) => {
       val expTyp = typ.getOrThrow(ExplicitTypeMissing(l.pos, "Array literal", id))
@@ -380,23 +371,17 @@ object NewTypeChecker {
       env.add(id, fullTyp)
     }
     case CFor(range, pipeline, par, combine) => {
+      // Check if this is a pipelined loop.
       checkPipeline(pipeline, cmd, par)
 
-      val iter = range.iter
-      val (e1, binds) = env.withScope { newScope =>
+      // Check the for loop body and make variables declared in loop body
+      // available to the combine block.
+      env.withScope { newScope =>
         // Add binding for iterator in a separate scope.
-        val e2 = newScope.add(iter, range.idxType)
-        checkC(par)(e2)
+        val forEnv = newScope.add(range.iter, range.idxType)
+        val combEnv = checkC(par)(forEnv)
+        checkC(combine)(combEnv)
       }
-      // Create scope where ids bound in the parallel scope map to fully banked
-      // arrays. Remove the iterator binding.
-      val vecBinds = binds
-        .withFilter({ case (id, _) => id != iter })
-        .map({ case (id, typ) =>
-          id -> TArray(typ, List((range.u, range.u)), 1)
-        })
-
-      e1.withScope(e2 => checkC(combine)(e2 ++ vecBinds))._1
     }
     case view@CView(id, arrId, vdims) => env(arrId) match {
       case TArray(typ, adims, port) => {

@@ -17,11 +17,43 @@ import Logger.PositionalLoggable
 
 object AffineChecker {
 
+  def check(p: Prog) = AffineChecker.check(p)
+
   private final case object AffineChecker extends PartialChecker {
 
     type Env = AffineEnv.Environment
 
     val emptyEnv = AffineEnv.emptyEnv
+
+    override def check(p: Prog): Unit = {
+      val Prog(_, defs, _, decls, cmd) = p
+
+      val topFunc = FuncDef(Id(""), decls, TVoid(), Some(cmd))
+      (defs ++ List(topFunc)).foldLeft(emptyEnv) {
+        case (e, d) => checkDef(d)(e)
+      }
+      ()
+    }
+
+    override def checkDef(defi: Definition)(implicit env: Env) = defi match {
+      case FuncDef(id, args, ret, bodyOpt) => {
+        val (env2, _, _) = env.withScope(1) { newScope =>
+
+          // Add physical resources corresponding to array decls
+          val envWithResources = args
+            .collect({ case Decl(id, t:TArray) => id -> t})
+            .foldLeft(newScope)({ case (env, (id, t)) =>
+              addPhysicalResource(id, t, env)
+            })
+
+          bodyOpt
+            .map(body => checkC(body)(envWithResources))
+            .getOrElse(envWithResources)
+        }
+        env2
+      }
+      case _:RecordDef => env
+    }
 
     /**
      * Add physical resources and default accessor gadget corresponding to a new
@@ -110,29 +142,30 @@ object AffineChecker {
         val ta@TArray(_, _, _) = id.typ.get
         addPhysicalResource(id, ta, env)
       }
-      case (CReduce(_, _, rhs), env) => {
-        val EVar(gadget) = rhs
-        val TArray(_, dims, _) = rhs.typ.get
-        val consumeList = dims.map(dim => 0.until(dim._2))
-        env.consumeWithGadget(gadget, consumeList)(rhs.pos)
-      }
       case (CSeq(c1, c2), env) => {
         val (env1, pDefs, gDefs) = env.withScope(1) { newScope =>
           checkC(c1)(newScope)
         }
         // Create a new environment that has the same gadget definations and
         // physical resources as env1 but hasn't consumed anything.
-        pDefs.foldLeft[Env](env ++ gDefs)({ case (e, b) =>
-          e.addResource(b._1, b._2)
+        pDefs.toList.foldLeft[Env](env ++ gDefs)({ case (e, (id, resource)) =>
+          e.addResource(id, resource.toFresh)
         })
 
         val env2 = checkC(c2)(env ++ gDefs)
         env2 merge env1
       }
       case (CPar(c1, c2), env) => checkC(c2)(checkC(c1)(env))
-      case (_:CFor, env) => {
-        // Increase resources and handle combine
-        ???
+      case (CFor(range, _, par, combine), env) => {
+        val (e1, _, _) = env.withScope(range.u) { newScope =>
+          checkC(par)(newScope)
+        }
+
+        val (e2, _, _) = env.withScope(1) { newScope =>
+          checkC(combine)(newScope)
+        }
+
+        e1 merge e2
       }
       case (_:CView, env) => {
         // Add gadget for the view and add missing well formedness checks
