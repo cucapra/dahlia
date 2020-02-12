@@ -123,6 +123,17 @@ object AffineEnv {
     phyRes: ScopedMap[Id, ArrayInfo] = ScopedMap(),
     gadgetMap: ScopedMap[Id, Gadget] = ScopedMap())(implicit val res: Int) extends Environment {
 
+    override def toString = {
+      val lst =
+        for { (ps, gs) <- phyRes.iterator.zip(gadgetMap.iterator) }
+        yield (
+          ps.toList.map({case (k, v) => s"$k -> $v"}).mkString(", "),
+          gs.keys.mkString("{", ", ", "}")
+        )
+
+      lst.mkString(" ==> ")
+    }
+
     /** Tracking bound gadgets */
     def add(id: Id, resource: Gadget) =
       this.copy(gadgetMap = gadgetMap.add(id, resource).getOrThrow(AlreadyBound(id)))
@@ -148,12 +159,20 @@ object AffineEnv {
     def merge(env: Environment): Environment = env match {
       case that:Env =>
         val (myResources, thatResources) = (this.phyRes.keys, that.phyRes.keys)
+        val (myGads, thatGads) = (this.gadgetMap.keys, that.gadgetMap.keys)
 
         // Sanity check: The same set of ids are bound by both environments
         if (myResources != thatResources) {
           throw Impossible(
             "Trying to merge two environments which bind different sets of ids." +
-            s" Intersection of bind set: ${myResources & thatResources}")
+            s"\nEnv 1: ${myResources}" +
+            s"\nEnv 2: ${thatResources}")
+        }
+        if (myGads != thatGads) {
+          throw Impossible(
+            "Trying to merge two environments which bind different sets of ids." +
+            s"\nEnv 1: ${myGads}" +
+            s"\nEnv 2: ${thatGads}")
         }
 
         /**
@@ -184,7 +203,7 @@ object AffineEnv {
     }
 
     def withScope(inScope: Environment => Environment): Environment = {
-      throw Impossible("WithScope called on Affine env without resources.")
+      this.withScope(1)(inScope)._1
     }
 
     val getResources = res

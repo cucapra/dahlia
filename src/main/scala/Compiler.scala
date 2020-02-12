@@ -25,13 +25,18 @@ object Compiler {
     case Futil  => backend.futil.FutilBackend
   }
 
-  def compileStringWithError(prog: String, c: Config = emptyConf) = {
+  def checkStringWithError(prog: String, c: Config = emptyConf) = {
     val ast = FuseParser.parse(prog)
     typechecker.CapabilityChecker.check(ast); showDebug(ast, "Capability Checking", c)
     typechecker.NewTypeChecker.typeCheck(ast); showDebug(ast, "Type Checking", c)
-    // passes.BoundsChecker.check(ast);  // Doesn't modify the AST.
-    passes.LoopChecker.check(ast);  // Doesn't modify the AST.
-    passes.DependentLoops.check(ast); // Doesn't modify the AST.
+    typechecker.AffineChecker.check(ast); // Doesn't modify the AST
+    passes.BoundsChecker.check(ast);      // Doesn't modify the AST.
+    passes.LoopChecker.check(ast);        // Doesn't modify the AST.
+    passes.DependentLoops.check(ast);     // Doesn't modify the AST.
+    ast
+  }
+
+  def codegen(ast: Prog, c: Config = emptyConf) = {
     val rast = passes.RewriteView.rewriteProg(ast); showDebug(rast, "Rewrite Views", c)
     toBackend(c.backend).emit(rast, c)
   }
@@ -42,26 +47,27 @@ object Compiler {
   }
 
   def compileString(prog: String, c: Config): Either[String, String] = {
-    Try(compileStringWithError(prog, c)).toEither.left.map(err => {
-      scribe.debug(err.getStackTrace().mkString("\n"))
-      err match {
-        case _: Errors.TypeError => s"[${red("Type error")}] ${err.getMessage}"
-        case _: Errors.ParserError =>
-          s"[${red("Parsing error")}] ${err.getMessage}"
-        case _: CompilerError.Impossible =>
-          s"[${red("Impossible")}] ${err.getMessage}. " +
+    Try(codegen(checkStringWithError(prog, c), c))
+      .toEither.left.map(err => {
+        scribe.debug(err.getStackTrace().take(10).mkString("\n"))
+        err match {
+          case _: Errors.TypeError => s"[${red("Type error")}] ${err.getMessage}"
+          case _: Errors.ParserError =>
+            s"[${red("Parsing error")}] ${err.getMessage}"
+          case _: CompilerError.Impossible =>
+            s"[${red("Impossible")}] ${err.getMessage}. " +
             "This should never trigger. Please report this as a bug."
-        case _ => s"[${red("Error")}] ${err.getMessage}"
-      }
-    }).map(out => {
-      // Get metadata about the compiler build.
-      val version = getClass.getResourceAsStream("/version.properties")
-      val meta = Source.fromInputStream(version)
-                       .getLines
-                       .filter(l => l.trim != "")
-                       .mkString(", ")
-      s"// $meta\n" + out
-    })
+          case _ => s"[${red("Error")}] ${err.getMessage}"
+        }
+        }).map(out => {
+          // Get metadata about the compiler build.
+          val version = getClass.getResourceAsStream("/version.properties")
+          val meta = Source.fromInputStream(version)
+            .getLines
+            .filter(l => l.trim != "")
+            .mkString(", ")
+            s"// $meta\n" + out
+        })
   }
 
   def compileStringToFile(

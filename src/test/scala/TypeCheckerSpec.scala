@@ -1149,7 +1149,7 @@ class TypeCheckerSpec extends FunSpec {
     }
     it("can cross sequential composition boundary") {
       typeCheck("""
-        let A: float[10 bank 4];
+        let A: float[10 bank 2];
         view m1 = A[_: bank 2];
         m1[0];
         ---

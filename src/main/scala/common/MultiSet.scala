@@ -20,6 +20,12 @@ object MultiSet {
     def containsAtLeast(element: K, num: Int): Boolean =
       setMap.get(element).map(_ >= num).getOrElse(false)
 
+    override def toString =
+      setMap.toList
+        .map({case (v, n) => List.tabulate(n)(_ => v)})
+        .flatten
+        .mkString("{", ", ", "}")
+
     /**
      * Apply [[op]] on the values associated with the same key in [[this]] and [[that]].
      */

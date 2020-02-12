@@ -213,16 +213,57 @@ object NewTypeChecker {
       }
       case (t, _) => throw UnexpectedType(expr.pos, "record access", "record type", t)
     }
-    case acc@EArrAccess(id, idxs) => env(id).matchOrError(expr.pos, "array access", s"array type"){
+    case EArrAccess(id, idxs) => env(id).matchOrError(expr.pos, "array access", s"array type"){
       case TArray(typ, dims, _) => {
         if (dims.length != idxs.length) {
           throw IncorrectAccessDims(id, dims.length, idxs.length)
         }
+        idxs.foldLeft(env)((env, idx) => {
+          val (typ, nEnv) = checkE(idx)(env)
+          typ match {
+            case _:IntType => ()
+            case _ => throw UnexpectedType(idx.pos, "array index", "integer type", typ)
+          }
+          nEnv
+        })
         // Bind the type of to Id
         id.typ = Some(env(id));
         typ -> env
       }
     }
+  }
+
+  // Check if this array dimension is well formed and return the dimension
+  // spec for the corresponding dimension in the view.
+  private def checkView(view: View, arrDim: DimSpec)
+                       (implicit env: Environment): (Environment, DimSpec) = {
+
+    val View(suf, prefix, shrink) = view
+    val (len, bank) = arrDim
+
+    // Shrinking factor must be a factor of banking for the dimension
+    if (shrink.isDefined && (shrink.get > bank || bank % shrink.get != 0)) {
+      throw InvalidShrinkWidth(view.pos, bank, shrink.get)
+    }
+
+    val newBank = shrink.getOrElse(bank)
+
+    // Get the indexing expression
+    val idx = suf match {
+      case Aligned(fac, idx) => if (newBank > fac || fac % newBank != 0) {
+        throw InvalidAlignFactor(suf.pos, fac, newBank)
+      } else {
+        idx
+      }
+      case Rotation(idx) => idx
+    }
+
+    val (typ, nEnv) = checkE(idx)
+    typ.matchOrError(idx.pos, "view", "integer type") {
+      case _:IntType => () // IntTypes are valid
+    }
+
+    (nEnv, (prefix.getOrElse(len) -> newBank))
   }
 
   private def checkPipeline(enabled: Boolean, loop: Command, body: Command) = {
@@ -242,8 +283,8 @@ object NewTypeChecker {
     case CIf(cond, cons, alt) => {
       val (cTyp, e1) = checkE(cond)(env)
       cTyp.matchOrError(cond.pos, "if condition", "bool"){ case _:TBool => () }
-      val e2 = e1.withScope(e => checkC(cons)(e))
-      val e3 = e1.withScope(e => checkC(alt)(e))
+      e1.withScope(e => checkC(cons)(e))
+      e1.withScope(e => checkC(alt)(e))
       // No binding updates need to be reflected.
       e1
     }
@@ -261,7 +302,7 @@ object NewTypeChecker {
       if (isSubtype(t2, t1)) e2
       else throw UnexpectedSubtype(rhs.pos, "assignment", t1, t2)
     }
-    case CReduce(rop, l, r) => {
+    case CReduce(_, l, r) => {
       val (t1, e1) = checkE(l)
       val (t2, e2) = checkE(r)(e1)
 
@@ -383,26 +424,33 @@ object NewTypeChecker {
         checkC(combine)(combEnv)
       }
     }
-    case view@CView(id, arrId, vdims) => env(arrId) match {
+    case CView(id, arrId, vdims) => env(arrId) match {
       case TArray(typ, adims, port) => {
         val (vlen, alen) = (vdims.length, adims.length)
         if(vlen != alen) {
           throw IncorrectAccessDims(arrId, alen, vlen)
         }
 
-        // TODO(rachit): Add some part of checkView back in.
+        val (env1, viewDims) =
+          adims
+            .zip(vdims)
+            .foldLeft((env, List[DimSpec]()))({
+              case ((env, viewDims), (arrDim, view)) =>
+                val (nEnv, vDim) = checkView(view, arrDim)(env)
+                (nEnv, vDim :: viewDims)
+            })
 
         // View get the same type the array they are built from.
-        val viewTyp = env(arrId)
+        val viewTyp = TArray(typ, viewDims.reverse, port)
         id.typ = Some(viewTyp)
         arrId.typ = Some(env(arrId))
 
         // Add binding for the new array
-        env.add(id, viewTyp)
+        env1.add(id, viewTyp)
       }
       case t => throw UnexpectedType(cmd.pos, "view", "array", t)
     }
-    case view@CSplit(id, arrId, dims) => env(arrId) match {
+    case CSplit(id, arrId, dims) => env(arrId) match {
       case TArray(typ, adims, ports) => {
         val (vlen, alen) = (dims.length, adims.length)
         if(vlen != alen) {

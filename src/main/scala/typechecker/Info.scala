@@ -20,6 +20,8 @@ object Info {
     // Source code locations that consumed a bank.
     conLocs: Map[Int, MultiSet[Position]] = Map()) {
 
+    override def toString = remBanks.toString
+
     def consumeResources(resources: Seq[Int])
                         (implicit pos: Position, trace: List[String]) = {
 
@@ -54,8 +56,6 @@ object Info {
       val remBanks = this.remBanks.zipWith(that.remBanks, Math.min)
       this.copy(remBanks = remBanks, conLocs = this.conLocs ++ that.conLocs)
     }
-
-    override def toString = s"{$avBanks, $remBanks}"
   }
 
   object ArrayInfo {

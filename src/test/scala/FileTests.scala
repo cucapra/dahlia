@@ -14,7 +14,7 @@ class FileTypePositive extends FunSuite {
   for (file <- Files.newDirectoryStream(shouldCompile).asScala) {
     test(file.toString) {
       val prog = new String(Files.readAllBytes(file))
-      Compiler.compileStringWithError(prog)
+      Compiler.checkStringWithError(prog)
     }
   }
 
@@ -28,7 +28,7 @@ class FileTypeNegative extends FunSuite {
     test(file.toString) {
       val prog = new String(Files.readAllBytes(file))
       assertThrows[Errors.TypeError] {
-        Compiler.compileStringWithError(prog)
+        Compiler.checkStringWithError(prog)
       }
     }
   }
