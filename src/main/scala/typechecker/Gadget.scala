@@ -18,6 +18,10 @@ object Gadgets {
 
   type ConsumeList = Seq[Seq[Int]]
 
+  def clString(cl: Seq[Seq[Int]]): String = {
+    cl.map(els => els.mkString("{", ",", "}")).mkString("[", "][", "]")
+  }
+
   trait Gadget {
     // Return the name of the resource, the list of banks to be consumed,
     // and a trace of transformations done on the original resource.
@@ -28,6 +32,8 @@ object Gadgets {
     private def cross[A](acc: Seq[List[A]], l: Seq[A]): Seq[List[A]] = {
       for { a <- acc; el <- l } yield a :+ el
     }
+
+    override def toString = resource.toString
 
     private def hyperBankToBank(hyperBanks: List[Int]) = {
       if (hyperBanks.length != banks.length)
@@ -51,7 +57,7 @@ object Gadgets {
 
       val outRes = hyperBanks.map(hyperBankToBank).toList
 
-      (resource, outRes, List(outRes.toString))
+      (resource, outRes, List(clString(List(outRes))))
     }
   }
 
@@ -66,7 +72,7 @@ object Gadgets {
         .map({ case (resources, (_, banks)) => resources.map(_ % banks)})
 
       val (res, sum, trace) = underlying.getSummary(resourceTransform)
-      (res, sum, resourceTransform.toString :: trace)
+      (res, sum, clString(resourceTransform) :: trace)
     }
   }
 
@@ -76,7 +82,7 @@ object Gadgets {
       def getSummary(consume: ConsumeList) = {
         val outRes = transformer(consume)
         val (res, sum, trace) = underlying.getSummary(outRes)
-        (res, sum, outRes.toString :: trace)
+        (res, sum, clString(outRes) :: trace)
       }
     }
 

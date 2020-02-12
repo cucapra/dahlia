@@ -15,8 +15,10 @@ object ScopeMap {
 
     override def toString =
       mapList
-        .map(map => s"<${map.map({case (k, v) => s"$k -> $v"}).mkString(", ")}>")
-        .mkString(" => ")
+        .map(map => s"${map.map({case (k, v) => s"$k -> $v"}).mkString(",")}")
+        .mkString(" ==> ")
+
+    def iterator = mapList.iterator
 
     def head = mapList.head
     def length = mapList.length - 1

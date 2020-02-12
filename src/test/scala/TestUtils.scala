@@ -1,8 +1,7 @@
 package fuselang
 
 import common._
-import passes._
-import typechecker._
+import Compiler._
 
 object TestUtils {
 
@@ -14,13 +13,5 @@ object TestUtils {
   }
 
   def parseAst(s: String) = FuseParser.parse(s)
-  def typeCheck(s: String) = {
-    val ast = FuseParser.parse(s);
-    CapabilityChecker.check(ast);
-    val env = NewTypeChecker.typeCheck(ast);
-    BoundsChecker.check(ast);
-    LoopChecker.check(ast);
-    DependentLoops.check(ast);
-    env
-  }
+  def typeCheck(s: String) = checkStringWithError(s)
 }

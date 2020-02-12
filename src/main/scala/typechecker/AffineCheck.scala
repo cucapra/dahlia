@@ -5,15 +5,11 @@ import scala.{PartialFunction => PF}
 import Gadgets._
 import Info._
 
-import fuselang._
-import Utils._
-
 import fuselang.common._
 import Syntax._
 import Errors._
 import Checker._
 import CompilerError._
-import Logger.PositionalLoggable
 
 object AffineChecker {
 
@@ -36,7 +32,7 @@ object AffineChecker {
     }
 
     override def checkDef(defi: Definition)(implicit env: Env) = defi match {
-      case FuncDef(id, args, ret, bodyOpt) => {
+      case FuncDef(_, args, _, bodyOpt) => {
         val (env2, _, _) = env.withScope(1) { newScope =>
 
           // Add physical resources corresponding to array decls
@@ -103,7 +99,7 @@ object AffineChecker {
      * Checks a given simple view and returns the dimensions for the view,
      * shrink factors, and an updated environment.
      */
-    private def checkView(view: View, arrDim: DimSpec): (Int, DimSpec) = {
+    /*private def checkView(view: View, arrDim: DimSpec): (Int, DimSpec) = {
 
       val View(suf, pre, shrink) = view
       val (len, bank) = arrDim
@@ -116,12 +112,12 @@ object AffineChecker {
       val newBank = shrink.getOrElse(bank)
 
       (newBank, (pre.getOrElse(len) -> newBank))
-    }
+    }*/
 
     override def checkLVal(e: Expr)(implicit env: Env) = e match {
       case acc@EArrAccess(id, idxs) => {
         // This only triggers for l-values.
-        val TArray(typ, dims, _) = id.typ.get
+        val TArray(_, dims, _) = id.typ.get
         acc.consumable match {
           case Some(Annotations.ShouldConsume) => {
             val (bres, consumeList) = getConsumeList(idxs, dims)(id)
@@ -138,21 +134,28 @@ object AffineChecker {
     }
 
     override def myCheckC: PF[(Command, Env), Env] = {
-      case (CLet(id, _, _), env) => {
-        val ta@TArray(_, _, _) = id.typ.get
+      case (CLet(id, Some(ta@TArray(_, _, _)), _), env) => {
         addPhysicalResource(id, ta, env)
       }
       case (CSeq(c1, c2), env) => {
-        val (env1, pDefs, gDefs) = env.withScope(1) { newScope =>
+        // Abuse withScope to capture bindings created in this scope.
+        val (_, pDefs, gDefs) = env.withScope(1) { newScope =>
           checkC(c1)(newScope)
         }
-        // Create a new environment that has the same gadget definations and
-        // physical resources as env1 but hasn't consumed anything.
-        pDefs.toList.foldLeft[Env](env ++ gDefs)({ case (e, (id, resource)) =>
-          e.addResource(id, resource.toFresh)
+        // Recreate the resource usage patterns in this scope. Note that
+        // any physical resource affected from lower parts of the scope
+        // chain don't need to be changed.
+        val env1 = pDefs.toList.foldLeft[Env](env ++ gDefs)({
+          case (e, (id, resource)) => e.addResource(id, resource)
         })
 
-        val env2 = checkC(c2)(env ++ gDefs)
+        // Create a new environment that has the same gadget definations and
+        // physical resources as env1 but hasn't consumed anything.
+        val nextEnv = pDefs.toList.foldLeft[Env](env ++ gDefs)({
+          case (e, (id, resource)) => e.addResource(id, resource.toFresh)
+        })
+
+        val env2 = checkC(c2)(nextEnv)
         env2 merge env1
       }
       case (CPar(c1, c2), env) => checkC(c2)(checkC(c1)(env))
@@ -167,19 +170,22 @@ object AffineChecker {
 
         e1 merge e2
       }
-      case (_:CView, env) => {
+      case (CView(id, arrId, _), env) => {
         // Add gadget for the view and add missing well formedness checks
         // from new type checker
-        ???
+        val TArray(_, adims, _) = arrId.typ.get
+        val TArray(_, vdims, _) = id.typ.get
+        val shrinks = vdims.map(_._2)
+        env.add(id, viewGadget(env(arrId), shrinks, adims))
       }
-      case (_:CSplit, env) => {
+      case (_:CSplit, _) => {
         // Same as above
         ???
       }
     }
 
     override def myCheckE: PF[(Expr, Env), Env] = {
-      case (EApp(f, args), env) => {
+      case (EApp(_, args), env) => {
         args.foldLeft(env)({ case (e, argExpr) => {
           // If an array id is used as a parameter, consume it completely.
           // This works correctly with capabilities.
