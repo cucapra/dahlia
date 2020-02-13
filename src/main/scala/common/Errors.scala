@@ -9,9 +9,9 @@ object Errors {
   def withPos(s: String, pos: Position, postMsg: String = "") =
     s"[${pos.line}.${pos.column}] $s\n${pos.longString}\n${postMsg}"
 
-  class TypeError(msg: String,
-                  pos: Position,
-                  postMsg: String) extends RuntimeException(withPos(msg, pos, postMsg)) {
+  class TypeError(msg: String) extends RuntimeException(msg) {
+    def this(msg: String, pos: Position, postMsg: String) =
+      this(withPos(msg, pos, postMsg))
     def this(msg: String, pos: Position) = this(msg, pos, "")
   }
 
@@ -81,7 +81,7 @@ object Errors {
 
   case class AlreadyConsumed(id: Id, bank: Int, origRes: Int, conLocs: MultiSet[Position])
                             (implicit pos: Position, trace: List[String])
-                            extends RuntimeException(
+                            extends TypeError(
                               alreadyConsumedError(id, bank, origRes, conLocs, pos, trace))
 
   case class InvalidDynamicIndex(id:Id, bf:Int) extends TypeError(
