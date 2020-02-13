@@ -28,12 +28,12 @@ object Compiler {
   def checkStringWithError(prog: String, c: Config = emptyConf) = {
     val ast = FuseParser.parse(prog)
     passes.WellFormedChecker.check(ast)
-    typechecker.CapabilityChecker.check(ast); showDebug(ast, "Capability Checking", c)
     typechecker.TypeChecker.typeCheck(ast); showDebug(ast, "Type Checking", c)
-    typechecker.AffineChecker.check(ast); // Doesn't modify the AST
     passes.BoundsChecker.check(ast);      // Doesn't modify the AST.
     passes.LoopChecker.check(ast);        // Doesn't modify the AST.
     passes.DependentLoops.check(ast);     // Doesn't modify the AST.
+    typechecker.CapabilityChecker.check(ast); showDebug(ast, "Capability Checking", c)
+    typechecker.AffineChecker.check(ast); // Doesn't modify the AST
     ast
   }
 
