@@ -29,7 +29,7 @@ object Compiler {
     val ast = FuseParser.parse(prog)
     passes.WellFormedChecker.check(ast)
     typechecker.CapabilityChecker.check(ast); showDebug(ast, "Capability Checking", c)
-    typechecker.NewTypeChecker.typeCheck(ast); showDebug(ast, "Type Checking", c)
+    typechecker.TypeChecker.typeCheck(ast); showDebug(ast, "Type Checking", c)
     typechecker.AffineChecker.check(ast); // Doesn't modify the AST
     passes.BoundsChecker.check(ast);      // Doesn't modify the AST.
     passes.LoopChecker.check(ast);        // Doesn't modify the AST.
