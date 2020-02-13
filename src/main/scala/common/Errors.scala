@@ -101,10 +101,10 @@ object Errors {
   // View errors
   case class InvalidShrinkWidth(pos: Position, bf: Int, width: Int) extends TypeError(
     s"Invalid shrinking factor for view. Expected factor of $bf (banking factor), received: $width", pos)
-  case class InvalidAlignFactor(pos: Position, afac: Int, bank: Int) extends TypeError(
-    s"Aligned suffix factor $afac is not a multiple of the banking factor $bank.", pos)
-  case class ViewInsideUnroll(pos: Position, arrId: Id) extends TypeError(
-    s"Cannot create view for $arrId inside an unrolled context.", pos)
+  case class InvalidAlignFactor(pos: Position, msg: String) extends TypeError(
+    msg, pos)
+  case class ViewInsideUnroll(pos: Position) extends TypeError(
+    s"Cannot create view inside an unrolled context.", pos)
   case class InvalidSplitFactor(id: Id, arrId: Id, split: Int, bank: Int, dim: Int) extends TypeError(
     s"Cannot create split view $id: split factor $split does not divide banking factor $bank in dimension $dim for $arrId", id.pos)
 

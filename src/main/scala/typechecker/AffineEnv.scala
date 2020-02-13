@@ -150,8 +150,9 @@ object AffineEnv {
       phyRes.get(name) match {
         case None =>
           throw Impossible(s"No physical resource named $name.")
-        case Some(info) =>
+        case Some(info) => {
           this.copy(phyRes = phyRes.update(name, info.consumeResources(resources)))
+        }
       }
     }
 

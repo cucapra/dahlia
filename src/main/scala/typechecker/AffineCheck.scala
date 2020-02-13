@@ -139,13 +139,13 @@ object AffineChecker {
       }
       case (CSeq(c1, c2), env) => {
         // Abuse withScope to capture bindings created in this scope.
-        val (_, pDefs, gDefs) = env.withScope(1) { newScope =>
+        val (nEnv, pDefs, gDefs) = env.withScope(1) { newScope =>
           checkC(c1)(newScope)
         }
         // Recreate the resource usage patterns in this scope. Note that
         // any physical resource affected from lower parts of the scope
         // chain don't need to be changed.
-        val env1 = pDefs.toList.foldLeft[Env](env ++ gDefs)({
+        val env1 = pDefs.toList.foldLeft[Env](nEnv ++ gDefs)({
           case (e, (id, resource)) => e.addResource(id, resource)
         })
 
@@ -178,9 +178,11 @@ object AffineChecker {
         val shrinks = vdims.map(_._2)
         env.add(id, viewGadget(env(arrId), shrinks, adims))
       }
-      case (_:CSplit, _) => {
-        // Same as above
-        ???
+      case (CSplit(id, arrId, _), env) => {
+        val TArray(_, adims, _) = arrId.typ.get
+        val TArray(_, vdims, _) = id.typ.get
+        env.add(id,
+          splitGadget(env(arrId), adims, vdims))
       }
     }
 
