@@ -146,17 +146,6 @@ class TypeCheckerSpec extends FunSpec {
         typeCheck("while (true) {let x = 1;} x + 2;")
       }
     }
-    it("iterator id in combine block") {
-      assertThrows[Unbound] {
-        typeCheck("""
-          decl a: bit<32>[8];
-          for (let i = 0..8) {
-            } combine {
-              a[i];
-            }
-            """ )
-      }
-    }
     it("allows same name in different scopes") {
       typeCheck("""
         for (let i = 0..1) {
@@ -331,28 +320,6 @@ class TypeCheckerSpec extends FunSpec {
   }
 
   describe("Reductions") {
-    it("RHS should be an array") {
-      assertThrows[UnexpectedType] {
-        typeCheck("let x = 1; x += x;")
-      }
-    }
-    it("RHS should be fully banked") {
-      assertThrows[UnexpectedType] {
-        typeCheck("decl a: bit<32>[8 bank 2]; let x = 0; x += a;")
-      }
-    }
-    it("RHS should be 1-dimensional array") {
-      assertThrows[UnexpectedType] {
-        typeCheck("decl a: bit<32>[8 bank 8][10]; let x = 0; x += a;")
-      }
-    }
-    it("outside a loop with fully banked array") {
-      typeCheck("""
-        decl a: bit<64>[10 bank 10];
-        let sum: bit<64> = 0;
-        sum += a;
-        """ )
-    }
     // This is equivalent to the example above
     it ("fully unrolled loop and fully banked array") {
       typeCheck("""
@@ -360,9 +327,9 @@ class TypeCheckerSpec extends FunSpec {
         let sum: bit<64> = 0;
         for (let i = 0..10) unroll 10 {
           let v = a[i]
-          } combine {
-            sum += v;
-          }
+        } combine {
+          sum += v;
+        }
           """ )
     }
   }
@@ -390,21 +357,6 @@ class TypeCheckerSpec extends FunSpec {
           sum += x;
         }
           """ )
-    }
-
-    it("variables defined act as consumable arrays") {
-      assertThrows[AlreadyConsumed] {
-        typeCheck("""
-          decl a: bit<64>[10 bank 5];
-          let sum: bit<64> = 0;
-          for (let i = 0..10) unroll 5  {
-            let x = a[i]
-          } combine {
-            sum += x;
-            x[0];
-          }
-          """ )
-      }
     }
   }
 
@@ -1069,7 +1021,7 @@ class TypeCheckerSpec extends FunSpec {
           decl a: bit<10>[16 bank 8];
           for (let i = 0..4) unroll 4 {
             for (let j = 0..4) {
-              view v = a[4 * j :]
+              view v = a[4 * j : bank 4]
             }
           }
           """ )

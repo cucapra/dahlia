@@ -39,9 +39,9 @@ object Checker {
     def check(p: Prog): Unit = {
       val Prog(_, defs, _, _, cmd) = p
 
-      defs.collect({ case FuncDef(_, _, _, bodyOpt) => bodyOpt.map(checkC(_)(emptyEnv)) })
+      val env = defs.foldLeft(emptyEnv)({ case (env, defi) => checkDef(defi)(env)})
 
-      checkC(cmd)(emptyEnv); ()
+      checkC(cmd)(env); ()
     }
 
     /**

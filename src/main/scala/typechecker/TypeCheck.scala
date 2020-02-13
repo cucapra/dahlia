@@ -339,7 +339,7 @@ object TypeChecker {
 
     val idx = suf match {
       case Aligned(fac, idx) => if (newBank > fac || fac % newBank != 0) {
-        throw InvalidAlignFactor(suf.pos, fac, newBank)
+        throw InvalidAlignFactor(suf.pos, "Invalid Align")
       } else {
         idx
       }
@@ -536,7 +536,7 @@ object TypeChecker {
       case TArray(typ, adims, port) => {
         // Check if the view is defined inside an unroll
         if (env.getResources != 1) {
-          throw ViewInsideUnroll(view.pos, arrId)
+          throw ViewInsideUnroll(view.pos)
         }
 
         val (vlen, alen) = (vdims.length, adims.length)
@@ -568,7 +568,7 @@ object TypeChecker {
     case view@CSplit(id, arrId, dims) => env(arrId) match {
       case TArray(typ, adims, ports) => {
         if (env.getResources != 1) {
-          throw ViewInsideUnroll(view.pos, arrId)
+          throw ViewInsideUnroll(view.pos)
         }
         val (vlen, alen) = (dims.length, adims.length)
         if(vlen != alen) {

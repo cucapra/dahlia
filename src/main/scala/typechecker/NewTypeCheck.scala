@@ -72,6 +72,11 @@ import Logger.PositionalLoggable
  */
 object NewTypeChecker {
 
+  def pr[A](v: A): A = {
+    println(v)
+    v
+  }
+
   /* A program consists of a list of function or type definitions, a list of
    * variable declarations and then a command. We build up an environment with
    * all the declarations and definitions, then check the command in that environment
@@ -250,8 +255,12 @@ object NewTypeChecker {
 
     // Get the indexing expression
     val idx = suf match {
-      case Aligned(fac, idx) => if (newBank > fac || fac % newBank != 0) {
-        throw InvalidAlignFactor(suf.pos, fac, newBank)
+      case Aligned(fac, idx) => if (newBank > fac) {
+        throw InvalidAlignFactor(suf.pos, s"Invalid align factor. Banking factor $newBank is bigger than alignment factor $fac.")
+      }
+      else if(fac % newBank != 0) {
+        throw InvalidAlignFactor(suf.pos,
+          s"Invalid align factor. Banking factor $newBank not a factor of the alignment factor $fac.")
       } else {
         idx
       }
@@ -487,16 +496,12 @@ object NewTypeChecker {
     }
     case CExpr(e) => checkE(e)._2
     case CReturn(expr) => {
-      env.getReturn match {
-        case Some(retType) => {
-          val (t, e) = checkE(expr)
-          if (isSubtype(t, retType) == false) {
-            throw UnexpectedSubtype(expr.pos, "return", retType, t)
-          }
-          e
-        }
-        case None => throw ReturnNotInFunc(cmd.pos)
+      val retType = env.getReturn.get
+      val (t, e) = checkE(expr)
+      if (isSubtype(t, retType) == false) {
+        throw UnexpectedSubtype(expr.pos, "return", retType, t)
       }
+      e
     }
     case CEmpty => env
     case _:CDecorate => env
