@@ -60,6 +60,9 @@ object Errors {
   case class ReduceInsideUnroll(op: ROp, pos: Position) extends TypeError(
     s"$op cannot be inside an unrolled loop", pos)
 
+  case class FuncInUnroll(pos: Position) extends TypeError(
+    "Cannot call function inside unrolled loop.", pos)
+
   // Unrolling and banking errors
   case class UnrollRangeError(pos: Position, rSize: Int, uFactor: Int) extends TypeError(
     s"Cannot unroll range of size $rSize by factor $uFactor.", pos)

@@ -964,6 +964,17 @@ class TypeCheckerSpec extends FunSpec {
       }
     }
 
+    it("disallowed inside unrolled loops") {
+      assertThrows[FuncInUnroll] {
+        typeCheck("""
+          def bar(a: bool) { }
+          for (let i = 0..10) unroll 5 {
+            bar(tre)
+          }
+          """ )
+      }
+    }
+
     it("completely consume array parameters") {
       assertThrows[AlreadyConsumed] {
         typeCheck("""
