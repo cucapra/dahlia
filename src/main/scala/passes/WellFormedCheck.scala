@@ -35,8 +35,12 @@ object WellFormedChecker {
     }
 
     override def myCheckE: PF[(Expr, Env), Env] = {
-      case (expr@ERecLiteral(_), _) => throw NotInBinder(expr.pos, "Record Literal")
-      case (expr@EArrLiteral(_), _) => throw NotInBinder(expr.pos, "Array Literal")
+      case (expr:ERecLiteral, _) => throw NotInBinder(expr.pos, "Record Literal")
+      case (expr:EArrLiteral, _) => throw NotInBinder(expr.pos, "Array Literal")
+      case (expr:EApp, env) => {
+        assertOrThrow(env.insideUnroll == false, FuncInUnroll(expr.pos))
+        env
+      }
     }
 
     override def myCheckC: PF[(Command, Env), Env] = {
