@@ -40,6 +40,11 @@ object WellFormedChecker {
     }
 
     override def myCheckC: PF[(Command, Env), Env] = {
+      case (cmd@CReduce(op, l, r), e) => {
+        assertOrThrow(e.insideUnroll == false,
+          ReduceInsideUnroll(op,cmd.pos))
+        checkE(r)(checkE(l)(e))
+      }
       case (l@CLet(id, typ, Some(EArrLiteral(_))), e) => {
         val expTyp = typ
           .getOrThrow(ExplicitTypeMissing(l.pos, "Array literal", id))
@@ -64,7 +69,9 @@ object WellFormedChecker {
         val insideUnroll = range.u > 1 || env.insideUnroll
         val e1 = env.withScope(newScope =>
             checkC(par)(newScope.copy(insideUnroll = insideUnroll)))
-        checkC(combine)(e1)
+        // Allow reduce operators inside combine
+        val e2 = checkC(combine)(e1.copy(insideUnroll = false))
+        e2.copy(insideUnroll = env.insideUnroll)
       }
       case (cmd@CReturn(_), env) => {
         assertOrThrow(env.insideFunc,

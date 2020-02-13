@@ -30,6 +30,10 @@ object Errors {
   case class ReturnNotInFunc(pos: Position) extends TypeError(
     s"Return statements are only allowed in fucntions.", pos)
 
+  // Reduce operators
+  case class ReduceInsideUnroll(op: ROp, pos: Position) extends TypeError(
+    s"$op cannot be inside an unrolled loop", pos)
+
   // Unrolling and banking errors
   case class UnrollRangeError(pos: Position, rSize: Int, uFactor: Int) extends TypeError(
     s"Cannot unroll range of size $rSize by factor $uFactor.", pos)
