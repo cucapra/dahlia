@@ -15,6 +15,32 @@ object Errors {
     def this(msg: String, pos: Position) = this(msg, pos, "")
   }
 
+  def alreadyConsumedError(
+    id: Id,
+    bank: Int,
+    origRes: Int,
+    conLocs: MultiSet[Position],
+    pos: Position,
+    trace: List[String]) = {
+      val prevCons = conLocs.setMap.toList.dropRight(1).map({
+        case (loc, counts) =>
+          s"\n[${loc.line}.${loc.column}] Required $counts resource(s):\n${loc.longString}"
+      }).mkString("")
+
+      s"""
+      |[${pos.line}.${pos.column}] Bank $bank for physical resource `$id' already consumed.
+      |${pos.longString}
+      |
+      |`${id}' originally had ${origRes} resource(s).
+      |
+      |Previous locations that consumed bank $bank:
+      |${prevCons}
+      |
+      |Last gadget trace was:
+      |${trace.mkString("\n")}
+      """.stripMargin.trim
+  }
+
   @deprecated("MsgErrors are not informative. Either create a new Error case or reuse one of the exisiting ones", "fuse 0.0.1")
   case class MsgError(msg: String, pos: Position) extends TypeError(msg, pos)
 
@@ -54,12 +80,9 @@ object Errors {
     s"Invalid parallel access on `$arrId`. Banking factor ($bf) does not divide unrolling factor ($uf). ", pos)
 
   case class AlreadyConsumed(id: Id, bank: Int, origRes: Int, conLocs: MultiSet[Position])
-                            (implicit pos: Position, trace: List[String]) extends TypeError(
-    s"Bank $bank for physical resource `$id' already consumed. It originally had ${origRes} resources.\n\nLast gadget transformation trace was:\n${trace.mkString("\n")}.\n\nLocations that consumed this bank:",
-    pos,
-    conLocs.setMap.toList.map({
-      case (loc, counts) => s"\n[${loc.line}.${loc.column}] Required $counts resource(s):\n${loc.longString}"
-    }).mkString(""))
+                            (implicit pos: Position, trace: List[String])
+                            extends RuntimeException(
+                              alreadyConsumedError(id, bank, origRes, conLocs, pos, trace))
 
   case class InvalidDynamicIndex(id:Id, bf:Int) extends TypeError(
     s"Dynamic access of array `$id' requires unbanked dimension. Actual banking factor: $bf. Use a shrink view to create unbanked array.", id.pos)
