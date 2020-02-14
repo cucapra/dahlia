@@ -163,14 +163,14 @@ object AffineEnv {
         val (oldGads, nextGads) = (this.gadgetMap.keys, next.gadgetMap.keys)
 
         // The next environment should bind all resources in this env.
-        if (nextRes.subsetOf(oldRes) == false) {
+        if (oldRes.subsetOf(nextRes) == false) {
           throw Impossible(
             "New environment is missing resources bound in old env." +
             s"\n\nOld Env: ${oldRes}" +
             s"\n\nNew Env: ${nextRes}" +
             s"\n\nMissing: ${oldRes diff nextRes}")
         }
-        if (nextGads.subsetOf(oldGads) == false) {
+        if (oldRes.subsetOf(nextRes) == false) {
           throw Impossible(
             "New environment is missing gadgets bound in old env." +
             s"\n\nOld Env: ${oldGads}" +
