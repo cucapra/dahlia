@@ -158,29 +158,31 @@ object AffineEnv {
 
     /** Helper functions for Mergable[Env] */
     def merge(env: Environment): Environment = env match {
-      case that:Env =>
-        val (myResources, thatResources) = (this.phyRes.keys, that.phyRes.keys)
-        val (myGads, thatGads) = (this.gadgetMap.keys, that.gadgetMap.keys)
+      case next:Env =>
+        val (oldRes, nextRes) = (this.phyRes.keys, next.phyRes.keys)
+        val (oldGads, nextGads) = (this.gadgetMap.keys, next.gadgetMap.keys)
 
-        // Sanity check: The same set of ids are bound by both environments
-        if (myResources != thatResources) {
+        // The next environment should bind all resources in this env.
+        if (nextRes.subsetOf(oldRes) == false) {
           throw Impossible(
-            "Trying to merge two environments which bind different sets of ids." +
-            s"\nEnv 1: ${myResources}" +
-            s"\nEnv 2: ${thatResources}")
+            "New environment is missing resources bound in old env." +
+            s"\n\nOld Env: ${oldRes}" +
+            s"\n\nNew Env: ${nextRes}" +
+            s"\n\nMissing: ${oldRes diff nextRes}")
         }
-        if (myGads != thatGads) {
+        if (nextGads.subsetOf(oldGads) == false) {
           throw Impossible(
-            "Trying to merge two environments which bind different sets of ids." +
-            s"\nEnv 1: ${myGads}" +
-            s"\nEnv 2: ${thatGads}")
+            "New environment is missing gadgets bound in old env." +
+            s"\n\nOld Env: ${oldGads}" +
+            s"\n\nNew Env: ${nextGads}"+
+            s"\n\nMissing: ${oldGads diff nextGads}.\n")
         }
 
         /**
          * For each bound id, set consumed banks to the union of consumed bank
          * sets from both environments.
          */
-        myResources.foldLeft[Env](that)({ case (env, id) =>
+        oldRes.foldLeft[Env](next)({ case (env, id) =>
           env.copy(phyRes = env.phyRes.update(id, env.phyRes(id) merge this.phyRes(id)))
         })
     }

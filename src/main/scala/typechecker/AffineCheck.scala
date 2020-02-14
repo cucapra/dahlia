@@ -156,7 +156,7 @@ object AffineChecker {
         })
 
         val env2 = checkC(c2)(nextEnv)
-        env2 merge env1
+        env1 merge env2
       }
       case (CPar(c1, c2), env) => checkC(c2)(checkC(c1)(env))
       case (CFor(range, _, par, combine), env) => {
