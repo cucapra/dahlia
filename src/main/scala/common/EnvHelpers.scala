@@ -2,7 +2,7 @@ package fuselang.common
 
 object EnvHelpers {
 
-  trait ScopeManager[T <: ScopeManager[_]] {
+  trait ScopeManager[T <: ScopeManager[_]] { this: T =>
 
     /**
      * Open a new scope and run commands in it. When the scope ends, the
@@ -23,7 +23,7 @@ object EnvHelpers {
    * An environment that keeps track of mapping of resource [[V]] using keys
    * of type [[V]].
    */
-  trait Tracker[K, V, T <: Tracker[_, _, _]] {
+  trait Tracker[K, V, T <: Tracker[_, _, _]] { this: T =>
 
     /**
      * Add the resource to the current environment.
