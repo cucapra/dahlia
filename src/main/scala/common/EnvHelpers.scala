@@ -36,4 +36,14 @@ object EnvHelpers {
     def get(k: K): Option[V]
   }
 
+  trait NewTracker[K, V, T] {
+    def add(t: T, k: K, v: V): T
+    def get(t: T, k: K): Option[V]
+  }
+
+  implicit class NewTrackerOps[K, V, T](a: T)(implicit ev: NewTracker[K, V, T]) {
+    def add(k: K, v: V) = ev.add(a, k, v)
+    def get(k: K) = ev.get(a, k)
+  }
+
 }

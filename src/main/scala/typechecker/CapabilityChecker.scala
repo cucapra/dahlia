@@ -6,8 +6,9 @@ import fuselang.common._
 import Syntax._
 import Syntax.Annotations._
 import Errors._
-import CapabilityEnv._
+import CapabilityEnvironment._
 import Checker._
+import EnvHelpers._
 
 object CapabilityChecker {
 
@@ -17,7 +18,7 @@ object CapabilityChecker {
 
     type Env = CapabilityEnv
 
-    val emptyEnv = CapabilityEnv.emptyEnv
+    val emptyEnv = CapabilityEnvironment.emptyEnv
 
     /**
      * Check an array read.
@@ -28,9 +29,9 @@ object CapabilityChecker {
     override def myCheckE: PF[(Expr, Env), Env] = {
       case (acc@EArrAccess(_, idxs), env) => {
         val (nEnv, consumableAnn, cap) = env.get(acc) match {
-          case Some(Read) => (env, SkipConsume, Read)
-          case Some(Write) | None => (checkESeq(idxs)(env), ShouldConsume, Read)
-        }
+            case Some(Read) => (env, SkipConsume, Read)
+            case Some(Write) | None => (checkESeq(idxs)(env), ShouldConsume, Read)
+          }
         acc.consumable = Some(consumableAnn)
         nEnv.add(acc, cap)
       }

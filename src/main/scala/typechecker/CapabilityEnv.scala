@@ -6,28 +6,16 @@ import fuselang.common._
 import EnvHelpers._
 import Syntax._
 import CompilerError._
+import ScopeMap._
 
-object CapabilityEnv {
+object CapabilityEnvironment {
 
-  val emptyEnv: CapabilityEnv = Env()
+  val emptyEnv = CapabilityEnv()
 
-  sealed trait CapabilityEnv
-    extends ScopeManager[CapabilityEnv]
-    with Tracker[Expr, Capability, CapabilityEnv]
-
-  private case class Env(
+  case class CapabilityEnv(
     readSet: ScopedSet[Expr] = ScopedSet(),
-    writeSet: ScopedSet[Expr] = ScopedSet()) extends CapabilityEnv {
-
-      def get(e: Expr) =
-        if (readSet.contains(e)) Some(Read)
-        else if (writeSet.contains(e)) Some(Write)
-        else None
-
-      def add(e: Expr, cap: Capability) = cap match {
-        case Read => this.copy(readSet = readSet.add(e))
-        case Write => this.copy(writeSet = writeSet.add(e))
-      }
+    writeSet: ScopedSet[Expr] = ScopedSet(),
+    intTrack: ScopedMap[Int, Int] = ScopedMap()) extends ScopeManager[CapabilityEnv] {
 
       def endScope = {
         val scopes = for {
@@ -40,7 +28,7 @@ object CapabilityEnv {
 
       def withScope(inScope: CapabilityEnv => CapabilityEnv): CapabilityEnv = {
         inScope(this.copy(readSet = readSet.addScope, writeSet = writeSet.addScope)) match {
-          case that: Env => that.endScope
+          case that => that.endScope
         }
       }
 
@@ -48,5 +36,19 @@ object CapabilityEnv {
         assert(this == that, "Tried to merge different capability envs")
         this
       }
+  }
+
+  object CapabilityEnv {
+    implicit val capTracker = new NewTracker[Expr, Capability, CapabilityEnv] {
+      def get(env: CapabilityEnv, e: Expr) =
+        if (env.readSet.contains(e)) Some(Read)
+        else if (env.writeSet.contains(e)) Some(Write)
+        else None
+
+      def add(env: CapabilityEnv, e: Expr, cap: Capability) = cap match {
+        case Read => env.copy(readSet = env.readSet.add(e))
+        case Write => env.copy(writeSet = env.writeSet.add(e))
+      }
+    }
   }
 }
