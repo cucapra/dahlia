@@ -18,14 +18,10 @@ object AffineEnv {
   val emptyEnv: Environment = Env()(1)
 
   /**
-   * An environment keep tracks of information for type checking:
-   * - The typedefs bound at the start of the program.
-   * - The association of Identifiers to corresponding types.
-   * - Number of resources nested unrolled contexts imply.
-   *
-   * The environment structure is built using a chain of scope over the
-   * last two associations. A scope is a logical grouping of assoication
-   * corresponding to lexical scope in programs.
+   * An Affine Env tracks:
+   * - The physical resources bound in this context.
+   * - Gadget definitions bound in this context
+   * - Number of parallel resources required by this context.
    */
   sealed trait Environment
     extends ScopeManager[Environment]
@@ -44,9 +40,7 @@ object AffineEnv {
     def add(gadget: Id, resource: Gadget): Environment
 
     /**
-     * Associate a gadget to the name of the physical resource it consumes.
-     * Note that this DOES NOT associate it to the exact list of resources
-     * consumed.
+     * Get the gadget associated with identifier.
      * @param gadget Name of the gadget that consumes the resource.
      *
      */
@@ -64,31 +58,20 @@ object AffineEnv {
     /**
      * Add physical resources to the environment.
      * @param id Name of the physical resource.
-     * @param banks Number of banks in each dimension of the physical resource.
-     *
-     * For example, addResources("A", List(2, 2)) adds the set of resources
-     * {A00, A01, A10, A11} to the environment.
+     * @param banks Number of banks available to this resource. All resources
+     * are single dimensional. Multi-dimensional banks are implemented using
+     * [[Gadget.MultiDimGadget]]
      */
     def addResource(name: Id, info: ArrayInfo): Environment
 
     /**
-     * Consume the physical resources implied by the access of this gadget.
-     * Uses the mapping created by addGadget to find the underlying physical
-     * resource and consumed the banks associated with it.
-     *
-     * @param gadget Name of the gadget causing the consume.
-     * @param banks Banks to be consumed for each dimension
-     */
-    def consumeResource(name: Id, resources: List[Int])
-                       (implicit pos: Position, trace: List[String]): Environment
-
-    /**
-     * Merge this environment with [[that]] to create e' such that for each
+     * Merge this environment with [[next]] to create e' such that for each
      * physical resource id, e'.banks(id) <= this.banks(id) and e'.banks(id) <=
      * that.banks(id).
-     * @requires: this.physicalResources == that.physicalResources
+     * @requires: this.physicalResources subsetOf next.physicalResources
+     * @requires: this.gadgetDefs subsetOf next.gadgetDefs
      */
-    def merge(that: Environment): Environment
+    def merge(next: Environment): Environment
 
     /**
      * Open a new scope and run commands in it. When the scope ends, new the
@@ -96,8 +79,8 @@ object AffineEnv {
      *
      * @param inScope Commands executed with the inner scope.
      * @param resources Amount of resources required inside new scope.
-     * @returns A new environment without the topmost scope and a Scope
-     *          containing all bindings in the topmost scope.
+     * @returns A new environment without the topmost scope and scopes
+     *          containing bindings for physical resource and gadgets.
      */
     def withScope(resources: Int)
                  (inScope: Environment => Environment):
@@ -109,19 +92,26 @@ object AffineEnv {
      */
     def getResources: Int
 
-    /** Convenience Methods */
+    /**
+     * Consume resources through [[gadget]]. The given [[consumeList]] is
+     * transformed by the gadget into a resource requirement for the underlying
+     * physical resource.
+     */
     def consumeWithGadget(gadget: Id, consumeList: ConsumeList)
-                         (implicit pos: Position) = {
-      val (resName, resources, trace) = this(gadget).getSummary(consumeList)
-      implicit val t = trace
-      this.consumeResource(resName, resources)
-    }
+                         (implicit pos: Position): Environment
 
   }
 
   private case class Env(
     phyRes: ScopedMap[Id, ArrayInfo] = ScopedMap(),
     gadgetMap: ScopedMap[Id, Gadget] = ScopedMap())(implicit val res: Int) extends Environment {
+
+    def consumeWithGadget(gadget: Id, consumeList: ConsumeList)
+                         (implicit pos: Position) = {
+      val (resName, resources, trace) = this(gadget).getSummary(consumeList)
+      implicit val t = trace
+      this.consumeResource(resName, resources)
+    }
 
     override def toString = {
       val lst =

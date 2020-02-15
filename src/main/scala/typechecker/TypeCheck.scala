@@ -11,63 +11,7 @@ import CompilerError._
 import Logger.PositionalLoggable
 
 /**
- * Type checker implementation for Fuse. Apart from normal typechecking, such as
- * ensuring condition in `if` is a boolean, it does following.
- * - Affine properties of banks in memories.
- * - Checking combine blocks correctly use bound variables.
- * - Generate subtype joins for binary operators.
- * - Checks read/write capabilites for array accesses
- *
- * It also MUTATES and ANNOTATES the input AST:
- * - CLet with an explicit type get the correct type
- * - Binders for id update the `typ` var defined on the Id class.
- *
- * Type checking array accesses enforces the various affine restrictions. A
- * lot of machinery works together to implement gadget checking.
- *
- * We make a distinction between physical memories ("memories") and
- * the hardware that accesses them ("gadgets"). In short, the type checker
- * creates affine resources corresponding to memories and makes sure that
- * different gadgets with the same underlying memory don't try to consume
- * more resources than a memory provides.
- *
- * '''Memory Instantiation'''
- *
- * The type checker starts tracking memory resource after they are created.
- * There are two ways of creating memories:
- *
- * 1. `decl`s with array types.
- * 2. `let` bindings with array types.
- *
- * When the type checker encounters these, it adds two things to the context:
- *
- * 1. The physical affine resources implied by the type. For example, the
- *    type bit<32>[10 bank 5][4 bank 4] implies that the memory has 5 affine
- *    resources in the first dimension and 4 in the second.
- * 2. A default gadget for this memory ([[Gadgets.ResourceGadget]]). All possible
- *    compositions of gadgets have a [[Gadgets.ResourceGadget]] at their root.
- *
- * '''Gadget Creation'''
- *
- * Gadgets are created in two places:
- *
- * 1. Default ([[Gadgets.ResourceGadget]]) when a memory definition is reached.
- * 2. View ([[Gadgets.ViewGadget]]) when a view is created. A view gadget is
- *    built on top of another gadget itself which might come from a memory
- *    or another gadget itself. This creates a hierarchy of gadgets.
- *
- * '''Access checking'''
- *
- * Access checking is done in four steps:
- *
- * 1. If the memory was marked with [[Syntax.Annotations.SkipConsume]],
- *    we do the well formedness check and move on.
- * 2. Otherwise, we generate resource consumptions implied by the indices for
- *    each dimension of the array.
- * 3. We pass on this resource consumption list to the gadget for the access
- *    which transforms the resources into one for the underlying resource.
- * 4. Finally, we consume the resources required by the transformed consumption
- *    list.
+ * Type checker implementation for Dahlia.
  *
  */
 object TypeChecker {
