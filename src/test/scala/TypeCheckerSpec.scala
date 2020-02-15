@@ -1262,6 +1262,29 @@ class TypeCheckerSpec extends FunSpec {
           """ )
       }
     }
+    it("views defined in sequencing are available") {
+      typeCheck("""
+        let A: float{2}[8 bank 8];
+
+        view A_1 = A[_: bank 2];
+        ---
+        view A_2 = A[_: bank 4];
+        ---
+        {
+          A_1[0];
+          A_2[0];
+        }
+        """ )
+    }
+    it("physical resources defined in sequencing are available") {
+      typeCheck("""
+        let A: float{2}[8];
+        ---
+        let B: float[10];
+        ---
+        let x = A[1] + B[1];
+        """ )
+    }
   }
 
   describe("Loop iterators") {
