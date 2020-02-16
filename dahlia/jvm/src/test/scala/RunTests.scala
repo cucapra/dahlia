@@ -56,7 +56,7 @@ class RunTests extends org.scalatest.AsyncFunSuite {
   // Suppress logging infor logging.
   common.Logger.setLogLevel(scribe.Level.Warn)
 
-  val shouldRun = Paths.get("src/test/should-run")
+  val shouldRun = Paths.get("dahlia/jvm/src/test/should-run")
   val srcFilePattern = """.*\.fuse"""
 
   // Create a temporary directory for generating C++ files.
