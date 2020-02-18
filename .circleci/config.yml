@@ -15,7 +15,7 @@ jobs:
           key: sbt-cache
       - run:
           name: Compile
-          command: sbt assembly
+          command: sbt dahliaJVM/assembly
       - save_cache:
           key: sbt-cache
           paths:
@@ -24,4 +24,4 @@ jobs:
               - "~/.m2"
       - run:
           name: Test
-          command: sbt test
+          command: sbt dahliaJVM/test
