@@ -1,0 +1,13 @@
+{
+  "name": "dahlia-tech-demo",
+  "version": "0.0.1",
+  "description": "Technology demo for the Dahlia HLS Compiler",
+  "main": "index.js",
+  "repository": "https://github.com/cucapra/dahlia",
+  "author": "Rachit Nigam",
+  "license": "MIT",
+  "dependencies": {
+    "brace": "^0.11.1",
+    "browserify": "^16.5.0"
+  }
+}

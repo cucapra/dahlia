@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Dahlia demo</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="style.css">
+  </head>
+
+  <body>
+    <div class="container">
+    <div class="header">
+      <h2 class="title-name">Dahlia HLS Compiler Demo</h2>
+    </div>
+    <!-- Input area -->
+		<div id="editor" class="input">let a: float[10];
+a[0];
+a[1]</div>
+    <!-- Output area -->
+    <div id="result" class="output"></div>
+    <!-- Compile button -->
+    <div class="buttons">
+      <button class="button" onclick="compile()">
+        Compile
+      </button>
+      <!--button class="button" onclick="getStaticLink()">
+        Static Link
+      </button-->
+    </div>
+    <!-- Footer -->
+    <!--div class="footer">
+      <hr/>
+      <footer>
+        Built on commit
+          <a href="https://github.com/cucapra/seashell/commit/%%COMMIT%%">
+          %%COMMIT_SHORT%%
+          </a>
+      </footer>
+    </div-->
+    <!-- Scripts to load -->
+    <script src="./bundle.js"></script>
+  </body>
+</html>

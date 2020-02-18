@@ -1,9 +1,5 @@
 package fuselang
 
-import scala.util.Try
-import scala.io.Source
-import java.nio.file.{Files, Paths, Path, StandardOpenOption}
-
 import common._
 import Configuration._
 import Syntax._
@@ -40,57 +36,6 @@ object Compiler {
   def codegen(ast: Prog, c: Config = emptyConf) = {
     val rast = passes.RewriteView.rewriteProg(ast); showDebug(rast, "Rewrite Views", c)
     toBackend(c.backend).emit(rast, c)
-  }
-
-  // Outputs red text to the console
-  def red(txt: String): String = {
-    Console.RED + txt + Console.RESET
-  }
-
-  def formatErrorMsg(err: Errors.DahliaError) = {
-    val (msg, ctx, pos, postMsg) =
-      (err.getMsg, err.getCtx, err.getPos, err.getPostMsg)
-
-    s"[${red(ctx)}] [${pos.line}.${pos.column}] $msg\n${pos.longString}\n${postMsg}"
-  }
-
-  def compileString(prog: String, c: Config): Either[String, String] = {
-    Try(codegen(checkStringWithError(prog, c), c))
-      .toEither.left.map(err => {
-        scribe.debug(err.getStackTrace().take(10).mkString("\n"))
-        err match {
-          case err: Errors.DahliaError => formatErrorMsg(err)
-          case _: CompilerError.Impossible =>
-            s"[${red("Impossible")}] ${err.getMessage}. " +
-            "This should never trigger. Please report this as a bug."
-          case _ => s"[${red("Error")}] ${err.getMessage}"
-        }
-        }).map(out => {
-          // Get metadata about the compiler build.
-          val version = getClass.getResourceAsStream("/version.properties")
-          val meta = Source.fromInputStream(version)
-            .getLines
-            .filter(l => l.trim != "")
-            .mkString(", ")
-            s"// $meta\n" + out
-        })
-  }
-
-  def compileStringToFile(
-      prog: String,
-      c: Config,
-      out: String
-  ): Either[String, Path] = {
-
-    compileString(prog, c).map(p => {
-      Files.write(
-        Paths.get(out),
-        p.toCharArray.map(_.toByte),
-        StandardOpenOption.CREATE,
-        StandardOpenOption.TRUNCATE_EXISTING,
-        StandardOpenOption.WRITE
-      )
-    })
   }
 
 }

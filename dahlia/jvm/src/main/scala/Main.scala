@@ -1,9 +1,13 @@
 package fuselang
 
-import java.nio.file.{Files, Path}
+import java.nio.file.{Files, Paths, Path, StandardOpenOption}
 import java.io.File
 
+import scala.util.Try
+import scala.io.Source
+
 import Compiler._
+import common._
 import common.Logger
 import common.Configuration._
 
@@ -70,6 +74,62 @@ object Main {
           .unbounded()
           .action((x, c) => c.copy(compilerOpts = x :: c.compilerOpts))
           .text("Option to be passed to the C++ compiler. Can be repeated."))
+  }
+
+
+  // Outputs red text to the console
+  def red(txt: String): String = {
+    Console.RED + txt + Console.RESET
+  }
+
+  def formatErrorMsg(err: Errors.DahliaError) = {
+    val (msg, ctx, pos, postMsg) =
+      (err.getMsg, err.getCtx, Option(err.getPos), err.getPostMsg)
+
+    if (pos.isDefined) {
+      s"[${red(ctx)}] [${pos.get.line}.${pos.get.column}] $msg\n${pos.get.longString}\n${postMsg}"
+    } else {
+      s"[${red(ctx)}] $msg\n${postMsg}"
+    }
+  }
+
+  def compileString(prog: String, c: Config): Either[String, String] = {
+    Try(codegen(checkStringWithError(prog, c), c))
+      .toEither.left.map(err => {
+        scribe.debug(err.getStackTrace().take(10).mkString("\n"))
+        err match {
+          case err: Errors.DahliaError => formatErrorMsg(err)
+          case _: CompilerError.Impossible =>
+            s"[${red("Impossible")}] ${err.getMessage}. " +
+            "This should never trigger. Please report this as a bug."
+          case _ => s"[${red("Error")}] ${err.getMessage}"
+        }
+        }).map(out => {
+          // Get metadata about the compiler build.
+          val version = getClass.getResourceAsStream("/version.properties")
+          val meta = Source.fromInputStream(version)
+            .getLines
+            .filter(l => l.trim != "")
+            .mkString(", ")
+            s"// $meta\n" + out
+        })
+  }
+
+  def compileStringToFile(
+      prog: String,
+      c: Config,
+      out: String
+  ): Either[String, Path] = {
+
+    compileString(prog, c).map(p => {
+      Files.write(
+        Paths.get(out),
+        p.toCharArray.map(_.toByte),
+        StandardOpenOption.CREATE,
+        StandardOpenOption.TRUNCATE_EXISTING,
+        StandardOpenOption.WRITE
+      )
+    })
   }
 
   def runWithConfig(conf: Config): Either[String, Int] = {
