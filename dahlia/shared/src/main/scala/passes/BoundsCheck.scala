@@ -14,6 +14,8 @@ import EnvHelpers._
 
 object BoundsChecker {
 
+  private implicit val ctx = "Bounds Check"
+
   def check(p: Prog) = BCheck.check(p)
 
   // Bounds checker environment doesn't need to track any information. Empty

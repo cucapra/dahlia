@@ -17,6 +17,8 @@ object AffineEnv {
 
   val emptyEnv: Environment = Env()(1)
 
+  private implicit val ctxName = "Affine Check"
+
   /**
    * An Affine Env tracks:
    * - The physical resources bound in this context.

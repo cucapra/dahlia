@@ -29,6 +29,8 @@ object TypeEnv {
   sealed trait Environment
     extends Tracker[Id, Type, Environment] {
 
+    implicit val ctxName = "Type Check"
+
     /**
      * Type binding manipulation
      */

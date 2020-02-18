@@ -16,10 +16,7 @@ import Logger.PositionalLoggable
  */
 object TypeChecker {
 
-  def pr[A](v: A): A = {
-    println(v)
-    v
-  }
+  private implicit val ctxName = "Type Check"
 
   /* A program consists of a list of function or type definitions, a list of
    * variable declarations and then a command. We build up an environment with

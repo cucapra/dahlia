@@ -6,6 +6,7 @@ import scala.{PartialFunction => PF}
 
 object Checker {
 
+
   /**
    * Helper function for lifting checkE and checkC. Only we define a partial
    * function that handles some of the cases in checkE or checkC that we

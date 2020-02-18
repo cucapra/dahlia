@@ -18,7 +18,8 @@ object Info {
     // Bank resources that haven't been consumed yet.
     remBanks: MultiSet[Int],
     // Source code locations that consumed a bank.
-    conLocs: Map[Int, MultiSet[Position]] = Map()) {
+    conLocs: Map[Int, MultiSet[Position]] = Map()
+  )(implicit ctxName: String){
 
     override def toString = remBanks.toString
 
@@ -67,7 +68,7 @@ object Info {
         case (acc, (hb, maxBank)) => acc * maxBank + hb
       })
 
-    def apply(id: Id, banks: Iterable[Int], ports: Int): ArrayInfo = {
+    def apply(id: Id, banks: Iterable[Int], ports: Int)(implicit ctxName: String): ArrayInfo = {
       val startResources: MultiSet[Int] = fromSeq(
         banks
           .map(b => List.tabulate(b)(identity))

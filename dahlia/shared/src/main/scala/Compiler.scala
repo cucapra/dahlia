@@ -47,14 +47,19 @@ object Compiler {
     Console.RED + txt + Console.RESET
   }
 
+  def formatErrorMsg(err: Errors.DahliaError) = {
+    val (msg, ctx, pos, postMsg) =
+      (err.getMsg, err.getCtx, err.getPos, err.getPostMsg)
+
+    s"[${red(ctx)}] [${pos.line}.${pos.column}] $msg\n${pos.longString}\n${postMsg}"
+  }
+
   def compileString(prog: String, c: Config): Either[String, String] = {
     Try(codegen(checkStringWithError(prog, c), c))
       .toEither.left.map(err => {
         scribe.debug(err.getStackTrace().take(10).mkString("\n"))
         err match {
-          case _: Errors.TypeError => s"[${red("Type error")}] ${err.getMessage}"
-          case _: Errors.ParserError =>
-            s"[${red("Parsing error")}] ${err.getMessage}"
+          case err: Errors.DahliaError => formatErrorMsg(err)
           case _: CompilerError.Impossible =>
             s"[${red("Impossible")}] ${err.getMessage}. " +
             "This should never trigger. Please report this as a bug."

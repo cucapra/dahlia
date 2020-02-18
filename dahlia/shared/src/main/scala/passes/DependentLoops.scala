@@ -12,6 +12,8 @@ import EnvHelpers._
 
 object DependentLoops {
 
+  private implicit val ctx = "Dependent Loop Check"
+
   def check(p: Prog) = DepCheck.check(p)
 
   private case class UseEnv(

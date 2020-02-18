@@ -78,6 +78,8 @@ object AffineChecker {
 
   private final case object AffineChecker extends PartialChecker {
 
+    implicit val ctxName = "Affine Check"
+
     type Env = AffineEnv.Environment
 
     val emptyEnv = AffineEnv.emptyEnv
@@ -136,7 +138,7 @@ object AffineChecker {
           // Index is an index type.
           case TIndex((s, e), _) =>
             if ((e - s) % dims(dim)._2 != 0)
-              throw BankUnrollInvalid(arrId, dims(dim)._2, e - s)(idx.pos)
+              throw BankUnrollInvalid(arrId, dims(dim)._2, e - s)(idx.pos, ctxName)
             else
               (bres * (e - s), Range(s, e) +: consume)
           // Index is a statically known number.

@@ -11,6 +11,8 @@ import Checker._
 
 object CapabilityChecker {
 
+  private implicit val ctx = "Capability Check"
+
   def check(p: Prog) = CapChecker.check(p)
 
   private final case object CapChecker extends PartialChecker {

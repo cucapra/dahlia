@@ -12,6 +12,7 @@ import EnvHelpers._
 
 object WellFormedChecker {
 
+
   def check(p: Prog) = WFCheck.check(p)
 
   private case class WFEnv(
@@ -24,6 +25,8 @@ object WellFormedChecker {
   }
 
   private final case object WFCheck extends PartialChecker {
+
+    implicit val ctxName = "Well Formedness Check"
 
     type Env = WFEnv
     val emptyEnv = WFEnv()

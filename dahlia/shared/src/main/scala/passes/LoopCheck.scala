@@ -12,6 +12,8 @@ import EnvHelpers._
 
 object LoopChecker {
 
+  private implicit val ctx = "Loop Check"
+
   // Possible mappings for stateMap
   sealed trait States
   case object Use extends States
@@ -34,7 +36,7 @@ object LoopChecker {
       case None => throw Impossible("nameMap has this view id before, redefinition")
       case Some(m) => LEnv(stateMap,m)
     }
-    
+
     def getName(aid:Id):Id = nameMap.get(aid).getOrElse(aid)
 
     // Helper functions for stateMap
@@ -53,10 +55,10 @@ object LoopChecker {
       case Some(DontKnow) => throw LoopDepSequential(id)
       case Some(Def)| Some(Use) => this //Use/Def -> Use don't update
     }
-    
+
     def checkExprMap(idxs: Option[EArrAccess]):(LEnv, Boolean) = res match{
       case 1 => (this, false)
-      case _ => idxs match {      
+      case _ => idxs match {
         case Some(EArrAccess(id, idxs)) => exprMap.get(id) match {
           case None =>(this.copy(exprMap=exprMap.add(id, idxs).get), true)
           case Some(idxlist) => {
@@ -97,7 +99,7 @@ object LoopChecker {
           }
       }
     }
-    
+
     // To satisfy envhelper
     def withScope(inScope: LEnv => LEnv): LEnv = withScope(1)(inScope)
     def addScope(resources: Int) = {

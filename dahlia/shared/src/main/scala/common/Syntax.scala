@@ -6,6 +6,8 @@ import Errors._
 
 object Syntax {
 
+  private implicit val ctxName = "Syntax Construct"
+
   /**
    * Annotations added by the various passes of the type checker.
    */
