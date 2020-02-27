@@ -3,29 +3,29 @@ id: binders
 title: Variable Binders
 ---
 
-Variables in Fuse can be bound in four ways.
+Variables in Dahlia can be bound in four ways.
 
 ## Let bindings
 
 A `let` binding can be used in three ways:
 
 ```
-let <iden> = <expr>
-let <iden>: <type> = <expr>
+let <iden> = <expr>;
+let <iden>: <type> = <expr>;
 let <iden>: <type>;
 ```
 
 The first allows simple variable declarations that automatically infer the
 type of the identifer from the expression:
 
-```C
+```dahlia
 let x = true; // x is boolean
 ```
 
 The second form simply checks the type of the expression and makes sure it
 can be represented as the explicit type.
 
-```
+```dahlia
 let x: bit<10> = 1;
 ```
 
@@ -35,7 +35,7 @@ let x: bit<10> = 1;
 The final form allows defining uninitialized variables. Reading from uninitialized
 memories returns undefined garbage values stored in the memory.
 
-```
+```dahlia
 let x: bit<10>;
 let y = x; // returns garbage value stored in memory
 ```
@@ -44,14 +44,14 @@ let y = x; // returns garbage value stored in memory
 
 The `decl` allow declarations without initalization:
 
-```
+```dahlia
 decl x: bit<10>
 ```
 
 However, `decl`s always get compiled into the top level kernel function.
-This Fuse program:
+This Dahlia program:
 
-```
+```dahlia
 decl x: bit<10>;
 decl y: bit<10>;
 x + y
@@ -69,7 +69,7 @@ void kernel(ap_int<10> x, ap_int<10> y) {
 
 Function definitions can be used to bind variables into a new scope:
 
-```
+```dahlia
 def foo(x: bit<10>, y: bit<10>) {
   x + y
 }
@@ -77,10 +77,10 @@ def foo(x: bit<10>, y: bit<10>) {
 
 Imported function also bind function in the global scope:
 
-```
+```dahlia
 import "printer.h" {
   def print_vector(c: float[4]);
 }
 ```
 
-Import functions are described in detail [here][import.md]
+Import functions are described in detail [here](imports.md).

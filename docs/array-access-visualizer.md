@@ -4,13 +4,13 @@ title: Array Access Visualizer
 ---
 
 We have written a small library in Racket to provide visualization facilities
-for array accesses. This tool can be used while developing Fuse programs
+for array accesses. This tool can be used while developing Dahlia programs
 that make use of complicated array access patterns and views.
 
 The library defines the wrapper `let/matrix` which allows defining matrices
 and defines C-like array access notation for those arrays. The `let/matrix`
 context also defines `---` that corresponds to the sequencing operator in
-Fuse.
+Dahlia.
 
 To play with examples, open `tools/array-access-visualizer/examples.rkt`
 in [DrRacket][drracket] and click run. This will generate three sequences of
@@ -18,7 +18,7 @@ images that corresponds to the two examples.
 
 For the first example, we have:
 
-```scheme
+```lisp
 (let/matrix [ (A[2][4]) ]
   (A[0][1])
   (---)
@@ -32,7 +32,7 @@ Try removing it to see the visualization generated.
 
 The second example is a bit more interesting:
 
-```scheme
+```lisp
 (let/matrix [ (A[2][4])
               (B[1][8]) ]
  (for ([i (in-range 1)]
@@ -56,7 +56,7 @@ accesses.
 In the `let/matrix` form's array definitions, we can also specify the banking
 factor for each dimension:
 
-```scheme
+```lisp
 (let/matrix [ (A[1][8 #:bank 4])) ])
 ```
 
@@ -67,7 +67,7 @@ which generates the array:
 The values produced by `let/matrix` are first class racket lists that can be
 manipulated like other values:
 
-```scheme
+```lisp
 (define-value (A-access B-access)
   (let/matrix ([A 2 2]
                [B 2 2])

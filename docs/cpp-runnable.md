@@ -4,7 +4,7 @@ id: cpp-runnable
 ---
 
 The `fuse` CLI provides the `run` subcommand for generating executables that
-can be used to test Fuse code without going through a synthesis workflow.
+can be used to test Dahlia code without going through a synthesis workflow.
 
 ## Limitation
 
@@ -19,9 +19,9 @@ important limitations.
 
 ## Example
 
-As an example, we'll be using the following fuse code:
+As an example, we'll be using the following Dahlia code:
 
-```C
+```dahlia
 decl a: float[2][2];
 decl b: float[2][2];
 decl c: float[2][2];
@@ -73,7 +73,6 @@ We can define a C++ function to print the output of an array and `import`
 it into the fuse file:
 
 ```C++
-
 void print_vector(vector<int> vec, int size) {
   for (int i = 0; i < size; i++) {
     std::cout << vec[i] << std::endl;
@@ -115,7 +114,7 @@ testing of the kernel code while development.
 ## Data Format
 
 We use the [JSON](https://www.json.org/) format to pass in data to the compiled
-executable. The types in Fuse directly map to JSON data elements:
+executable. The types in Dahlia directly map to JSON data elements:
 
 - **Numeric Types**: While the JSON standard only allows for `double`s, the
     parsing library correctly casts double into input types. As noted before,
