@@ -1,6 +1,6 @@
 ---
 id: testing
-title: Testing Fuse
+title: Testing Dahlia
 ---
 
 We use `sbt`'s built-in testing facilities to run tests. There are four test
@@ -33,7 +33,7 @@ The file test harness simply pulls in tests under `src/test/{should-compile,shou
 As the names suggest, the first directory contains tests that should compile with
 the type checker while the second contains programs that should fail.
 
-Simply add a Fuse program under the directory to get them to run.
+Simply add a Dahlia program under the directory to get them to run.
 
 ## Run tests
 

@@ -1,6 +1,6 @@
 const baseUrl = '/fuse/'
 const siteConfig = {
-  title: 'Fuse',
+  title: 'Dahlia',
   tagline: 'A typed programming language for safe high-level synthesis',
   url: 'https://capra.cs.cornell.edu',
   baseUrl: baseUrl,
@@ -30,12 +30,15 @@ const siteConfig = {
     // Highlight.js theme to use for syntax highlighting in code blocks.
     theme: 'default',
     hljs: function(hljs) {
-      hljs.registerLanguage('fuse', function(hljs) {
+      hljs.registerLanguage('dahlia', function(hljs) {
         return {
           case_insensitive: false,
           keywords: {
-            keyword: 'for if while let decl view def bank unroll combine shrink',
-            types: "bool bit float"
+            title: 'for if while let decl view def record import',
+            symbol: 'bank unroll combine shrink',
+            // add point and rect for nicer highlighting even though they aren't primitive
+            type: "bool bit float point rect",
+            literal: "true false"
           },
           contains: [
             hljs.C_LINE_COMMENT_MODE,

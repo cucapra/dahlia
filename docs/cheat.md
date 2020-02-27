@@ -8,7 +8,7 @@ nothing makes sense yet!
 
 ## Constants
 
-```
+```dahlia
 1; // numbers
 true; false; // booleans
 1.2; // floating point
@@ -16,7 +16,7 @@ true; false; // booleans
 
 ## Let bindings
 
-```C
+```dahlia
 let x = 1;
 // Can optionally provide type
 let x: bit<32> = 1;
@@ -24,7 +24,7 @@ let x: bit<32> = 1;
 
 ## Declarations
 
-```C
+```dahlia
 decl a: bit<32>; // number
 ```
 
@@ -34,7 +34,7 @@ decl a: bit<32>; // number
 
 Arrays defined using `decl` are used as the memory interface for this module.
 
-```C
+```dahlia
 decl arr: bit<32>[10] // 10 elements each of which is bit<32>
 decl barr: bit<32>[10 bank 2] // An array with two banks
 decl marr: bit<32>[10 bank 2][8 bank 4] // multi-dimensional arrays are supported
@@ -45,7 +45,7 @@ decl marr: bit<32>[10 bank 2][8 bank 4] // multi-dimensional arrays are supporte
 Local arrays are either mapped to BRAM or a register file depending on their
 size and usage. Read uninitialized memories results in undefined behavior.
 
-```C
+```dahlia
 let tmp: bit<32>[10];
 let tmp_banked: bit<32>[10 bank 5];
 ```
@@ -55,7 +55,7 @@ let tmp_banked: bit<32>[10 bank 5];
 Local array definitions can optionally be initialized. Local memories with
 initializers can only have a single dimension.
 
-```C
+```dahlia
 let tmp: bit<32>[3] = {1, 2, 3};
 ```
 
@@ -63,7 +63,7 @@ let tmp: bit<32>[3] = {1, 2, 3};
 
 ### Definitions
 
-```C
+```dahlia
 // Cannot contain arrays
 record point {
   x: bit<32>;
@@ -80,7 +80,7 @@ record rect {
 
 Record literals can only defined in a let binder and need an explicit type.
 
-```C
+```dahlia
 let p: point = { x = 1; y = 2 }
 ```
 
@@ -88,21 +88,21 @@ let p: point = { x = 1; y = 2 }
 
 ## Binary operations
 
-```C
+```dahlia
 1 + 2;
 a[i] << 1;
 ```
 
 ## Assignment
 
-```C
+```dahlia
 x := 1;
 a[i] := 10;
 ```
 
 ## Conditionals (if)
 
-```C
+```dahlia
 // Can omit the else
 if (x) {
   a[i] := 1
@@ -117,7 +117,7 @@ if (y) {
 
 ## While loops
 
-```C
+```dahlia
 while (i > 0) {
   a[i] := 1;
   i := i - 1;
@@ -126,7 +126,7 @@ while (i > 0) {
 
 ## For loops
 
-```C
+```dahlia
 for (let i = 0..10) {
   a[i] := 1;
 }
@@ -138,7 +138,7 @@ for(let i = 0..10) unroll 2 {
 
 ## Combine blocks and reductions
 
-```C
+```dahlia
 let sum = 0;
 for (let i = 0..10) unroll 2 {
   let x = a[i];
@@ -149,7 +149,7 @@ for (let i = 0..10) unroll 2 {
 
 ## Sequential composition
 
-```C
+```dahlia
 a[0] := 1;
 ---
 a[1] := 10;
@@ -161,7 +161,7 @@ Functions cannot return values. They can only modify buffers.
 
 ### Definitions
 
-```C
+```dahlia
 
 def foo(a: bit<32>[10], b: bit<32>[10]) {
   a[0] := b[0]
@@ -170,7 +170,7 @@ def foo(a: bit<32>[10], b: bit<32>[10]) {
 
 ### Application
 
-```C
+```dahlia
 foo(arr, barr)
 ```
 
@@ -179,7 +179,7 @@ foo(arr, barr)
 Import statements can be used to add `#include`s to files and import external
 definitions. The imported functions do not have bodies;
 
-```C
+```dahlia
 import "printer.h" {
   def print_vector(a: bit<32>[10]);
   def run_prog(a: bit<32>[10]);
@@ -189,76 +189,59 @@ import "printer.h" {
 
 ## Views
 
-Once created, views are accessed transparently as arrays.
+Views are used to represent different memory access patterns.
+Once created, they are accessed transparently as arrays.
 
-### Simple views
+### Shrink Views
+A shrink view reduces the banking of a memory by a integer factor.
 
-The basic syntax of a simple view is:
-
-```C
-view v = a[ <suf> : + <pre> bank <shrink> ];
+```dahlia
+let A: float[16 bank 8];
+view sh = shrink[by 4];
+for (let i = 0..8) unroll 2 {
+  sh[i]; // OK: sh has 2 banks (8 / 4 = 2)
+}
 ```
 
-where `+` and `bank` syntactically required. Suffixes can either be _aligned_
-or _rotating_. The `<pre>` and `bank <shrink>` can be optionally elided.
+### Suffix and Prefix Views
+These views let you take a prefix or a suffix of a memory as long as the banking factor of a memory
+is a factor of the prefix / suffix. To enforce this restriction, the syntax of suffix/prefix is
+`suffix M[by k * e]` where `k` must be an integer.
 
-```C
-view v = a[<suf>:] // valid
-view v = a[<suf>: bank <shrink>] // valid
-view v = a[_: <pre> bank <shrink>] // valid
+```dahlia
+let A: float[6 bank 4];
+for (let i = 0..4) {
+  view s = suffix A[by 2 * i];
+  ---
+  view s = prefix A[by 2 * i];
+}
 ```
 
-#### Aligned view
+### Shift Views
+These are generalized suffix / prefix views that lift the restriction that the banking factor
+is a factor of the shifting factor. The syntax for this view is `shfit M[by e]` where `e` can be
+any expression.
 
-The syntax for creating an aligned view is:
-
-```C
-view v_a = a[factor * expr: ...]
+```dahlia
+let A: float[6 bank 4];
+for (let i = 0..4) {
+  view s = shift A[by i * i];
+}
 ```
 
-where `factor` must be a factor of the banking factor the array. Example:
+### Split Views
+Split views transform  single dimension of a memory into a multi-dimensional memory.
+The split factor must divide the size of the dimension that is being split.
 
-```C
-decl a: bit<32>[16 bank 8];
-view v = a[4 * i: ]; // valid, i can be an arbitrary expression
-view v = a[2 * i: bank 2]; // valid
+```dahlia
+let A: float[8];
+view split_A = split A[by 2]; // split_A has type float[4 bank 2][2 bank 2];
 ```
-
-#### Rotation view
-
-The syntax for creating a rotation view is:
-
-```C
-view v_a = a[ expr! : ...]
-```
-
-Example:
-
-```C
-decl a: bit<32>[16 bank 8];
-view v = a[i!: ]; // valid
-view v = a[(i + j)! :] // valid
-```
-
-### Split views
-
-See the views doc for the semantics of `split`.
-
-Split views are created using the following syntax:
-
-```C
-decl a: bit<32>[16 bank 8];
-split v = a[by <factor>]
-```
-
-where `factor` must be a factor of the banking factor of the corresponding
-dimension. If `factor` is `1` then the dimension is preserved as is.
-
 
 ## Program Structure
 
-A fuse program has the following structure:
-```C
+A Dahlia program has the following structure:
+```
 <includes>
 <func defs or record defs>
 <decls>

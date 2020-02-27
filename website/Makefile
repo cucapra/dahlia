@@ -4,6 +4,9 @@ build:
 	yarn
 	yarn build
 
+develop:
+	yarn run start
+
 # Deployment.
 RSYNCARGS := --compress --recursive --checksum --itemize-changes \
 	--delete -e ssh --perms --chmod=Du=rwx,Dgo=rx,Fu=rw,Fog=r \

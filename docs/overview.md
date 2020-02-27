@@ -3,7 +3,7 @@ id: overview
 title: Overview
 ---
 
-Fuse is a programming language for designing hardware accelerators.  It
+Dahlia is a programming language for designing hardware accelerators.  It
 provides abstractions that guarantee predictable hardware realizability after type
 checking.
 
@@ -44,17 +44,17 @@ researchers to explore this problem.
 
 ### Status
 
-Fuse is still early in its development. The current reference compiler can
-generate Vivado HLS C code using fuse code. We have several ongoing projects:
+Dahlia is still early in its development. The current reference compiler can
+generate Vivado HLS C code using Dahlia code. We have several ongoing projects:
 
-[**Fuse**][repo]: The language constructs and the reference compiler. We are
+[**Dahlia**][repo]: The language constructs and the reference compiler. We are
 focusing our efforts on building precise semantics and compiling
 down to various HLS backends to study their properties.
 
 [**FuTIL**][futil-repo] (Fuse Temporal Intermediary Language): An intermediary language for compiling high level
 languages down to RTL. Distinct from IRs like [FIRRTL][firrtl] which target the lower level problem of optimizing RTL code.
 
-**Fuse-to-RTL**: Ongoing project to directly generate RTL code from Fuse source
+**Dahlia-to-RTL**: Ongoing project to directly generate RTL code from Dahlia source
 programs using FuTIL.
 
 ### Open Source
