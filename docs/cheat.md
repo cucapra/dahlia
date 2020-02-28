@@ -218,7 +218,7 @@ for (let i = 0..4) {
 ```
 
 ### Shift Views
-These are generalized suffix / prefix views that lift the restriction that the banking factor
+These are generalized suffix/prefix views that lift the restriction that the banking factor
 is a factor of the shifting factor. The syntax for this view is `shfit M[by e]` where `e` can be
 any expression.
 
