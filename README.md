@@ -12,7 +12,7 @@ backends. Vivado HLS is the only currently supported backend.
 [docs]: https://capra.cs.cornell.edu/fuse
 
 <p align="center">
-  <img src="./website/static/img/data-collection.svg">
+  <img src="./website/static/img/dahlia-compiler.svg">
 </p>
 
 ## Set It Up
