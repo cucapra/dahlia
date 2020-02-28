@@ -55,7 +55,7 @@ down to various HLS backends to study their properties.
 languages down to RTL. Distinct from IRs like [FIRRTL][firrtl] which target the lower level problem of optimizing RTL code.
 
 **Dahlia-to-RTL**: Ongoing project to directly generate RTL code from Dahlia source
-programs using FuTIL.
+programs using [FuTIL](https://github.com/cucapra/futil).
 
 ### Open Source
 
