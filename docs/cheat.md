@@ -230,7 +230,7 @@ for (let i = 0..4) {
 ```
 
 ### Split Views
-Split views transform  single dimension of a memory into a multi-dimensional memory.
+Split views transform one dimension of a memory into multiple dimensions.
 The split factor must divide the size of the dimension that is being split.
 
 ```dahlia
