@@ -11,6 +11,10 @@ backends. Vivado HLS is the only currently supported backend.
 
 [docs]: https://capra.cs.cornell.edu/fuse
 
+<p align="center">
+  <img src="./website/static/img/data-collection.svg">
+</p>
+
 ## Set It Up
 
 The compiler is written in [Scala][].
@@ -44,7 +48,7 @@ Type `sbt assembly` to package up a [fat jar][] for command-line use.
 The short `fuse` shell script here invokes the built jar to run the compiler.
 To compile a simple test, for example, run:
 
-    $ ./fuse src/test/should-compile/matadd.sea
+    $ ./fuse src/test/should-compile/matadd.fuse
 
 The compiler produces HLS C source code on its standard output.
 
