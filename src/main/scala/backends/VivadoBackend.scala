@@ -14,10 +14,8 @@ private class VivadoBackend extends CppLike {
     |#include <ap_int.h>
   """.stripMargin.trim)
 
-  def unroll(n: Int): Doc = n match {
-    case 1 => value(s"#pragma HLS LOOP_FLATTEN off")
-    case n => value(s"#pragma HLS LOOP_FLATTEN off") <@> value(s"#pragma HLS UNROLL factor=$n skip_exit_check")
-  }
+  def unroll(n: Int): Doc =
+    value(s"#pragma HLS UNROLL factor=$n skip_exit_check")
 
   def interfaceValid(decls: List[Decl]) =
     decls.collect({ case Decl(id, typ: TArray) => {
@@ -65,6 +63,7 @@ private class VivadoBackend extends CppLike {
     text("for") <> emitRange(cmd.range) <+> scope {
       emitPipeline(cmd.pipeline) <>
       unroll(cmd.range.u) <@>
+      text("#pragma HLS LOOP_FLATTEN off") <@>
       cmd.par <>
       (if (cmd.combine != CEmpty) line <> text("// combiner:") <@> cmd.combine
        else emptyDoc)
@@ -72,7 +71,8 @@ private class VivadoBackend extends CppLike {
 
   override def emitWhile(cmd: CWhile): Doc =
       text("while") <> parens(cmd.cond) <+> scope {
-        emitPipeline(cmd.pipeline) <>
+        emitPipeline(cmd.pipeline) <@>
+        text("#pragma HLS LOOP_FLATTEN off") <@>
         cmd.body
       }
 
