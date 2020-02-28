@@ -33,11 +33,13 @@ decl a: bit<32>; // number
 ### Global arrays
 
 Arrays defined using `decl` are used as the memory interface for this module.
+**Note**: The Vivado backend does not allow for banking interfaces since the
+generated hardware is incorrect.
 
 ```dahlia
-decl arr: bit<32>[10] // 10 elements each of which is bit<32>
-decl barr: bit<32>[10 bank 2] // An array with two banks
-decl marr: bit<32>[10 bank 2][8 bank 4] // multi-dimensional arrays are supported
+decl arr: bit<32>[10]; // 10 elements each of which is bit<32>
+decl barr: bit<32>[10 bank 2]; // An array with two banks
+decl marr: bit<32>[10 bank 2][8 bank 4]; // multi-dimensional arrays are supported
 ```
 
 ### Local arrays
@@ -130,6 +132,9 @@ while (i > 0) {
 for (let i = 0..10) {
   a[i] := 1;
 }
+```
+
+```dahlia
 // With unrolling factor
 for(let i = 0..10) unroll 2 {
   a[i] := 1;
@@ -164,7 +169,7 @@ Functions cannot return values. They can only modify buffers.
 ```dahlia
 
 def foo(a: bit<32>[10], b: bit<32>[10]) {
-  a[0] := b[0]
+  a[0] := b[0];
 }
 ```
 
