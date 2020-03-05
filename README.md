@@ -1,19 +1,23 @@
-# Dahlia
+<h1>
+<p align="center">
+<img src="./website/static/img/dahlia-logo.png" width="120">
+</p>
+<p align="center">
+The Dahlia Programming Language
+</p>
+</h1>
 
 [![CircleCI](https://circleci.com/gh/cucapra/dahlia.svg?style=svg)](https://circleci.com/gh/cucapra/dahlia)
 
-Dahlia is a programming language for designing hardware accelerators.
-It provides abstractions that guarantee hardware realizability after type checking.
-For more details, see [the documentation][docs].
+Dahlia is a programming language for designing hardware accelerators.  It
+provides abstractions that guarantee predictable hardware generation after type
+checking. For more details, see [the demo][demo] and [the documentation][docs].
 
 Fuse is the reference compiler for compiling Dahlia programs to various HLS
 backends. Vivado HLS is the only currently supported backend.
 
 [docs]: https://capra.cs.cornell.edu/fuse
-
-<p align="center">
-  <img src="./website/static/img/dahlia-compiler.svg">
-</p>
+[demo]: https://capra.cs.cornell.edu/dahlia
 
 ## Set It Up
 
@@ -52,10 +56,13 @@ To compile a simple test, for example, run:
 
 The compiler produces HLS C source code on its standard output.
 
-## Documentation
+<p align="center">
+  <img src="./website/static/img/dahlia-compiler.svg">
+</p>
+<p align="center">
+  <b>Compiler Infrastructure</b>
+</p>
 
-The documentation is hosted [here][docs]. We
-use [Docusaurus](https://docusaurus.io/en/) to generate our documentation.
 
 ### Source
 
