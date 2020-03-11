@@ -51,7 +51,7 @@ generate Vivado HLS C code using Dahlia code. We have several ongoing projects:
 focusing our efforts on building precise semantics and compiling
 down to various HLS backends to study their properties.
 
-[**FuTIL**][futil-repo] (Fuse Temporal Intermediary Language): An intermediary language for compiling high level
+[**FuTIL**][futil-repo]: An intermediary language for compiling high level
 languages down to RTL. Distinct from IRs like [FIRRTL][firrtl] which target the lower level problem of optimizing RTL code.
 
 **Dahlia-to-RTL**: Ongoing project to directly generate RTL code from Dahlia source
@@ -64,5 +64,5 @@ prototypes are open source under a permissive license and we welcome any
 collaborations from industry and academic research groups.
 
 [repo]: https://github.com/cucapra/seashell
-[futil-repo]: https://github.com/sgpthomas/futil
+[futil-repo]: https://github.com/cucapra/futil
 [firrtl]: https://github.com/freechipsproject/firrtl
