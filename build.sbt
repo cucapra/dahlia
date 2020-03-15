@@ -10,7 +10,7 @@ lazy val dahlia = crossProject(JSPlatform, JVMPlatform)
     name := "Dahlia",
     version := "0.0.2",
 
-    ThisBuild / scalaVersion := "2.13.0",
+    ThisBuild / scalaVersion := "2.13.1",
 
     libraryDependencies ++= Seq(
       "org.scalatest" %%% "scalatest" % "3.0.8" % "test",
