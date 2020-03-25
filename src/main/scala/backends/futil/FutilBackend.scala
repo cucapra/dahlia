@@ -16,19 +16,19 @@ private class FutilBackendHelper {
     // update idx
     idx get base match {
       case Some(n) => idx = idx + (base -> (n + 1))
-      case None    => idx = idx + (base -> 0)
+      case None => idx = idx + (base -> 0)
     }
     CompVar(s"$base${idx(base)}")
   }
 
   /** Store mappings from Dahlia variables to
-    * generated Futil variables.
-    */
+   * generated Futil variables.
+   */
   type Store = Map[CompVar, CompVar]
 
   /** `emitDecl(d)` computes the structure that is needed to
-    *  represent the declaration `d`. Simply returns a `List[Structure]`.
-    */
+   *  represent the declaration `d`. Simply returns a `List[Structure]`.
+   */
   def emitDecl(d: Decl): List[Structure] = d.typ match {
     case TArray(_, dims, _) => {
       val const =
@@ -46,10 +46,10 @@ private class FutilBackendHelper {
   }
 
   /** `emitBinop` is a helper function to generate the structure
-    *  for `e1 binop e2`. The return type is described in `emitExpr`.
-    */
+   *  for `e1 binop e2`. The return type is described in `emitExpr`.
+   */
   def emitBinop(compName: String, e1: Expr, e2: Expr)(
-      implicit store: Store
+    implicit store: Store
   ): (Port, List[Structure], Enable) = {
     val binop = Stdlib.op(s"$compName", 32);
     val (e1port, e1struct, act1) = emitExpr(e1)
@@ -69,15 +69,15 @@ private class FutilBackendHelper {
   }
 
   /** `emitExpr(expr, lhs)(implicit store)` calculates the necessary structure
-    *  to compute `expr`. It return the triple (Port, List[Structure], Enable).
-    *  If `lhs = false`, then `Port` is the port that will hold the output
-    *  of computing this expression. If `lhs = true`, then `Port` represents
-    *  the port that can be used to put a value into the location represented by
-    *  `expr`. `Enable` is the list of components that need to be activated to
-    *  "activate" this expression.
-    */
+   *  to compute `expr`. It return the triple (Port, List[Structure], Enable).
+   *  If `lhs = false`, then `Port` is the port that will hold the output
+   *  of computing this expression. If `lhs = true`, then `Port` represents
+   *  the port that can be used to put a value into the location represented by
+   *  `expr`. `Enable` is the list of components that need to be activated to
+   *  "activate" this expression.
+   */
   def emitExpr(expr: Expr, lhs: Boolean = false)(
-      implicit store: Store
+    implicit store: Store
   ): (Port, List[Structure], Enable) =
     expr match {
       case EInt(v, _) => {
@@ -91,15 +91,15 @@ private class FutilBackendHelper {
       case EBinop(op, e1, e2) => {
         val compName =
           op.op match {
-            case "+"  => "add"
-            case "-"  => "sub"
-            case "*"  => "mult"
-            case "/"  => "div"
-            case "<"  => "lt"
-            case ">"  => "gt"
+            case "+" => "add"
+            case "-" => "sub"
+            case "*" => "mult"
+            case "/" => "div"
+            case "<" => "lt"
+            case ">" => "gt"
             case "<=" => "lte"
             case ">=" => "gte"
-            case x    => throw NotImplemented(s"Haven't implemented binop $x yet.")
+            case x => throw NotImplemented(s"Haven't implemented binop $x yet.")
           }
         emitBinop(compName, e1, e2)
       }
@@ -166,7 +166,7 @@ private class FutilBackendHelper {
     }
 
   def emitCmd(
-      c: Command
+    c: Command
   )(implicit store: Store): (List[Structure], Control, Store) =
     c match {
       case CPar(c1, c2) => {
@@ -212,7 +212,8 @@ private class FutilBackendHelper {
       case CFor(range, _, par, comb) =>
         range match {
           case CRange(id, start, end, 1) => {
-            val iter = LibDecl(genName(s"$id"), Stdlib.iterator(32, start, 1, end))
+            val iter =
+              LibDecl(genName(s"$id"), Stdlib.iterator(32, start, 1, end))
             val struct = List(iter)
             val (parStruct, parCon, s1) =
               emitCmd(par)(store + (CompVar(s"$id") -> iter.id))
@@ -266,7 +267,7 @@ private class FutilBackendHelper {
       case CExpr(EApp(Id("print_vec_3d"), List(EVar(x)))) =>
         (List(), Print(CompVar(s"$x")), store)
       case CEmpty => (List(), Enable(List()), store)
-      case x      => throw NotImplemented(s"No case for $x yet")
+      case x => throw NotImplemented(s"No case for $x yet")
     }
 
   def emitProg(p: Prog, c: Config): String = {
@@ -277,8 +278,8 @@ private class FutilBackendHelper {
       (store, struct) =>
         struct match {
           case CompDecl(id, _) => store + (id -> id)
-          case LibDecl(id, _)  => store + (id -> id)
-          case _               => store
+          case LibDecl(id, _) => store + (id -> id)
+          case _ => store
         }
     )
     val (cmdStruct, control, _) = emitCmd(p.cmd)(store)
@@ -292,4 +293,5 @@ case object FutilBackend extends fuselang.backend.Backend {
     (new FutilBackendHelper()).emitProg(p, c)
   }
   val canGenerateHeader = false
+  override val commentPrefix: String = ";"
 }
