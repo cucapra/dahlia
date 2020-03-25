@@ -5,10 +5,8 @@ import Doc._
 
 object Futil {
 
-  val debug = false
-
   def brackets(d: Doc) =
-    if (debug) enclose(text("["), d, text("]")) else parens(d)
+    enclose(text("["), d, text("]"))
 
   sealed trait Emitable {
     def doc(): Doc
@@ -81,19 +79,12 @@ object Futil {
   case class LibDecl(id: CompVar, ci: CompInst) extends Structure
   case class Connect(src: Port, dest: Port) extends Structure
 
-  case class CompInst(id: String, args: List[Value]) extends Emitable {
-    override def doc(): Doc =
-      parens(text(id) <+> hsep(args.map(_.doc)))
-  }
-
-  sealed trait Value extends Emitable {
-    override def doc(): Doc = this match {
-      case Num(v)  => value(v)
-      case VNone() => text("#f")
+  case class CompInst(id: String, args: List[Int]) extends Emitable {
+    override def doc(): Doc = {
+      val strList = args.map((x: Int) => text(x.toString()))
+      parens(text(id) <+> hsep(strList))
     }
   }
-  case class Num(v: Any) extends Value
-  case class VNone() extends Value
 
   /***** control *****/
   sealed trait Control extends Emitable {
@@ -116,72 +107,68 @@ object Futil {
         nest(parens(text("seq") <@> vsep(stmts.map(_.doc))), 1)
       case ParComp(stmts) =>
         nest(parens(text("par") <@> vsep(stmts.map(_.doc))), 1)
-      case If(cond, trueBr, falseBr) =>
+      case If(port, cond, trueBr, falseBr) =>
         parens(
-          text("if") <+> cond.doc
-            <> nest(emptyDoc <@> brackets(trueBr.doc), 4)
-            <> nest(emptyDoc <@> brackets(falseBr.doc), 4)
+          text("if") <+> port.doc <+> parens(hsep(cond.map(_.doc)))
+            <> nest(emptyDoc <@> trueBr.doc, 4)
+            <> nest(emptyDoc <@> falseBr.doc, 4)
         )
-      case Ifen(cond, trueBr, falseBr) =>
+      case While(port, cond, body) =>
         parens(
-          text("ifen") <+> cond.doc
-            <> nest(emptyDoc <@> trueBr.doc, 6)
-            <> nest(emptyDoc <@> falseBr.doc, 6)
-        )
-      case While(cond, body) =>
-        parens(
-          text("while") <+> cond.doc
+          text("while") <+> port.doc <+> parens(hsep(cond.map(_.doc)))
             <> nest(emptyDoc <@> body.doc, 2)
         )
       case Print(id) =>
         parens(text("print") <+> id.doc)
       case Enable(ids) =>
         parens(text("enable") <+> hsep(ids.map(_.doc)))
-      case Disable(ids) =>
-        parens(text("disable") <+> hsep(ids.map(_.doc)))
       case Empty() =>
         parens(text("empty"))
     }
   }
   case class SeqComp(stmts: List[Control]) extends Control
   case class ParComp(stmts: List[Control]) extends Control
-  case class If(cond: Port, trueBr: Control, falseBr: Control) extends Control
-  case class Ifen(cond: Port, trueBr: Control, falseBr: Control) extends Control
-  case class While(cond: Port, body: Control) extends Control
+  case class If(
+      port: Port,
+      cond: List[CompVar],
+      trueBr: Control,
+      falseBr: Control
+  ) extends Control
+  case class While(port: Port, cond: List[CompVar], body: Control)
+      extends Control
   case class Print(id: CompVar) extends Control
   case class Enable(ids: List[CompVar]) extends Control {
 
     def ++(en: Enable): Enable =
       Enable((ids ++ en.ids).distinct)
   }
-  case class Disable(ids: List[CompVar]) extends Control
   case class Empty() extends Control
 }
 
 /** Represents all of the primitives in Futil. */
 object Stdlib {
-  def constant(v: Futil.Value): Futil.CompInst =
-    Futil.CompInst("const", List(v))
+  def register(bitwidth: Int): Futil.CompInst =
+    Futil.CompInst("std_reg", List(bitwidth))
 
-  def constant(v: String): Futil.CompInst =
-    Futil.CompInst("const", List(Futil.Num(v)))
+  def iterator(bitwidth: Int, start: Int, end: Int, incr: Int): Futil.CompInst =
+    Futil.CompInst("std_iterator", List(bitwidth, start, end, incr))
+
+  def constant(bitwidth: Int, v: Int): Futil.CompInst =
+    Futil.CompInst("std_const", List(bitwidth, v))
+
+  def add(bitwidth: Int): Futil.CompInst =
+    Stdlib.op("add", bitwidth)
+
+  def op(op: String, bitwidth: Int): Futil.CompInst =
+    Futil.CompInst(s"std_$op", List(bitwidth))
+
+  def identity(bitwidth: Int): Futil.CompInst =
+    Futil.CompInst(s"std_id", List(bitwidth))
 
   def memory(dims: List[Int]): Futil.CompInst =
-    Futil.CompInst("memory", dims.map(Futil.Num(_)))
-
-  def register(): Futil.CompInst =
-    Futil.CompInst("comp/reg", List())
-
-  def op(op: String): Futil.CompInst =
-    Futil.CompInst(op, List())
-
-  def identity(): Futil.CompInst =
-    Futil.CompInst("comp/id", List())
+    Futil.CompInst("std_mem", dims)
 
   def sqrt(): Futil.CompInst =
-    Futil.CompInst("comp/sqrt", List())
-
-  def iterator(): Futil.CompInst =
-    Futil.CompInst("comp/iterator", List())
+    Futil.CompInst("std_sqrt", List())
 
 }

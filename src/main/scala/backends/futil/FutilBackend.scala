@@ -32,16 +32,14 @@ private class FutilBackendHelper {
   def emitDecl(d: Decl): List[Structure] = d.typ match {
     case TArray(_, dims, _) => {
       val const =
-        LibDecl(CompVar(s"${d.id}-init"), Stdlib.constant(VNone()))
+        LibDecl(CompVar(s"${d.id}-init"), Stdlib.constant(32, 0))
       val mem = LibDecl(CompVar(s"${d.id}"), Stdlib.memory(dims.map(_._1)))
-      List(const,
-           mem,
-           Connect(const.id.port("out"), mem.id.port("data-in")))
+      List(const, mem, Connect(const.id.port("out"), mem.id.port("data-in")))
     }
     case TBool() | TFloat() | TDouble() => {
       val const =
-        LibDecl(CompVar(s"${d.id}-c"), Stdlib.constant(VNone()))
-      val reg = LibDecl(CompVar("${d.id}"), Stdlib.register())
+        LibDecl(CompVar(s"${d.id}-c"), Stdlib.constant(32, 0))
+      val reg = LibDecl(CompVar("${d.id}"), Stdlib.register(32))
       List(const, reg, Connect(ThisPort(const.id), reg.id.port("in")))
     }
     case x => throw NotImplemented(s"Type $x not implemented for decls.")
@@ -53,17 +51,21 @@ private class FutilBackendHelper {
   def emitBinop(compName: String, e1: Expr, e2: Expr)(
       implicit store: Store
   ): (Port, List[Structure], Enable) = {
-    val binop = Stdlib.op(s"comp/$compName");
+    val binop = Stdlib.op(s"$compName", 32);
     val (e1port, e1struct, act1) = emitExpr(e1)
     val (e2port, e2struct, act2) = emitExpr(e2)
 
     val comp = LibDecl(genName(compName), binop)
-    val struct = List(comp,
-                      Connect(e1port, comp.id.port("left")),
-                      Connect(e2port, comp.id.port("right")))
-    (comp.id.port("out"),
-     struct ++ e1struct ++ e2struct,
-     Enable(List(comp.id)) ++ act1 ++ act2)
+    val struct = List(
+      comp,
+      Connect(e1port, comp.id.port("left")),
+      Connect(e2port, comp.id.port("right"))
+    )
+    (
+      comp.id.port("out"),
+      struct ++ e1struct ++ e2struct,
+      Enable(List(comp.id)) ++ act1 ++ act2
+    )
   }
 
   /** `emitExpr(expr, lhs)(implicit store)` calculates the necessary structure
@@ -79,11 +81,11 @@ private class FutilBackendHelper {
   ): (Port, List[Structure], Enable) =
     expr match {
       case EInt(v, _) => {
-        val const = LibDecl(genName("const"), Stdlib.constant(Num(v)))
+        val const = LibDecl(genName("const"), Stdlib.constant(32, v))
         (const.id.port("out"), List(const), Enable(List(const.id)))
       }
       case ERational(v: String) => {
-        val const = LibDecl(genName("const"), Stdlib.constant(v))
+        val const = LibDecl(genName("const"), Stdlib.constant(32, v.toInt))
         (const.id.port("out"), List(const), Enable(List(const.id)))
       }
       case EBinop(op, e1, e2) => {
@@ -103,9 +105,11 @@ private class FutilBackendHelper {
       }
       case EVar(id) =>
         val portName = if (lhs) "in" else "out"
-        (store(CompVar(s"$id")).port(portName),
-         List(),
-         Enable(List(store(CompVar(s"$id")))))
+        (
+          store(CompVar(s"$id")).port(portName),
+          List(),
+          Enable(List(store(CompVar(s"$id"))))
+        )
 
       case EArrAccess(id, idxs) => {
         // aggh scala you should be smarter
@@ -113,27 +117,38 @@ private class FutilBackendHelper {
         val (gadgets, addrStructs) =
           ports.zipWithIndex.map {
             case (p, i) =>
-              val gad = LibDecl(genName("gad"), Stdlib.identity())
-              (gad,
-               List(gad,
-                    Connect(p, gad.id.port("in")),
-                    Connect(gad.id.port("out"), CompVar(s"$id").port(s"addr$i"))))
+              val gad = LibDecl(genName("gad"), Stdlib.identity(32))
+              (
+                gad,
+                List(
+                  gad,
+                  Connect(p, gad.id.port("in")),
+                  Connect(gad.id.port("out"), CompVar(s"$id").port(s"addr$i"))
+                )
+              )
           }.unzip
 
         val flatActs = acts.map(_.ids).flatten
 
         if (lhs) {
-          val writeEn = LibDecl(genName(s"$id-we"), Stdlib.identity())
+          val writeEn = LibDecl(genName(s"$id-we"), Stdlib.identity(32))
           val writeStruct = List(
             writeEn,
-            Connect(writeEn.id.port("out"), CompVar(s"$id").port("data-in")))
-          (writeEn.id.port("in"),
-           structs.flatten ++ addrStructs.flatten ++ writeStruct,
-           Enable(List(CompVar(s"$id"), writeEn.id) ++ gadgets.map(_.id) ++ flatActs))
+            Connect(writeEn.id.port("out"), CompVar(s"$id").port("data-in"))
+          )
+          (
+            writeEn.id.port("in"),
+            structs.flatten ++ addrStructs.flatten ++ writeStruct,
+            Enable(
+              List(CompVar(s"$id"), writeEn.id) ++ gadgets.map(_.id) ++ flatActs
+            )
+          )
         } else {
-          (CompVar(s"$id").port("out"),
-           structs.flatten ++ addrStructs.flatten,
-           Enable(List(CompVar(s"$id")) ++ gadgets.map(_.id) ++ flatActs))
+          (
+            CompVar(s"$id").port("out"),
+            structs.flatten ++ addrStructs.flatten,
+            Enable(List(CompVar(s"$id")) ++ gadgets.map(_.id) ++ flatActs)
+          )
         }
       }
       case ECast(e, _) => emitExpr(e)
@@ -141,9 +156,11 @@ private class FutilBackendHelper {
         val (port, struct, act) = emitExpr(e)
         val sqrtComp = LibDecl(genName("sqrt"), Stdlib.sqrt())
         val sqrtStruct = List(sqrtComp, Connect(port, sqrtComp.id.port("in")))
-        (sqrtComp.id.port("out"),
-         struct ++ sqrtStruct,
-         Enable(List(sqrtComp.id)) ++ act)
+        (
+          sqrtComp.id.port("out"),
+          struct ++ sqrtStruct,
+          Enable(List(sqrtComp.id)) ++ act
+        )
       }
       case x => throw NotImplemented(s"No case for $x yet")
     }
@@ -163,15 +180,17 @@ private class FutilBackendHelper {
         (struct1 ++ struct2, con1.seq(con2), s2)
       }
       case CLet(id, _, Some(e)) => {
-        val reg = LibDecl(genName(s"$id"), Stdlib.register())
+        val reg = LibDecl(genName(s"$id"), Stdlib.register(32))
         val (port, exStruct, acts) = emitExpr(e)(store)
         val struct = List(reg, Connect(port, reg.id.port("in"))) ++ exStruct
-        (struct,
-         Enable(List(reg.id)) ++ acts,
-         store + (CompVar(s"$id") -> reg.id))
+        (
+          struct,
+          Enable(List(reg.id)) ++ acts,
+          store + (CompVar(s"$id") -> reg.id)
+        )
       }
       case CLet(id, _, None) => {
-        val reg = LibDecl(genName(s"$id"), Stdlib.register())
+        val reg = LibDecl(genName(s"$id"), Stdlib.register(32))
         val struct = List(reg)
         (struct, Empty(), store + (CompVar(s"$id") -> reg.id))
       }
@@ -187,45 +206,27 @@ private class FutilBackendHelper {
         val (tStruct, tCon, _) = emitCmd(tbranch)
         val (fStruct, fCon, _) = emitCmd(fbranch)
         val struct = condStruct ++ tStruct ++ fStruct
-        val control = acts.seq(If(port, tCon, fCon))
+        val control = If(port, acts.ids, tCon, fCon)
         (struct, control, store)
       }
       case CFor(range, _, par, comb) =>
         range match {
           case CRange(id, start, end, 1) => {
-            val iter = LibDecl(genName(s"$id"), Stdlib.iterator())
-
-            val iterStart =
-              LibDecl(iter.id.addSuffix("-start"), Stdlib.constant(Num(start)))
-            val iterIncr =
-              LibDecl(iter.id.addSuffix("-incr"), Stdlib.constant(Num(1)))
-            val iterEnd =
-              LibDecl(iter.id.addSuffix("-end"), Stdlib.constant(Num(end)))
-            val iterEn =
-              LibDecl(iter.id.addSuffix("-en"), Stdlib.constant(Num(1)))
-
-            val struct = List(
-              iter,
-              Connect(iterStart.id.port("out"), iter.id.port("start")),
-              Connect(iterIncr.id.port("out"), iter.id.port("incr")),
-              Connect(iterEnd.id.port("out"), iter.id.port("end")),
-              Connect(iterEn.id.port("out"), iter.id.port("en")))
+            val iter = LibDecl(genName(s"$id"), Stdlib.iterator(32, start, 1, end))
+            val struct = List(iter)
             val (parStruct, parCon, s1) =
               emitCmd(par)(store + (CompVar(s"$id") -> iter.id))
             val (combStruct, combControl, _) = emitCmd(comb)(s1)
-            (struct ++ parStruct ++ combStruct,
-             Enable(
-               List(
-                 iterEn.id,
-                 iterStart.id,
-                 iterIncr.id,
-                 iterEnd.id,
-                 iter.id))
-               .seq(While(
-                      iter.id.port("stop"), // until (iter @ stop) = 0
-                      (parCon.seq(combControl))
-                        .seq(Enable(List(iter.id, iterEn.id))))), // iter++
-             store)
+            val body = combControl match {
+              case Enable(List()) => parCon
+              case _ => parCon.seq(combControl)
+            }
+            val control = While(
+              iter.id.port("stop"), // until (iter @ stop) = 0
+              List(iter.id),
+              body
+            )
+            (struct ++ parStruct ++ combStruct, control, store)
           }
           case _ => throw NotImplemented("Haven't done all the iterators yet")
         }
@@ -233,8 +234,7 @@ private class FutilBackendHelper {
         val (port, condStruct, acts) = emitExpr(cond)
         val (bodyStruct, bodyCon, _) = emitCmd(body)
         val struct = bodyStruct ++ condStruct
-        val control =
-          acts.seq(While(port, bodyCon.seq(acts)))
+        val control = While(port, acts.ids, bodyCon.seq(acts))
         (struct, control, store)
       }
       case CReduce(rop, lhs, rhs) => {
@@ -243,13 +243,16 @@ private class FutilBackendHelper {
         val (rPort, rStruct, rAct) = emitExpr(rhs)
         val (ropStruct, control) = rop.op match {
           case "+=" => {
-            val adder = LibDecl(genName("comb-add"), Stdlib.op("comp/add"))
-            (List(
-               adder,
-               Connect(rPort, adder.id.port("right")),
-               Connect(loutPort, adder.id.port("left")),
-               Connect(adder.id.port("out"), linPort)),
-             Enable(List(adder.id)))
+            val adder = LibDecl(genName("comb-add"), Stdlib.add(32))
+            (
+              List(
+                adder,
+                Connect(rPort, adder.id.port("right")),
+                Connect(loutPort, adder.id.port("left")),
+                Connect(adder.id.port("out"), linPort)
+              ),
+              Enable(List(adder.id))
+            )
           }
           case x => throw Impossible(s"$x is not a reduce operator!")
         }
