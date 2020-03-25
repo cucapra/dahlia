@@ -17,6 +17,7 @@ ensime.sbt
 .metals
 .bloop
 .scalafmt.conf
+metals.sbt
 
 node_modules/
 
