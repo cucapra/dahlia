@@ -27,4 +27,9 @@ trait Backend {
    */
   val canGenerateHeader: Boolean
 
+  /**
+   * Character to prefix generated comments with.
+   */
+  val commentPrefix: String = "//"
+
 }

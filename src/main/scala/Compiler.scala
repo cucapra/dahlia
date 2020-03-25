@@ -48,33 +48,37 @@ object Compiler {
   }
 
   def compileString(prog: String, c: Config): Either[String, String] = {
-    Try(codegen(checkStringWithError(prog, c), c))
-      .toEither.left.map(err => {
+    Try(codegen(checkStringWithError(prog, c), c)).toEither.left
+      .map(err => {
         scribe.debug(err.getStackTrace().take(10).mkString("\n"))
         err match {
-          case _: Errors.TypeError => s"[${red("Type error")}] ${err.getMessage}"
+          case _: Errors.TypeError =>
+            s"[${red("Type error")}] ${err.getMessage}"
           case _: Errors.ParserError =>
             s"[${red("Parsing error")}] ${err.getMessage}"
           case _: CompilerError.Impossible =>
             s"[${red("Impossible")}] ${err.getMessage}. " +
-            "This should never trigger. Please report this as a bug."
+              "This should never trigger. Please report this as a bug."
           case _ => s"[${red("Error")}] ${err.getMessage}"
         }
-        }).map(out => {
-          // Get metadata about the compiler build.
-          val version = getClass.getResourceAsStream("/version.properties")
-          val meta = Source.fromInputStream(version)
-            .getLines
-            .filter(l => l.trim != "")
-            .mkString(", ")
-            s"// $meta\n" + out
-        })
+      })
+      .map(out => {
+        // Get metadata about the compiler build.
+        val version = getClass.getResourceAsStream("/version.properties")
+        val meta = Source
+          .fromInputStream(version)
+          .getLines
+          .filter(l => l.trim != "")
+          .mkString(", ")
+        val commentPre = toBackend(c.backend).commentPrefix
+        s"$commentPre $meta\n" + out
+      })
   }
 
   def compileStringToFile(
-      prog: String,
-      c: Config,
-      out: String
+    prog: String,
+    c: Config,
+    out: String
   ): Either[String, Path] = {
 
     compileString(prog, c).map(p => {
