@@ -50,7 +50,7 @@ private class FutilBackendHelper {
    */
   def emitBinop(compName: String, e1: Expr, e2: Expr)(
     implicit store: Store
-  ): (Port, List[Structure], Enable) = {
+  ): (Port, List[Structure], List[CompVar]) = {
     val binop = Stdlib.op(s"$compName", 32);
     val (e1port, e1struct, act1) = emitExpr(e1)
     val (e2port, e2struct, act2) = emitExpr(e2)
@@ -64,7 +64,7 @@ private class FutilBackendHelper {
     (
       comp.id.port("out"),
       struct ++ e1struct ++ e2struct,
-      Enable(List(comp.id)) ++ act1 ++ act2
+      comp.id :: act1 ++ act2
     )
   }
 
@@ -78,15 +78,16 @@ private class FutilBackendHelper {
    */
   def emitExpr(expr: Expr, lhs: Boolean = false)(
     implicit store: Store
-  ): (Port, List[Structure], Enable) =
+  ): (Port, List[Structure], List[CompVar]) =
     expr match {
       case EInt(v, _) => {
+        val _ = lhs
         val const = LibDecl(genName("const"), Stdlib.constant(32, v))
-        (const.id.port("out"), List(const), Enable(List(const.id)))
+        (const.id.port("out"), List(const), List(const.id))
       }
       case ERational(v: String) => {
         val const = LibDecl(genName("const"), Stdlib.constant(32, v.toInt))
-        (const.id.port("out"), List(const), Enable(List(const.id)))
+        (const.id.port("out"), List(const), List(const.id))
       }
       case EBinop(op, e1, e2) => {
         val compName =
@@ -108,60 +109,9 @@ private class FutilBackendHelper {
         (
           store(CompVar(s"$id")).port(portName),
           List(),
-          Enable(List(store(CompVar(s"$id"))))
+          List(store(CompVar(s"$id")))
         )
-
-      case EArrAccess(id, idxs) => {
-        // aggh scala you should be smarter
-        val (ports, structs, acts) = idxs.map(e => emitExpr(e)).unzip3
-        val (gadgets, addrStructs) =
-          ports.zipWithIndex.map {
-            case (p, i) =>
-              val gad = LibDecl(genName("gad"), Stdlib.identity(32))
-              (
-                gad,
-                List(
-                  gad,
-                  Connect(p, gad.id.port("in")),
-                  Connect(gad.id.port("out"), CompVar(s"$id").port(s"addr$i"))
-                )
-              )
-          }.unzip
-
-        val flatActs = acts.map(_.ids).flatten
-
-        if (lhs) {
-          val writeEn = LibDecl(genName(s"$id-we"), Stdlib.identity(32))
-          val writeStruct = List(
-            writeEn,
-            Connect(writeEn.id.port("out"), CompVar(s"$id").port("data-in"))
-          )
-          (
-            writeEn.id.port("in"),
-            structs.flatten ++ addrStructs.flatten ++ writeStruct,
-            Enable(
-              List(CompVar(s"$id"), writeEn.id) ++ gadgets.map(_.id) ++ flatActs
-            )
-          )
-        } else {
-          (
-            CompVar(s"$id").port("out"),
-            structs.flatten ++ addrStructs.flatten,
-            Enable(List(CompVar(s"$id")) ++ gadgets.map(_.id) ++ flatActs)
-          )
-        }
-      }
       case ECast(e, _) => emitExpr(e)
-      case EApp(Id("sqrt"), List(e)) => {
-        val (port, struct, act) = emitExpr(e)
-        val sqrtComp = LibDecl(genName("sqrt"), Stdlib.sqrt())
-        val sqrtStruct = List(sqrtComp, Connect(port, sqrtComp.id.port("in")))
-        (
-          sqrtComp.id.port("out"),
-          struct ++ sqrtStruct,
-          Enable(List(sqrtComp.id)) ++ act
-        )
-      }
       case x => throw NotImplemented(s"No case for $x yet")
     }
 
@@ -180,25 +130,25 @@ private class FutilBackendHelper {
         (struct1 ++ struct2, con1.seq(con2), s2)
       }
       case CLet(id, _, Some(e)) => {
-        val reg = LibDecl(genName(s"$id"), Stdlib.register(32))
+        val reg = LibDecl(CompVar(s"$id"), Stdlib.register(32))
         val (port, exStruct, acts) = emitExpr(e)(store)
-        val struct = List(reg, Connect(port, reg.id.port("in"))) ++ exStruct
-        (
-          struct,
-          Enable(List(reg.id)) ++ acts,
-          store + (CompVar(s"$id") -> reg.id)
-        )
+        val struct = reg :: Connect(port, reg.id.port("in")) :: exStruct
+        val group = Group(genName("group"), reg.id :: acts)
+        (group :: struct, Enable(group.id), store + (CompVar(s"$id") -> reg.id))
       }
       case CLet(id, _, None) => {
-        val reg = LibDecl(genName(s"$id"), Stdlib.register(32))
+        val reg = LibDecl(CompVar(s"$id"), Stdlib.register(32))
         val struct = List(reg)
         (struct, Empty(), store + (CompVar(s"$id") -> reg.id))
       }
       case CUpdate(lhs, rhs) => {
         val (lPort, lexStruct, lActs) = emitExpr(lhs, true)(store)
         val (rPort, rexStruct, rActs) = emitExpr(rhs)(store)
-        val struct = lexStruct ++ rexStruct ++ List(Connect(rPort, lPort))
-        val control = lActs ++ rActs
+        val group = Group(genName("group"), lActs ++ rActs)
+        val struct = lexStruct ++ rexStruct ++ List(Connect(rPort, lPort)) ++ List(
+          group
+        )
+        val control = Enable(group.id)
         (struct, control, store)
       }
       case CIf(cond, tbranch, fbranch) => {
@@ -206,67 +156,11 @@ private class FutilBackendHelper {
         val (tStruct, tCon, _) = emitCmd(tbranch)
         val (fStruct, fCon, _) = emitCmd(fbranch)
         val struct = condStruct ++ tStruct ++ fStruct
-        val control = If(port, acts.ids, tCon, fCon)
-        (struct, control, store)
+        val group = Group(genName("group"), acts)
+        val control = If(port, group.id, tCon, fCon)
+        (group :: struct, control, store)
       }
-      case CFor(range, _, par, comb) =>
-        range match {
-          case CRange(id, start, end, 1) => {
-            val iter =
-              LibDecl(genName(s"$id"), Stdlib.iterator(32, start, 1, end))
-            val struct = List(iter)
-            val (parStruct, parCon, s1) =
-              emitCmd(par)(store + (CompVar(s"$id") -> iter.id))
-            val (combStruct, combControl, _) = emitCmd(comb)(s1)
-            val body = combControl match {
-              case Enable(List()) => parCon
-              case _ => parCon.seq(combControl)
-            }
-            val control = While(
-              iter.id.port("stop"), // until (iter @ stop) = 0
-              List(iter.id),
-              body
-            )
-            (struct ++ parStruct ++ combStruct, control, store)
-          }
-          case _ => throw NotImplemented("Haven't done all the iterators yet")
-        }
-      case CWhile(cond, _, body) => {
-        val (port, condStruct, acts) = emitExpr(cond)
-        val (bodyStruct, bodyCon, _) = emitCmd(body)
-        val struct = bodyStruct ++ condStruct
-        val control = While(port, acts.ids, bodyCon.seq(acts))
-        (struct, control, store)
-      }
-      case CReduce(rop, lhs, rhs) => {
-        val (linPort, lStruct, lAct) = emitExpr(lhs, true)
-        val (loutPort, _, _) = emitExpr(lhs)
-        val (rPort, rStruct, rAct) = emitExpr(rhs)
-        val (ropStruct, control) = rop.op match {
-          case "+=" => {
-            val adder = LibDecl(genName("comb-add"), Stdlib.add(32))
-            (
-              List(
-                adder,
-                Connect(rPort, adder.id.port("right")),
-                Connect(loutPort, adder.id.port("left")),
-                Connect(adder.id.port("out"), linPort)
-              ),
-              Enable(List(adder.id))
-            )
-          }
-          case x => throw Impossible(s"$x is not a reduce operator!")
-        }
-        (lStruct ++ rStruct ++ ropStruct, control ++ lAct ++ rAct, store)
-      }
-      // hardcoded print functions
-      case CExpr(EApp(Id("print_vec"), List(EVar(x)))) =>
-        (List(), Print(CompVar(s"$x")), store)
-      case CExpr(EApp(Id("print_vec_2d"), List(EVar(x)))) =>
-        (List(), Print(CompVar(s"$x")), store)
-      case CExpr(EApp(Id("print_vec_3d"), List(EVar(x)))) =>
-        (List(), Print(CompVar(s"$x")), store)
-      case CEmpty => (List(), Enable(List()), store)
+      case CEmpty => (List(), SeqComp(List()), store)
       case x => throw NotImplemented(s"No case for $x yet")
     }
 
@@ -284,7 +178,13 @@ private class FutilBackendHelper {
     )
     val (cmdStruct, control, _) = emitCmd(p.cmd)(store)
     val struct = declStruct ++ cmdStruct
-    Namespace("prog", List(Component("main", List(), List(), struct, control))).emit
+    Namespace(
+      "prog",
+      List(
+        Import("primitives/std.lib"),
+        Component("main", List(), List(), struct.sorted, control)
+      )
+    ).emit
   }
 }
 
