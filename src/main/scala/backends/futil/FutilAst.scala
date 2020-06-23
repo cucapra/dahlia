@@ -1,12 +1,21 @@
 package fuselang.backend.futil
 
 import fuselang.common.PrettyPrint.Doc
+import fuselang.common.CompilerError._
 import Doc._
 
 object Futil {
 
-  def brackets(d: Doc) =
-    enclose(text("["), d, text("]"))
+  def emitCompStructure(structs: List[Structure]): Doc = {
+    val (cells, connections) = structs.partition(st =>
+      st match {
+        case _: LibDecl | _: CompDecl => true
+        case _                        => false
+      }
+    )
+    text("cells") <+> scope(vsep(cells.map(_.doc))) <@>
+      text("wires") <+> scope(vsep(connections.map(_.doc)))
+  }
 
   sealed trait Emitable {
     def doc(): Doc
@@ -29,54 +38,47 @@ object Futil {
   case class Namespace(name: String, comps: List[NamespaceStatement])
       extends Emitable {
     override def doc(): Doc =
-      parens(
-        text("define/namespace") <+> text(name)
-          <> nest(emptyDoc <@> vsep(comps.map(_.doc)), 2)
-      )
+      vsep(comps.map(_.doc))
   }
 
   /** The statements that can appear in a `define/namespace` construct. */
   sealed trait NamespaceStatement extends Emitable {
     override def doc(): Doc = this match {
-      case Import(filename) => parens(text("import") <+> text(filename))
-      case Component(name, inputs, outputs, structure, control) =>
-        parens(
-          text("define/component")
-            <+> text(name)
-            <+> parens(hsep(inputs.map(_.doc)))
-            <+> parens(hsep(outputs.map(_.doc)))
-            <> nest(
-              emptyDoc
-                <@> nest(parens(vsep(structure.map(_.doc))), 1)
-                <@> control.doc,
-              2
-            )
-        )
+      case Import(filename) => text("import") <+> quote(text(filename))
+      case Component(name, inputs, outputs, structure, control) => {
+        text("component") <+>
+          text(name) <>
+          parens(hsep(inputs.map(_.doc))) <+>
+          parens(hsep(outputs.map(_.doc))) <+>
+          scope(
+            emitCompStructure(structure) <@>
+              text("control") <+> scope(control.doc)
+          )
+      }
     }
   }
 
   case class Import(filename: String) extends NamespaceStatement
   case class Component(
-    name: String,
-    inputs: List[PortDef],
-    outputs: List[PortDef],
-    structure: List[Structure],
-    control: Control
+      name: String,
+      inputs: List[PortDef],
+      outputs: List[PortDef],
+      structure: List[Structure],
+      control: Control
   ) extends NamespaceStatement
 
   /***** structure *****/
   sealed trait Port extends Emitable with Ordered[Port] {
     override def doc(): Doc = this match {
       case CompPort(id, name) =>
-        parens(text("@") <+> id.doc <+> text(name))
-      case ThisPort(id) =>
-        parens(text("@") <+> text("this") <+> id.doc)
+        id.doc <> dot <> text(name)
+      case ThisPort(id) => id.doc
     }
 
     override def compare(that: Port): Int = (this, that) match {
-      case (ThisPort(thisId), ThisPort(thatId)) => thisId.compare(thatId)
-      case (ThisPort(_), _) => 1
-      case (_, ThisPort(_)) => -1
+      case (ThisPort(thisId), ThisPort(thatId))       => thisId.compare(thatId)
+      case (ThisPort(_), _)                           => 1
+      case (_, ThisPort(_))                           => -1
       case (CompPort(thisId, _), CompPort(thatId, _)) => thisId.compare(thatId)
     }
   }
@@ -87,11 +89,11 @@ object Futil {
   sealed trait Structure extends Emitable with Ordered[Structure] {
     override def doc(): Doc = this match {
       case CompDecl(id, comp) =>
-        brackets(text("new") <+> id.doc <+> comp.doc)
-      case LibDecl(id, ci) =>
-        brackets(text("new-std") <+> id.doc <+> ci.doc)
+        id.doc <+> equal <+> comp.doc
+      case LibDecl(id, comp) =>
+        id.doc <+> equal <+> text("prim") <+> comp.doc
       case Connect(src, dest) =>
-        brackets(text("->") <+> src.doc <+> dest.doc)
+        src.doc <+> equal <+> dest.doc
       case Group(id, comps) =>
         brackets(text("group") <+> id.doc <+> parens(hsep(comps.map(_.doc))))
     }
@@ -109,15 +111,14 @@ object Futil {
             thisSrc.compare(thatSrc)
           }
         }
-        case (LibDecl(_, _), _) => -1
-        case (_, LibDecl(_, _)) => 1
+        case (LibDecl(_, _), _)  => -1
+        case (_, LibDecl(_, _))  => 1
         case (CompDecl(_, _), _) => -1
         case (_, CompDecl(_, _)) => 1
-        case (Group(_, _), _) => -1
-        case (_, Group(_, _)) => 1
+        case (Group(_, _), _)    => -1
+        case (_, Group(_, _))    => 1
       }
     }
-
   }
   case class LibDecl(id: CompVar, ci: CompInst) extends Structure
   case class CompDecl(id: CompVar, comp: CompVar) extends Structure
@@ -127,7 +128,7 @@ object Futil {
   case class CompInst(id: String, args: List[Int]) extends Emitable {
     override def doc(): Doc = {
       val strList = args.map((x: Int) => text(x.toString()))
-      parens(text(id) <+> hsep(strList))
+      text(id) <> parens(hsep(strList, comma))
     }
   }
 
@@ -135,39 +136,36 @@ object Futil {
   sealed trait Control extends Emitable {
     def seq(c: Control): Control = (this, c) match {
       case (seq0: SeqComp, seq1: SeqComp) => SeqComp(seq0.stmts ++ seq1.stmts)
-      case (seq: SeqComp, _) => SeqComp(seq.stmts ++ List(c))
-      case (_, seq: SeqComp) => SeqComp(this :: seq.stmts)
-      case _ => SeqComp(List(this, c))
+      case (seq: SeqComp, _)              => SeqComp(seq.stmts ++ List(c))
+      case (_, seq: SeqComp)              => SeqComp(this :: seq.stmts)
+      case _                              => SeqComp(List(this, c))
     }
 
     def par(c: Control): Control = (this, c) match {
       case (par0: ParComp, par1: ParComp) => ParComp(par0.stmts ++ par1.stmts)
-      case (par0: ParComp, par1) => ParComp(par0.stmts ++ List(par1))
-      case (par0, par1: ParComp) => ParComp(par0 :: par1.stmts)
-      case _ => ParComp(List(this, c))
+      case (par0: ParComp, par1)          => ParComp(par0.stmts ++ List(par1))
+      case (par0, par1: ParComp)          => ParComp(par0 :: par1.stmts)
+      case _                              => ParComp(List(this, c))
     }
     override def doc(): Doc = this match {
       case SeqComp(stmts) =>
-        nest(parens(text("seq") <@> vsep(stmts.map(_.doc))), 1)
+        text("seq") <+> scope(vsep(stmts.map(_.doc)))
       case ParComp(stmts) =>
-        nest(parens(text("par") <@> vsep(stmts.map(_.doc))), 1)
+        text("par") <+> scope(vsep(stmts.map(_.doc)))
       case If(port, cond, trueBr, falseBr) =>
-        parens(
-          text("if") <+> port.doc <+> parens(cond.doc)
-            <> nest(emptyDoc <@> trueBr.doc, 4)
-            <> nest(emptyDoc <@> falseBr.doc, 4)
-        )
+        text("if") <+> port.doc <+> text("with") <+>
+          cond.doc <>
+          scope(trueBr.doc) <@>
+          text("else") <+>
+          scope(falseBr.doc)
       case While(port, cond, body) =>
-        parens(
-          text("while") <+> port.doc <+> parens(cond.doc)
-            <> nest(emptyDoc <@> body.doc, 2)
-        )
-      case Print(id) =>
-        parens(text("print") <+> id.doc)
-      case Enable(id) =>
-        parens(text("enable") <+> id.doc)
-      case Empty() =>
-        parens(text("empty"))
+        text("while") <+> port.doc <+> text("with") <+>
+        cond.doc <+>
+        scope(body.doc)
+      case Print(_) =>
+        throw Impossible("Futil does not support print")
+      case Enable(id) => id.doc
+      case Empty() => text("empty")
     }
   }
   case class SeqComp(stmts: List[Control]) extends Control
