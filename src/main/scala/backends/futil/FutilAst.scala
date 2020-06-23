@@ -44,11 +44,12 @@ object Futil {
   /** The statements that can appear in a `define/namespace` construct. */
   sealed trait NamespaceStatement extends Emitable {
     override def doc(): Doc = this match {
-      case Import(filename) => text("import") <+> quote(text(filename))
+      case Import(filename) => text("import") <+> quote(text(filename)) <> semi
       case Component(name, inputs, outputs, structure, control) => {
         text("component") <+>
           text(name) <>
           parens(hsep(inputs.map(_.doc))) <+>
+          text("->") <+>
           parens(hsep(outputs.map(_.doc))) <+>
           scope(
             emitCompStructure(structure) <@>
@@ -89,13 +90,14 @@ object Futil {
   sealed trait Structure extends Emitable with Ordered[Structure] {
     override def doc(): Doc = this match {
       case CompDecl(id, comp) =>
-        id.doc <+> equal <+> comp.doc
+        id.doc <+> equal <+> comp.doc <> semi
       case LibDecl(id, comp) =>
-        id.doc <+> equal <+> text("prim") <+> comp.doc
+        id.doc <+> equal <+> text("prim") <+> comp.doc <> semi
       case Connect(src, dest) =>
-        src.doc <+> equal <+> dest.doc
-      case Group(id, comps) =>
-        brackets(text("group") <+> id.doc <+> parens(hsep(comps.map(_.doc))))
+        dest.doc <+> equal <+> src.doc <> semi
+      case Group(id, conns) =>
+        text("group") <+> id.doc <+>
+          scope(vsep(conns.map(_.doc)))
     }
 
     def compare(that: Structure): Int = {
@@ -122,7 +124,21 @@ object Futil {
   }
   case class LibDecl(id: CompVar, ci: CompInst) extends Structure
   case class CompDecl(id: CompVar, comp: CompVar) extends Structure
-  case class Group(id: CompVar, comps: List[CompVar]) extends Structure
+  case class Group(id: CompVar, connections: List[Connect]) extends Structure
+  object Group {
+    def fromStructure(
+        id: CompVar,
+        structure: List[Structure]
+    ): (Group, List[Structure]) = {
+      val (connections, st) = structure.partitionMap[Connect, Structure](st =>
+        st match {
+          case c: Connect => Left(c)
+          case s          => Right(s)
+        }
+      )
+      (this(id, connections), st)
+    }
+  }
   case class Connect(src: Port, dest: Port) extends Structure
 
   case class CompInst(id: String, args: List[Int]) extends Emitable {
@@ -160,12 +176,12 @@ object Futil {
           scope(falseBr.doc)
       case While(port, cond, body) =>
         text("while") <+> port.doc <+> text("with") <+>
-        cond.doc <+>
-        scope(body.doc)
+          cond.doc <+>
+          scope(body.doc)
       case Print(_) =>
         throw Impossible("Futil does not support print")
-      case Enable(id) => id.doc
-      case Empty() => text("empty")
+      case Enable(id) => id.doc <> semi
+      case Empty()    => text("empty")
     }
   }
   case class SeqComp(stmts: List[Control]) extends Control
@@ -200,5 +216,4 @@ object Stdlib {
 
   def sqrt(): Futil.CompInst =
     Futil.CompInst("std_sqrt", List())
-
 }
