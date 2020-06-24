@@ -31,7 +31,11 @@ object LowerForLoops {
         val add = NumOp("+", OpConstructor.add)
         val upd = CUpdate(itVar, EBinop(add, itVar, EInt(1)))
         val cond = EBinop(CmpOp("<"), itVar, EInt(e))
-        val body = CSeq(CSeq(par, combine), upd)
+
+        // Rewrite par and combine
+        val (npar, _) = rewriteC(par)(env)
+        val (ncombine, _) = rewriteC(combine)(env)
+        val body = CSeq(CSeq(npar, ncombine), upd)
         CSeq(init, CWhile(cond, false, body)) -> env
       }
     }
