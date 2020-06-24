@@ -16,7 +16,7 @@ private class FutilBackendHelper {
     // update idx
     idx get base match {
       case Some(n) => idx = idx + (base -> (n + 1))
-      case None    => idx = idx + (base -> 0)
+      case None => idx = idx + (base -> 0)
     }
     CompVar(s"$base${idx(base)}")
   }
@@ -90,15 +90,15 @@ private class FutilBackendHelper {
       case EBinop(op, e1, e2) => {
         val compName =
           op.op match {
-            case "+"  => "add"
-            case "-"  => "sub"
-            case "*"  => "mult"
-            case "/"  => "div"
-            case "<"  => "lt"
-            case ">"  => "gt"
+            case "+" => "add"
+            case "-" => "sub"
+            case "*" => "mult"
+            case "/" => "div"
+            case "<" => "lt"
+            case ">" => "gt"
             case "<=" => "lte"
             case ">=" => "gte"
-            case x    => throw NotImplemented(s"Haven't implemented binop $x yet.")
+            case x => throw NotImplemented(s"Haven't implemented binop $x yet.")
           }
         emitBinop(compName, e1, e2)
       }
@@ -109,7 +109,7 @@ private class FutilBackendHelper {
           List()
         )
       case ECast(e, _) => emitExpr(e)
-      case x           => throw NotImplemented(s"No case for $x yet")
+      case x => throw NotImplemented(s"No case for $x yet")
     }
 
   def emitCmd(
@@ -178,8 +178,8 @@ private class FutilBackendHelper {
     val store = declStruct.foldLeft(Map[CompVar, CompVar]())((store, struct) =>
       struct match {
         case CompDecl(id, _) => store + (id -> id)
-        case LibDecl(id, _)  => store + (id -> id)
-        case _               => store
+        case LibDecl(id, _) => store + (id -> id)
+        case _ => store
       }
     )
     val (cmdStruct, control, _) = emitCmd(p.cmd)(store)
