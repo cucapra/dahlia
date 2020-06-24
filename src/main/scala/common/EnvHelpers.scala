@@ -10,7 +10,20 @@ object EnvHelpers {
      *
      * @param inScope Commands executed inside a new Scope level.
      */
-    def withScope(inScope: T => T): T
+    def withScope(inScope: T => T): T = {
+      inScope(this)
+    }
+
+    /**
+     * Open a new scope and run commands in it. When the scope ends, the
+     * modified environment and the value produced by the function are
+     * returned.
+     *
+     * @param inScope Commands executed inside a new Scope level.
+     */
+    def withScopeAndRet[V](inScope: T => (V, T)): (V, T) = {
+      inScope(this)
+    }
 
     /**
      * Merge this environment with [[that]] for some abstract merge function.

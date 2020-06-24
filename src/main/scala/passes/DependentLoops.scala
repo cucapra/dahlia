@@ -17,7 +17,6 @@ object DependentLoops {
   private case class UseEnv(
     used: Set[Id]
   ) extends ScopeManager[UseEnv] {
-    def withScope(inScope: UseEnv => UseEnv): UseEnv = inScope(this)
 
     def merge(that: UseEnv): UseEnv = UseEnv(this.used ++ that.used)
 
@@ -40,9 +39,6 @@ object DependentLoops {
     loopVars: Set[Id],
     depVars: Set[Id]
   ) extends ScopeManager[DepEnv] {
-    def withScope(inScope: DepEnv => DepEnv): DepEnv = {
-      inScope(this)
-    }
 
     def forgetScope(inScope: DepEnv => DepEnv): DepEnv = {
       inScope(this)

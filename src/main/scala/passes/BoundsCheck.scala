@@ -19,8 +19,6 @@ object BoundsChecker {
   // Bounds checker environment doesn't need to track any information. Empty
   // environment that just runs the commands.
   private case class BEnv() extends ScopeManager[BEnv] {
-    def withScope(inScope: BEnv => BEnv): BEnv = inScope(this)
-
     // Neither environment contains anything.
     def merge(that: BEnv): BEnv = this
   }

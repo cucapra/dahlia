@@ -23,56 +23,66 @@ object LoopChecker {
   // Loop checker environment doesn't need to track any information. Empty
   // environment that just runs the commands.
   private case class LEnv(
-    stateMap: ScopedMap[Id, States] = ScopedMap(),
-    nameMap: ScopedMap[Id, Id] = ScopedMap(),
-    exprMap: ScopedMap[Id, List[Expr]] = ScopedMap())(implicit val res: Int = 1)
-    extends ScopeManager[LEnv] {
-
+      stateMap: ScopedMap[Id, States] = ScopedMap(),
+      nameMap: ScopedMap[Id, Id] = ScopedMap(),
+      exprMap: ScopedMap[Id, List[Expr]] = ScopedMap()
+  )(implicit val res: Int = 1)
+      extends ScopeManager[LEnv] {
 
     // Helper functions for nameMap
-    def addName(vid:Id, tid:Id):LEnv = nameMap.add(vid,tid) match{
-      case None => throw Impossible("nameMap has this view id before, redefinition")
-      case Some(m) => LEnv(stateMap,m)
+    def addName(vid: Id, tid: Id): LEnv = nameMap.add(vid, tid) match {
+      case None =>
+        throw Impossible("nameMap has this view id before, redefinition")
+      case Some(m) => LEnv(stateMap, m)
     }
-    
-    def getName(aid:Id):Id = nameMap.get(aid).getOrElse(aid)
+
+    def getName(aid: Id): Id = nameMap.get(aid).getOrElse(aid)
 
     // Helper functions for stateMap
-    def atDef(id:Id): LEnv = stateMap.head.get(id) match{
-      case None | Some(DontKnow) => LEnv(stateMap.addShadow(id, Def), nameMap, exprMap)
+    def atDef(id: Id): LEnv = stateMap.head.get(id) match {
+      case None | Some(DontKnow) =>
+        LEnv(stateMap.addShadow(id, Def), nameMap, exprMap)
       case Some(Def) => this
       case Some(Use) => throw LoopDepSequential(id)
     }
-    def atDk(id:Id):LEnv = stateMap.head.get(id) match{
-      case None | Some(Def) => LEnv(stateMap.addShadow(id, DontKnow), nameMap, exprMap)
+    def atDk(id: Id): LEnv = stateMap.head.get(id) match {
+      case None | Some(Def) =>
+        LEnv(stateMap.addShadow(id, DontKnow), nameMap, exprMap)
       case Some(DontKnow) => this
       case Some(Use) => throw LoopDepSequential(id)
     }
-    def atUse(id:Id):LEnv = stateMap.head.get(id) match {
+    def atUse(id: Id): LEnv = stateMap.head.get(id) match {
       case None => LEnv(stateMap.addShadow(id, Use), nameMap, exprMap)
       case Some(DontKnow) => throw LoopDepSequential(id)
-      case Some(Def)| Some(Use) => this //Use/Def -> Use don't update
+      case Some(Def) | Some(Use) => this //Use/Def -> Use don't update
     }
-    
-    def checkExprMap(idxs: Option[EArrAccess]):(LEnv, Boolean) = res match{
+
+    def checkExprMap(idxs: Option[EArrAccess]): (LEnv, Boolean) = res match {
       case 1 => (this, false)
-      case _ => idxs match {      
-        case Some(EArrAccess(id, idxs)) => exprMap.get(id) match {
-          case None =>(this.copy(exprMap=exprMap.add(id, idxs).get), true)
-          case Some(idxlist) => {
-            for (i <- 0 to stateMap.length - 1) {
-              if(idxlist(i) != idxs(i)){
-                return (this, true)
+      case _ =>
+        idxs match {
+          case Some(EArrAccess(id, idxs)) =>
+            exprMap.get(id) match {
+              case None =>
+                (this.copy(exprMap = exprMap.add(id, idxs).get), true)
+              case Some(idxlist) => {
+                for (i <- 0 to stateMap.length - 1) {
+                  if (idxlist(i) != idxs(i)) {
+                    return (this, true)
+                  }
+                }
+                (this, false)
               }
             }
-            (this, false)
-          }
+          case None => (this, true)
         }
-        case None => (this, true)
-      }
     }
     //check and update the state table
-    def updateState(id:Id, state: States, idxs: Option[EArrAccess] = None):LEnv = {
+    def updateState(
+        id: Id,
+        state: States,
+        idxs: Option[EArrAccess] = None
+    ): LEnv = {
       val (env, check) = checkExprMap(idxs)
       if (check) {
         val e2 = state match {
@@ -81,36 +91,43 @@ object LoopChecker {
           case Use => env.atUse(env.getName(id))
         }
         e2
-      }
-      else
+      } else
         env
     }
     // Helper functions for ScopeManager
     def withScope(resources: Int)(inScope: LEnv => LEnv): LEnv = {
-      if (resources == 1){
-          inScope(this.addNameScope) match {
-            case env:LEnv => env.endNameScope
-          }
-      }else{
-          inScope(this.addScope(resources)) match {
-            case env:LEnv => env.endScope(resources)
-          }
+      if (resources == 1) {
+        inScope(this.addNameScope) match {
+          case env: LEnv => env.endNameScope
+        }
+      } else {
+        inScope(this.addScope(resources)) match {
+          case env: LEnv => env.endScope(resources)
+        }
       }
     }
-    
+    override def withScopeAndRet[R](inScope: LEnv => (R, LEnv)): (R, LEnv) = {
+      inScope(this.addNameScope) match {
+        case (r, env: LEnv) => (r, env.endNameScope)
+      }
+    }
+
     // To satisfy envhelper
-    def withScope(inScope: LEnv => LEnv): LEnv = withScope(1)(inScope)
+    override def withScope(inScope: LEnv => LEnv): LEnv = withScope(1)(inScope)
+
     def addScope(resources: Int) = {
-      LEnv(stateMap.addScope, nameMap.addScope, exprMap.addScope)(res * resources)
+      LEnv(stateMap.addScope, nameMap.addScope, exprMap.addScope)(
+        res * resources
+      )
     }
     def endScope(resources: Int) = {
       val nmap = nameMap.endScope.get._2
       val emap = exprMap.endScope.get._2
       val (innermap, outermap) = stateMap.endScope.get
-      var outerenv = LEnv(outermap, nmap, emap)(res/resources)
+      var outerenv = LEnv(outermap, nmap, emap)(res / resources)
       val keys = innermap.keys
-      for (k <- keys){
-        outerenv = outerenv.updateState(k, innermap(k))//inner map is a scala map
+      for (k <- keys) {
+        outerenv = outerenv.updateState(k, innermap(k)) //inner map is a scala map
       }
       outerenv
     }
@@ -122,13 +139,20 @@ object LoopChecker {
       LEnv(stateMap, nmap, exprMap)
     }
 
-    def mergeHelper(k: Id, v1:  Option[States], v2: Option[States], env: LEnv): LEnv = (v1, v2) match {
+    def mergeHelper(
+        k: Id,
+        v1: Option[States],
+        v2: Option[States],
+        env: LEnv
+    ): LEnv = (v1, v2) match {
       case (None, None) => throw Impossible("No such merging")
-      case (None, Some(Use)) =>  env.copy(stateMap = env.stateMap.addShadow(k, Use) )
-      case (None, _) =>  env.copy(stateMap = env.stateMap.addShadow(k, DontKnow) )
-      case (Some(Def), Some(DontKnow)) =>  env.copy(stateMap = env.stateMap.addShadow(k, DontKnow) )
+      case (None, Some(Use)) =>
+        env.copy(stateMap = env.stateMap.addShadow(k, Use))
+      case (None, _) => env.copy(stateMap = env.stateMap.addShadow(k, DontKnow))
+      case (Some(Def), Some(DontKnow)) =>
+        env.copy(stateMap = env.stateMap.addShadow(k, DontKnow))
       case (Some(Def), Some(Use)) => throw LoopDepMerge(k)
-      case (Some(DontKnow), Some(Use)) =>  throw LoopDepMerge(k)
+      case (Some(DontKnow), Some(Use)) => throw LoopDepMerge(k)
       case (v1, v2) => if (v1 == v2) env else mergeHelper(k, v2, v1, env)
     }
 
@@ -149,17 +173,18 @@ object LoopChecker {
 
     val emptyEnv = LEnv()(1)
 
-    def myCheckLVal(e: Expr, env: Env): Env = { e match
-      {
+    def myCheckLVal(e: Expr, env: Env): Env = {
+      e match {
         case EVar(id) => env.updateState(id, Def)
-        case EArrAccess(id, idxs) => env.updateState(id, Def, Some(EArrAccess(id, idxs)))
+        case EArrAccess(id, idxs) =>
+          env.updateState(id, Def, Some(EArrAccess(id, idxs)))
         case ERecAccess(rec, _) => myCheckLVal(rec, env)
         case _ => throw Impossible("Cannot be lhs value")
       }
     }
 
     override def myCheckE: PF[(Expr, Env), Env] = {
-    // by default, this is rval
+      // by default, this is rval
       case (EVar(id), e) => e.updateState(id, Use)
       case (EArrAccess(id, idxs), e) => {
         e.updateState(id, Use, Some(EArrAccess(id, idxs)))
@@ -167,29 +192,27 @@ object LoopChecker {
     }
 
     override def myCheckC: PF[(Command, Env), Env] = {
-      case (CUpdate(lhs, rhs), e) => myCheckLVal(lhs,checkE(rhs)(e))
-      case (CReduce(_, lhs, rhs), e) => myCheckLVal(lhs,checkE(rhs)(e))
+      case (CUpdate(lhs, rhs), e) => myCheckLVal(lhs, checkE(rhs)(e))
+      case (CReduce(_, lhs, rhs), e) => myCheckLVal(lhs, checkE(rhs)(e))
       case (CLet(id, _, None), e) => myCheckLVal(EVar(id), e)
-      case (CLet(id, _, eOpt), e) => myCheckLVal(EVar(id), checkE(eOpt.get)(e) )
-      case (_@CView(viewId, arrId, _), e) => {
+      case (CLet(id, _, eOpt), e) => myCheckLVal(EVar(id), checkE(eOpt.get)(e))
+      case (_ @CView(viewId, arrId, _), e) => {
         val id = e.getName(arrId)
-        e.addName(viewId,id)
+        e.addName(viewId, id)
       }
-      case (_@CSplit(viewId, arrId, _), e) => {
+      case (_ @CSplit(viewId, arrId, _), e) => {
         val id = e.getName(arrId)
-        e.addName(viewId,id)
+        e.addName(viewId, id)
       }
       case (CFor(range, _, par, _), e) => {
-        e.withScope(range.u){ e1=>
-          checkC(par)(e1)
-        }
+        e.withScope(range.u) { e1 => checkC(par)(e1) }
       }
       case (CWhile(cond, _, body), e) => {
         val e1 = checkE(cond)(e)
         e1.withScope(1)(env => checkC(body)(env))
       }
       case (CIf(cond, c1, c2), e) => {
-        e.withScope( someScope =>{
+        e.withScope(someScope => {
           val nEnv = checkE(cond)(someScope)
           val e1 = nEnv.withScope(checkC(c1)(_))
           val e2 = nEnv.withScope(checkC(c2)(_))
