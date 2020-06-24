@@ -68,12 +68,11 @@ private class FutilBackendHelper {
   }
 
   /** `emitExpr(expr, lhs)(implicit store)` calculates the necessary structure
-    *  to compute `expr`. It return the triple (Port, List[Structure], Enable).
+    *  to compute `expr`. It return the pair (Port, List[Structure]).
     *  If `lhs = false`, then `Port` is the port that will hold the output
     *  of computing this expression. If `lhs = true`, then `Port` represents
     *  the port that can be used to put a value into the location represented by
-    *  `expr`. `Enable` is the list of components that need to be activated to
-    *  "activate" this expression.
+    *  `expr`.
     */
   def emitExpr(expr: Expr, lhs: Boolean = false)(
       implicit store: Store
@@ -161,7 +160,15 @@ private class FutilBackendHelper {
         (group :: st ++ struct, control, store)
       }
       case CEmpty => (List(), SeqComp(List()), store)
-      case x      => throw NotImplemented(s"No case for $x yet")
+      case CWhile(cond, _, body) => {
+        val (condPort, condStruct) = emitExpr(cond)
+        val (condGroup, condDefs) =
+          Group.fromStructure(genName("cond"), condStruct)
+        val (bodyStruct, bodyCon, st) = emitCmd(body)
+        val control = While(condPort, condGroup.id, bodyCon)
+        (bodyStruct ++ condDefs, control, st)
+      }
+      case x => throw NotImplemented(s"No case for $x yet")
     }
 
   def emitProg(p: Prog, c: Config): String = {
