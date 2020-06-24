@@ -98,7 +98,7 @@ private class FutilBackendHelper {
             case ">" => "gt"
             case "<=" => "lte"
             case ">=" => "gte"
-            case x => throw NotImplemented(s"Haven't implemented binop $x yet.")
+            case x => throw NotImplemented(s"Futil backend does not support $x yet.")
           }
         emitBinop(compName, e1, e2)
       }
@@ -109,7 +109,7 @@ private class FutilBackendHelper {
           List()
         )
       case ECast(e, _) => emitExpr(e)
-      case x => throw NotImplemented(s"No case for $x yet")
+      case x => throw NotImplemented(s"Futil backend does not support $x yet.")
     }
 
   def emitCmd(
@@ -168,7 +168,11 @@ private class FutilBackendHelper {
         val control = While(condPort, condGroup.id, bodyCon)
         (bodyStruct ++ condDefs, control, st)
       }
-      case x => throw NotImplemented(s"No case for $x yet")
+      case _: CFor =>
+        throw BackendError(
+          "for loops cannot be directed generated. Use the --lower flag to turn them into while loops."
+        )
+      case x => throw NotImplemented(s"Futil backed does not support $x yet")
     }
 
   def emitProg(p: Prog, c: Config): String = {
