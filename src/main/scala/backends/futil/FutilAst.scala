@@ -170,8 +170,8 @@ object Futil {
         text("par") <+> scope(vsep(stmts.map(_.doc)))
       case If(port, cond, trueBr, falseBr) =>
         text("if") <+> port.doc <+> text("with") <+>
-          cond.doc <>
-          scope(trueBr.doc) <@>
+          cond.doc <+>
+          scope(trueBr.doc) <+>
           text("else") <+>
           scope(falseBr.doc)
       case While(port, cond, body) =>
