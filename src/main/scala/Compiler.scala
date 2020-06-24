@@ -41,7 +41,17 @@ object Compiler {
   def codegen(ast: Prog, c: Config = emptyConf) = {
     val rast = passes.RewriteView.rewriteProg(ast);
     showDebug(rast, "Rewrite Views", c)
-    toBackend(c.backend).emit(rast, c)
+
+    // Perform program lowering if needed.
+    val finalAst: Prog = if (c.enableLowering) {
+      val fast = passes.LowerForLoops.rewrite(rast)
+      showDebug(fast, "LowerForLoops", c)
+      fast
+    } else {
+      rast
+    }
+
+    toBackend(c.backend).emit(finalAst, c)
   }
 
   // Outputs red text to the console

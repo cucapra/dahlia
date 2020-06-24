@@ -45,6 +45,10 @@ object Main {
       .action((b, c) => c.copy(backend = backends(b)))
       .text("Name of the backend to use. Default: `vivado`.")
 
+    opt[Unit]("lower")
+      .action((_, c) => c.copy(enableLowering = true))
+      .text("Enable passes to lower programs. Default: false")
+
     opt[String]('l', "log-level")
       .action((s, c) => c.copy(logLevel = Logger.stringToLevel(s)))
       .text("Set logging level for the compiler. Default: `info`.")

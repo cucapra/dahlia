@@ -25,7 +25,8 @@ object Configuration {
     compilerOpts: List[String] = List(),  // Extra options to the generateExec Compiler
     header: Boolean = false,              // Generate a header
     passDebug: Boolean = false,           // Show AST after every state
-    logLevel: scribe.Level = scribe.Level.Info
+    logLevel: scribe.Level = scribe.Level.Info,
+    enableLowering: Boolean = false,      // Enable lowering passes
   )
 
 }
