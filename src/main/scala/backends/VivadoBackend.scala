@@ -71,7 +71,7 @@ private class VivadoBackend extends CppLike {
 
   override def emitWhile(cmd: CWhile): Doc =
       text("while") <> parens(cmd.cond) <+> scope {
-        emitPipeline(cmd.pipeline) <@>
+        emitPipeline(cmd.pipeline) <>
         text("#pragma HLS LOOP_FLATTEN off") <@>
         cmd.body
       }
