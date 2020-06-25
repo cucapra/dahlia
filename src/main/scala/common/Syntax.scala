@@ -126,7 +126,7 @@ object Syntax {
   case class EArrAccess(id: Id, idxs: List[Expr])
       extends Expr
       with ConsumableAnnotation
-  case class EPhsAccess(id: Id, bankIdxs: List[(Expr, Expr)])
+  case class EPhysAccess(id: Id, bankIdxs: List[(Expr, Expr)])
       extends Expr
       with ConsumableAnnotation
   case class EArrLiteral(idxs: List[Expr]) extends Expr

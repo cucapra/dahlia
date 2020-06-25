@@ -3,6 +3,7 @@ package fuselang.passes
 import scala.{PartialFunction => PF}
 import fuselang.common._
 import Transformer._
+import EnvHelpers._
 import Syntax._
 import CompilerError._
 

@@ -76,6 +76,8 @@ object Checker {
       case ECast(e, _) => checkE(e)
       case ERecAccess(rec, _) => checkE(rec)
       case EArrAccess(_, idxs) => checkESeq(idxs)
+      case EPhysAccess(_, bankIdxs) =>
+        checkESeq(bankIdxs.flatMap({ case (bank, idx) => List(bank, idx) }))
     }
 
     def checkLVal(e: Expr)(implicit env: Env): Env = checkE(e)

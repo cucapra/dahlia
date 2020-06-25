@@ -6,6 +6,7 @@ import fuselang.common._
 import Syntax._
 import Syntax.Annotations._
 import Errors._
+import CompilerError._
 import CapabilityEnv._
 import Checker._
 
@@ -33,6 +34,9 @@ object CapabilityChecker {
         }
         acc.consumable = Some(consumableAnn)
         nEnv.add(acc, cap)
+      }
+      case (_: EPhysAccess, _) => {
+        throw NotImplemented("Capability checking for physical accesses.")
       }
     }
 
