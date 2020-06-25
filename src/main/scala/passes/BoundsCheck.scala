@@ -16,18 +16,11 @@ object BoundsChecker {
 
   def check(p: Prog) = BCheck.check(p)
 
-  // Bounds checker environment doesn't need to track any information. Empty
-  // environment that just runs the commands.
-  private case class BEnv() extends ScopeManager[BEnv] {
-    // Neither environment contains anything.
-    def merge(that: BEnv): BEnv = this
-  }
-
   private final case object BCheck extends PartialChecker {
 
-    type Env = BEnv
+    type Env = UnitEnv
 
-    val emptyEnv = BEnv()
+    val emptyEnv = UnitEnv()
 
     /**
       * Given a view with a known prefix length, check if it **might** cause an

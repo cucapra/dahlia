@@ -99,6 +99,8 @@ object Cpp {
       case EArrAccess(id, idxs) =>
         id <> ssep(idxs.map(idx => brackets(emitExpr(idx))), emptyDoc)
       case EArrLiteral(idxs) => braces(commaSep(idxs.map(idx => emitExpr(idx))))
+      case _: EPhysAccess =>
+        throw NotImplemented("Physical access code gen for cpp-like backends.")
       case ERecAccess(rec, field) => rec <> dot <> field
       case ERecLiteral(fs) =>
         scope {

@@ -39,7 +39,7 @@ object Compiler {
   }
 
   def codegen(ast: Prog, c: Config = emptyConf) = {
-    val rast = passes.RewriteView.rewriteProg(ast);
+    val rast = passes.RewriteView.rewrite(ast);
     showDebug(rast, "Rewrite Views", c)
 
     // Perform program lowering if needed.

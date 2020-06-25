@@ -49,4 +49,12 @@ object EnvHelpers {
     def get(k: K): Option[V]
   }
 
+  /**
+    * Definition of a trivial environment that doesn't track any
+    * information.
+    */
+  final case class UnitEnv() extends ScopeManager[UnitEnv] {
+    def merge(that: UnitEnv) = this
+  }
+
 }

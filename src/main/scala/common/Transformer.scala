@@ -115,6 +115,16 @@ object Transformer {
         val (nidxs, env1) = rewriteESeq(idxs)
         acc.copy(idxs = nidxs.toList) -> env1
       }
+      case acc @ EPhysAccess(_, bankIdxs) => {
+        val init = (List[(Expr, Expr)](), env)
+        val (nBankIdxsReversed, nEnv) = bankIdxs.foldLeft(init)({
+          case ((nBankIdxs, env), (bank, idx)) =>
+            val (nBank, env1) = rewriteE(bank)(env)
+            val (nIdx, env2) = rewriteE(idx)(env1)
+            ((nBank, nIdx) :: nBankIdxs, env2)
+        })
+        acc.copy(bankIdxs = nBankIdxsReversed.reverse.toList) -> nEnv
+      }
     }
 
     def rewriteLVal(e: Expr)(implicit env: Env): (Expr, Env) = rewriteE(e)
@@ -205,13 +215,5 @@ object Transformer {
 
     def partialRewriteC: PF[(Command, Env), (Command, Env)] =
       asPartial(super.rewriteC(_: Command)(_: Env))
-  }
-
-  /**
-    * Definition of a trivial environment that doesn't track any
-    * information.
-    */
-  final case class UnitEnv() extends ScopeManager[UnitEnv] {
-    def merge(that: UnitEnv) = this
   }
 }

@@ -209,7 +209,7 @@ object TypeChecker {
           typ -> env
         }
       }
-    case EPhsAccess(id, bankIdxs) =>
+    case EPhysAccess(id, bankIdxs) =>
       env(id).matchOrError(expr.pos, "array access", s"array type") {
         case TArray(typ, dims, _) => {
           if (dims.length != bankIdxs.length) {

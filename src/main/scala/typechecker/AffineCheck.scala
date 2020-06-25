@@ -289,6 +289,9 @@ object AffineChecker {
           }
         }
       }
+      case (_: EPhysAccess, _) => {
+        throw NotImplemented("Affine checking for physical accesses.")
+      }
     }
   }
 }

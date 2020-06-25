@@ -72,6 +72,22 @@ object Pretty {
         )
       else doc
     }
+    case acc @ EPhysAccess(id, idxs) => {
+      val doc = id <>
+        ssep(
+          idxs.map({
+            case (bank, idx) =>
+              braces(emitExpr(bank)) <> brackets(emitExpr(idx))
+          }),
+          emptyDoc
+        )
+
+      if (debug)
+        brackets(
+          doc <> colon <+> acc.consumable.map(emitConsume).getOrElse(emptyDoc)
+        )
+      else doc
+    }
     case EArrLiteral(idxs) => braces(commaSep(idxs.map(idx => emitExpr(idx))))
     case ERecAccess(rec, field) => rec <> dot <> field
     case ERecLiteral(fs) =>
