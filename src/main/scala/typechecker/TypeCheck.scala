@@ -209,6 +209,29 @@ object TypeChecker {
           typ -> env
         }
       }
+    case EPhsAccess(id, bankIdxs) =>
+      env(id).matchOrError(expr.pos, "array access", s"array type") {
+        case TArray(typ, dims, _) => {
+          if (dims.length != bankIdxs.length) {
+            throw IncorrectAccessDims(id, dims.length, bankIdxs.length)
+          }
+          bankIdxs.foldLeft(env)((env, bankIdx) => {
+            val (bank, idx) = bankIdx
+            val (bankTyp, env1) = checkE(bank)(env)
+            val (idxTyp, env2) = checkE(idx)(env1)
+            bankTyp.matchOrError(bank.pos, "bank index", "integer type") {
+              case _: IntType => ()
+            }
+            idxTyp.matchOrError(bank.pos, "array index", "integer type") {
+              case _: IntType => ()
+            }
+            env2
+          })
+          // Bind the type of to Id
+          id.typ = Some(env(id));
+          typ -> env
+        }
+      }
   }
 
   // Check if this array dimension is well formed and return the dimension
