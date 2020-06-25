@@ -15,7 +15,7 @@ object DependentLoops {
   def check(p: Prog) = DepCheck.check(p)
 
   private case class UseEnv(
-    used: Set[Id]
+      used: Set[Id]
   ) extends ScopeManager[UseEnv] {
 
     def merge(that: UseEnv): UseEnv = UseEnv(this.used ++ that.used)
@@ -36,8 +36,8 @@ object DependentLoops {
   }
 
   private case class DepEnv(
-    loopVars: Set[Id],
-    depVars: Set[Id]
+      loopVars: Set[Id],
+      depVars: Set[Id]
   ) extends ScopeManager[DepEnv] {
 
     def forgetScope(inScope: DepEnv => DepEnv): DepEnv = {
@@ -45,7 +45,8 @@ object DependentLoops {
       this
     }
 
-    def merge(that: DepEnv): DepEnv = DepEnv(this.loopVars ++ that.loopVars, this.depVars ++ that.depVars)
+    def merge(that: DepEnv): DepEnv =
+      DepEnv(this.loopVars ++ that.loopVars, this.depVars ++ that.depVars)
 
     def addLoopVar(id: Id): DepEnv = {
       // remove id and then add it back so that the most recent id is in the set
@@ -71,15 +72,15 @@ object DependentLoops {
     val emptyEnv = DepEnv(Set(), Set())
 
     override def myCheckE: PF[(Expr, Env), Env] = {
-      case (EArrAccess(id@_, idxs), env) => {
+      case (EArrAccess(id @ _, idxs), env) => {
         idxs.foreach(e => {
-                       val used = UseCheck.checkE(e)(UseCheck.emptyEnv)
-                       val intersect = env.depVars.intersect(used.used)
-                       if (intersect.size != 0) {
-                         val sourceId = intersect.toList(0)
-                         throw LoopDynamicAccess(e, sourceId)
-                       }
-                     })
+          val used = UseCheck.checkE(e)(UseCheck.emptyEnv)
+          val intersect = env.depVars.intersect(used.used)
+          if (intersect.size != 0) {
+            val sourceId = intersect.toList(0)
+            throw LoopDynamicAccess(e, sourceId)
+          }
+        })
         env
       }
     }
@@ -87,13 +88,9 @@ object DependentLoops {
     override def myCheckC: PF[(Command, Env), Env] = {
       case (CFor(range, _, par, _), env) => {
         if (range.u > 1) {
-          env.forgetScope(e1 =>
-            checkC(par)(e1.addLoopVar(range.iter))
-          )
+          env.forgetScope(e1 => checkC(par)(e1.addLoopVar(range.iter)))
         } else {
-          env.forgetScope(e1 =>
-            checkC(par)(e1)
-          )
+          env.forgetScope(e1 => checkC(par)(e1))
         }
       }
       case (CLet(id, _, Some(exp)), env) => {

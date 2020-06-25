@@ -1,7 +1,6 @@
 /**
- * Lightweight library from the deprecated scala.text distribution.
- */
-
+  * Lightweight library from the deprecated scala.text distribution.
+  */
 package fuselang.common
 
 import java.io.Writer
@@ -12,16 +11,15 @@ object PrettyPrint {
   case object DocSpace extends Doc
   case class DocText(txt: String) extends Doc
   case class DocNest(indent: Int, doc: Doc) extends Doc
-  case class DocCons(hd: Doc, tl: Doc) extends Doc {
-  }
+  case class DocCons(hd: Doc, tl: Doc) extends Doc {}
 
   /**
-   * A basic pretty-printing library, based on Lindig's strict version
-   * of Wadler's adaptation of Hughes' pretty-printer.
-   *
-   * @author Michel Schinz
-   * @version 1.0
-   */
+    * A basic pretty-printing library, based on Lindig's strict version
+    * of Wadler's adaptation of Hughes' pretty-printer.
+    *
+    * @author Michel Schinz
+    * @version 1.0
+    */
   abstract class Doc {
     def <@>(hd: Doc): Doc = {
       if (hd == DocNil) this
@@ -41,18 +39,18 @@ object PrettyPrint {
     }
 
     /**
-     * Format this Doc on `writer`.
-     */
+      * Format this Doc on `writer`.
+      */
     def format(writer: Writer): Unit = {
       type FmtState = (Int, Doc)
 
       def spaces(n: Int): Unit = {
         var rem = n
         while (rem >= 16) { writer write "                "; rem -= 16 }
-        if (rem >= 8)     { writer write "        "; rem -= 8 }
-        if (rem >= 4)     { writer write "    "; rem -= 4 }
-        if (rem >= 2)     { writer write "  "; rem -= 2}
-        if (rem == 1)     { writer write " " }
+        if (rem >= 8) { writer write "        "; rem -= 8 }
+        if (rem >= 4) { writer write "    "; rem -= 4 }
+        if (rem >= 2) { writer write "  "; rem -= 2 }
+        if (rem == 1) { writer write " " }
       }
 
       def fmt(state: List[FmtState]): Unit = state match {
@@ -80,6 +78,7 @@ object PrettyPrint {
   }
 
   object Doc {
+
     /** The empty Doc */
     def emptyDoc = DocNil
     def line = DocBreak
@@ -129,7 +128,6 @@ object PrettyPrint {
       lbrace <> nest(emptyDoc <@> doc, indent) <@> rbrace
 
     /** Common functions **/
-
     def quote(d: Doc) = surround(d, text("\""))
 
     def parens(d: Doc) = enclose(text("("), d, text(")"))

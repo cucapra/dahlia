@@ -10,7 +10,7 @@ object Futil {
     val (cells, connections) = structs.partition(st =>
       st match {
         case _: LibDecl | _: CompDecl => true
-        case _                        => false
+        case _ => false
       }
     )
     text("cells") <+> scope(vsep(cells.map(_.doc))) <@>
@@ -77,9 +77,9 @@ object Futil {
     }
 
     override def compare(that: Port): Int = (this, that) match {
-      case (ThisPort(thisId), ThisPort(thatId))       => thisId.compare(thatId)
-      case (ThisPort(_), _)                           => 1
-      case (_, ThisPort(_))                           => -1
+      case (ThisPort(thisId), ThisPort(thatId)) => thisId.compare(thatId)
+      case (ThisPort(_), _) => 1
+      case (_, ThisPort(_)) => -1
       case (CompPort(thisId, _), CompPort(thatId, _)) => thisId.compare(thatId)
     }
   }
@@ -113,12 +113,12 @@ object Futil {
             thisSrc.compare(thatSrc)
           }
         }
-        case (LibDecl(_, _), _)  => -1
-        case (_, LibDecl(_, _))  => 1
+        case (LibDecl(_, _), _) => -1
+        case (_, LibDecl(_, _)) => 1
         case (CompDecl(_, _), _) => -1
         case (_, CompDecl(_, _)) => 1
-        case (Group(_, _), _)    => -1
-        case (_, Group(_, _))    => 1
+        case (Group(_, _), _) => -1
+        case (_, Group(_, _)) => 1
       }
     }
   }
@@ -133,7 +133,7 @@ object Futil {
       val (connections, st) = structure.partitionMap[Connect, Structure](st =>
         st match {
           case c: Connect => Left(c)
-          case s          => Right(s)
+          case s => Right(s)
         }
       )
       (this(id, connections), st)
@@ -152,16 +152,16 @@ object Futil {
   sealed trait Control extends Emitable {
     def seq(c: Control): Control = (this, c) match {
       case (seq0: SeqComp, seq1: SeqComp) => SeqComp(seq0.stmts ++ seq1.stmts)
-      case (seq: SeqComp, _)              => SeqComp(seq.stmts ++ List(c))
-      case (_, seq: SeqComp)              => SeqComp(this :: seq.stmts)
-      case _                              => SeqComp(List(this, c))
+      case (seq: SeqComp, _) => SeqComp(seq.stmts ++ List(c))
+      case (_, seq: SeqComp) => SeqComp(this :: seq.stmts)
+      case _ => SeqComp(List(this, c))
     }
 
     def par(c: Control): Control = (this, c) match {
       case (par0: ParComp, par1: ParComp) => ParComp(par0.stmts ++ par1.stmts)
-      case (par0: ParComp, par1)          => ParComp(par0.stmts ++ List(par1))
-      case (par0, par1: ParComp)          => ParComp(par0 :: par1.stmts)
-      case _                              => ParComp(List(this, c))
+      case (par0: ParComp, par1) => ParComp(par0.stmts ++ List(par1))
+      case (par0, par1: ParComp) => ParComp(par0 :: par1.stmts)
+      case _ => ParComp(List(this, c))
     }
     override def doc(): Doc = this match {
       case SeqComp(stmts) =>
@@ -181,7 +181,7 @@ object Futil {
       case Print(_) =>
         throw Impossible("Futil does not support print")
       case Enable(id) => id.doc <> semi
-      case Empty()    => text("empty")
+      case Empty() => text("empty")
     }
   }
   case class SeqComp(stmts: List[Control]) extends Control

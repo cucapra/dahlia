@@ -24,7 +24,6 @@ object Cpp {
 
     val defaultIndent = 2
 
-
     /**
       * Helper to generate a variable declaration with an initial value.
       */
@@ -84,22 +83,22 @@ object Cpp {
     implicit def IdToString(id: Id): Doc = value(id.v)
 
     def emitBaseInt(v: Int, base: Int): String = base match {
-      case 8  => s"0${Integer.toString(v, 8)}"
+      case 8 => s"0${Integer.toString(v, 8)}"
       case 10 => v.toString
       case 16 => s"0x${Integer.toString(v, 16)}"
     }
 
     implicit def emitExpr(e: Expr): Doc = e match {
-      case ECast(e, typ)      => parens(emitType(typ)) <> emitExpr(e)
-      case EApp(fn, args)     => fn <> parens(commaSep(args.map(emitExpr)))
-      case EInt(v, base)      => value(emitBaseInt(v, base))
-      case ERational(d)       => value(d)
-      case EBool(b)           => value(if (b) 1 else 0)
-      case EVar(id)           => value(id)
+      case ECast(e, typ) => parens(emitType(typ)) <> emitExpr(e)
+      case EApp(fn, args) => fn <> parens(commaSep(args.map(emitExpr)))
+      case EInt(v, base) => value(emitBaseInt(v, base))
+      case ERational(d) => value(d)
+      case EBool(b) => value(if (b) 1 else 0)
+      case EVar(id) => value(id)
       case EBinop(op, e1, e2) => parens(e1 <+> text(op.toString) <+> e2)
       case EArrAccess(id, idxs) =>
         id <> ssep(idxs.map(idx => brackets(emitExpr(idx))), emptyDoc)
-      case EArrLiteral(idxs)      => braces(commaSep(idxs.map(idx => emitExpr(idx))))
+      case EArrLiteral(idxs) => braces(commaSep(idxs.map(idx => emitExpr(idx))))
       case ERecAccess(rec, field) => rec <> dot <> field
       case ERecLiteral(fs) =>
         scope {
@@ -122,28 +121,28 @@ object Cpp {
     implicit def emitCmd(c: Command): Doc = c match {
       case CPar(c1, c2) => c1 <@> c2
       case CSeq(c1, c2) => c1 <@> text("//---") <@> c2
-      case l: CLet      => emitLet(l)
+      case l: CLet => emitLet(l)
       case CIf(cond, cons, alt) => {
         text("if") <+> parens(cond) <+> scope(cons) <> (alt match {
           case CEmpty => emptyDoc
-          case _      => space <> text("else") <+> scope(alt)
+          case _ => space <> text("else") <+> scope(alt)
         })
       }
-      case f: CFor                => emitFor(f)
-      case w: CWhile              => emitWhile(w)
-      case CDecorate(dec)         => value(dec)
-      case CUpdate(lhs, rhs)      => lhs <+> equal <+> rhs <> semi
+      case f: CFor => emitFor(f)
+      case w: CWhile => emitWhile(w)
+      case CDecorate(dec) => value(dec)
+      case CUpdate(lhs, rhs) => lhs <+> equal <+> rhs <> semi
       case CReduce(rop, lhs, rhs) => lhs <+> text(rop.toString) <+> rhs <> semi
-      case CReturn(e)             => text("return") <+> e <> semi
-      case CExpr(e)               => e <> semi
-      case CEmpty                 => emptyDoc
+      case CReturn(e) => text("return") <+> e <> semi
+      case CExpr(e) => e <> semi
+      case CEmpty => emptyDoc
       case _: CView | _: CSplit =>
         throw Impossible("Views should not exist during codegen.")
     }
 
     def emitDecl(id: Id, typ: Type): Doc = typ match {
       case ta: TArray => emitArrayDecl(ta, id)
-      case _          => emitType(typ) <+> id
+      case _ => emitType(typ) <+> id
     }
 
     def emitFunc(func: FuncDef, entry: Boolean = false): Doc = func match {
@@ -151,10 +150,9 @@ object Cpp {
         val as = commaSep(args.map(decl => emitDecl(decl.id, decl.typ)))
         // If body is not defined, this is an extern. Elide the definition.
         val body = bodyOpt
-          .map(
-            body =>
-              emitType(ret) <+> id <> parens(as) <+>
-                scope { emitFuncHeader(func, entry) <@> body }
+          .map(body =>
+            emitType(ret) <+> id <> parens(as) <+>
+              scope { emitFuncHeader(func, entry) <@> body }
           )
           .getOrElse(emptyDoc)
 

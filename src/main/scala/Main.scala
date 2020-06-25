@@ -13,7 +13,7 @@ object Main {
   val backends = Map(
     "vivado" -> Vivado,
     "c++" -> Cpp,
-    "futil" -> Futil,
+    "futil" -> Futil
   )
 
   val parser = new scopt.OptionParser[Config]("fuse") {
@@ -33,15 +33,21 @@ object Main {
     opt[String]('n', "name")
       .valueName("<kernel>")
       .validate(x =>
-          if (x.matches("[A-Za-z0-9_]+")) success
-          else failure("Kernel name should only contain alphanumerals and _"))
+        if (x.matches("[A-Za-z0-9_]+")) success
+        else failure("Kernel name should only contain alphanumerals and _")
+      )
       .action((x, c) => c.copy(kernelName = x))
       .text("Name of the top level function. Default: `kernel`.")
 
     opt[String]('b', "backend")
       .valueName("<backend>")
-      .validate(b => if (backends.contains(b)) success
-                     else failure(s"Invalid backend name. Valid backends are ${backends.keys.mkString(", ")}"))
+      .validate(b =>
+        if (backends.contains(b)) success
+        else
+          failure(
+            s"Invalid backend name. Valid backends are ${backends.keys.mkString(", ")}"
+          )
+      )
       .action((b, c) => c.copy(backend = backends(b)))
       .text("Name of the backend to use. Default: `vivado`.")
 
@@ -63,7 +69,9 @@ object Main {
 
     cmd("run")
       .action((_, c) => c.copy(mode = Run, backend = Cpp))
-      .text("Generate a runnable object file. Assumes GCC and required headers are available. Implies mode=c++.")
+      .text(
+        "Generate a runnable object file. Assumes GCC and required headers are available. Implies mode=c++."
+      )
       .children(
         opt[String]('o', "outfile")
           .required()
@@ -73,7 +81,8 @@ object Main {
           .optional()
           .unbounded()
           .action((x, c) => c.copy(compilerOpts = x :: c.compilerOpts))
-          .text("Option to be passed to the C++ compiler. Can be repeated."))
+          .text("Option to be passed to the C++ compiler. Can be repeated.")
+      )
   }
 
   def runWithConfig(conf: Config): Either[String, Int] = {
@@ -85,16 +94,26 @@ object Main {
       case false => Left(s"$path: No such file in working directory")
     }
 
-    val cppPath: Either[ErrString, Option[Path]] = prog.flatMap(prog => conf.output match {
-      case Some(out) => compileStringToFile(prog, conf, out).map(path => Some(path))
-      case None => compileString(prog, conf).map(res => { println(res); None })
-    })
+    val cppPath: Either[ErrString, Option[Path]] = prog.flatMap(prog =>
+      conf.output match {
+        case Some(out) =>
+          compileStringToFile(prog, conf, out).map(path => Some(path))
+        case None =>
+          compileString(prog, conf).map(res => { println(res); None })
+      }
+    )
 
-    val status: Either[ErrString, Int] = cppPath.flatMap(pathOpt => conf.mode match {
-      case Run =>
-        GenerateExec.generateExec(pathOpt.get, s"${conf.output.get}.o", conf.compilerOpts)
-      case _ => Right(0)
-    })
+    val status: Either[ErrString, Int] = cppPath.flatMap(pathOpt =>
+      conf.mode match {
+        case Run =>
+          GenerateExec.generateExec(
+            pathOpt.get,
+            s"${conf.output.get}.o",
+            conf.compilerOpts
+          )
+        case _ => Right(0)
+      }
+    )
 
     status
   }
@@ -106,7 +125,10 @@ object Main {
         Logger.setLogLevel(conf.logLevel)
         val status = runWithConfig(conf)
         sys.exit(
-          status.left.map(compileErr => { System.err.println(compileErr); 1 }).merge)
+          status.left
+            .map(compileErr => { System.err.println(compileErr); 1 })
+            .merge
+        )
       }
       case None => {
         sys.exit(1)

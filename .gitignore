@@ -16,7 +16,6 @@ ensime.sbt
 .sbt-hydra-history
 .metals
 .bloop
-.scalafmt.conf
 metals.sbt
 
 node_modules/

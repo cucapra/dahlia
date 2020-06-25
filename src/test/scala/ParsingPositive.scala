@@ -25,7 +25,7 @@ class ParsingTests extends org.scalatest.FunSuite {
        */
       // this is comment
       x + 1;
-      """ )
+      """)
   }
 
   test("binops") {
@@ -70,7 +70,7 @@ class ParsingTests extends org.scalatest.FunSuite {
       for (let i = 0..10) unroll 5 {
         x + 1;
       }
-    """ )
+    """)
   }
 
   test("while loop") {
@@ -82,7 +82,7 @@ class ParsingTests extends org.scalatest.FunSuite {
           x + y;
         }
       }
-    """ )
+    """)
   }
 
   test("combiner syntax") {
@@ -90,7 +90,7 @@ class ParsingTests extends org.scalatest.FunSuite {
       for (let i = 0..10) {
       } combine {
       }
-    """ )
+    """)
 
     parseAst("""
       for (let i = 0..10) {
@@ -98,7 +98,7 @@ class ParsingTests extends org.scalatest.FunSuite {
         sum += 10;
         let x = 1;
       }
-    """ )
+    """)
   }
 
   test("refresh banks") {
@@ -106,7 +106,7 @@ class ParsingTests extends org.scalatest.FunSuite {
       x + 1;
       ---
       x + 2;
-    """ )
+    """)
   }
 
   test("commands") {
@@ -114,19 +114,19 @@ class ParsingTests extends org.scalatest.FunSuite {
     {
       x + 1;
     }
-      """ )
+      """)
   }
 
   test("functions") {
     parseAst("""
       def foo(a: bit<32>) {}
-      """ )
+      """)
 
     parseAst("""
       def foo(a: bit<32>[10 bank 5], b: bool) {
         bar(1, 2, 3)
       }
-      """ )
+      """)
   }
 
   test("records definitions") {
@@ -135,108 +135,108 @@ class ParsingTests extends org.scalatest.FunSuite {
         x: bit<32>;
         y: bit<32>
       }
-      """ )
+      """)
     parseAst("""
       record Point {
         x: int;
         y: bit<32>
       }
-      """ )
+      """)
   }
 
   test("record literals") {
     parseAst("""
       let res: point = { x = 10; y = 10 };
-      """ )
+      """)
   }
 
   test("array literals") {
     parseAst("""
       let res: bit<32>[10] = { 1, 2, 3 };
-      """ )
+      """)
   }
 
   test("records access") {
     parseAst("""
       let k = p.x;
-      """ )
+      """)
     parseAst("""
       let k = foo[i].x;
-      """ )
+      """)
     parseAst("""
       let k = rec.po.x;
-      """ )
+      """)
   }
 
   test("imports") {
     parseAst("""
       import "print.h" {}
-      """ )
+      """)
     parseAst("""
       import "print.h" {
         def foo(a: bit<32>);
       }
-      """ )
+      """)
   }
 
   test("simple views") {
     parseAst("""
       view v = a[_ :];
-      """ )
+      """)
 
     parseAst("""
       view v = a[_ : bank 2];
-      """ )
+      """)
 
     parseAst("""
       view v = a[4 * i :];
-      """ )
+      """)
 
     parseAst("""
       view v = a[i + 1! :];
-      """ )
+      """)
 
     parseAst("""
       view v = a[4 * i : +3];
-      """ )
+      """)
 
     parseAst("""
       view v = a[i + 1! : +3];
-      """ )
+      """)
 
     parseAst("""
       view v = a[4 * i : bank 5];
-      """ )
+      """)
 
     parseAst("""
       view v = a[i + 1! : bank 5];
-      """ )
+      """)
 
     parseAst("""
       view v = a[4*i:+3 bank 5];
-      """ )
+      """)
 
     parseAst("""
       view v = a[i + 1! : +3 bank 5];
-      """ )
+      """)
   }
 
   test("split views") {
     parseAst("""
       split b = a[by 10];
-      """ )
+      """)
 
     parseAst("""
       split b = a[by 10][by 20];
-      """ )
+      """)
   }
 
   test("casting") {
     parseAst("""
       let x = (y as bit<32>)
-      """ )
+      """)
     parseAst("""
       let x = (y as float)
-      """ )
+      """)
   }
 }

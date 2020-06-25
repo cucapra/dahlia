@@ -73,7 +73,7 @@ class TypeCheckerSpec extends FunSpec {
         typeCheck("""
           decl a: bit<10>[10];
           a[true];
-          """ )
+          """)
       }
     }
     it("with too many dimensions") {
@@ -81,7 +81,7 @@ class TypeCheckerSpec extends FunSpec {
         typeCheck("""
           decl a: bit<10>[10];
           a[1][1];
-          """ )
+          """)
       }
     }
     it("with too few dimensions") {
@@ -89,7 +89,7 @@ class TypeCheckerSpec extends FunSpec {
         typeCheck("""
           decl a: bit<10>[10][10];
           a[1];
-          """ )
+          """)
       }
     }
     it("consumes bank without unroll") {
@@ -100,7 +100,7 @@ class TypeCheckerSpec extends FunSpec {
             let x = a[i]
           }
           a[0]
-          """ )
+          """)
       }
     }
     it("consumes all banks with unroll") {
@@ -111,7 +111,7 @@ class TypeCheckerSpec extends FunSpec {
             let x = a[i]
           }
           a[0]
-          """ )
+          """)
       }
     }
 
@@ -154,7 +154,7 @@ class TypeCheckerSpec extends FunSpec {
         for (let i = 0..1) {
           let x = 10;
         }
-        """ )
+        """)
     }
   }
 
@@ -163,7 +163,7 @@ class TypeCheckerSpec extends FunSpec {
     it("comparisons on rational returns a boolean") {
       typeCheck("if (2.5 < 23.5) { 1 }")
     }
-    it("comparisons on float and rational a boolean"){
+    it("comparisons on float and rational a boolean") {
       typeCheck("let x: float = 1.0; x < 10.0")
     }
     it("can add sized int to sized int") {
@@ -247,7 +247,7 @@ class TypeCheckerSpec extends FunSpec {
             a[0]
           }
           a[0]
-          """ )
+          """)
       }
     }
     it("cannot consume same banks in sequenced statements from else branch") {
@@ -260,7 +260,7 @@ class TypeCheckerSpec extends FunSpec {
             a[1]
           }
           a[1]
-          """ )
+          """)
       }
     }
     it("can consume same banks in branches") {
@@ -271,7 +271,7 @@ class TypeCheckerSpec extends FunSpec {
         } else {
           a[0]
         }
-        """ )
+        """)
     }
     it("can consume bank in sequenced statement not used in either branch") {
       typeCheck("""
@@ -282,18 +282,18 @@ class TypeCheckerSpec extends FunSpec {
           a[0]
         }
         a[1]
-        """ )
+        """)
     }
     it("can create different capabilities in branches") {
       // See discussion in: https://github.com/cucapra/dahlia/pull/81
-        typeCheck("""
+      typeCheck("""
           decl a: bit<10>[2 bank 2];
           if (true) {
             a[0] := 1;
           } else {
             let x = a[0];
           }
-          """ )
+          """)
     }
   }
 
@@ -303,7 +303,7 @@ class TypeCheckerSpec extends FunSpec {
         while (true) {
           let x = 1;
         }
-        """ )
+        """)
     }
   }
 
@@ -314,14 +314,14 @@ class TypeCheckerSpec extends FunSpec {
           for (let i = 0..10) unroll 3 {
             let x = 1;
           }
-          """ )
+          """)
       }
     }
   }
 
   describe("Reductions") {
     // This is equivalent to the example above
-    it ("fully unrolled loop and fully banked array") {
+    it("fully unrolled loop and fully banked array") {
       typeCheck("""
         decl a: bit<64>[10 bank 10];
         let sum: bit<64> = 0;
@@ -330,7 +330,7 @@ class TypeCheckerSpec extends FunSpec {
         } combine {
           sum += v;
         }
-          """ )
+          """)
     }
   }
 
@@ -344,7 +344,7 @@ class TypeCheckerSpec extends FunSpec {
           } combine {
             sum += x;
           }
-          """ )
+          """)
     }
 
     it("with unrolling") {
@@ -356,7 +356,7 @@ class TypeCheckerSpec extends FunSpec {
         } combine {
           sum += x;
         }
-          """ )
+          """)
     }
   }
 
@@ -366,7 +366,7 @@ class TypeCheckerSpec extends FunSpec {
         typeCheck("""
           decl a: bit<32>[10];
           a[0]; a[1]
-          """ )
+          """)
       }
     }
 
@@ -375,7 +375,7 @@ class TypeCheckerSpec extends FunSpec {
         decl a: bit<32>{2}[10];
         a[0] := 0;
         a[1] := 1;
-        """ )
+        """)
     }
 
     it("multiple reads from different locations consume resources") {
@@ -383,7 +383,7 @@ class TypeCheckerSpec extends FunSpec {
         decl a: bit<32>{2}[10];
         a[0];
         a[1];
-        """ )
+        """)
     }
 
     it("multiple reads from same locations don't consume resources") {
@@ -393,7 +393,7 @@ class TypeCheckerSpec extends FunSpec {
         a[1];
         a[0];
         a[1];
-        """ )
+        """)
     }
 
     it("allow reads and writes to the same location") {
@@ -401,7 +401,7 @@ class TypeCheckerSpec extends FunSpec {
         decl a: bit<32>{2}[10];
         a[0] := 1;
         let x = a[0];
-        """ )
+        """)
     }
 
     it("disallow writes to the same location") {
@@ -410,7 +410,7 @@ class TypeCheckerSpec extends FunSpec {
           decl a: bit<32>{2}[10];
           a[0] := 1;
           a[0] := 2;
-          """ )
+          """)
       }
     }
 
@@ -423,7 +423,7 @@ class TypeCheckerSpec extends FunSpec {
         // Bank 1
         a[1] := 1;
         a[3] := 3;
-        """ )
+        """)
     }
 
     it("index types only consume one port") {
@@ -431,7 +431,7 @@ class TypeCheckerSpec extends FunSpec {
         decl a: bit<32>{2}[10];
         for (let i = 0..10) { a[i] := 1 }
         a[0] := 2
-        """ )
+        """)
     }
 
     it("regenerate after ---") {
@@ -442,7 +442,7 @@ class TypeCheckerSpec extends FunSpec {
         ---
         a[1] := 3;
         a[0] := 4;
-        """ )
+        """)
     }
 
     it("allow more unrolling than banks") {
@@ -451,7 +451,7 @@ class TypeCheckerSpec extends FunSpec {
         for (let i = 0..8) unroll 4 {
           a[i] := 1
         }
-        """ )
+        """)
     }
   }
 
@@ -463,7 +463,7 @@ class TypeCheckerSpec extends FunSpec {
           for (let i = 0..10) unroll 2 {
             let x = a[i];
           }
-          """ )
+          """)
       }
     }
     it("bank factor of unroll") {
@@ -473,7 +473,7 @@ class TypeCheckerSpec extends FunSpec {
           for (let i = 0..8) unroll 2 {
             let x = a[i];
           }
-          """ )
+          """)
       }
     }
   }
@@ -493,11 +493,13 @@ class TypeCheckerSpec extends FunSpec {
             a[0] := 1;
           }
           b[0] := 1
-          """ )
+          """)
       }
     }
 
-    it("doesnt refresh resources globally when composed with parallel composition") {
+    it(
+      "doesnt refresh resources globally when composed with parallel composition"
+    ) {
       assertThrows[AlreadyWrite] {
         typeCheck("""
           decl a: bit<32>[8];
@@ -507,7 +509,7 @@ class TypeCheckerSpec extends FunSpec {
             a[0] := 1;
           }
           a[0] := 1
-          """ )
+          """)
       }
     }
 
@@ -516,7 +518,7 @@ class TypeCheckerSpec extends FunSpec {
               let bucket_idx = 10;
               ---
               bucket_idx := (20 as bit<4>);
-         """ )
+         """)
     }
 
     it("check for declarations used in both branches") {
@@ -527,7 +529,7 @@ class TypeCheckerSpec extends FunSpec {
                 ---
                 test_var := 30;
               }
-         """ )
+         """)
     }
   }
 
@@ -540,7 +542,7 @@ class TypeCheckerSpec extends FunSpec {
           ---
           let y = a[i];
         }
-        """ )
+        """)
     }
 
     it("allows same banks to be used with reassignment") {
@@ -551,7 +553,7 @@ class TypeCheckerSpec extends FunSpec {
           ---
           a[i] := 2;
         }
-      """ )
+      """)
     }
 
     it("reuses banks of multidimensional array") {
@@ -564,7 +566,7 @@ class TypeCheckerSpec extends FunSpec {
             a[i][j] := 3;
           }
         }
-      """ )
+      """)
     }
   }
 
@@ -576,7 +578,7 @@ class TypeCheckerSpec extends FunSpec {
 
           for(let i = 0..6) { a[0] }
           for(let i = 0..6) { a[0] }
-          """ )
+          """)
       }
     }
 
@@ -589,7 +591,7 @@ class TypeCheckerSpec extends FunSpec {
               a[0] := 1;
               a[0] := 1;
             }
-          """ )
+          """)
       }
     }
 
@@ -601,7 +603,7 @@ class TypeCheckerSpec extends FunSpec {
             let x = a[0];
             let y = a[0];
           }
-        """ )
+        """)
     }
 
     it("read cannot occur after write") {
@@ -612,7 +614,7 @@ class TypeCheckerSpec extends FunSpec {
                 a[0] := 1;
                 let x = a[0] + 1;
               }
-          """ )
+          """)
       }
     }
 
@@ -624,41 +626,41 @@ class TypeCheckerSpec extends FunSpec {
                 let x = a[0] + 1;
                 a[0] := 1;
               }
-          """ )
+          """)
       }
     }
 
     it("read after write in same context with seq composition") {
-        typeCheck("""
+      typeCheck("""
               decl a: bit<32>[6 bank 6];
               for (let i = 0..6) {
                 let x = a[0] + 1;
                 ---
                 a[0] := 1;
               }
-          """ )
+          """)
     }
 
     it("write after read in same context with seq composition") {
-        typeCheck("""
+      typeCheck("""
               decl a: bit<32>[6 bank 6];
               for (let i = 0..6) {
                 a[0] := 1;
                 ---
                 let x = a[0] + 1;
               }
-          """ )
+          """)
     }
 
     it("write after write in same context with seq composition") {
-        typeCheck("""
+      typeCheck("""
               decl a: bit<32>[6 bank 6];
               for (let i = 0..6) {
                 a[0] := 1;
                 ---
                 a[0] := 2;
               }
-          """ )
+          """)
     }
   }
 
@@ -670,7 +672,7 @@ class TypeCheckerSpec extends FunSpec {
           for (let i = 0..10) unroll 5 {
             a[0] := 1
           }
-          """ )
+          """)
       }
     }
     it("write in two unrolled loops and incorrect idx accessor") {
@@ -682,7 +684,7 @@ class TypeCheckerSpec extends FunSpec {
               a[i][0] := 1
             }
           }
-          """ )
+          """)
       }
     }
     it("write with three loops, 2 unrolled") {
@@ -696,7 +698,7 @@ class TypeCheckerSpec extends FunSpec {
               }
             }
           }
-          """ )
+          """)
       }
     }
     it("read with one constant accessor and one unrolled iterator") {
@@ -709,7 +711,7 @@ class TypeCheckerSpec extends FunSpec {
             a[j][0];
           }
         }
-        """ )
+        """)
     }
     it("read in one unrolled loop and a constant access") {
       typeCheck("""
@@ -717,7 +719,7 @@ class TypeCheckerSpec extends FunSpec {
         for (let i = 0..10) unroll 5 {
           let x = a[0]
         }
-        """ )
+        """)
     }
     it("read in two unrolled loops and incorrect idx accessor") {
       typeCheck("""
@@ -727,7 +729,7 @@ class TypeCheckerSpec extends FunSpec {
             let x = a[i][0];
           }
         }
-        """ )
+        """)
     }
     it("read with three loops, 2 unrolled") {
       typeCheck("""
@@ -739,7 +741,7 @@ class TypeCheckerSpec extends FunSpec {
             }
           }
         }
-        """ )
+        """)
     }
     it("read with two dimensional unrolling") {
       typeCheck("""
@@ -751,7 +753,7 @@ class TypeCheckerSpec extends FunSpec {
             a[i][j];
           }
         }
-        """ )
+        """)
     }
   }
 
@@ -765,7 +767,7 @@ class TypeCheckerSpec extends FunSpec {
             ---
             a[i] := 1
           }
-          """ )
+          """)
       }
     }
     it("use after define in a nested unrolled loop is not allowed") {
@@ -779,7 +781,7 @@ class TypeCheckerSpec extends FunSpec {
               a[i][j] := 1
             }
           }
-        """ )
+        """)
       }
     }
     it("skip loop dependency check when indexing is the same") {
@@ -790,9 +792,11 @@ class TypeCheckerSpec extends FunSpec {
           ---
           a[i] := 1
         }
-        """ )
+        """)
     }
-    it("skip loop dependency check when indexing is the same in a nested unrolled loop") {
+    it(
+      "skip loop dependency check when indexing is the same in a nested unrolled loop"
+    ) {
       typeCheck("""
       decl a: bit<32>{2}[10][10 bank 2];
         for (let i = 0..6) unroll 2 {
@@ -802,7 +806,7 @@ class TypeCheckerSpec extends FunSpec {
             a[i][j] := 1
           }
         }
-        """ )
+        """)
     }
     it("no skip on loop dependency check when encountered a view") {
       assertThrows[LoopDepSequential] {
@@ -814,7 +818,7 @@ class TypeCheckerSpec extends FunSpec {
             ---
             a_v[i] := 1
           }
-          """ )
+          """)
       }
     }
     it("condition in if is always a use") {
@@ -827,7 +831,7 @@ class TypeCheckerSpec extends FunSpec {
             x := 1
           }
         }
-        """ )
+        """)
     }
     it("merging condition creates don't know state") {
       assertThrows[LoopDepSequential] {
@@ -841,7 +845,7 @@ class TypeCheckerSpec extends FunSpec {
             ---
             a;
           }
-          """ )
+          """)
       }
     }
     it("merging use and define is not allowed") {
@@ -856,7 +860,7 @@ class TypeCheckerSpec extends FunSpec {
               a[i];
             }
           }
-          """ )
+          """)
       }
     }
     it("define after use in an unrolled loop works") {
@@ -867,7 +871,7 @@ class TypeCheckerSpec extends FunSpec {
           ---
           let x = a[i];
         }
-        """ )
+        """)
     }
     it("define after use in nested unrolled loop works") {
       typeCheck("""
@@ -879,7 +883,7 @@ class TypeCheckerSpec extends FunSpec {
           ---
           a[i][0];
         }
-        """ )
+        """)
     }
     it("don't know state can be transferred to defined state again") {
       typeCheck("""
@@ -894,9 +898,9 @@ class TypeCheckerSpec extends FunSpec {
           ---
           a[i];
         }
-        """ )
+        """)
     }
-    it("don't know state is fine as long as the loop execution ends"){
+    it("don't know state is fine as long as the loop execution ends") {
       typeCheck("""
       let b1min = 10;
       for(let i = 0..2) unroll 2 {
@@ -911,13 +915,12 @@ class TypeCheckerSpec extends FunSpec {
     }
   }
 
-
   describe("Functions") {
     it("cannot have same name for multiple params") {
       assertThrows[AlreadyBound] {
         typeCheck("""
           def foo(a: bool, a: bit<10>) {}
-          """ )
+          """)
       }
     }
 
@@ -926,7 +929,7 @@ class TypeCheckerSpec extends FunSpec {
         typeCheck("""
           def bar(a: bool) { foo(a) }
           def foo(a: bool) { foo(a) }
-          """ )
+          """)
       }
     }
 
@@ -934,7 +937,7 @@ class TypeCheckerSpec extends FunSpec {
       assertThrows[Unbound] {
         typeCheck("""
           def bar(a: bool) { bar(a) }
-          """ )
+          """)
       }
     }
 
@@ -960,7 +963,7 @@ class TypeCheckerSpec extends FunSpec {
         typeCheck("""
           def bar(a: bool) { }
           bar(1)
-          """ )
+          """)
       }
     }
 
@@ -971,7 +974,7 @@ class TypeCheckerSpec extends FunSpec {
           for (let i = 0..10) unroll 5 {
             bar(tre)
           }
-          """ )
+          """)
       }
     }
 
@@ -982,7 +985,7 @@ class TypeCheckerSpec extends FunSpec {
           decl x: bit<10>[10 bank 5];
           bar(x);
           x[1]
-          """ )
+          """)
       }
     }
 
@@ -991,7 +994,7 @@ class TypeCheckerSpec extends FunSpec {
         typeCheck("""
           def bar(a: bit<10>) { a }
           1 + bar(10)
-          """ )
+          """)
       }
     }
 
@@ -1002,7 +1005,7 @@ class TypeCheckerSpec extends FunSpec {
           }
           decl b: bit<32>[5 bank 5];
           foo(b)
-          """ )
+          """)
       }
     }
 
@@ -1012,7 +1015,7 @@ class TypeCheckerSpec extends FunSpec {
           def foo(a: bit<32>, b: bit<32>) {
           }
           foo(1);
-          """ )
+          """)
       }
     }
   }
@@ -1023,7 +1026,7 @@ class TypeCheckerSpec extends FunSpec {
         typeCheck("""
           decl a: bit<10>[10 bank 5][10 bank 5];
           view v = a[5 * i :]
-          """ )
+          """)
       }
     }
     it("cannot be nested inside unroll context") {
@@ -1035,16 +1038,16 @@ class TypeCheckerSpec extends FunSpec {
               view v = a[4 * j : bank 4]
             }
           }
-          """ )
+          """)
       }
     }
     it("can use loop iterator if not unrolled") {
-        typeCheck("""
+      typeCheck("""
           decl a: bit<10>[16 bank 8];
           for (let i = 0..4) {
             view v = a[8 * i :]
           }
-          """ )
+          """)
     }
     it("has the same type as the underlying array") {
       assertThrows[NoJoin] {
@@ -1052,7 +1055,7 @@ class TypeCheckerSpec extends FunSpec {
           decl a: bool[10 bank 5];
           view v = a[0!:];
           v[3] + 1;
-          """ )
+          """)
       }
     }
     it("has the same dimensions as underlying array") {
@@ -1061,7 +1064,7 @@ class TypeCheckerSpec extends FunSpec {
           decl a: bool[10 bank 5][10 bank 5];
           view v = a[0!:][0!:];
           v[1]
-          """ )
+          """)
       }
     }
     it("cannot be used in the same time step as underlying array") {
@@ -1070,7 +1073,7 @@ class TypeCheckerSpec extends FunSpec {
           decl a: bool[10 bank 5][10 bank 5];
           view v = a[0!:][0!:];
           a[0][0]; v[0][0];
-          """ )
+          """)
       }
     }
     it("throw an error if require more resources than the underlying array.") {
@@ -1082,7 +1085,7 @@ class TypeCheckerSpec extends FunSpec {
           for (let i = 0..64) unroll 64 {
             let temp_x = m1_v[i][1];
           }
-          """ )
+          """)
       }
     }
     it("with shrink require more resources than consume list") {
@@ -1094,7 +1097,7 @@ class TypeCheckerSpec extends FunSpec {
           for (let i = 0..64) unroll 4 {
             let temp_x = m1_v[i];
           }
-          """ )
+          """)
       }
     }
     it("with multiple dimensions share ports") {
@@ -1107,7 +1110,7 @@ class TypeCheckerSpec extends FunSpec {
               let temp_x = m1[i][j];
             }
           }
-          """ )
+          """)
       }
     }
     it("can cross sequential composition boundary") {
@@ -1117,7 +1120,7 @@ class TypeCheckerSpec extends FunSpec {
         m1[0];
         ---
         m1[1]
-        """ )
+        """)
     }
   }
 
@@ -1127,7 +1130,7 @@ class TypeCheckerSpec extends FunSpec {
         typeCheck("""
           decl a: bit<32>[10 bank 5][2];
           split v = a[by 5];
-          """ )
+          """)
       }
     }
     it("cannot be created inside an unrolled loop") {
@@ -1137,7 +1140,7 @@ class TypeCheckerSpec extends FunSpec {
           for (let i = 0 .. 8) unroll 2 {
             split v = a[by 5];
           }
-          """ )
+          """)
       }
     }
     it("requires split factor to divide banking factor") {
@@ -1145,7 +1148,7 @@ class TypeCheckerSpec extends FunSpec {
         typeCheck("""
           decl a: bit<32>[10];
           split v = a[by 5];
-          """ )
+          """)
       }
     }
     it("add another dimension for each non-zero split") {
@@ -1154,14 +1157,14 @@ class TypeCheckerSpec extends FunSpec {
           decl a: bit<32>[10 bank 5];
           split v = a[by 5];
           v[0]
-          """ )
+          """)
       }
     }
     it("can be created inside an normal loop") {
       typeCheck("""
         decl a: bit<32>[10 bank 5];
         split v = a[by 5];
-        """ )
+        """)
     }
   }
 
@@ -1172,7 +1175,7 @@ class TypeCheckerSpec extends FunSpec {
           decl x: bit<32>;
           decl a: bit<10>[10 bank 5];
           view v = a[3 * x :]
-          """ )
+          """)
       }
     }
 
@@ -1182,7 +1185,7 @@ class TypeCheckerSpec extends FunSpec {
           decl x: bit<32>;
           decl a: bit<10>[10 bank 10];
           view v = a[5 * x :]
-          """ )
+          """)
       }
     }
 
@@ -1192,7 +1195,7 @@ class TypeCheckerSpec extends FunSpec {
           decl x: bit<32>;
           decl a: bit<10>[10 bank 5];
           view v = a[x * x :]
-          """ )
+          """)
       }
     }
 
@@ -1201,7 +1204,7 @@ class TypeCheckerSpec extends FunSpec {
         decl x: bit<32>;
         decl a: bit<10>[16 bank 8];
         view v = a[6 * x : bank 2]
-        """ )
+        """)
     }
   }
 
@@ -1211,7 +1214,7 @@ class TypeCheckerSpec extends FunSpec {
         decl a: bit<10>[10 bank 5];
         decl i: bit<32>;
         view v = a[i * i ! :]
-        """ )
+        """)
     }
   }
 
@@ -1223,7 +1226,7 @@ class TypeCheckerSpec extends FunSpec {
           view v1 = a[0!:][0!:];
           view v2 = a[1!:][2!:];
           v1[0][0]; v2[0][0];
-          """ )
+          """)
       }
     }
     it("views created from other views cannot be used together") {
@@ -1233,25 +1236,27 @@ class TypeCheckerSpec extends FunSpec {
           view v1 = a[0!:][0!:];
           view v2 = v1[1!:][2!:];
           a[0][0]; v2[0][0];
-          """ )
+          """)
       }
     }
-    it("split views created from the same underlying arrays cannot be used together") {
+    it(
+      "split views created from the same underlying arrays cannot be used together"
+    ) {
       assertThrows[AlreadyConsumed] {
         typeCheck("""
           decl a: bit<32>[10 bank 2][10 bank 2];
           view v1 = a[0!:][0!:];
           split v2 = a[by 2][by 2];
           v2[0][1][0][2]; v1[0][0];
-          """ )
+          """)
       }
     }
     it("arrays have fine grained bank tracking") {
-        typeCheck("""
+      typeCheck("""
           decl a: float[2 bank 2][10 bank 2];
           a[0][0];
           a[1][1];
-          """ )
+          """)
     }
     it("simple views dont have fine grained bank tracking") {
       assertThrows[AlreadyConsumed] {
@@ -1259,7 +1264,7 @@ class TypeCheckerSpec extends FunSpec {
           decl a: float[10 bank 2][10];
           view v1 = a[2 * 1: +2][0!:];
           v1[0][0]; v1[1][0];
-          """ )
+          """)
       }
     }
     it("views defined in sequencing are available") {
@@ -1274,7 +1279,7 @@ class TypeCheckerSpec extends FunSpec {
           A_1[0];
           A_2[0];
         }
-        """ )
+        """)
     }
     it("physical resources defined in sequencing are available") {
       typeCheck("""
@@ -1283,7 +1288,7 @@ class TypeCheckerSpec extends FunSpec {
         let B: float[10];
         ---
         let x = A[1] + B[1];
-        """ )
+        """)
     }
   }
 
@@ -1293,7 +1298,7 @@ class TypeCheckerSpec extends FunSpec {
         for (let i = 0..10) {
           let x = i * 2;
         }
-        """ )
+        """)
     }
 
     it("can be used for comparisons") {
@@ -1304,7 +1309,7 @@ class TypeCheckerSpec extends FunSpec {
             let x = 0;
           }
         }
-        """ )
+        """)
     }
 
     it("can be passed to functions with int types") {
@@ -1316,7 +1321,7 @@ class TypeCheckerSpec extends FunSpec {
         for (let i = 0..5) {
           test(i);
         }
-        """ )
+        """)
     }
 
     it("can be used with bit shifts") {
@@ -1324,7 +1329,7 @@ class TypeCheckerSpec extends FunSpec {
         for (let i = 0..10) {
           let x = i | 2;
         }
-        """ )
+        """)
     }
 
     it("with arithmetic, can be used for access") {
@@ -1333,7 +1338,7 @@ class TypeCheckerSpec extends FunSpec {
         for (let i = 0..10) {
           a[i * 2];
         }
-        """ )
+        """)
     }
   }
 
@@ -1390,7 +1395,7 @@ class TypeCheckerSpec extends FunSpec {
           x: bit<32>;
           y: bit<32>
         }
-        """ )
+        """)
     }
     it("can be used in a declaration") {
       typeCheck("""
@@ -1399,7 +1404,7 @@ class TypeCheckerSpec extends FunSpec {
           y: bit<32>
         }
         decl k: point;
-        """ )
+        """)
     }
     it("can be used in a declaration nested declaration") {
       typeCheck("""
@@ -1410,7 +1415,7 @@ class TypeCheckerSpec extends FunSpec {
         record bars {
           k: point
         }
-        """ )
+        """)
     }
     it("cannot use undefined type aliases") {
       assertThrows[Unbound] {
@@ -1418,7 +1423,7 @@ class TypeCheckerSpec extends FunSpec {
           record bars {
             k: point
           }
-          """ )
+          """)
       }
     }
     it("cannot contain arrays") {
@@ -1427,7 +1432,7 @@ class TypeCheckerSpec extends FunSpec {
           record bars {
             k: bit<10>[10]
           }
-          """ )
+          """)
       }
     }
     it("cannot rebind type alias") {
@@ -1439,7 +1444,7 @@ class TypeCheckerSpec extends FunSpec {
           record bars {
             l: bit<32>
           }
-          """ )
+          """)
       }
     }
     it("can access bound field") {
@@ -1449,7 +1454,7 @@ class TypeCheckerSpec extends FunSpec {
         }
         decl k: point;
         let x = k.x;
-        """ )
+        """)
     }
     it("can bound field has the right return type") {
       typeCheck("""
@@ -1458,7 +1463,7 @@ class TypeCheckerSpec extends FunSpec {
         }
         decl k: point;
         let x = k.x + 1;
-        """ )
+        """)
     }
     it("can bound field has the right return type in nested struct") {
       typeCheck("""
@@ -1470,7 +1475,7 @@ class TypeCheckerSpec extends FunSpec {
         }
         decl k: foo;
         let x = k.p.x + 1;
-        """ )
+        """)
     }
   }
 
@@ -1479,14 +1484,14 @@ class TypeCheckerSpec extends FunSpec {
       typeCheck("""
         record point { x: bit<32>; y: bit<32> }
         let p: point = {x = 1; y = 2 }
-        """ )
+        """)
     }
     it("cannot be defined without explicit type in let") {
       assertThrows[ExplicitTypeMissing] {
         typeCheck("""
           record point { x: bit<32>; y: bit<32> }
           let p = {x = 1; y = 2 }
-          """ )
+          """)
       }
     }
     it("cannot be used inside expressions") {
@@ -1494,22 +1499,22 @@ class TypeCheckerSpec extends FunSpec {
         typeCheck("""
           record point { x: bit<32>; y: bit<32> }
           let p = 1 + {x = 1; y = 2 }
-          """ )
+          """)
       }
     }
     it("get the right type") {
-        typeCheck("""
+      typeCheck("""
           record point { x: bit<32>; y: bit<32> }
           let p: point = {x = 1; y = 2 };
           let f: bit<32> = p.x;
-          """ )
+          """)
     }
     it("cannot have fields missing") {
       assertThrows[MissingField] {
         typeCheck("""
           record point { x: bit<32>; y: bit<32> }
           let p: point = {x = 1};
-          """ )
+          """)
       }
     }
     it("cannot have extra fields") {
@@ -1517,7 +1522,7 @@ class TypeCheckerSpec extends FunSpec {
         typeCheck("""
           record point { x: bit<32> }
           let p: point = {x = 1; y = 2};
-          """ )
+          """)
       }
     }
   }
@@ -1527,34 +1532,34 @@ class TypeCheckerSpec extends FunSpec {
       assertThrows[ExplicitTypeMissing] {
         typeCheck("""
           let x = {1, 2, 3}
-          """ )
+          """)
       }
     }
     it("does not support multidimensional literals") {
       assertThrows[Unsupported] {
         typeCheck("""
           let x: bit<32>[10][10] = {1, 2, 3}
-          """ )
+          """)
       }
     }
     it("requires literal to have the same size") {
       assertThrows[LiteralLengthMismatch] {
         typeCheck("""
           let x: bit<32>[5] = {1, 2, 3}
-          """ )
+          """)
       }
     }
     it("requires subtypes in the array literal") {
       assertThrows[UnexpectedSubtype] {
         typeCheck("""
           let x: bit<32>[3] = {true, false, true}
-          """ )
+          """)
       }
     }
     it("can be banked") {
       typeCheck("""
         let x: bool[3 bank 3] = {true, false, true}
-        """ )
+        """)
     }
     it("can be used without initializer") {
       typeCheck("""
@@ -1564,7 +1569,7 @@ class TypeCheckerSpec extends FunSpec {
           ---
           x[0] := false
         }
-        """ )
+        """)
     }
   }
 
@@ -1572,7 +1577,7 @@ class TypeCheckerSpec extends FunSpec {
     it("works with an unbanked array") {
       typeCheck("decl a: bit<10>[10]; decl x: bit<10>; a[x] := 5")
     }
-    it ("doesn't work with banked array") {
+    it("doesn't work with banked array") {
       assertThrows[InvalidDynamicIndex] {
         typeCheck("decl a: bit<10>[10 bank 5]; decl x: bit<10>; a[x] := 5")
       }
@@ -1589,7 +1594,7 @@ class TypeCheckerSpec extends FunSpec {
         decl x: bit<16>;
         decl y: bit<32>;
         x == y
-        """ )
+        """)
     }
 
     it("static ints are subtypes of index types") {
@@ -1597,7 +1602,7 @@ class TypeCheckerSpec extends FunSpec {
         for (let i = 0..12) {
           i == 1
         }
-        """ )
+        """)
     }
 
     it("index types are subtypes of sized ints") {
@@ -1606,7 +1611,7 @@ class TypeCheckerSpec extends FunSpec {
         for (let i = 0..12) {
           i == x
         }
-        """ )
+        """)
     }
 
     it("index types get upcast to sized int with log2(maxVal)") {
@@ -1615,7 +1620,7 @@ class TypeCheckerSpec extends FunSpec {
         for (let i = 0..33) {
           arr[5] := i * 1;
         }
-        """ )
+        """)
     }
 
     it("Array subtyping is not allowed") {
@@ -1627,7 +1632,7 @@ class TypeCheckerSpec extends FunSpec {
 
           decl a: bit<2>[10];
           foo(a)
-          """ )
+          """)
       }
     }
 
@@ -1638,7 +1643,7 @@ class TypeCheckerSpec extends FunSpec {
               let x = i + j;
             }
         }
-        """ )
+        """)
     }
 
     it("equal types have joins") {
@@ -1650,7 +1655,7 @@ class TypeCheckerSpec extends FunSpec {
         let i1: bit<32> = 10;
         let i2: bit<32> = 11;
         i1 == i2;
-        """ )
+        """)
     }
 
     it("float is a subtype of double") {
@@ -1658,7 +1663,7 @@ class TypeCheckerSpec extends FunSpec {
         decl x: float;
         decl y: float;
         let z: double = x + y;
-        """ )
+        """)
     }
     it("fix is not a subtype of double") {
       assertThrows[UnexpectedSubtype] {
@@ -1666,7 +1671,7 @@ class TypeCheckerSpec extends FunSpec {
           decl x: fix<3,2>;
           decl y: fix<3,2>;
           let z: double = x + y;
-          """ )
+          """)
       }
     }
     it("unsigned and signed bit types are incomparable") {
@@ -1675,7 +1680,7 @@ class TypeCheckerSpec extends FunSpec {
           decl x: ubit<32>;
           decl y: bit<32>;
           let z = x + y;
-          """ )
+          """)
       }
     }
     it("unsigned and signed fixed point types are incomparable") {
@@ -1684,14 +1689,16 @@ class TypeCheckerSpec extends FunSpec {
           decl x: ufix<32,16>;
           decl y: fix<32,16>;
           let z = x + y;
-          """ )
+          """)
       }
     }
-    it("negative rational number cannot be assigend to unsigned fixed point type") {
+    it(
+      "negative rational number cannot be assigend to unsigned fixed point type"
+    ) {
       assertThrows[UnexpectedSubtype] {
         typeCheck("""
           let z:ufix<32,16> = -0.5;
-          """ )
+          """)
       }
     }
   }
@@ -1704,7 +1711,7 @@ class TypeCheckerSpec extends FunSpec {
         }
         decl a: float[4];
         print_vect(a);
-        """ )
+        """)
     }
   }
 
@@ -1713,7 +1720,7 @@ class TypeCheckerSpec extends FunSpec {
       typeCheck("""
         decl a: bit<32>[10];
         let v = a[9];
-        """ )
+        """)
     }
 
     it("static ints larger than array size fail") {
@@ -1721,7 +1728,7 @@ class TypeCheckerSpec extends FunSpec {
         typeCheck("""
           decl a: bit<32>[10];
           let v = a[10];
-          """ )
+          """)
       }
     }
 
@@ -1731,7 +1738,7 @@ class TypeCheckerSpec extends FunSpec {
           decl a: bit<32>[10];
           decl b: bit<32>[10];
           let v = a[9] + b[10];
-          """ )
+          """)
       }
     }
 
@@ -1742,7 +1749,7 @@ class TypeCheckerSpec extends FunSpec {
         for (let i = 0..10) {
           a[i] := 0;
         }
-        """ )
+        """)
     }
 
     it("array access with index types fails when maxVal > array length") {
@@ -1753,7 +1760,7 @@ class TypeCheckerSpec extends FunSpec {
           for (let i = 0..11) {
             a[i] := 0;
           }
-        """ )
+        """)
       }
     }
 
@@ -1763,7 +1770,7 @@ class TypeCheckerSpec extends FunSpec {
           decl a: bit<32>[10];
           view v_a = a[0!:+3];
           v_a[3];
-          """ )
+          """)
       }
     }
 
@@ -1774,7 +1781,7 @@ class TypeCheckerSpec extends FunSpec {
           for (let i = 0..10) {
             view v_a = a[i!:+3];
           }
-          """ )
+          """)
       }
     }
   }
@@ -1785,47 +1792,49 @@ class TypeCheckerSpec extends FunSpec {
         decl x: float;
         decl y: bit<32>;
         (y as float) + x;
-        """ )
+        """)
     }
     it("safe to cast bit to fix as long as the integer length part is shorter") {
       typeCheck("""
         decl x: fix<32,16>;
         decl y: bit<16>;
         (y as fix<32,16>) + x;
-        """ )
+        """)
     }
     it("warning when casting float to bit type") {
       typeCheck("""
         decl x: float;
         decl y: bit<32>;
         (x as bit<32>) + y
-        """ )
+        """)
     }
     it("warning when casting fix to bit type") {
       typeCheck("""
         decl x: fix<32,16>;
         decl y: bit<16>;
         (x as bit<16>) + y
-        """ )
+        """)
     }
     it("safe to cast integer float to double") {
       typeCheck("""
         decl x: float;
         decl y: double;
         y + (x as double);
-        """ )
+        """)
     }
     it("safe to cast fix to double") {
       typeCheck("""
         decl x: fix<10,5>;
         decl y: double;
         y + (x as double);
-        """ )
+        """)
     }
   }
 
   describe("Array access dependent on loop iteration variables") {
-    it("assignments in both branches of a conditional can override variable that depends on loop iteration") {
+    it(
+      "assignments in both branches of a conditional can override variable that depends on loop iteration"
+    ) {
       typeCheck("""
       let foo: float[2];
       for (let j = 0..2) unroll 2 {
@@ -1840,7 +1849,9 @@ class TypeCheckerSpec extends FunSpec {
         }
       }""")
     }
-    it("single branche conditional does not override variable that depends on loop iteration") {
+    it(
+      "single branche conditional does not override variable that depends on loop iteration"
+    ) {
       assertThrows[TypeError] {
         typeCheck("""
           let foo: float[2];
@@ -1882,7 +1893,9 @@ class TypeCheckerSpec extends FunSpec {
           }""")
       }
     }
-    it("Chain of assignments that leads back to loop iterator + conditional overwriting of last var") {
+    it(
+      "Chain of assignments that leads back to loop iterator + conditional overwriting of last var"
+    ) {
       typeCheck("""
         let foo: float[2];
         for (let j = 0..2) unroll 2 {

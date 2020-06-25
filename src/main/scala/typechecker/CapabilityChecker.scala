@@ -20,13 +20,13 @@ object CapabilityChecker {
     val emptyEnv = CapabilityEnv.emptyEnv
 
     /**
-     * Check an array read.
-     * - If there is already a Read capability for this expression, ignore.
-     * - If there are no capabilities or a write capability, add a consume
-     *   annotation.
-     */
+      * Check an array read.
+      * - If there is already a Read capability for this expression, ignore.
+      * - If there are no capabilities or a write capability, add a consume
+      *   annotation.
+      */
     override def myCheckE: PF[(Expr, Env), Env] = {
-      case (acc@EArrAccess(_, idxs), env) => {
+      case (acc @ EArrAccess(_, idxs), env) => {
         val (nEnv, consumableAnn, cap) = env.get(acc) match {
           case Some(Read) => (env, SkipConsume, Read)
           case Some(Write) | None => (checkESeq(idxs)(env), ShouldConsume, Read)
@@ -41,14 +41,14 @@ object CapabilityChecker {
     }
 
     /**
-     * Check an array write. If there is already a write capability, error.
-     * Otherwise try to acquire a write capability.
-     *
-     * This doesn't need to be partial function since it deals with all
-     * cases in checkLVal.
-     */
+      * Check an array write. If there is already a write capability, error.
+      * Otherwise try to acquire a write capability.
+      *
+      * This doesn't need to be partial function since it deals with all
+      * cases in checkLVal.
+      */
     override def checkLVal(e: Expr)(implicit env: Env) = e match {
-      case acc@EArrAccess(_, idxs) => {
+      case acc @ EArrAccess(_, idxs) => {
         val (nEnv, consumableAnn, cap) = env.get(e) match {
           case Some(Write) => throw AlreadyWrite(e)
           case Some(Read) | None => (checkESeq(idxs), ShouldConsume, Write)

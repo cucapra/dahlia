@@ -208,9 +208,9 @@ object Transformer {
   }
 
   /**
-  * Definition of a trivial environment that doesn't track any
-  * information.
-  */
+    * Definition of a trivial environment that doesn't track any
+    * information.
+    */
   final case class UnitEnv() extends ScopeManager[UnitEnv] {
     def merge(that: UnitEnv) = this
   }

@@ -8,9 +8,10 @@ import Syntax._
 private class FuseParser extends RegexParsers with PackratParsers {
   type P[T] = PackratParser[T]
 
-  override protected val whiteSpace = """(\s|\/\/.*|(/\*((\*[^/])|[^*])*\*/))+""".r
+  override protected val whiteSpace =
+    """(\s|\/\/.*|(/\*((\*[^/])|[^*])*\*/))+""".r
 
-   // General parser combinators
+  // General parser combinators
   def braces[T](parser: P[T]): P[T] = "{" ~> parser <~ "}"
   def brackets[T](parser: P[T]): P[T] = "[" ~> parser <~ "]"
   def parens[T](parser: P[T]): P[T] = "(" ~> parser <~ ")"
@@ -20,17 +21,23 @@ private class FuseParser extends RegexParsers with PackratParsers {
   lazy val iden: P[Id] = positioned {
     "" ~> "[a-zA-Z_][a-zA-Z0-9_]*".r ^^ { v => Id(v) }
   }
-  lazy val number = "[0-9]+".r ^^ { n => n.toInt } | err("Expected positive number")
+  lazy val number = "[0-9]+".r ^^ { n =>
+    n.toInt
+  } | err("Expected positive number")
 
   lazy val stringVal: P[String] =
     "\"" ~> "[^\"]*".r <~ "\""
 
   // Atoms
   lazy val uInt: P[Expr] = "(-)?[0-9]+".r ^^ { n => EInt(n.toInt) }
-  lazy val hex = "0x[0-9a-fA-F]+".r ^^ { n => Integer.parseInt(n.substring(2), 16) }
+  lazy val hex = "0x[0-9a-fA-F]+".r ^^ { n =>
+    Integer.parseInt(n.substring(2), 16)
+  }
   lazy val octal = "0[0-7]+".r ^^ { n => Integer.parseInt(n.substring(1), 8) }
-  lazy val rational = "(-)?[0-9]+\\.[0-9]+".r ^^ {r => ERational(r)}
-  lazy val boolean = "true" ^^ { _ => true } | "false" ^^ { _ => false }
+  lazy val rational = "(-)?[0-9]+\\.[0-9]+".r ^^ { r => ERational(r) }
+  lazy val boolean = "true" ^^ { _ =>
+    true
+  } | "false" ^^ { _ => false }
 
   lazy val arrLiteral: P[Expr] = positioned {
     braces(repsep(expr, ",")) ^^ { case es => EArrLiteral(es) }
@@ -39,65 +46,75 @@ private class FuseParser extends RegexParsers with PackratParsers {
     iden ~ rep1(brackets(expr)) ^^ { case id ~ idxs => EArrAccess(id, idxs) }
   }
 
-  lazy val recLiteralField: P[(Id, Expr)] = iden ~ ("=" ~> expr) ^^ { case i ~ e => (i, e) }
+  lazy val recLiteralField: P[(Id, Expr)] = iden ~ ("=" ~> expr) ^^ {
+    case i ~ e => (i, e)
+  }
   lazy val recLiteral: P[Expr] = positioned {
     braces(repsep(recLiteralField, ";")) ^^ { case fs => ERecLiteral(fs.toMap) }
   }
 
-  lazy val exprCast: P[Expr] = parens(expr ~ "as" ~ atyp) ^^ { case e ~ _ ~ t => ECast(e, t)}
+  lazy val exprCast: P[Expr] = parens(expr ~ "as" ~ atyp) ^^ {
+    case e ~ _ ~ t => ECast(e, t)
+  }
 
   lazy val simpleAtom: P[Expr] = positioned {
     arrLiteral |
-    eaa |
-    recLiteral |
-    rational |
-    hex ^^ { case h => EInt(h, 16) } |
-    octal ^^ { case o => EInt(o, 8) } |
-    uInt |
-    boolean ^^ { case b => EBool(b) } |
-    iden ~ parens(repsep(expr, ",")) ^^ { case f ~ args => EApp(f, args) } |
-    iden ^^ { case id => EVar(id) } |
-    exprCast |
-    parens(expr)
+      eaa |
+      recLiteral |
+      rational |
+      hex ^^ { case h => EInt(h, 16) } |
+      octal ^^ { case o => EInt(o, 8) } |
+      uInt |
+      boolean ^^ { case b => EBool(b) } |
+      iden ~ parens(repsep(expr, ",")) ^^ { case f ~ args => EApp(f, args) } |
+      iden ^^ { case id => EVar(id) } |
+      exprCast |
+      parens(expr)
   }
 
   lazy val recAccess: P[Expr] = positioned {
     recAccess ~ "." ~ iden ^^ { case rec ~ _ ~ f => ERecAccess(rec, f) } |
-    simpleAtom
+      simpleAtom
   }
 
   // Binops. Need to parse them seperately from EBinop to get positions.
   import Syntax.{OpConstructor => OC}
   lazy val mulOps: P[BOp] = positioned {
-    "/" ^^ { _ => NumOp("/", OC.div) } |
-    "*" ^^ { _ => NumOp("*", OC.mul) } |
-    "%" ^^ { _ => NumOp("%", OC.mod) }
+    "/" ^^ { _ =>
+      NumOp("/", OC.div)
+    } |
+      "*" ^^ { _ => NumOp("*", OC.mul) } |
+      "%" ^^ { _ => NumOp("%", OC.mod) }
   }
   lazy val addOps: P[BOp] = positioned {
-    "+" ^^ { _ => NumOp("+", OC.add) } |
-    "-" ^^ { _ => NumOp("-", OC.sub) }
+    "+" ^^ { _ =>
+      NumOp("+", OC.add)
+    } |
+      "-" ^^ { _ => NumOp("-", OC.sub) }
   }
   lazy val eqOps: P[BOp] = positioned {
-    ("==" | "!=") ^^ { op => EqOp(op) } |
-    (">=" | "<=" | ">" | "<") ^^ { op => CmpOp(op) }
+    ("==" | "!=") ^^ { op =>
+      EqOp(op)
+    } |
+      (">=" | "<=" | ">" | "<") ^^ { op => CmpOp(op) }
   }
   lazy val shOps: P[BOp] = positioned {
-    (">>" | "<<") ^^ { op => BitOp(op)}
+    (">>" | "<<") ^^ { op => BitOp(op) }
   }
   lazy val bAnd: P[BOp] = positioned("&" ^^ { op => BitOp(op) })
-  lazy val bOr: P[BOp] = positioned("|" ^^  { op => BitOp(op) })
+  lazy val bOr: P[BOp] = positioned("|" ^^ { op => BitOp(op) })
   lazy val bXor: P[BOp] = positioned("^" ^^ { op => BitOp(op) })
 
   lazy val and: P[BOp] = positioned("&&" ^^ { op => BoolOp(op) })
-  lazy val or: P[BOp] = positioned("||" ^^  { op => BoolOp(op) })
+  lazy val or: P[BOp] = positioned("||" ^^ { op => BoolOp(op) })
 
   /** Expressions
-   * The bin* parsers implement the precedence order of operators described
-   * for C/C++: https://en.cppreference.com/w/c/language/operator_precedence
-   * The tower-like structure is required to implement precedence correctly.
-   */
+    * The bin* parsers implement the precedence order of operators described
+    * for C/C++: https://en.cppreference.com/w/c/language/operator_precedence
+    * The tower-like structure is required to implement precedence correctly.
+    */
   def parseOp(base: P[Expr], op: P[BOp]): P[Expr] = positioned {
-    chainl1(base, op ^^ { case op => EBinop(op, _, _)})
+    chainl1(base, op ^^ { case op => EBinop(op, _, _) })
   }
   lazy val binMul = parseOp(recAccess, mulOps)
   lazy val binAdd = parseOp(binMul, addOps)
@@ -108,26 +125,35 @@ private class FuseParser extends RegexParsers with PackratParsers {
   lazy val binBOr = parseOp(binBXor, bOr)
   lazy val binAnd = parseOp(binBOr, and)
   lazy val binOr = parseOp(binAnd, or)
-  lazy val expr = positioned (binOr)
+  lazy val expr = positioned(binOr)
 
   // Types
   lazy val typIdx: P[DimSpec] =
-    brackets(number ~ ("bank" ~> number).?) ^^ { case n ~ b => (n, b.getOrElse(1)) }
+    brackets(number ~ ("bank" ~> number).?) ^^ {
+      case n ~ b => (n, b.getOrElse(1))
+    }
 
   lazy val atyp: P[Type] =
-    "float" ^^ { _ => TFloat() } |
-    "double" ^^ { _ => TDouble() } |
-    "bool" ^^ { _ => TBool() } |
-    "bit" ~> angular(number) ^^ { case s => TSizedInt(s, false) } |
-    "ubit" ~> angular(number) ^^ { case s => TSizedInt(s, true) } |
-    "fix" ~> angular(number~","~number ) ^^{ case s1~_~s2 => TFixed(s1,s2,false) } |
-    "ufix" ~> angular(number~","~number ) ^^{ case s1~_~s2 => TFixed(s1,s2,true) } |
-    iden ^^ { case id => TAlias(id) }
-  lazy val typ: P[Type] =
-    atyp ~ braces(number).? ~ rep1(typIdx) ^^ { case t ~ p ~ dims =>
-      TArray(t, dims, p.getOrElse(1))
+    "float" ^^ { _ =>
+      TFloat()
     } |
-    atyp
+      "double" ^^ { _ => TDouble() } |
+      "bool" ^^ { _ => TBool() } |
+      "bit" ~> angular(number) ^^ { case s => TSizedInt(s, false) } |
+      "ubit" ~> angular(number) ^^ { case s => TSizedInt(s, true) } |
+      "fix" ~> angular(number ~ "," ~ number) ^^ {
+        case s1 ~ _ ~ s2 => TFixed(s1, s2, false)
+      } |
+      "ufix" ~> angular(number ~ "," ~ number) ^^ {
+        case s1 ~ _ ~ s2 => TFixed(s1, s2, true)
+      } |
+      iden ^^ { case id => TAlias(id) }
+  lazy val typ: P[Type] =
+    atyp ~ braces(number).? ~ rep1(typIdx) ^^ {
+      case t ~ p ~ dims =>
+        TArray(t, dims, p.getOrElse(1))
+    } |
+      atyp
 
   // For loops
   lazy val block: P[Command] =
@@ -140,7 +166,8 @@ private class FuseParser extends RegexParsers with PackratParsers {
   }
   lazy val cfor: P[Command] = positioned {
     "for" ~> crange ~ "pipeline".? ~ block ~ ("combine" ~> block).? ^^ {
-      case range ~ pl ~ par ~ c => CFor(range, pl.isDefined, par, c.getOrElse(CEmpty))
+      case range ~ pl ~ par ~ c =>
+        CFor(range, pl.isDefined, par, c.getOrElse(CEmpty))
     }
   }
 
@@ -151,8 +178,8 @@ private class FuseParser extends RegexParsers with PackratParsers {
   // Simple views
   lazy val viewSuffix: P[Suffix] = positioned {
     expr <~ "!" ^^ { case e => Rotation(e) } |
-    number ~ "*" ~ expr ^^ { case fac ~ _ ~ e => Aligned(fac, e) } |
-    "_" ^^ { case _ => Rotation(EInt(0)) }
+      number ~ "*" ~ expr ^^ { case fac ~ _ ~ e => Aligned(fac, e) } |
+      "_" ^^ { case _ => Rotation(EInt(0)) }
   }
 
   lazy val viewParam: P[View] = positioned {
@@ -176,8 +203,9 @@ private class FuseParser extends RegexParsers with PackratParsers {
 
   // If
   lazy val conditional: P[Command] = positioned {
-    "if" ~> parens(expr) ~ block ~ ("else" ~> block).?  ^^ {
-      case cond ~ cons ~ alt => CIf(cond, cons, if (alt.isDefined) alt.get else CEmpty )
+    "if" ~> parens(expr) ~ block ~ ("else" ~> block).? ^^ {
+      case cond ~ cons ~ alt =>
+        CIf(cond, cons, if (alt.isDefined) alt.get else CEmpty)
     }
   }
 
@@ -185,37 +213,39 @@ private class FuseParser extends RegexParsers with PackratParsers {
     "let" ~> iden ~ (":" ~> typ).? ~ ("=" ~> expr).? ^^ {
       case id ~ t ~ exp => CLet(id, t, exp)
     } |
-    "return" ~> expr ^^ { case e => CReturn(e) } |
-    view | splitView |
-    expr ~ ":=" ~ expr ^^ { case l ~ _ ~ r => CUpdate(l, r) } |
-    expr ~ rop ~ expr ^^ { case l ~ rop ~ r => CReduce(rop, l, r) } |
-    expr ^^ { case e => CExpr(e) }
+      "return" ~> expr ^^ { case e => CReturn(e) } |
+      view | splitView |
+      expr ~ ":=" ~ expr ^^ { case l ~ _ ~ r => CUpdate(l, r) } |
+      expr ~ rop ~ expr ^^ { case l ~ rop ~ r => CReduce(rop, l, r) } |
+      expr ^^ { case e => CExpr(e) }
   }
 
   lazy val blockCmd: P[Command] = positioned {
     block |
-    cfor |
-    conditional |
-    "while" ~> parens(expr) ~ "pipeline".? ~ block ^^ { case cond ~ pl ~ body => CWhile(cond, pl.isDefined, body) } |
-    decor
+      cfor |
+      conditional |
+      "while" ~> parens(expr) ~ "pipeline".? ~ block ^^ {
+        case cond ~ pl ~ body => CWhile(cond, pl.isDefined, body)
+      } |
+      decor
   }
 
   lazy val parCmd: P[Command] = positioned {
     simpleCmd ~ ";" ~ parCmd ^^ { case c1 ~ _ ~ c2 => CPar(c1, c2) } |
-    blockCmd ~ parCmd ^^ { case c1 ~ c2 => CPar(c1, c2) } |
-    simpleCmd <~ ";" | blockCmd | simpleCmd
+      blockCmd ~ parCmd ^^ { case c1 ~ c2 => CPar(c1, c2) } |
+      simpleCmd <~ ";" | blockCmd | simpleCmd
   }
 
   lazy val cmd: P[Command] = positioned {
     parCmd ~ "---" ~ cmd ^^ { case c1 ~ _ ~ c2 => CSeq(c1, c2) } |
-    parCmd
+      parCmd
   }
 
   lazy val args: P[Decl] = iden ~ (":" ~> typ) ^^ { case i ~ t => Decl(i, t) }
 
   // Declarations
   lazy val decl: P[Decl] = positioned {
-    "decl" ~> args  <~ ";"
+    "decl" ~> args <~ ";"
   }
 
   // Definitions
@@ -273,4 +303,3 @@ object FuseParser {
     case res => throw Errors.ParserError(s"$res")
   }
 }
-

@@ -10,10 +10,10 @@ object Pretty {
 
   def emitProg(p: Prog)(implicit debug: Boolean): String = {
     val layout = vsep(p.includes.map(emitInclude)) <@>
-    vsep(p.defs.map(emitDef)) <@>
-    vsep(p.decors.map(d => text(d.value))) <@>
-    vsep(p.decls.map(d => text("decl") <+> emitDecl(d) <> semi)) <@>
-    emitCmd(p.cmd)
+      vsep(p.defs.map(emitDef)) <@>
+      vsep(p.decors.map(d => text(d.value))) <@>
+      vsep(p.decls.map(d => text("decl") <+> emitDecl(d) <> semi)) <@>
+      emitCmd(p.cmd)
 
     layout.pretty
   }
@@ -25,7 +25,7 @@ object Pretty {
   def emitDef(defi: Definition)(implicit debug: Boolean): Doc = defi match {
     case FuncDef(id, args, ret, bodyOpt) => {
       text("def") <+> id <> parens(ssep(args.map(emitDecl), comma <> space)) <+>
-      emitTyp(ret) <> bodyOpt.map(emitCmd).getOrElse(semi)
+        emitTyp(ret) <> bodyOpt.map(emitCmd).getOrElse(semi)
     }
     case RecordDef(name, fields) => {
       text("record") <+> name <+> scope(vsep(fields.map({
@@ -43,7 +43,8 @@ object Pretty {
 
   implicit def emitId(id: Id)(implicit debug: Boolean): Doc = {
     val idv = value(id.v)
-    if (debug) id.typ.map(t => brackets(idv <> colon <+> emitTyp(t))).getOrElse(idv)
+    if (debug)
+      id.typ.map(t => brackets(idv <> colon <+> emitTyp(t))).getOrElse(idv)
     else idv
   }
 
@@ -60,26 +61,34 @@ object Pretty {
     case EApp(fn, args) => fn <> parens(commaSep(args.map(emitExpr)))
     case EInt(v, base) => value(emitBaseInt(v, base))
     case ERational(d) => value(d)
-    case EBool(b) => value(if(b) 1 else 0)
+    case EBool(b) => value(if (b) 1 else 0)
     case EVar(id) => value(id)
     case EBinop(op, e1, e2) => parens(e1 <+> text(op.toString) <+> e2)
-    case acc@EArrAccess(id, idxs) => {
+    case acc @ EArrAccess(id, idxs) => {
       val doc = id <> ssep(idxs.map(idx => brackets(emitExpr(idx))), emptyDoc)
-      if (debug) brackets(doc <> colon <+> acc.consumable.map(emitConsume).getOrElse(emptyDoc))
+      if (debug)
+        brackets(
+          doc <> colon <+> acc.consumable.map(emitConsume).getOrElse(emptyDoc)
+        )
       else doc
     }
     case EArrLiteral(idxs) => braces(commaSep(idxs.map(idx => emitExpr(idx))))
     case ERecAccess(rec, field) => rec <> dot <> field
-    case ERecLiteral(fs) => scope {
-      commaSep(fs.toList.map({ case (id, expr) => id <+> equal <+> expr <> semi }))
-    }
+    case ERecLiteral(fs) =>
+      scope {
+        commaSep(fs.toList.map({
+          case (id, expr) => id <+> equal <+> expr <> semi
+        }))
+      }
   }
 
   def emitRange(range: CRange)(implicit debug: Boolean): Doc = {
     val CRange(id, s, e, u) = range
 
-    parens(text("let") <+> id <+> equal <+> value(s) <+> text("..") <+> value(e)) <>
-    (if (u > 1) space <> text("unroll") <+> value(u) else emptyDoc)
+    parens(
+      text("let") <+> id <+> equal <+> value(s) <+> text("..") <+> value(e)
+    ) <>
+      (if (u > 1) space <> text("unroll") <+> value(u) else emptyDoc)
   }
 
   def emitView(view: View)(implicit debug: Boolean): Doc = {
@@ -103,7 +112,7 @@ object Pretty {
         typ.map(space <> colon <+> emitTyp(_)).getOrElse(emptyDoc) <>
         e.map(space <> equal <+> emitExpr(_)).getOrElse(emptyDoc) <> semi
     case CIf(cond, cons, alt) => {
-      text("if") <+> parens(cond) <+> scope (cons) <> (alt match {
+      text("if") <+> parens(cond) <+> scope(cons) <> (alt match {
         case CEmpty => emptyDoc
         case _ => space <> text("else") <+> scope(alt)
       })
@@ -114,7 +123,9 @@ object Pretty {
         scope(emitCmd(par)) <+> text("combine") <+> scope(emitCmd(com))
     case CWhile(cond, pipe, body) =>
       text("while") <+> parens(cond) <>
-        (if (pipe) space <> text("pipeline") else emptyDoc) <+> scope(emitCmd(body))
+        (if (pipe) space <> text("pipeline") else emptyDoc) <+> scope(
+        emitCmd(body)
+      )
     case CDecorate(dec) => value(dec)
     case CUpdate(lhs, rhs) => lhs <+> equal <+> rhs <> semi
     case CReduce(rop, lhs, rhs) => lhs <+> text(rop.toString) <+> rhs <> semi
@@ -126,6 +137,9 @@ object Pretty {
         ssep(dims.map(v => brackets(emitView(v))), emptyDoc) <> semi
     case CSplit(vId, arrId, factors) =>
       text("split") <+> vId <+> equal <+> arrId <>
-        ssep(factors.map(factor => brackets(text("by") <+> value(factor))), emptyDoc)
+        ssep(
+          factors.map(factor => brackets(text("by") <+> value(factor))),
+          emptyDoc
+        )
   }
 }

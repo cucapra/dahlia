@@ -95,12 +95,12 @@ object AffineChecker {
     override def checkDef(defi: Definition)(implicit env: Env) = defi match {
       case FuncDef(_, args, _, bodyOpt) => {
         val (env2, _, _) = env.withScope(1) { newScope =>
-
           // Add physical resources corresponding to array decls
           val envWithResources = args
-            .collect({ case Decl(id, t:TArray) => id -> t})
-            .foldLeft(newScope)({ case (env, (id, t)) =>
-              addPhysicalResource(id, t, env)
+            .collect({ case Decl(id, t: TArray) => id -> t })
+            .foldLeft(newScope)({
+              case (env, (id, t)) =>
+                addPhysicalResource(id, t, env)
             })
 
           bodyOpt
@@ -109,13 +109,13 @@ object AffineChecker {
         }
         env2
       }
-      case _:RecordDef => env
+      case _: RecordDef => env
     }
 
     /**
-     * Add physical resources and default accessor gadget corresponding to a new
-     * array. This is used for `decl` with arrays and new `let` bound arrays.
-     */
+      * Add physical resources and default accessor gadget corresponding to a new
+      * array. This is used for `decl` with arrays and new `let` bound arrays.
+      */
     private def addPhysicalResource(id: Id, typ: TArray, env: Env) = {
       val banks = typ.dims.map(_._2)
       env
@@ -123,33 +123,37 @@ object AffineChecker {
         .add(id, MultiDimGadget(ResourceGadget(id, banks), typ.dims))
     }
 
-
     /**
-     * Generate a ConsumeList corresponding to the underlying memory type and
-     * the index accessors.
-     */
-    private def getConsumeList(idxs: List[Expr], dims: List[DimSpec])
-                              (implicit arrId: Id) = {
+      * Generate a ConsumeList corresponding to the underlying memory type and
+      * the index accessors.
+      */
+    private def getConsumeList(idxs: List[Expr], dims: List[DimSpec])(
+        implicit arrId: Id
+    ) = {
 
-      val (bres, consume) = idxs.zipWithIndex.foldLeft((1, IndexedSeq[Seq[Int]]()))({
-        case ((bres, consume), (idx, dim)) => idx.typ.get match {
-          // Index is an index type.
-          case TIndex((s, e), _) =>
-            if ((e - s) % dims(dim)._2 != 0)
-              throw BankUnrollInvalid(arrId, dims(dim)._2, e - s)(idx.pos)
-            else
-              (bres * (e - s), Range(s, e) +: consume)
-          // Index is a statically known number.
-          case TStaticInt(v) =>
-            (bres * 1, Vector(v % dims(dim)._2) +: consume)
-          // Index is a dynamic number.
-          case _:TSizedInt =>
-            if (dims(dim)._2 != 1) throw InvalidDynamicIndex(arrId, dims(dim)._2)
-            else (bres * 1, Vector(0) +: consume)
+      val (bres, consume) = idxs.zipWithIndex.foldLeft(
+        (1, IndexedSeq[Seq[Int]]())
+      )({
+        case ((bres, consume), (idx, dim)) =>
+          idx.typ.get match {
+            // Index is an index type.
+            case TIndex((s, e), _) =>
+              if ((e - s) % dims(dim)._2 != 0)
+                throw BankUnrollInvalid(arrId, dims(dim)._2, e - s)(idx.pos)
+              else
+                (bres * (e - s), Range(s, e) +: consume)
+            // Index is a statically known number.
+            case TStaticInt(v) =>
+              (bres * 1, Vector(v % dims(dim)._2) +: consume)
+            // Index is a dynamic number.
+            case _: TSizedInt =>
+              if (dims(dim)._2 != 1)
+                throw InvalidDynamicIndex(arrId, dims(dim)._2)
+              else (bres * 1, Vector(0) +: consume)
 
-          case t =>
-            throw UnexpectedType(idx.pos, "array indexing", "integer type", t)
-        }
+            case t =>
+              throw UnexpectedType(idx.pos, "array indexing", "integer type", t)
+          }
       })
 
       // Reverse the types list to match the order with idxs.
@@ -157,9 +161,9 @@ object AffineChecker {
     }
 
     /**
-     * Checks a given simple view and returns the dimensions for the view,
-     * shrink factors, and an updated environment.
-     */
+      * Checks a given simple view and returns the dimensions for the view,
+      * shrink factors, and an updated environment.
+      */
     /*private def checkView(view: View, arrDim: DimSpec): (Int, DimSpec) = {
 
       val View(suf, pre, shrink) = view
@@ -176,7 +180,7 @@ object AffineChecker {
     }*/
 
     override def checkLVal(e: Expr)(implicit env: Env) = e match {
-      case acc@EArrAccess(id, idxs) => {
+      case acc @ EArrAccess(id, idxs) => {
         // This only triggers for l-values.
         val TArray(_, dims, _) = id.typ.get
         acc.consumable match {
@@ -184,18 +188,23 @@ object AffineChecker {
             val (bres, consumeList) = getConsumeList(idxs, dims)(id)
             // Check if the accessors generated enough copies for the context.
             if (bres != env.getResources)
-              throw InsufficientResourcesInUnrollContext(env.getResources, bres, e)
+              throw InsufficientResourcesInUnrollContext(
+                env.getResources,
+                bres,
+                e
+              )
             // Consume the resources required by this gadget.
-          env.consumeWithGadget(id, consumeList)(acc.pos)
+            env.consumeWithGadget(id, consumeList)(acc.pos)
           }
-          case con => throw Impossible(s"$acc in write position has $con annotation")
+          case con =>
+            throw Impossible(s"$acc in write position has $con annotation")
         }
       }
       case _ => checkE(e)
     }
 
     override def myCheckC: PF[(Command, Env), Env] = {
-      case (CLet(id, Some(ta@TArray(_, _, _)), _), env) => {
+      case (CLet(id, Some(ta @ TArray(_, _, _)), _), env) => {
         addPhysicalResource(id, ta, env)
       }
       case (CSeq(c1, c2), env) => {
@@ -242,32 +251,36 @@ object AffineChecker {
       case (CSplit(id, arrId, _), env) => {
         val TArray(_, adims, _) = arrId.typ.get
         val TArray(_, vdims, _) = id.typ.get
-        env.add(id,
-          splitGadget(env(arrId), adims, vdims))
+        env.add(id, splitGadget(env(arrId), adims, vdims))
       }
     }
 
     override def myCheckE: PF[(Expr, Env), Env] = {
       case (EApp(_, args), env) => {
-        args.foldLeft(env)({ case (e, argExpr) => {
-          // If an array id is used as a parameter, consume it completely.
-          // This works correctly with capabilities.
-          (argExpr.typ.get, argExpr) match {
-            case (ta:TArray, EVar(gadget)) => {
-              val consumeList = ta.dims.map(dim => 0.until(dim._2))
-              e.consumeWithGadget(gadget, consumeList)(argExpr.pos)
+        args.foldLeft(env)({
+          case (e, argExpr) => {
+            // If an array id is used as a parameter, consume it completely.
+            // This works correctly with capabilities.
+            (argExpr.typ.get, argExpr) match {
+              case (ta: TArray, EVar(gadget)) => {
+                val consumeList = ta.dims.map(dim => 0.until(dim._2))
+                e.consumeWithGadget(gadget, consumeList)(argExpr.pos)
+              }
+              case (_: TArray, expr) => {
+                throw Impossible(s"Type of $expr is ${argExpr.typ.get}")
+              }
+              case _ => e
             }
-            case (_:TArray, expr) => {
-              throw Impossible(s"Type of $expr is ${argExpr.typ.get}")
-            }
-            case _ => e
           }
-        }})
+        })
       }
-      case (expr@EArrAccess(id, idxs), env) => {
+      case (expr @ EArrAccess(id, idxs), env) => {
         val TArray(_, dims, _) = id.typ.get
         expr.consumable match {
-          case None => throw Impossible(s"$expr in read position has no consumable annotation")
+          case None =>
+            throw Impossible(
+              s"$expr in read position has no consumable annotation"
+            )
           case Some(Annotations.SkipConsume) => env
           case Some(Annotations.ShouldConsume) => {
             val (_, consumeList) = getConsumeList(idxs, dims)(id)

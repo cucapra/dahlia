@@ -98,7 +98,8 @@ private class FutilBackendHelper {
             case ">" => "gt"
             case "<=" => "lte"
             case ">=" => "gte"
-            case x => throw NotImplemented(s"Futil backend does not support $x yet.")
+            case x =>
+              throw NotImplemented(s"Futil backend does not support $x yet.")
           }
         emitBinop(compName, e1, e2)
       }

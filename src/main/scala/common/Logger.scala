@@ -5,13 +5,15 @@ import scribe._
 import scribe.format._
 
 object Logger {
+
   /** Makes all positionals logable by scribe */
-  implicit object PositionalLoggable extends Loggable[(String,Positional)] {
+  implicit object PositionalLoggable extends Loggable[(String, Positional)] {
     override def apply(value: (String, Positional)) = {
       val pos = value._2.pos
 
       new output.TextOutput(
-        s"[${pos.line}.${pos.column}] ${value._1}\n${pos.longString}")
+        s"[${pos.line}.${pos.column}] ${value._1}\n${pos.longString}"
+      )
     }
   }
 
@@ -23,14 +25,15 @@ object Logger {
   }
 
   /**
-   * Stateful function to set the logging level in the compiler.
-   */
+    * Stateful function to set the logging level in the compiler.
+    */
   def setLogLevel(level: Level) = {
-    scribe.Logger.root.clearHandlers().withHandler(
-      formatter = format, minimumLevel = Some(level)).replace()
+    scribe.Logger.root
+      .clearHandlers()
+      .withHandler(formatter = format, minimumLevel = Some(level))
+      .replace()
   }
 
   val format: Formatter = formatter"[$levelColored] $message$newLine"
 
 }
-
