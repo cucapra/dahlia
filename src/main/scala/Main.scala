@@ -55,9 +55,9 @@ object Main {
       .action((_, c) => c.copy(enableLowering = true))
       .text("Enable passes to lower programs. Default: false")
 
-    opt[String]('l', "log-level")
+    /*opt[String]('l', "log-level")
       .action((s, c) => c.copy(logLevel = Logger.stringToLevel(s)))
-      .text("Set logging level for the compiler. Default: `info`.")
+      .text("Set logging level for the compiler. Default: `info`.")*/
 
     opt[Unit]('h', "header")
       .action((_, c) => c.copy(header = true))
@@ -94,23 +94,23 @@ object Main {
       case false => Left(s"$path: No such file in working directory")
     }
 
-    val cppPath: Either[ErrString, Option[Path]] = prog.flatMap(prog =>
+    val cppPath: Either[ErrString, Option[Path]] = prog.right.flatMap(prog =>
       conf.output match {
         case Some(out) =>
-          compileStringToFile(prog, conf, out).map(path => Some(path))
+          compileStringToFile(prog, conf, out).right.map(path => Some(path))
         case None =>
-          compileString(prog, conf).map(res => { println(res); None })
+          compileString(prog, conf).right.map(res => { println(res); None })
       }
     )
 
-    val status: Either[ErrString, Int] = cppPath.flatMap(pathOpt =>
+    val status: Either[ErrString, Int] = cppPath.right.flatMap(pathOpt =>
       conf.mode match {
-        case Run =>
-          GenerateExec.generateExec(
-            pathOpt.get,
-            s"${conf.output.get}.o",
-            conf.compilerOpts
-          )
+        case Run => Right(0)
+          //GenerateExec.generateExec(
+            //pathOpt.get,
+            //s"${conf.output.get}.o",
+            //conf.compilerOpts
+          //)
         case _ => Right(0)
       }
     )
@@ -122,7 +122,7 @@ object Main {
 
     parser.parse(args, emptyConf) match {
       case Some(conf) => {
-        Logger.setLogLevel(conf.logLevel)
+        //Logger.setLogLevel(conf.logLevel)
         val status = runWithConfig(conf)
         sys.exit(
           status.left

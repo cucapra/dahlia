@@ -42,12 +42,12 @@ object BoundsChecker {
               case idx: TIndex => fac * idx.maxVal
               case TStaticInt(v) => fac * v
               case idx: TSizedInt =>
-                scribe.warn(
+                /*scribe.warn(
                   (
                     s"$idx is used to create view $viewId. This could be unsafe.",
                     idx
                   )
-                );
+                );*/
                 1
             }
 
@@ -71,13 +71,13 @@ object BoundsChecker {
                     t.foreach({
                       case idxt @ TSizedInt(n, _) =>
                         if (math.pow(2, n) >= size) {
-                          scribe.warn(
+                          /*scribe.warn(
                             (
                               s"$idxt is used for an array access. " +
                                 "This might be out of bounds at runtime.",
                               idx
                             )
-                          )
+                          )*/
                         }
                       case TStaticInt(v) =>
                         if (v >= size)

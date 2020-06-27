@@ -131,7 +131,7 @@ object Gadgets {
         .map({
           // Remove all the common elements and consume at least the entire array.
           // This handles the case when the consume list is larger than all.
-          case (cl, all) => cl.diff(all).appendedAll(all)
+          case (cl, all) => List(cl.diff(all), all).flatten
         })
     }
     ViewGadget(underlying, transformer)

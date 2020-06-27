@@ -8,7 +8,7 @@ import fuselang.common._
 import Syntax._
 import Errors._
 import CompilerError._
-import Logger.PositionalLoggable
+//import Logger.PositionalLoggable
 
 /**
   * Type checker implementation for Dahlia.
@@ -132,9 +132,9 @@ object TypeChecker {
     case ECast(e, castType) => {
       val (typ, nEnv) = checkE(e)
       if (safeCast(typ, castType) == false) {
-        scribe.warn {
-          (s"Casting $typ to $castType which may lose precision.", expr)
-        }
+        //scribe.warn {
+          //(s"Casting $typ to $castType which may lose precision.", expr)
+        //}
       }
       castType -> nEnv
     }

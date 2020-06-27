@@ -114,7 +114,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
     * The tower-like structure is required to implement precedence correctly.
     */
   def parseOp(base: P[Expr], op: P[BOp]): P[Expr] = positioned {
-    chainl1(base, op ^^ { case op => EBinop(op, _, _) })
+    chainl1(base, op ^^ { case op => EBinop(op, _: Expr, _: Expr) })
   }
   lazy val binMul = parseOp(recAccess, mulOps)
   lazy val binAdd = parseOp(binMul, addOps)

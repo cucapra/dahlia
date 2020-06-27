@@ -43,7 +43,7 @@ object CodeGenHelpers {
   def fastDiv(l: Expr, r: Expr) = r match {
     case EInt(n, _) if (isPowerOfTwo(n)) => l >> EInt(log2(n).toInt, 10)
     case e => {
-      scribe.warn(s"Cannot generate fast division for dynamic expression $e")
+      //scribe.warn(s"Cannot generate fast division for dynamic expression $e")
       l div r
     }
   }
@@ -52,7 +52,7 @@ object CodeGenHelpers {
   def fastMod(l: Expr, r: Expr) = r match {
     case EInt(n, _) if (isPowerOfTwo(n)) => l & EInt(n - 1, 10)
     case e => {
-      scribe.warn(s"Cannot generate fast division for dynamic expression $e")
+      //scribe.warn(s"Cannot generate fast division for dynamic expression $e")
       l mod r
     }
   }

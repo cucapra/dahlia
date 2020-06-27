@@ -130,13 +130,13 @@ object Futil {
         id: CompVar,
         structure: List[Structure]
     ): (Group, List[Structure]) = {
-      val (connections, st) = structure.partitionMap[Connect, Structure](st =>
+      val (connections, st) = structure.partition(st =>
         st match {
-          case c: Connect => Left(c)
-          case s => Right(s)
+          case _: Connect => true
+          case _ => false
         }
       )
-      (this(id, connections), st)
+      (this(id, connections.collect({ case c:Connect => c })), st)
     }
   }
   case class Connect(src: Port, dest: Port) extends Structure
