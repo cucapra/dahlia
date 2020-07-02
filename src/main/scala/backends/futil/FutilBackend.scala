@@ -1,10 +1,9 @@
 package fuselang.backend.futil
 
 import fuselang.backend.futil.Futil._
-
+import fuselang.Utils._
 import fuselang.common._
 import Syntax._
-
 import Configuration._
 import CompilerError._
 
@@ -26,21 +25,49 @@ private class FutilBackendHelper {
     */
   type Store = Map[CompVar, CompVar]
 
+  def emitArrayDecl(typ: TArray, id: Id): List[Structure] = {
+    // No support for multi-ported memories or banked memories.
+    assertOrThrow(
+      typ.ports == 1, NotImplemented("Emitting multi-ported memories."))
+    assertOrThrow(
+      typ.dims.forall(_._2 == 1), NotImplemented("Banked memories."))
+
+    val width = typ.typ match {
+      case _:TBool => 1
+      case TSizedInt(size, unsigned) => {
+        assert(unsigned, NotImplemented("Arrays of signed integers."))
+        size
+      }
+      case x => throw NotImplemented(s"Arrays of $x")
+    }
+    val name = CompVar(s"${id}")
+
+    val mem = typ.dims.length match {
+      case 1 => {
+        val size = typ.dims(0)._1
+        // XXX(rachit): Index using 32-bit numbers for now since all constants
+        // are 32-bit.
+        val idxSize = /* bitsNeeded(size) */ 32
+        LibDecl(name, Stdlib.mem_d1(width, size, idxSize))
+      }
+      case n => throw NotImplemented(s"Arrays of size $n")
+    }
+    List(mem)
+  }
+
   /** `emitDecl(d)` computes the structure that is needed to
     *  represent the declaration `d`. Simply returns a `List[Structure]`.
     */
   def emitDecl(d: Decl): List[Structure] = d.typ match {
-    case TArray(_, dims, _) => {
-      val const =
-        LibDecl(CompVar(s"${d.id}-init"), Stdlib.constant(32, 0))
-      val mem = LibDecl(CompVar(s"${d.id}"), Stdlib.memory(dims.map(_._1)))
-      List(const, mem, Connect(const.id.port("out"), mem.id.port("data-in")))
+    case tarr: TArray => emitArrayDecl(tarr, d.id)
+    case _:TBool => {
+      val reg = LibDecl(CompVar("${d.id}"), Stdlib.register(1))
+      List(reg)
     }
-    case TBool() | TFloat() | TDouble() => {
-      val const =
-        LibDecl(CompVar(s"${d.id}-c"), Stdlib.constant(32, 0))
-      val reg = LibDecl(CompVar("${d.id}"), Stdlib.register(32))
-      List(const, reg, Connect(ThisPort(const.id), reg.id.port("in")))
+    case TSizedInt(size, unsigned) => {
+      assert(unsigned, NotImplemented("Generating signed integers"))
+      val reg = LibDecl(CompVar("${d.id}"), Stdlib.register(size))
+      List(reg)
     }
     case x => throw NotImplemented(s"Type $x not implemented for decls.")
   }
@@ -83,10 +110,6 @@ private class FutilBackendHelper {
         val const = LibDecl(genName("const"), Stdlib.constant(32, v))
         (const.id.port("out"), List(const))
       }
-      case ERational(v: String) => {
-        val const = LibDecl(genName("const"), Stdlib.constant(32, v.toInt))
-        (const.id.port("out"), List(const))
-      }
       case EBinop(op, e1, e2) => {
         val compName =
           op.op match {
@@ -110,6 +133,22 @@ private class FutilBackendHelper {
           List()
         )
       case ECast(e, _) => emitExpr(e)
+      case EArrAccess(id, accessors) => {
+        val arr = store(CompVar(s"$id"))
+        // We always need to specify and address on the `addr` ports. Generate
+        // the additional structure.
+        val indexing = accessors.zipWithIndex.foldLeft(List[Structure]())({
+          case (structs, (accessor, idx)) => {
+            val (port, struct) = emitExpr(accessor)
+            val con = Connect(port, arr.port("addr" + idx))
+            con :: struct ++ structs
+          }
+        })
+
+        // The value is generated on `read_data` and written on `write_data`.
+        val portName = if (lhs) "write_data" else "read_data"
+        (arr.port(portName), indexing)
+      }
       case x => throw NotImplemented(s"Futil backend does not support $x yet.")
     }
 
@@ -127,6 +166,10 @@ private class FutilBackendHelper {
         val (struct2, con2, s2) = emitCmd(c2)(s1)
         (struct1 ++ struct2, con1.seq(con2), s2)
       }
+      case CLet(id, Some(tarr: TArray), None) =>
+        (emitArrayDecl(tarr, id), Empty, store)
+      case CLet(_, Some(_:TArray), Some(_)) =>
+        throw NotImplemented(s"Futil backed cannot initialize memories")
       case CLet(id, _, Some(e)) => {
         val reg = LibDecl(CompVar(s"$id"), Stdlib.register(32))
         val (port, exStruct) = emitExpr(e)(store)
@@ -141,7 +184,7 @@ private class FutilBackendHelper {
       case CLet(id, _, None) => {
         val reg = LibDecl(CompVar(s"$id"), Stdlib.register(32))
         val struct = List(reg)
-        (struct, Empty(), store + (CompVar(s"$id") -> reg.id))
+        (struct, Empty, store + (CompVar(s"$id") -> reg.id))
       }
       case CUpdate(lhs, rhs) => {
         val (lPort, lexStruct) = emitExpr(lhs, true)(store)
@@ -171,7 +214,7 @@ private class FutilBackendHelper {
       }
       case _: CFor =>
         throw BackendError(
-          "for loops cannot be directed generated. Use the --lower flag to turn them into while loops."
+          "for loops cannot be directly generated. Use the --lower flag to turn them into while loops."
         )
       case x => throw NotImplemented(s"Futil backed does not support $x yet")
     }

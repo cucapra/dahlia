@@ -181,7 +181,7 @@ object Futil {
       case Print(_) =>
         throw Impossible("Futil does not support print")
       case Enable(id) => id.doc <> semi
-      case Empty() => text("empty")
+      case Empty => text("empty")
     }
   }
   case class SeqComp(stmts: List[Control]) extends Control
@@ -191,7 +191,7 @@ object Futil {
   case class While(port: Port, cond: CompVar, body: Control) extends Control
   case class Print(id: CompVar) extends Control
   case class Enable(id: CompVar) extends Control
-  case class Empty() extends Control
+  case object Empty extends Control
 }
 
 /** Represents all of the primitives in Futil. */
@@ -211,8 +211,8 @@ object Stdlib {
   def identity(bitwidth: Int): Futil.CompInst =
     Futil.CompInst(s"std_id", List(bitwidth))
 
-  def memory(dims: List[Int]): Futil.CompInst =
-    Futil.CompInst("std_mem", dims)
+  def mem_d1(width: Int, size: Int, idxSize: Int): Futil.CompInst =
+    Futil.CompInst("std_mem_d1", List(width, size, idxSize))
 
   def sqrt(): Futil.CompInst =
     Futil.CompInst("std_sqrt", List())

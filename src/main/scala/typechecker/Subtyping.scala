@@ -1,7 +1,8 @@
 package fuselang.typechecker
 
-import scala.math.{max, log10, ceil, abs}
+import scala.math.max
 import fuselang.common.Syntax._
+import fuselang.Utils.bitsNeeded
 
 /**
   * Subtyping relations are only defined over the number hierarchy. Read 't1 < t2'
@@ -40,12 +41,6 @@ import fuselang.common.Syntax._
   *  t2.
   */
 object Subtyping {
-  def bitsNeeded(n: Int): Int = n match {
-    case 0 => 1
-    case n if n > 0 => ceil(log10(n + 1) / log10(2)).toInt
-    case n if n < 0 => bitsNeeded(abs(n)) + 1
-  }
-
   def areEqual(t1: Type, t2: Type) = (t1, t2) match {
     case (TStaticInt(v1), TStaticInt(v2)) => v1 == v2
     case (_: TIndex, _: TIndex) => true
