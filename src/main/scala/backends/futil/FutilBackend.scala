@@ -210,7 +210,7 @@ private class FutilBackendHelper {
           Group.fromStructure(genName("cond"), condStruct)
         val (bodyStruct, bodyCon, st) = emitCmd(body)
         val control = While(condPort, condGroup.id, bodyCon)
-        (bodyStruct ++ condDefs, control, st)
+        (condGroup :: bodyStruct ++ condDefs, control, st)
       }
       case _: CFor =>
         throw BackendError(
