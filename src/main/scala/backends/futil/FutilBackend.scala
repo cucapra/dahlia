@@ -12,7 +12,7 @@ import CompilerError._
   *  - `done` holds the port that signals when the writing or reading from `port` is done
   *  - `structure` represents additional structure involved in computing the expression
   */
-private class EmitOutput(
+private case class EmitOutput(
     val port: Port,
     val done: Port,
     val structure: List[Structure]
@@ -72,8 +72,6 @@ private class FutilBackendHelper {
     val mem = typ.dims.length match {
       case 1 => {
         val size = typ.dims(0)._1
-        // XXX(rachit): Index using 32-bit numbers for now since all constants
-        // are 32-bit.
         val idxSize = bitsNeeded(size - 1)
         LibDecl(name, Stdlib.mem_d1(width, size, idxSize))
       }
@@ -121,7 +119,7 @@ private class FutilBackendHelper {
       Connect(e1Out.port, comp.id.port("left")),
       Connect(e2Out.port, comp.id.port("right"))
     )
-    new EmitOutput(
+    EmitOutput(
       comp.id.port("out"),
       ConstantPort(1, 1),
       struct ++ e1Out.structure ++ e2Out.structure
@@ -143,7 +141,7 @@ private class FutilBackendHelper {
         val _ = lhs
         val const =
           LibDecl(genName("const"), Stdlib.constant(bitsForType(expr.typ), v))
-        new EmitOutput(const.id.port("out"), ConstantPort(1, 1), List(const))
+        EmitOutput(const.id.port("out"), ConstantPort(1, 1), List(const))
       }
       case EBinop(op, e1, e2) => {
         val compName =
@@ -168,7 +166,7 @@ private class FutilBackendHelper {
         val struct =
           if (lhs) List(Connect(ConstantPort(1, 1), varName.port("write_en")))
           else List()
-        new EmitOutput(
+        EmitOutput(
           varName.port(portName),
           varName.port("done"),
           struct
@@ -195,7 +193,7 @@ private class FutilBackendHelper {
         val writeEnStruct =
           if (lhs) List(Connect(ConstantPort(1, 1), arr.port("write_en")))
           else List()
-        new EmitOutput(
+        EmitOutput(
           arr.port(portName),
           arr.port("done"),
           indexing ++ writeEnStruct

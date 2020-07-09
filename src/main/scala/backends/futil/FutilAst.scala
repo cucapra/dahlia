@@ -167,8 +167,8 @@ object Futil {
   sealed trait GuardExpr extends Emitable {
     override def doc(): Doc = this match {
       case Atom(item) => item.doc
-      case And(left, right) => left.doc <+> text("&") <+> right.doc
-      case Or(left, right) => left.doc <+> text("|") <+> right.doc
+      case And(left, right) => parens(left.doc <+> text("&") <+> right.doc)
+      case Or(left, right) => parens(left.doc <+> text("|") <+> right.doc)
     }
   }
 
