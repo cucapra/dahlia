@@ -131,7 +131,7 @@ object TypeChecker {
     case EArrLiteral(_) => throw NotInBinder(expr.pos, "Array Literal")
     case ECast(e, castType) => {
       val (typ, nEnv) = checkE(e)
-      if (safeCast(typ, castType) == false) {
+      if (!safeCast(typ, castType)) {
         scribe.warn {
           (s"Casting $typ to $castType which may lose precision.", expr)
         }
