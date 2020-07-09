@@ -74,18 +74,31 @@ object Futil {
       case CompPort(id, name) =>
         id.doc <> dot <> text(name)
       case ThisPort(id) => id.doc
+      case HolePort(id, name) =>
+        id.doc <> brackets(text(name))
+      case ConstantPort(width, value) =>
+        text(width.toString) <> text("'d") <> text(value.toString)
     }
 
     override def compare(that: Port): Int = (this, that) match {
       case (ThisPort(thisId), ThisPort(thatId)) => thisId.compare(thatId)
+      case (CompPort(thisId, _), CompPort(thatId, _)) => thisId.compare(thatId)
+      case (HolePort(thisId, _), HolePort(thatId, _)) => thisId.compare(thatId)
+      case (ConstantPort(_, thisV), ConstantPort(_, thatV)) =>
+        thisV.compare(thatV)
       case (ThisPort(_), _) => 1
       case (_, ThisPort(_)) => -1
-      case (CompPort(thisId, _), CompPort(thatId, _)) => thisId.compare(thatId)
+      case (CompPort(_, _), _) => 1
+      case (_, CompPort(_, _)) => -1
+      case (ConstantPort(_, _), _) => 1
+      case (_, ConstantPort(_, _)) => -1
     }
   }
 
   case class CompPort(id: CompVar, name: String) extends Port
   case class ThisPort(id: CompVar) extends Port
+  case class HolePort(id: CompVar, name: String) extends Port
+  case class ConstantPort(width: Int, value: Int) extends Port
 
   sealed trait Structure extends Emitable with Ordered[Structure] {
     override def doc(): Doc = this match {
@@ -93,7 +106,9 @@ object Futil {
         id.doc <+> equal <+> comp.doc <> semi
       case LibDecl(id, comp) =>
         id.doc <+> equal <+> text("prim") <+> comp.doc <> semi
-      case Connect(src, dest) =>
+      case Connect(src, dest, Some(guard)) =>
+        dest.doc <+> equal <+> guard.doc <+> text("?") <+> src.doc <> semi
+      case Connect(src, dest, None) =>
         dest.doc <+> equal <+> src.doc <> semi
       case Group(id, conns) =>
         text("group") <+> id.doc <+>
@@ -106,7 +121,7 @@ object Futil {
         case (CompDecl(thisId, _), CompDecl(thatId, _)) =>
           thisId.compare(thatId)
         case (Group(thisId, _), Group(thatId, _)) => thisId.compare(thatId)
-        case (Connect(thisSrc, thisDest), Connect(thatSrc, thatDest)) => {
+        case (Connect(thisSrc, thisDest, _), Connect(thatSrc, thatDest, _)) => {
           if (thisSrc.compare(thatSrc) == 0) {
             thisDest.compare(thatDest)
           } else {
@@ -139,7 +154,8 @@ object Futil {
       (this(id, connections), st)
     }
   }
-  case class Connect(src: Port, dest: Port) extends Structure
+  case class Connect(src: Port, dest: Port, guard: Option[GuardExpr] = None)
+      extends Structure
 
   case class CompInst(id: String, args: List[Int]) extends Emitable {
     override def doc(): Doc = {
@@ -147,6 +163,18 @@ object Futil {
       text(id) <> parens(hsep(strList, comma))
     }
   }
+
+  sealed trait GuardExpr extends Emitable {
+    override def doc(): Doc = this match {
+      case Atom(item) => item.doc
+      case And(left, right) => left.doc <+> text("&") <+> right.doc
+      case Or(left, right) => left.doc <+> text("|") <+> right.doc
+    }
+  }
+
+  case class Atom(item: Port) extends GuardExpr
+  case class And(left: GuardExpr, right: GuardExpr) extends GuardExpr
+  case class Or(left: GuardExpr, right: GuardExpr) extends GuardExpr
 
   /***** control *****/
   sealed trait Control extends Emitable {
@@ -167,7 +195,7 @@ object Futil {
       case SeqComp(stmts) =>
         text("seq") <+> scope(vsep(stmts.map(_.doc)))
       case ParComp(stmts) =>
-        text("par") <+> scope(vsep(stmts.map(_.doc)))
+        text("seq") <+> scope(vsep(stmts.map(_.doc)))
       case If(port, cond, trueBr, falseBr) =>
         text("if") <+> port.doc <+> text("with") <+>
           cond.doc <+>
