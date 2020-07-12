@@ -434,7 +434,7 @@ private class FutilBackendHelper {
     Namespace(
       "prog",
       List(
-        Import("primitives/std.lib"),
+        Import("../futil/primitives/std.lib"),
         Component("main", List(), List(), struct.sorted, control)
       )
     ).emit

@@ -7,19 +7,8 @@ import java.nio.file.{Files, Paths, Path, StandardOpenOption}
 import common._
 import Configuration._
 import Syntax._
-import Transformer.{PartialTransformer, TypedPartialTransformer}
 
 object Compiler {
-
-  // Transformers to execute *before* type checking.
-  val preTransformers: List[(String, PartialTransformer)] = List(
-    "Lower for loops" -> passes.LowerForLoops
-  )
-
-  // Transformers to execute *after* type checking.
-  val postTransformers: List[(String, TypedPartialTransformer)] = List(
-    "Rewrite views" -> passes.RewriteView
-  )
 
   def showDebug(ast: Prog, pass: String, c: Config): Unit = {
     if (c.passDebug) {
@@ -36,43 +25,61 @@ object Compiler {
     case Futil => backend.futil.FutilBackend
   }
 
-  def checkStringWithError(prog: String, c: Config = emptyConf) = {
-    val preAst = FuseParser.parse(prog)
+  var allTime: Map[String, Double] = Map()
 
-    // Run pre transformers if lowering is enabled
-    val ast = if (c.enableLowering) {
-      preTransformers.foldLeft(preAst)({
-        case (ast, (name, pass)) => {
-          val newAst = pass.rewrite(ast)
-          showDebug(newAst, name, c)
-          newAst
-        }
-      })
-    } else {
-      preAst
-    }
-    passes.WellFormedChecker.check(ast)
-    typechecker.TypeChecker.typeCheck(ast);
-    showDebug(ast, "Type Checking", c)
-    passes.BoundsChecker.check(ast); // Doesn't modify the AST.
-    passes.LoopChecker.check(ast); // Doesn't modify the AST.
-    passes.DependentLoops.check(ast); // Doesn't modify the AST.
-    typechecker.CapabilityChecker.check(ast);
+  def time[R](name: String, block: => R): R = {
+    val t0 = System.nanoTime()
+    val result = block // call-by-name
+    val t1 = System.nanoTime()
+    val time = (t1 - t0) / 1000000.0
+    allTime += s"$name: " -> time
+    result
+  }
+
+  def checkStringWithError(prog: String, c: Config = emptyConf) = {
+    val ast = time("parse", { FuseParser.parse(prog) })
+    time("well formedness", { passes.WellFormedChecker.check(ast) })
+    time("type checking", {
+      typechecker.TypeChecker.typeCheck(ast); showDebug(ast, "Type Checking", c)
+    })
+    time(
+      "bounds checking", { passes.BoundsChecker.check(ast) }
+    ); // Doesn't modify the AST.
+    time(
+      "loop checking", { passes.LoopChecker.check(ast) }
+    ); // Doesn't modify the AST.
+    time(
+      "dependent loop checking", { passes.DependentLoops.check(ast) }
+    ); // Doesn't modify the AST.
+    time("capability checking", { typechecker.CapabilityChecker.check(ast) });
     showDebug(ast, "Capability Checking", c)
     typechecker.AffineChecker.check(ast); // Doesn't modify the AST
+    time(
+      "affine checking", { typechecker.AffineChecker.check(ast) }
+    ); // Doesn't modify the AST
     ast
   }
 
   def codegen(ast: Prog, c: Config = emptyConf) = {
-    // Run post transformers
-    val transformedAst = postTransformers.foldLeft(ast)({
-      case (ast, (name, pass)) => {
-        val newAst = pass.rewrite(ast)
-        showDebug(newAst, name, c)
-        newAst
-      }
-    })
-    toBackend(c.backend).emit(transformedAst, c)
+    val rast = passes.RewriteView.rewrite(ast);
+    showDebug(rast, "Rewrite Views", c)
+    allTime.toList
+      .sortBy(-_._2)
+      .foreach({
+        case (pass, time) =>
+          System.err.println(f"$pass: ${time}%2.2f" + "ms")
+      })
+
+    // Perform program lowering if needed.
+    val finalAst: Prog = if (c.enableLowering) {
+      val fast = passes.LowerForLoops.rewrite(rast)
+      showDebug(fast, "LowerForLoops", c)
+      fast
+    } else {
+      rast
+    }
+
+    toBackend(c.backend).emit(finalAst, c)
   }
 
   // Outputs red text to the console
@@ -90,7 +97,7 @@ object Compiler {
           case _: Errors.ParserError =>
             s"[${red("Parsing error")}] ${err.getMessage}"
           case _: CompilerError.Impossible =>
-            s"[${red("Impossible")}] ${err.getMessage}\n" +
+            s"[${red("Impossible")}] ${err.getMessage}. " +
               "This should never trigger. Please report this as a bug."
           case _ => s"[${red("Error")}] ${err.getMessage}"
         }
