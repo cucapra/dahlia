@@ -7,7 +7,7 @@ import scala.util.parsing.input.Position
 object Errors {
 
   def withPos(s: String, pos: Position, postMsg: String = "") =
-    s"[${pos.line}.${pos.column}] $s\n${pos.longString}\n${postMsg}"
+    s"[Line ${pos.line}, Column ${pos.column}] $s\n${pos.longString}\n${postMsg}"
 
   class TypeError(msg: String) extends RuntimeException(msg) {
     def this(msg: String, pos: Position, postMsg: String) =
@@ -297,4 +297,9 @@ object CompilerError {
       extends RuntimeException(
         s"$msg This feature is not yet implemented. Please open a feature request for it."
       )
+
+  object NotImplemented {
+    def apply(msg: String, pos: Position): NotImplemented =
+      this(Errors.withPos(msg, pos))
+  }
 }

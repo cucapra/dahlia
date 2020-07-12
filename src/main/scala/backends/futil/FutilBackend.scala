@@ -1,5 +1,7 @@
 package fuselang.backend.futil
 
+import scala.util.parsing.input.{Position}
+
 import fuselang.backend.futil.Futil._
 import fuselang.Utils._
 import fuselang.common._
@@ -32,13 +34,14 @@ private class FutilBackendHelper {
   }
 
   /** Extracts the bits needed from an optional type annotation. */
-  def bitsForType(t: Option[Type]): Int = {
+  def bitsForType(t: Option[Type], pos: Position): Int = {
     t match {
       case Some(TSizedInt(width, _)) => width
       case Some(TBool()) => 1
       case x =>
         throw NotImplemented(
-          s"Futil backend does not discovering bits for $x yet."
+          s"Futil cannot infer bitwidth for type $x. Please manually annotate it using a cast expression.",
+          pos
         )
     }
   }
@@ -90,11 +93,11 @@ private class FutilBackendHelper {
       List(reg)
     }
     case TSizedInt(size, unsigned) => {
-      assert(unsigned, NotImplemented("Generating signed integers"))
+      assert(unsigned, NotImplemented("Generating signed integers", d.pos))
       val reg = LibDecl(CompVar("${d.id}"), Stdlib.register(size))
       List(reg)
     }
-    case x => throw NotImplemented(s"Type $x not implemented for decls.")
+    case x => throw NotImplemented(s"Type $x not implemented for decls.", x.pos)
   }
 
   /** `emitBinop` is a helper function to generate the structure
@@ -106,12 +109,12 @@ private class FutilBackendHelper {
     val e1Out = emitExpr(e1)
     val e2Out = emitExpr(e2)
     assertOrThrow(
-      bitsForType(e1.typ) == bitsForType(e2.typ),
+      bitsForType(e1.typ, e1.pos) == bitsForType(e2.typ, e2.pos),
       Impossible(
         "The widths of the left and right side of a binop didn't match."
       )
     )
-    val binop = Stdlib.op(s"$compName", bitsForType(e1.typ));
+    val binop = Stdlib.op(s"$compName", bitsForType(e1.typ, e1.pos));
 
     val comp = LibDecl(genName(compName), binop)
     val struct = List(
@@ -140,7 +143,7 @@ private class FutilBackendHelper {
       case EInt(v, _) => {
         val _ = lhs
         val const =
-          LibDecl(genName("const"), Stdlib.constant(bitsForType(expr.typ), v))
+          LibDecl(genName("const"), Stdlib.constant(bitsForType(expr.typ, expr.pos), v))
         EmitOutput(const.id.port("out"), ConstantPort(1, 1), List(const))
       }
       case EBinop(op, e1, e2) => {
@@ -156,7 +159,7 @@ private class FutilBackendHelper {
             case ">=" => "gte"
             case "!=" => "neq"
             case x =>
-              throw NotImplemented(s"Futil backend does not support $x yet.")
+              throw NotImplemented(s"Futil backend does not support $x yet.", op.pos)
           }
         emitBinop(compName, e1, e2)
       }
@@ -199,7 +202,7 @@ private class FutilBackendHelper {
           indexing ++ writeEnStruct
         )
       }
-      case x => throw NotImplemented(s"Futil backend does not support $x yet.")
+      case x => throw NotImplemented(s"Futil backend does not support $x yet.", x.pos)
     }
 
   def emitCmd(
@@ -219,9 +222,9 @@ private class FutilBackendHelper {
       case CLet(id, Some(tarr: TArray), None) =>
         (emitArrayDecl(tarr, id), Empty, store)
       case CLet(_, Some(_: TArray), Some(_)) =>
-        throw NotImplemented(s"Futil backend cannot initialize memories")
+        throw NotImplemented(s"Futil backend cannot initialize memories", c.pos)
       case CLet(id, typ, Some(e)) => {
-        val reg = LibDecl(CompVar(s"$id"), Stdlib.register(bitsForType(typ)))
+        val reg = LibDecl(CompVar(s"$id"), Stdlib.register(bitsForType(typ, c.pos)))
         val out = emitExpr(e)(store)
         val groupName = genName("let")
         val doneHole = Connect(
@@ -241,7 +244,7 @@ private class FutilBackendHelper {
         )
       }
       case CLet(id, typ, None) => {
-        val reg = LibDecl(CompVar(s"$id"), Stdlib.register(bitsForType(typ)))
+        val reg = LibDecl(CompVar(s"$id"), Stdlib.register(bitsForType(typ, c.pos)))
         val struct = List(reg)
         (struct, Empty, store + (CompVar(s"$id") -> reg.id))
       }
@@ -287,7 +290,7 @@ private class FutilBackendHelper {
         throw BackendError(
           "for loops cannot be directly generated. Use the --lower flag to turn them into while loops."
         )
-      case x => throw NotImplemented(s"Futil backend does not support $x yet")
+      case x => throw NotImplemented(s"Futil backend does not support $x yet", x.pos)
     }
 
   def emitProg(p: Prog, c: Config): String = {
