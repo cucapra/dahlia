@@ -51,6 +51,7 @@ object Compiler {
       rast
     }
 
+    typechecker.TypeChecker.typeCheck(finalAst);
     toBackend(c.backend).emit(finalAst, c)
   }
 

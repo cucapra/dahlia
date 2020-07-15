@@ -108,8 +108,6 @@ private class FutilBackendHelper {
   ): EmitOutput = {
     val e1Out = emitExpr(e1)
     val e2Out = emitExpr(e2)
-    println(s"$e1: ${e1.typ}")
-    println(s"$e2: ${e2.typ}")
     assertOrThrow(
       bitsForType(e1.typ, e1.pos) == bitsForType(e2.typ, e2.pos),
       Impossible(
@@ -144,7 +142,6 @@ private class FutilBackendHelper {
     expr match {
       case EInt(v, _) => {
         val _ = lhs
-        println(s"$expr: ${expr.typ}")
         val const =
           LibDecl(
             genName("const"),
@@ -234,7 +231,6 @@ private class FutilBackendHelper {
       case CLet(_, Some(_: TArray), Some(_)) =>
         throw NotImplemented(s"Futil backend cannot initialize memories", c.pos)
       case CLet(id, typ, Some(e)) => {
-        println(s"$e: $typ")
         val reg =
           LibDecl(CompVar(s"$id"), Stdlib.register(bitsForType(typ, c.pos)))
         val out = emitExpr(e)(store)
@@ -345,7 +341,6 @@ private class FutilBackendHelper {
 
 case object FutilBackend extends fuselang.backend.Backend {
   def emitProg(p: Prog, c: Config) = {
-    println(p.cmd.toString)
     (new FutilBackendHelper()).emitProg(p, c)
   }
   val canGenerateHeader = false
