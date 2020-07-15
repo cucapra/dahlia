@@ -84,48 +84,59 @@ object Transformer {
       case _: RecordDef => (defi, env)
     }
 
-    def rewriteE(expr: Expr)(implicit env: Env): (Expr, Env) = expr match {
-      case _: ERational | _: EInt | _: EBool | _: EVar => (expr, env)
-      case ERecLiteral(fields) => {
-        val (fs, env1) = rewriteESeq(fields.map(_._2))
-        ERecLiteral(fields.map(_._1).zip(fs).toMap) -> env1
-      }
-      case EArrLiteral(idxs) => {
-        val (idxs1, env1) = rewriteESeq(idxs)
-        EArrLiteral(idxs1.toList) -> env1
-      }
-      case EBinop(op, e1, e2) => {
-        val (ne1, env1) = rewriteE(e1)
-        val (ne2, env2) = rewriteE(e2)(env1)
-        EBinop(op, ne1, ne2) -> env2
-      }
-      case app @ EApp(_, args) => {
-        val (nargs, env1) = rewriteESeq(args)
-        app.copy(args = nargs.toList) -> env1
-      }
-      case cast @ ECast(e, _) => {
-        val (e1, env1) = rewriteE(e)
-        cast.copy(e = e1) -> env1
-      }
-      case rec @ ERecAccess(e, _) => {
-        val (e1, env1) = rewriteE(e)
-        rec.copy(rec = e1) -> env1
-      }
-      case acc @ EArrAccess(_, idxs) => {
-        val (nidxs, env1) = rewriteESeq(idxs)
-        acc.copy(idxs = nidxs.toList) -> env1
-      }
-      case acc @ EPhysAccess(_, bankIdxs) => {
-        val init = (List[(Expr, Expr)](), env)
-        val (nBankIdxsReversed, nEnv) = bankIdxs.foldLeft(init)({
-          case ((nBankIdxs, env), (bank, idx)) =>
-            val (nBank, env1) = rewriteE(bank)(env)
-            val (nIdx, env2) = rewriteE(idx)(env1)
-            ((nBank, nIdx) :: nBankIdxs, env2)
-        })
-        acc.copy(bankIdxs = nBankIdxsReversed.reverse.toList) -> nEnv
-      }
+    def transferType(expr: Expr, f: (Expr, Env) => (Expr, Env))(implicit env: Env): (Expr, Env) = {
+      val (e1, env1) = f(expr, env)
+      e1.typ = expr.typ
+      (e1, env1)
     }
+
+    def rewriteE(expr: Expr)(implicit env: Env): (Expr, Env) = {
+      transferType(expr, _rewriteE(_)(_))
+    }
+
+    private def _rewriteE(expr: Expr)(implicit env: Env): (Expr, Env) =
+      expr match {
+        case _: ERational | _: EInt | _: EBool | _: EVar => (expr, env)
+        case ERecLiteral(fields) => {
+          val (fs, env1) = rewriteESeq(fields.map(_._2))
+          ERecLiteral(fields.map(_._1).zip(fs).toMap) -> env1
+        }
+        case EArrLiteral(idxs) => {
+          val (idxs1, env1) = rewriteESeq(idxs)
+          EArrLiteral(idxs1.toList) -> env1
+        }
+        case EBinop(op, e1, e2) => {
+          val (ne1, env1) = rewriteE(e1)
+          val (ne2, env2) = rewriteE(e2)(env1)
+          EBinop(op, ne1, ne2) -> env2
+        }
+        case app @ EApp(_, args) => {
+          val (nargs, env1) = rewriteESeq(args)
+          app.copy(args = nargs.toList) -> env1
+        }
+        case cast @ ECast(e, _) => {
+          val (e1, env1) = rewriteE(e)
+          cast.copy(e = e1) -> env1
+        }
+        case rec @ ERecAccess(e, _) => {
+          val (e1, env1) = rewriteE(e)
+          rec.copy(rec = e1) -> env1
+        }
+        case acc @ EArrAccess(_, idxs) => {
+          val (nidxs, env1) = rewriteESeq(idxs)
+          acc.copy(idxs = nidxs.toList) -> env1
+        }
+        case acc @ EPhysAccess(_, bankIdxs) => {
+          val init = (List[(Expr, Expr)](), env)
+          val (nBankIdxsReversed, nEnv) = bankIdxs.foldLeft(init)({
+            case ((nBankIdxs, env), (bank, idx)) =>
+              val (nBank, env1) = rewriteE(bank)(env)
+              val (nIdx, env2) = rewriteE(idx)(env1)
+              ((nBank, nIdx) :: nBankIdxs, env2)
+          })
+          acc.copy(bankIdxs = nBankIdxsReversed.reverse.toList) -> nEnv
+        }
+      }
 
     def rewriteLVal(e: Expr)(implicit env: Env): (Expr, Env) = rewriteE(e)
 

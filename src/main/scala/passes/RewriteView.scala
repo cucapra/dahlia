@@ -130,8 +130,9 @@ object RewriteView {
     // Compose custom traversal with parent's generic traversal.
     override def rewriteC(cmd: Command)(implicit env: Env) =
       (myRewriteC.orElse(partialRewriteC))(cmd, env)
-    override def rewriteE(expr: Expr)(implicit env: Env) =
-      (myRewriteE.orElse(partialRewriteE))(expr, env)
+    override def rewriteE(expr: Expr)(implicit env: Env) = {
+      super.transferType(expr, myRewriteE.orElse(partialRewriteE)(_, _))(env)
+    }
   }
 
 }

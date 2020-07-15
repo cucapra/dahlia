@@ -29,11 +29,6 @@ object LowerForLoops {
         // updates the iterator value.
         val itVar = EVar(it)
         itVar.typ = typ
-        // val init = CLet(
-        //   it,
-        //   t, // Some(range.idxType)
-        //   Some(EInt(s))
-        // )
 
         val (init, upd, cond) = typ match {
           case Some(t) => {
