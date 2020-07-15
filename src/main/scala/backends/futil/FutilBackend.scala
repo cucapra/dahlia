@@ -75,15 +75,28 @@ private class FutilBackendHelper {
     val mem = typ.dims.length match {
       case 1 => {
         val size = typ.dims(0)._1
-        val idxSize = bitsNeeded(size - 1)
+        val idxSize = bitsNeeded(size) // XXX(sam): seems like we could use size - 1
         LibDecl(name, Stdlib.mem_d1(width, size, idxSize))
       }
       case 2 => {
         val size0 = typ.dims(0)._1
         val size1 = typ.dims(1)._1
-        val idxSize0 = bitsNeeded(size0 - 1)
-        val idxSize1 = bitsNeeded(size1 - 1)
+        val idxSize0 = bitsNeeded(size0)
+        val idxSize1 = bitsNeeded(size1)
         LibDecl(name, Stdlib.mem_d2(width, size0, size1, idxSize0, idxSize1))
+      }
+      case 3 => {
+        val size0 = typ.dims(0)._1
+        val size1 = typ.dims(1)._1
+        val size2 = typ.dims(2)._1
+        val idxSize0 = bitsNeeded(size0)
+        val idxSize1 = bitsNeeded(size1)
+        val idxSize2 = bitsNeeded(size2)
+        LibDecl(
+          name,
+          Stdlib
+            .mem_d3(width, size0, size1, size2, idxSize0, idxSize1, idxSize2)
+        )
       }
       case n => throw NotImplemented(s"Arrays of size $n")
     }
@@ -165,8 +178,8 @@ private class FutilBackendHelper {
             case "/" => "div"
             case "<" => "lt"
             case ">" => "gt"
-            case "<=" => "lte"
-            case ">=" => "gte"
+            case "<=" => "le"
+            case ">=" => "ge"
             case "!=" => "neq"
             case x =>
               throw NotImplemented(

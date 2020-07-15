@@ -34,7 +34,7 @@ object EnvHelpers {
 
   /**
     * An environment that keeps track of mapping of resource [[V]] using keys
-    * of type [[V]].
+    * of type [[K]].
     */
   trait Tracker[K, V, T <: Tracker[_, _, _]] { this: T =>
 
