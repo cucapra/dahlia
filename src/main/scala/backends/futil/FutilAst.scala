@@ -242,6 +242,15 @@ object Stdlib {
   def mem_d1(width: Int, size: Int, idxSize: Int): Futil.CompInst =
     Futil.CompInst("std_mem_d1", List(width, size, idxSize))
 
+  def mem_d2(
+      width: Int,
+      size0: Int,
+      size1: Int,
+      idxSize0: Int,
+      idxSize1: Int
+  ): Futil.CompInst =
+    Futil.CompInst("std_mem_d2", List(width, size0, size1, idxSize0, idxSize1))
+
   def sqrt(): Futil.CompInst =
     Futil.CompInst("std_sqrt", List())
 }

@@ -78,6 +78,13 @@ private class FutilBackendHelper {
         val idxSize = bitsNeeded(size - 1)
         LibDecl(name, Stdlib.mem_d1(width, size, idxSize))
       }
+      case 2 => {
+        val size0 = typ.dims(0)._1
+        val size1 = typ.dims(1)._1
+        val idxSize0 = bitsNeeded(size0 - 1)
+        val idxSize1 = bitsNeeded(size1 - 1)
+        LibDecl(name, Stdlib.mem_d2(width, size0, size1, idxSize0, idxSize1))
+      }
       case n => throw NotImplemented(s"Arrays of size $n")
     }
     List(mem)
@@ -89,12 +96,12 @@ private class FutilBackendHelper {
   def emitDecl(d: Decl): List[Structure] = d.typ match {
     case tarr: TArray => emitArrayDecl(tarr, d.id)
     case _: TBool => {
-      val reg = LibDecl(CompVar("${d.id}"), Stdlib.register(1))
+      val reg = LibDecl(CompVar(s"${d.id}"), Stdlib.register(1))
       List(reg)
     }
     case TSizedInt(size, unsigned) => {
       assert(unsigned, NotImplemented("Generating signed integers", d.pos))
-      val reg = LibDecl(CompVar("${d.id}"), Stdlib.register(size))
+      val reg = LibDecl(CompVar(s"${d.id}"), Stdlib.register(size))
       List(reg)
     }
     case x => throw NotImplemented(s"Type $x not implemented for decls.", x.pos)
@@ -171,7 +178,7 @@ private class FutilBackendHelper {
       }
       case EVar(id) =>
         val portName = if (lhs) "in" else "out"
-        val varName = store(CompVar(s"$id"))
+        val varName = store.get(CompVar(s"$id")).getOrThrow(Impossible(s"$id"))
         val struct =
           if (lhs) List(Connect(ConstantPort(1, 1), varName.port("write_en")))
           else List()
