@@ -160,8 +160,8 @@ private class FuseParser extends RegexParsers with PackratParsers {
     braces(cmd.?) ^^ { case c => c.getOrElse(CEmpty) }
 
   lazy val crange: P[CRange] = positioned {
-    parens("let" ~> iden ~ "=" ~ number ~ ".." ~ number) ~ ("unroll" ~> number).? ^^ {
-      case id ~ _ ~ s ~ _ ~ e ~ u => CRange(id, s, e, u.getOrElse(1))
+    parens("let" ~> iden ~ (":" ~> typ).? ~ "=" ~ number ~ ".." ~ number) ~ ("unroll" ~> number).? ^^ {
+      case id ~ t ~ _ ~ s ~ _ ~ e ~ u => CRange(id, t, s, e, u.getOrElse(1))
     }
   }
   lazy val cfor: P[Command] = positioned {

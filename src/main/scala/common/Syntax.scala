@@ -136,7 +136,8 @@ object Syntax {
   case class EVar(id: Id) extends Expr
   case class ECast(e: Expr, castType: Type) extends Expr
 
-  case class CRange(iter: Id, s: Int, e: Int, u: Int) extends Positional {
+  case class CRange(iter: Id, castType: Option[Type], s: Int, e: Int, u: Int)
+      extends Positional {
     def idxType: TIndex = {
       if ((e - s) % u != 0) {
         throw UnrollRangeError(this.pos, e - s, u)
