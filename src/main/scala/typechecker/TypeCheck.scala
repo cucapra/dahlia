@@ -116,6 +116,10 @@ object TypeChecker {
       throw Impossible(s"$e was type checked multiple times.")
     }
     e.typ = Some(typ)
+    e match {
+      case EBinop(_, _, _) => println(s"$e: ${e.typ}")
+      case _ => ()
+    }
     typ -> nEnv
   }
 

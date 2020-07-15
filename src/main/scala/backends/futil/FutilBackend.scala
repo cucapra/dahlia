@@ -108,6 +108,8 @@ private class FutilBackendHelper {
   ): EmitOutput = {
     val e1Out = emitExpr(e1)
     val e2Out = emitExpr(e2)
+    println(s"$e1: ${e1.typ}")
+    println(s"$e2: ${e2.typ}")
     assertOrThrow(
       bitsForType(e1.typ, e1.pos) == bitsForType(e2.typ, e2.pos),
       Impossible(
@@ -142,8 +144,12 @@ private class FutilBackendHelper {
     expr match {
       case EInt(v, _) => {
         val _ = lhs
+        println(s"$expr: ${expr.typ}")
         val const =
-          LibDecl(genName("const"), Stdlib.constant(bitsForType(expr.typ, expr.pos), v))
+          LibDecl(
+            genName("const"),
+            Stdlib.constant(bitsForType(expr.typ, expr.pos), v)
+          )
         EmitOutput(const.id.port("out"), ConstantPort(1, 1), List(const))
       }
       case EBinop(op, e1, e2) => {
@@ -159,7 +165,10 @@ private class FutilBackendHelper {
             case ">=" => "gte"
             case "!=" => "neq"
             case x =>
-              throw NotImplemented(s"Futil backend does not support $x yet.", op.pos)
+              throw NotImplemented(
+                s"Futil backend does not support $x yet.",
+                op.pos
+              )
           }
         emitBinop(compName, e1, e2)
       }
@@ -202,7 +211,8 @@ private class FutilBackendHelper {
           indexing ++ writeEnStruct
         )
       }
-      case x => throw NotImplemented(s"Futil backend does not support $x yet.", x.pos)
+      case x =>
+        throw NotImplemented(s"Futil backend does not support $x yet.", x.pos)
     }
 
   def emitCmd(
@@ -224,7 +234,9 @@ private class FutilBackendHelper {
       case CLet(_, Some(_: TArray), Some(_)) =>
         throw NotImplemented(s"Futil backend cannot initialize memories", c.pos)
       case CLet(id, typ, Some(e)) => {
-        val reg = LibDecl(CompVar(s"$id"), Stdlib.register(bitsForType(typ, c.pos)))
+        println(s"$e: $typ")
+        val reg =
+          LibDecl(CompVar(s"$id"), Stdlib.register(bitsForType(typ, c.pos)))
         val out = emitExpr(e)(store)
         val groupName = genName("let")
         val doneHole = Connect(
@@ -244,7 +256,8 @@ private class FutilBackendHelper {
         )
       }
       case CLet(id, typ, None) => {
-        val reg = LibDecl(CompVar(s"$id"), Stdlib.register(bitsForType(typ, c.pos)))
+        val reg =
+          LibDecl(CompVar(s"$id"), Stdlib.register(bitsForType(typ, c.pos)))
         val struct = List(reg)
         (struct, Empty, store + (CompVar(s"$id") -> reg.id))
       }
@@ -290,7 +303,21 @@ private class FutilBackendHelper {
         throw BackendError(
           "for loops cannot be directly generated. Use the --lower flag to turn them into while loops."
         )
-      case x => throw NotImplemented(s"Futil backend does not support $x yet", x.pos)
+      case c @ CReduce(op, e1, e2) => {
+        op.toString match {
+          case "+=" =>
+            emitCmd(CUpdate(e1, EBinop(NumOp("+", _ + _), e1, e2)))
+          case "*=" =>
+            emitCmd(CUpdate(e1, EBinop(NumOp("*", _ * _), e1, e2)))
+          case _ =>
+            throw NotImplemented(
+              s"Futil backend does not support $op yet",
+              c.pos
+            )
+        }
+      }
+      case x =>
+        throw NotImplemented(s"Futil backend does not support $x yet", x.pos)
     }
 
   def emitProg(p: Prog, c: Config): String = {
@@ -318,6 +345,7 @@ private class FutilBackendHelper {
 
 case object FutilBackend extends fuselang.backend.Backend {
   def emitProg(p: Prog, c: Config) = {
+    println(p.cmd.toString)
     (new FutilBackendHelper()).emitProg(p, c)
   }
   val canGenerateHeader = false

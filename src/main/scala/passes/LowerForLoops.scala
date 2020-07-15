@@ -22,16 +22,35 @@ object LowerForLoops {
       case (CFor(range, pipeline, par, combine), env) => {
         if (pipeline) throw NotImplemented("Lowering pipelined for loops.")
 
-        val CRange(it, s, e, u) = range
+        val CRange(it, typ, s, e, u) = range
         if (u != 1) throw NotImplemented("Lowering unrolled for loops.")
 
         // Generate a let bound variable sequenced with a while loop that
         // updates the iterator value.
         val itVar = EVar(it)
-        val init = CLet(it, Some(range.idxType), Some(EInt(s)))
-        val add = NumOp("+", OpConstructor.add)
-        val upd = CUpdate(itVar, EBinop(add, itVar, EInt(1)))
-        val cond = EBinop(CmpOp("<"), itVar, EInt(e))
+        itVar.typ = typ
+        // val init = CLet(
+        //   it,
+        //   t, // Some(range.idxType)
+        //   Some(EInt(s))
+        // )
+
+        val (init, upd, cond) = typ match {
+          case Some(t) => {
+            val add = NumOp("+", OpConstructor.add)
+            val init = CLet(it, typ, Some(ECast(EInt(s), t)))
+            val upd = CUpdate(itVar, EBinop(add, itVar, ECast(EInt(1), t)))
+            val cond = EBinop(CmpOp("<"), itVar, ECast(EInt(e), t))
+            (init, upd, cond)
+          }
+          case None => {
+            val add = NumOp("+", OpConstructor.add)
+            val init = CLet(it, typ, Some(EInt(s)))
+            val upd = CUpdate(itVar, EBinop(add, itVar, EInt(1)))
+            val cond = EBinop(CmpOp("<"), itVar, EInt(e))
+            (init, upd, cond)
+          }
+        }
 
         // Rewrite par and combine
         val (npar, _) = rewriteC(par)(env)

@@ -13,7 +13,7 @@ object Pretty {
       vsep(p.defs.map(emitDef)) <@>
       vsep(p.decors.map(d => text(d.value))) <@>
       vsep(p.decls.map(d => text("decl") <+> emitDecl(d) <> semi)) <@>
-      emitCmd(p.cmd)
+      emitCmd(p.cmd)(true)
 
     layout.pretty
   }
@@ -34,7 +34,7 @@ object Pretty {
     }
   }
 
-  def emitDecl(d: Decl): Doc = emitId(d.id)(false) <> colon <+> emitTyp(d.typ)
+  def emitDecl(d: Decl): Doc = emitId(d.id)(true) <> colon <+> emitTyp(d.typ)
 
   def emitConsume(ann: Annotations.Consumable): Doc = ann match {
     case Annotations.ShouldConsume => text("consume")
@@ -99,7 +99,7 @@ object Pretty {
   }
 
   def emitRange(range: CRange)(implicit debug: Boolean): Doc = {
-    val CRange(id, s, e, u) = range
+    val CRange(id, _, s, e, u) = range
 
     parens(
       text("let") <+> id <+> equal <+> value(s) <+> text("..") <+> value(e)
