@@ -7,7 +7,7 @@ import fuselang.Utils._
 import fuselang.common._
 import Syntax._
 import Errors._
-// import CompilerError._
+import CompilerError._
 import Logger.PositionalLoggable
 
 /**
@@ -112,9 +112,9 @@ object TypeChecker {
       e: Expr
   )(implicit env: Environment): (Type, Environment) = {
     val (typ, nEnv) = _checkE(e)
-    // if (e.typ.isDefined) {
-    //   throw Impossible(s"$e was type checked multiple times.")
-    // }
+    if (e.typ.isDefined) {
+      throw Impossible(s"$e was type checked multiple times.")
+    }
     e.typ = Some(typ)
     typ -> nEnv
   }
