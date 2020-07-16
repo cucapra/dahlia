@@ -75,7 +75,7 @@ private class FutilBackendHelper {
     val mem = typ.dims.length match {
       case 1 => {
         val size = typ.dims(0)._1
-        val idxSize = bitsNeeded(size) // XXX(sam): seems like we could use size - 1
+        val idxSize = bitsNeeded(size)
         LibDecl(name, Stdlib.mem_d1(width, size, idxSize))
       }
       case 2 => {
@@ -183,7 +183,7 @@ private class FutilBackendHelper {
             case "!=" => "neq"
             case x =>
               throw NotImplemented(
-                s"Futil backend does not support $x yet.",
+                s"Futil backend does not support '$x' yet.",
                 op.pos
               )
           }
@@ -191,7 +191,7 @@ private class FutilBackendHelper {
       }
       case EVar(id) =>
         val portName = if (lhs) "in" else "out"
-        val varName = store.get(CompVar(s"$id")).getOrThrow(Impossible(s"$id"))
+        val varName = store.get(CompVar(s"$id")).getOrThrow(Impossible(s"$id was not in `store`"))
         val struct =
           if (lhs) List(Connect(ConstantPort(1, 1), varName.port("write_en")))
           else List()
@@ -320,6 +320,10 @@ private class FutilBackendHelper {
           "for loops cannot be directly generated. Use the --lower flag to turn them into while loops."
         )
       case c @ CReduce(op, e1, e2) => {
+        // rewrite statements of the form
+        //   lhs += rhs
+        // to
+        //   lhs = lhs + rhs
         op.toString match {
           case "+=" =>
             emitCmd(CUpdate(e1, EBinop(NumOp("+", _ + _), e1, e2)))

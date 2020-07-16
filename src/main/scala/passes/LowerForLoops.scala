@@ -69,6 +69,8 @@ object LowerForLoops {
       }
     }
 
+    /** We need to change the types of iterator variables so that
+      * they match the iterators annotated type. */
     override def myRewriteE: PF[(Expr, Env), (Expr, Env)] = {
       case (v @ EVar(id), env) => {
         env.get(id) match {
