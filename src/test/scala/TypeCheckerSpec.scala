@@ -6,6 +6,8 @@ import Errors._
 import org.scalatest.FunSpec
 
 class TypeCheckerSpec extends FunSpec {
+  // Suppress logging.
+  common.Logger.setLogLevel(scribe.Level.Error)
 
   describe("Let bindings") {
     describe("with explicit type and initializer") {
@@ -497,10 +499,8 @@ class TypeCheckerSpec extends FunSpec {
       }
     }
 
-    it(
-      "doesnt refresh resources globally when composed with parallel composition"
-    ) {
-      assertThrows[AlreadyWrite] {
+    it("works with scoped blocks") {
+      assertThrows[AlreadyConsumed] {
         typeCheck("""
           decl a: bit<32>[8];
           {
