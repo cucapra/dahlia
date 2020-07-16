@@ -70,7 +70,7 @@ object BoundsChecker {
                   case ((idx, t), (size, _)) =>
                     t.foreach({
                       case idxt @ TSizedInt(n, _) =>
-                        if (math.pow(2, n) >= size) {
+                        if ((math.pow(2, n) - 1) >= size) {
                           scribe.warn(
                             (
                               s"$idxt is used for an array access. " +

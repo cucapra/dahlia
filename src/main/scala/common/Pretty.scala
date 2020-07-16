@@ -92,7 +92,7 @@ object Pretty {
     case ERecAccess(rec, field) => rec <> dot <> field
     case ERecLiteral(fs) =>
       scope {
-        commaSep(fs.toList.map({
+        hsep(fs.toList.map({
           case (id, expr) => id <+> equal <+> expr <> semi
         }))
       }
@@ -144,7 +144,7 @@ object Pretty {
         emitCmd(body)
       )
     case CDecorate(dec) => value(dec)
-    case CUpdate(lhs, rhs) => lhs <+> equal <+> rhs <> semi
+    case CUpdate(lhs, rhs) => lhs <+> colon <> equal <+> rhs <> semi
     case CReduce(rop, lhs, rhs) => lhs <+> text(rop.toString) <+> rhs <> semi
     case CReturn(e) => text("return") <+> e <> semi
     case CExpr(e) => e <> semi

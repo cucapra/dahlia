@@ -27,16 +27,9 @@ object AsyncRun {
     }
   }
 
-  def compileAndEval(src: Path, data: Path, out: Path)(
+  def compileAndEval(conf: Config, data: Path)(
       implicit ec: ExecutionContext
   ): Future[Either[String, Int]] = {
-
-    val conf = Config(
-      srcFile = src.toFile(),
-      mode = Configuration.Run,
-      backend = Configuration.Cpp,
-      output = Some(out.toString)
-    )
 
     val compileToC = Future { Main.runWithConfig(conf) }
 
@@ -45,7 +38,7 @@ object AsyncRun {
         case Left(_) => Future.successful(s)
         case Right(status) => {
           assert(status == 0, s"Status after running fuse was $status")
-          val toExec = Paths.get(out.toString + ".o")
+          val toExec = Paths.get(conf.output.get.toString + ".o")
           val runCmd = Seq(s"${toExec}", data.toString)
           toExec.toFile.setExecutable(true)
           asyncProcRun(runCmd)
@@ -60,14 +53,19 @@ class RunTests extends org.scalatest.AsyncFunSuite {
   // Suppress logging.
   common.Logger.setLogLevel(scribe.Level.Warn)
 
-  val shouldRun = Paths.get("src/test/should-run")
   val srcFilePattern = """.*\.fuse"""
+  val lowerPattern = """.*should-lower.*"""
 
   // Create a temporary directory for generating C++ files.
   val tmpDir = Files.createDirectories(Paths.get(".").resolve("_test"))
 
-  for (file <- Files.newDirectoryStream(shouldRun).asScala
-       if file.toString.matches(srcFilePattern)) {
+  val shouldRun = Paths.get("src/test/should-run")
+  val shouldLower = Paths.get("src/test/should-lower")
+  val stream = Files.newDirectoryStream(shouldRun).asScala ++ Files
+    .newDirectoryStream(shouldLower)
+    .asScala
+
+  for (file <- stream if file.toString.matches(srcFilePattern)) {
     test(file.toString, SlowTest) {
       val dataPath = Paths.get(file.toString + ".data.json")
       val outFile = tmpDir.resolve(file.getFileName.toString + ".cpp")
@@ -78,8 +76,16 @@ class RunTests extends org.scalatest.AsyncFunSuite {
         s"Data file ${dataPath} missing. Run tests require data files."
       )
 
+      val conf = Config(
+        srcFile = file.toFile(),
+        mode = Configuration.Run,
+        backend = Configuration.Cpp,
+        output = Some(outFile.toString),
+        enableLowering = file.toString.matches(lowerPattern)
+      )
+
       AsyncRun
-        .compileAndEval(file, dataPath, outFile)
+        .compileAndEval(conf, dataPath)
         .map(_ match {
           case Left(err) => assert(false, err)
           case Right(status) => Files.delete(outFile); assert(status == 0)
