@@ -140,6 +140,7 @@ object Cpp {
       case CEmpty => emptyDoc
       case _: CView | _: CSplit =>
         throw Impossible("Views should not exist during codegen.")
+      case CBlock(cmd) => scope(cmd)
     }
 
     def emitDecl(id: Id, typ: Type): Doc = typ match {

@@ -192,6 +192,7 @@ object Syntax {
   }
   case class CReturn(exp: Expr) extends Command
   case class CExpr(exp: Expr) extends Command
+  case class CBlock(cmd: Command) extends Command
   case object CEmpty extends Command
 
   sealed trait Definition extends Positional

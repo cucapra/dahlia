@@ -158,5 +158,6 @@ object Pretty {
           factors.map(factor => brackets(text("by") <+> value(factor))),
           emptyDoc
         )
+    case CBlock(cmd) => scope(emitCmd(cmd))
   }
 }

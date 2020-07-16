@@ -290,6 +290,7 @@ object TypeChecker {
 
   private def checkC(cmd: Command)(implicit env: Environment): Environment =
     cmd match {
+      case CBlock(cmd) => env.withScope(checkC(cmd)(_))
       case CPar(c1, c2) => checkC(c2)(checkC(c1))
       case CSeq(c1, c2) => checkC(c2)(checkC(c1))
       case CIf(cond, cons, alt) => {
