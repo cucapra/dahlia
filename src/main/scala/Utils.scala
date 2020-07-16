@@ -1,4 +1,5 @@
 package fuselang
+import scala.{PartialFunction => PF}
 import scala.math.{log10, ceil, abs}
 
 object Utils {
@@ -14,6 +15,10 @@ object Utils {
     case 0 => 1
     case n if n > 0 => ceil(log10(n + 1) / log10(2)).toInt
     case n if n < 0 => bitsNeeded(abs(n)) + 1
+  }
+
+  @inline def asPartial[A, B, C](f: (A, B) => C): PF[(A, B), C] = {
+    case (a, b) => f(a, b)
   }
 
   @inline def assertOrThrow[T <: Throwable](cond: Boolean, except: => T) = {

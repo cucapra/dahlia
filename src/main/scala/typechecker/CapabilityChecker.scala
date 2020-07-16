@@ -26,7 +26,7 @@ object CapabilityChecker {
       * - If there are no capabilities or a write capability, add a consume
       *   annotation.
       */
-    override def myCheckE: PF[(Expr, Env), Env] = {
+    def myCheckE: PF[(Expr, Env), Env] = {
       case (acc @ EArrAccess(_, idxs), env) => {
         val (nEnv, consumableAnn, cap) = env.get(acc) match {
           case Some(Read) => (env, SkipConsume, Read)
@@ -40,7 +40,7 @@ object CapabilityChecker {
       }
     }
 
-    override def myCheckC: PF[(Command, Env), Env] = {
+    def myCheckC: PF[(Command, Env), Env] = {
       case (CSeq(c1, c2), env) => checkC(c1)(env); checkC(c2)(env)
     }
 
@@ -63,6 +63,11 @@ object CapabilityChecker {
       }
       case _ => checkE(e)
     }
+
+    override def checkE(expr: Expr)(implicit env: Env) =
+      mergeCheckE(myCheckE)(expr, env)
+    override def checkC(cmd: Command)(implicit env: Env) =
+      mergeCheckC(myCheckC)(cmd, env)
 
   }
 }

@@ -183,7 +183,7 @@ object LoopChecker {
       }
     }
 
-    override def myCheckE: PF[(Expr, Env), Env] = {
+    def myCheckE: PF[(Expr, Env), Env] = {
       // by default, this is rval
       case (EVar(id), e) => e.updateState(id, Use)
       case (EArrAccess(id, idxs), e) => {
@@ -191,7 +191,7 @@ object LoopChecker {
       }
     }
 
-    override def myCheckC: PF[(Command, Env), Env] = {
+    def myCheckC: PF[(Command, Env), Env] = {
       case (CUpdate(lhs, rhs), e) => myCheckLVal(lhs, checkE(rhs)(e))
       case (CReduce(_, lhs, rhs), e) => myCheckLVal(lhs, checkE(rhs)(e))
       case (CLet(id, _, None), e) => myCheckLVal(EVar(id), e)
@@ -220,5 +220,10 @@ object LoopChecker {
         })
       }
     }
+
+    override def checkE(expr: Expr)(implicit env: Env) =
+      mergeCheckE(myCheckE)(expr, env)
+    override def checkC(cmd: Command)(implicit env: Env) =
+      mergeCheckC(myCheckC)(cmd, env)
   }
 }

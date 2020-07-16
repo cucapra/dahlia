@@ -1,22 +1,11 @@
 package fuselang.common
-
-import Syntax._
-import EnvHelpers._
 import scala.{PartialFunction => PF}
 
-object Checker {
+import fuselang.Utils.asPartial
+import Syntax._
+import EnvHelpers._
 
-  /**
-    * Helper function for lifting checkE and checkC. Only we define a partial
-    * function that handles some of the cases in checkE or checkC that we
-    * care about, we can define the checkE for the Checker as:
-    *
-    * [[myCheckC.orElse(asPartial(checkE(_: Expr)(_: Env)))]]
-    *
-    */
-  def asPartial[A, B, C](f: (A, B) => C): PF[(A, B), C] = {
-    case (a, b) => f(a, b)
-  }
+object Checker {
 
   /**
     * A checker is a compiler pass that collects information using some Environment
@@ -109,39 +98,46 @@ object Checker {
   }
 
   /**
-    * Partial checker defines helper functions for writing down checkers and
-    * bootstrapping them correctly. Most of the time, we'll override one
-    * of the myCheck methods and then use them with the default checker methods.
+    * Partial checker defines helper functions for writing down
+    * transformers and bootstrapping them correctly. We use
+    * [[scala.PartialFunction]] to get a partial traversal pattern.
+    *
+    * In order to define a partial pattern, we first create a PartialFunction
+    * that implements the rewrites we want:
+    * [[
+    * def myCheckE: PF[(Expr, Env), (Expr, Env)] = {
+    *   case (EInt(_), env) => ???
+    * }
+    * ]]
+    *
+    * We can then override default traversal pattern with ours:
+    * [[
+    * override def checkE(cmd: Command)(implicit env: Env) =
+    *   (myCheckE.orElse(partialCheckE))(cmd, env)
+    * ]]
+    *
+    * The "magic" here is in [[scala.PartialFunction.orElse]] which
+    * executes myCheckE first and if there are no matching cases, falls
+    * back to partialRewriteE which has the default traversal behavior.
     */
   abstract class PartialChecker extends Checker {
+    private val partialCheckE: PF[(Expr, Env), Env] =
+      asPartial(super.checkE(_: Expr)(_: Env))
 
-    // We create these two objects to get reference equality in the checkE
-    // conditional below.
-    private def defaultMyCheckE: PF[(Expr, Env), Env] =
-      asPartial(checkE(_: Expr)(_: Env))
+    private val partialCheckC: PF[(Command, Env), Env] =
+      asPartial(super.checkC(_: Command)(_: Env))
 
-    private def defaultMyCheckC: PF[(Command, Env), Env] =
-      asPartial(checkC(_: Command)(_: Env))
-
-    def myCheckE: PF[(Expr, Env), Env] = defaultMyCheckE
-
-    def myCheckC: PF[(Command, Env), Env] = defaultMyCheckC
-
-    override def checkE(expr: Expr)(implicit env: Env): Env = {
-      // Don't create a new function if myCheckE was not overriden
-      if (myCheckE == defaultMyCheckE) {
-        myCheckE(expr, env)
-      } else {
-        myCheckE.orElse(asPartial(super.checkE(_: Expr)(_: Env)))((expr, env))
-      }
+    // Convinience functions for when we want to compose the traversal
+    // pattern.
+    def mergeCheckE(
+        myCheckE: PF[(Expr, Env), Env]
+    ): PF[(Expr, Env), Env] = {
+        myCheckE.orElse(partialCheckE)
     }
-
-    override def checkC(cmd: Command)(implicit env: Env): Env = {
-      if (myCheckC == defaultMyCheckC) {
-        myCheckC(cmd, env)
-      } else {
-        myCheckC.orElse(asPartial(super.checkC(_: Command)(_: Env)))((cmd, env))
-      }
+    def mergeCheckC(
+        myCheckC: PF[(Command, Env), Env]
+    ): PF[(Command, Env), Env] = {
+        myCheckC.orElse(partialCheckC)
     }
   }
 }

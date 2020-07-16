@@ -32,7 +32,7 @@ object WellFormedChecker {
       case _: RecordDef => env
     }
 
-    override def myCheckE: PF[(Expr, Env), Env] = {
+    def myCheckE: PF[(Expr, Env), Env] = {
       case (expr: ERecLiteral, _) =>
         throw NotInBinder(expr.pos, "Record Literal")
       case (expr: EArrLiteral, _) =>
@@ -43,7 +43,7 @@ object WellFormedChecker {
       }
     }
 
-    override def myCheckC: PF[(Command, Env), Env] = {
+    def myCheckC: PF[(Command, Env), Env] = {
       case (cmd @ CReduce(op, l, r), e) => {
         assertOrThrow(e.insideUnroll == false, ReduceInsideUnroll(op, cmd.pos))
         checkE(r)(checkE(l)(e))
@@ -83,5 +83,10 @@ object WellFormedChecker {
         env
       }
     }
+
+    override def checkE(expr: Expr)(implicit env: Env) =
+      mergeCheckE(myCheckE)(expr, env)
+    override def checkC(cmd: Command)(implicit env: Env) =
+      mergeCheckC(myCheckC)(cmd, env)
   }
 }

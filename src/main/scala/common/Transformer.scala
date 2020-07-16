@@ -1,34 +1,12 @@
 package fuselang.common
 
+import fuselang.Utils.asPartial
 import Syntax._
 import EnvHelpers._
 import scala.{PartialFunction => PF}
 
 object Transformer {
 
-  /**
-    * Helper function for lifting checkE and checkC. Only we define a partial
-    * function that handles some of the cases in checkE or checkC that we
-    * care about, we can define the checkE for the Checker as:
-    *
-    * [[myRewriteC.orElse(asPartial(checkE(_: Expr)(_: Env)))]]
-    *
-    */
-  def asPartial[A, B, C](f: (A, B) => C): PF[(A, B), C] = {
-    case (a, b) => f(a, b)
-  }
-
-  /**
-    * A checker is a compiler pass that collects information using some Environment
-    * type and is only used for it's side effects. A Checker cannot modify the
-    * AST beyond adding annotations on it.
-    *
-    * The Environment is threaded through the nodes while checking happens.
-    * For example, if we have Node(e1, e2), the checker runs:
-    *
-    * val env1 = check(e1)(currEnv)
-    * check(e2)(env1)
-    */
   abstract class Transformer {
 
     type Env <: ScopeManager[Env]
@@ -203,7 +181,7 @@ object Transformer {
     *
     * We can then override default traversal pattern with ours:
     * [[
-    * override def checkE(cmd: Command)(implicit env: Env) =
+    * override def rewriteE(cmd: Command)(implicit env: Env) =
     *   (myRewriteE.orElse(partialRewriteE))(cmd, env)
     * ]]
     *
