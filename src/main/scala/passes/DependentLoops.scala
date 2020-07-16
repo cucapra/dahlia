@@ -30,9 +30,12 @@ object DependentLoops {
     type Env = UseEnv
     val emptyEnv = UseEnv(Set())
 
-    override def myCheckE: PF[(Expr, Env), Env] = {
+    def myCheckE: PF[(Expr, Env), Env] = {
       case (EVar(id), env) => env.add(id)
     }
+
+    override def checkE(expr: Expr)(implicit env: Env) =
+      mergeCheckE(myCheckE)(expr, env)
   }
 
   private case class DepEnv(
@@ -71,7 +74,7 @@ object DependentLoops {
     type Env = DepEnv
     val emptyEnv = DepEnv(Set(), Set())
 
-    override def myCheckE: PF[(Expr, Env), Env] = {
+    def myCheckE: PF[(Expr, Env), Env] = {
       case (EArrAccess(id @ _, idxs), env) => {
         idxs.foreach(e => {
           val used = UseCheck.checkE(e)(UseCheck.emptyEnv)
@@ -85,7 +88,7 @@ object DependentLoops {
       }
     }
 
-    override def myCheckC: PF[(Command, Env), Env] = {
+    def myCheckC: PF[(Command, Env), Env] = {
       case (CFor(range, _, par, _), env) => {
         if (range.u > 1) {
           env.forgetScope(e1 => checkC(par)(e1.addLoopVar(range.iter)))
@@ -110,5 +113,10 @@ object DependentLoops {
         }
       }
     }
+
+    override def checkE(expr: Expr)(implicit env: Env) =
+      mergeCheckE(myCheckE)(expr, env)
+    override def checkC(cmd: Command)(implicit env: Env) =
+      mergeCheckC(myCheckC)(cmd, env)
   }
 }

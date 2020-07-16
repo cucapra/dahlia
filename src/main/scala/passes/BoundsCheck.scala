@@ -57,7 +57,7 @@ object BoundsChecker {
       }
     }
 
-    override def myCheckE: PF[(Expr, Env), Env] = {
+    def myCheckE: PF[(Expr, Env), Env] = {
       case (EArrAccess(id, idxs), e) => {
         id.typ
           .getOrThrow(Impossible(s"$id missing type in $e"))
@@ -94,7 +94,7 @@ object BoundsChecker {
       }
     }
 
-    override def myCheckC: PF[(Command, Env), Env] = {
+    def myCheckC: PF[(Command, Env), Env] = {
       case (c @ CView(viewId, arrId, views), e) => {
         val typ =
           arrId.typ.getOrThrow(Impossible(s"$arrId is missing type in $c"))
@@ -110,5 +110,10 @@ object BoundsChecker {
         e
       }
     }
+
+    override def checkE(expr: Expr)(implicit env: Env) =
+      mergeCheckE(myCheckE)(expr, env)
+    override def checkC(cmd: Command)(implicit env: Env) =
+      mergeCheckC(myCheckC)(cmd, env)
   }
 }

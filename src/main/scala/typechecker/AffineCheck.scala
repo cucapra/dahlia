@@ -203,7 +203,7 @@ object AffineChecker {
       case _ => checkE(e)
     }
 
-    override def myCheckC: PF[(Command, Env), Env] = {
+    def myCheckC: PF[(Command, Env), Env] = {
       case (CLet(id, Some(ta @ TArray(_, _, _)), _), env) => {
         addPhysicalResource(id, ta, env)
       }
@@ -255,7 +255,7 @@ object AffineChecker {
       }
     }
 
-    override def myCheckE: PF[(Expr, Env), Env] = {
+    def myCheckE: PF[(Expr, Env), Env] = {
       case (EApp(_, args), env) => {
         args.foldLeft(env)({
           case (e, argExpr) => {
@@ -293,5 +293,10 @@ object AffineChecker {
         throw NotImplemented("Affine checking for physical accesses.")
       }
     }
+
+    override def checkE(expr: Expr)(implicit env: Env) =
+      mergeCheckE(myCheckE)(expr, env)
+    override def checkC(cmd: Command)(implicit env: Env) =
+      mergeCheckC(myCheckC)(cmd, env)
   }
 }
