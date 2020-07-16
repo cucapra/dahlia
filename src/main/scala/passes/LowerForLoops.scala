@@ -53,7 +53,7 @@ object LowerForLoops extends PartialTransformer {
       val init = CLet(it, typ, Some(ECast(EInt(s), t)))
       val upd =
         CUpdate(itVar.copy(), EBinop(add, itVar.copy(), ECast(EInt(1), t)))
-      val cond = EBinop(CmpOp("<"), itVar.copy(), ECast(EInt(e), t))
+      val cond = EBinop(CmpOp("<="), itVar.copy(), ECast(EInt(e - 1), t))
       val nEnv = env.add(it.copy(), t)
 
       // Rewrite par and combine
