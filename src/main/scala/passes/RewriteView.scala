@@ -25,7 +25,7 @@ object RewriteView {
 
   def rewrite = ViewRewriter.rewrite _
 
-  private final object ViewRewriter extends PartialTranformer {
+  private final object ViewRewriter extends TypedPartialTransformer {
     case class ViewEnv(map: Map[Id, List[Expr] => Expr])
         extends ScopeManager[ViewEnv]
         with Tracker[Id, List[Expr] => Expr, ViewEnv] {
@@ -61,7 +61,7 @@ object RewriteView {
         (j % EInt(viewBank))
     }
 
-    override def myRewriteE: PF[(Expr, Env), (Expr, Env)] = {
+    def myRewriteE: PF[(Expr, Env), (Expr, Env)] = {
       case (acc @ EArrAccess(arrId, idxs), env) => {
         // Rewrite the indexing expressions
         val (nIdxs, nEnv) = super.rewriteESeq(idxs)(env)
@@ -88,7 +88,7 @@ object RewriteView {
       }
     }
 
-    override def myRewriteC: PF[(Command, Env), (Command, Env)] = {
+    def myRewriteC: PF[(Command, Env), (Command, Env)] = {
       case (CView(id, arrId, dims), env) => {
         val f = (es: List[Expr]) =>
           EArrAccess(
@@ -129,10 +129,9 @@ object RewriteView {
 
     // Compose custom traversal with parent's generic traversal.
     override def rewriteC(cmd: Command)(implicit env: Env) =
-      (myRewriteC.orElse(partialRewriteC))(cmd, env)
-    override def rewriteE(expr: Expr)(implicit env: Env) = {
-      super.transferType(expr, myRewriteE.orElse(partialRewriteE)(_, _))(env)
-    }
+      mergeRewriteC(myRewriteC)(cmd, env)
+    override def rewriteE(expr: Expr)(implicit env: Env) =
+      mergeRewriteE(myRewriteE)(expr, env)
   }
 
 }

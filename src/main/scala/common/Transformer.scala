@@ -84,21 +84,7 @@ object Transformer {
       case _: RecordDef => (defi, env)
     }
 
-    /** Public wrapper for [[rewriteE]] that transfers type annotations
-      * from the input [[expr]] to the expression resulting from [[rewriteE]].
-      * Any subclasses that overwrite `rewriteE` should call this function.
-      */
-    def transferType(expr: Expr, f: (Expr, Env) => (Expr, Env))(implicit env: Env): (Expr, Env) = {
-      val (e1, env1) = f(expr, env)
-      e1.typ = expr.typ
-      (e1, env1)
-    }
-
-    def rewriteE(expr: Expr)(implicit env: Env): (Expr, Env) = {
-      transferType(expr, _rewriteE(_)(_))
-    }
-
-    private def _rewriteE(expr: Expr)(implicit env: Env): (Expr, Env) =
+    def rewriteE(expr: Expr)(implicit env: Env): (Expr, Env) =
       expr match {
         case _: ERational | _: EInt | _: EBool | _: EVar => (expr, env)
         case ERecLiteral(fields) => {
@@ -204,31 +190,80 @@ object Transformer {
 
   /**
     * Partial transformer defines helper functions for writing down
-    * transformers and bootstrapping them correctly. Most of the time, we'll
-    * override one of the my* methods and then use them with the default
-    * checker methods to define a partial traversal pattern.
+    * transformers and bootstrapping them correctly. We use
+    * [[scala.PartialFunction]] to get a partial traversal pattern.
     *
-    * To get a complete traversal, we can compose the my* function with
-    * the partial* functions using Scala's [[PartialFunction.orElse]]
-    * function.
+    * In order to define a partial pattern, we first create a PartialFunction
+    * that implements the rewrites we want:
+    * [[
+    * def myRewriteE: PF[(Expr, Env), (Expr, Env)] = {
+    *   case (EInt(_), env) => ???
+    * }
+    * ]]
+    *
+    * We can then override default traversal pattern with ours:
+    * [[
+    * override def checkE(cmd: Command)(implicit env: Env) =
+    *   (myRewriteE.orElse(partialRewriteE))(cmd, env)
+    * ]]
+    *
+    * The "magic" here is in [[scala.PartialFunction.orElse]] which
+    * executes myRewriteE first and if there are no matching cases, falls
+    * back to partialRewriteE which has the default traversal behavior.
     */
-  abstract class PartialTranformer extends Transformer {
-
-    // We create these two objects to get reference equality in the checkE
-    // conditional below.
-
-    def myRewriteE: PF[(Expr, Env), (Expr, Env)] =
-      asPartial(rewriteE(_: Expr)(_: Env))
-
-    def myRewriteC: PF[(Command, Env), (Command, Env)] =
-      asPartial(rewriteC(_: Command)(_: Env))
-
-    // Handle to the partial rewriters of the parent. Use when defining a
-    // partial traversal pattern.
-    def partialRewriteE: PF[(Expr, Env), (Expr, Env)] =
+  abstract class PartialTransformer extends Transformer {
+    private val partialRewriteE: PF[(Expr, Env), (Expr, Env)] =
       asPartial(super.rewriteE(_: Expr)(_: Env))
 
-    def partialRewriteC: PF[(Command, Env), (Command, Env)] =
+    private val partialRewriteC: PF[(Command, Env), (Command, Env)] =
       asPartial(super.rewriteC(_: Command)(_: Env))
+
+    // Convinience functions for when we want to compose the traversal
+    // pattern.
+    def mergeRewriteE(
+        myRewriteE: PF[(Expr, Env), (Expr, Env)]
+    ): PF[(Expr, Env), (Expr, Env)] = {
+        myRewriteE.orElse(partialRewriteE)
+    }
+    def mergeRewriteC(
+        myRewriteC: PF[(Command, Env), (Command, Env)]
+    ): PF[(Command, Env), (Command, Env)] = {
+        myRewriteC.orElse(partialRewriteC)
+    }
+  }
+
+  /**
+   * Transformer that adds type annotations to newly created AST nodes
+   * returned from the transformer.
+   *
+   * XXX(rachit): The right way to make this work would be to use an
+   * environment returned from the TypeChecker and use it to add type
+   * annotations to every AST node.
+   */
+  abstract class TypedPartialTransformer extends PartialTransformer {
+    private val partialRewriteE: PF[(Expr, Env), (Expr, Env)] =
+      asPartial(super.rewriteE(_: Expr)(_: Env))
+    /** Public wrapper for [[rewriteE]] that transfers type annotations
+      * from the input [[expr]] to the expression resulting from [[rewriteE]].
+      * Any subclasses that overwrite `rewriteE` should call this function.
+      */
+    def transferType(expr: Expr, f: (Expr, Env) => (Expr, Env))(
+        implicit env: Env
+    ): (Expr, Env) = {
+      val (e1, env1) = f(expr, env)
+      e1.typ = expr.typ
+      (e1, env1)
+    }
+
+    override def mergeRewriteE(
+        myRewriteE: PF[(Expr, Env), (Expr, Env)]
+    ): PF[(Expr, Env), (Expr, Env)] = {
+      val func = (expr: Expr, env: Env) => {
+        val (e1, env1) = myRewriteE.orElse(partialRewriteE)(expr, env)
+        e1.typ = expr.typ
+        (e1, env1)
+      }
+      asPartial(func(_: Expr, _: Env))
+    }
   }
 }
