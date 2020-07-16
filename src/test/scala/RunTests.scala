@@ -57,7 +57,7 @@ object AsyncRun {
 
 class RunTests extends org.scalatest.AsyncFunSuite {
 
-  // Suppress logging infor logging.
+  // Suppress logging.
   common.Logger.setLogLevel(scribe.Level.Warn)
 
   val shouldRun = Paths.get("src/test/should-run")
