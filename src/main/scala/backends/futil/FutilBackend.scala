@@ -236,6 +236,7 @@ private class FutilBackendHelper {
       c: Command
   )(implicit store: Store): (List[Structure], Control, Store) =
     c match {
+      case CBlock(cmd) => emitCmd(cmd)
       case CPar(c1, c2) => {
         val (struct1, con1, s1) = emitCmd(c1)
         val (struct2, con2, s2) = emitCmd(c2)(s1)

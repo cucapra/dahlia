@@ -93,6 +93,7 @@ object Checker {
       case CWhile(cond, _, body) => {
         checkE(cond).withScope(checkC(body)(_))
       }
+      case CBlock(cmd) => env.withScope(checkC(cmd)(_))
     }
 
   }

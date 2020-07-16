@@ -162,6 +162,10 @@ object Transformer {
         val (nbody, env2) = env1.withScopeAndRet(rewriteC(body)(_))
         wh.copy(cond = ncond, body = nbody) -> env2
       }
+      case cb @ CBlock(body) => {
+        val (nbody, env1) = env.withScopeAndRet(rewriteC(body)(_))
+        cb.copy(cmd = nbody) -> env1
+      }
     }
 
   }

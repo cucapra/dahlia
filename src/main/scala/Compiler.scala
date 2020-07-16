@@ -7,8 +7,19 @@ import java.nio.file.{Files, Paths, Path, StandardOpenOption}
 import common._
 import Configuration._
 import Syntax._
+import Transformer.{PartialTransformer, TypedPartialTransformer}
 
 object Compiler {
+
+  // Transformers to execute *before* type checking.
+  val preTransformers: List[(String, PartialTransformer)] = List(
+    "Lower for loops" -> passes.LowerForLoops
+  )
+
+  // Transformers to execute *after* type checking.
+  val postTransformers: List[(String, TypedPartialTransformer)] = List(
+    "Rewrite views" -> passes.RewriteView
+  )
 
   def showDebug(ast: Prog, pass: String, c: Config): Unit = {
     if (c.passDebug) {
@@ -26,9 +37,23 @@ object Compiler {
   }
 
   def checkStringWithError(prog: String, c: Config = emptyConf) = {
-    val ast = FuseParser.parse(prog)
+    val preAst = FuseParser.parse(prog)
+
+    // Run pre transformers if lowering is enabled
+    val ast = if (c.enableLowering) {
+      preTransformers.foldLeft(preAst)({
+        case (ast, (name, pass)) => {
+          val newAst = pass.rewrite(ast)
+          showDebug(newAst, name, c)
+          newAst
+        }
+      })
+    } else {
+      preAst
+    }
     passes.WellFormedChecker.check(ast)
-    typechecker.TypeChecker.typeCheck(ast); showDebug(ast, "Type Checking", c)
+    typechecker.TypeChecker.typeCheck(ast);
+    showDebug(ast, "Type Checking", c)
     passes.BoundsChecker.check(ast); // Doesn't modify the AST.
     passes.LoopChecker.check(ast); // Doesn't modify the AST.
     passes.DependentLoops.check(ast); // Doesn't modify the AST.
@@ -39,19 +64,15 @@ object Compiler {
   }
 
   def codegen(ast: Prog, c: Config = emptyConf) = {
-    val rast = passes.RewriteView.rewrite(ast);
-    showDebug(rast, "Rewrite Views", c)
-
-    // Perform program lowering if needed.
-    val finalAst: Prog = if (c.enableLowering) {
-      val fast = passes.LowerForLoops.rewrite(rast)
-      showDebug(fast, "LowerForLoops", c)
-      fast
-    } else {
-      rast
-    }
-
-    toBackend(c.backend).emit(finalAst, c)
+    // Run post transformers
+    val transformedAst = postTransformers.foldLeft(ast)({
+      case (ast, (name, pass)) => {
+        val newAst = pass.rewrite(ast)
+        showDebug(newAst, name, c)
+        newAst
+      }
+    })
+    toBackend(c.backend).emit(transformedAst, c)
   }
 
   // Outputs red text to the console
@@ -69,7 +90,7 @@ object Compiler {
           case _: Errors.ParserError =>
             s"[${red("Parsing error")}] ${err.getMessage}"
           case _: CompilerError.Impossible =>
-            s"[${red("Impossible")}] ${err.getMessage}. " +
+            s"[${red("Impossible")}] ${err.getMessage}\n" +
               "This should never trigger. Please report this as a bug."
           case _ => s"[${red("Error")}] ${err.getMessage}"
         }

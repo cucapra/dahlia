@@ -221,7 +221,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
   }
 
   lazy val blockCmd: P[Command] = positioned {
-    block |
+    braces(cmd.?) ^^ { case cmd => cmd.map(CBlock(_)).getOrElse(CEmpty) } |
       cfor |
       conditional |
       "while" ~> parens(expr) ~ "pipeline".? ~ block ^^ {
