@@ -84,6 +84,10 @@ object Transformer {
       case _: RecordDef => (defi, env)
     }
 
+    /** Public wrapper for [[rewriteE]] that transfers type annotations
+      * from the input [[expr]] to the expression resulting from [[rewriteE]].
+      * Any subclasses that overwrite `rewriteE` should call this function.
+      */
     def transferType(expr: Expr, f: (Expr, Env) => (Expr, Env))(implicit env: Env): (Expr, Env) = {
       val (e1, env1) = f(expr, env)
       e1.typ = expr.typ
