@@ -1,0 +1,27 @@
+#include "parser.cpp"
+/***************** Parse helpers  ******************/
+/***************************************************/
+void kernel(vector<int> a, vector<int> b, int result) {
+  
+  int res = 0;
+  for(int i = 0; i < 4; i++) {
+    int v = (a[i] * b[i]);
+    // combiner:
+    res += v;
+  }
+  result = res;
+  json_t __;
+  __["a"] = a;
+  __["b"] = b;
+  __["result"] = result;
+  std::cout << __.dump(2) << std::endl;
+}
+int main(int argc, char** argv) {
+  using namespace flattening;
+  auto v = parse_data(argc, argv);;
+  auto a = get_arg<n_dim_vec_t<int, 1>>("a", "bit<32>[]", v);
+  auto b = get_arg<n_dim_vec_t<int, 1>>("b", "bit<32>[]", v);
+  auto result = get_arg<int>("result", "int", v);
+  kernel(a, b, result);
+  return 0;
+}

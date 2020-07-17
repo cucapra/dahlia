@@ -1,0 +1,21 @@
+#!/bin/bash
+
+### Script to run a dahlia program using the C++ backend and generate an
+### output.
+set -euf -o pipefail
+
+# Input dahlia program.
+prog="$1"
+# Extra options for the Dahlia compiler.
+extra_opts="$2"
+# Location of the JSON data.
+data="./file-tests/data/$(basename "$prog").data.json"
+# Save the output file in a temporary location.
+out="$(mktemp).cpp"
+
+
+# Generate the output file.
+./fuse run "$prog" $extra_opts -o "$out" > /dev/null
+
+# Run the program with the data
+"$out.o" "$data"

@@ -1,0 +1,14 @@
+decl arr: bit<32>[8 bank 4];
+decl filter: bit<32>[2 bank 2];
+decl result: bit<32>[4];
+
+// Compute result[i] = arr[2 * i] * filter[2 * i] + arr[2 * i + 1] * filter[2 * i]
+for(let j = 0..4) {
+  view v_a = arr[2 * j: +2 bank 2];
+
+  for (let i = 0..2) unroll 2 {
+    let v = v_a[i] * filter[i];
+  } combine {
+    result[j] += v;
+  }
+}

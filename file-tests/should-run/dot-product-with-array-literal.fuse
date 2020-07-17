@@ -1,0 +1,12 @@
+decl a: bit<32>[4];
+decl result: bit<32>;
+
+let b: bit<32>[4] = {3, 5, 7, 11};
+
+let res: bit<32> = 0;
+for (let i = 0..4) {
+  let v = a[i] * b[i];
+} combine {
+  res += v;
+}
+result := res;
