@@ -19,6 +19,9 @@ private class CppRunnable extends CppLike {
 
   var declMap: Set[Id] = Set()
 
+  // Variable to store the results of the updated arrays.
+  val serializer = text("__")
+
   def emitType(typ: Type): Doc = typ match {
     case _: TVoid => text("void")
     case _: TBool => text("bool")
@@ -109,7 +112,7 @@ private class CppRunnable extends CppLike {
 
   def emitSerializeDecl: Decl => Doc = {
     case Decl(id, _) => {
-      text("result") <> brackets(quote(id)) <+> text("=") <+> id <> semi
+      serializer <> brackets(quote(id)) <+> text("=") <+> id <> semi
     }
   }
 
@@ -208,9 +211,10 @@ private class CppRunnable extends CppLike {
           None,
           p.decls.map(decl => text("&") <> value(decl.id.v))
         ) <> semi <@>
-        text("json_t") <+> text("result") <> semi <@>
+        text("json_t") <+> serializer <> semi <@>
         serializeArgs <@>
-        text("std::cout << result.dump(2) << std::endl") <> semi <@>
+        text("std::cout <<") <+> serializer <> text(".dump(2) << std::endl") <>
+          semi <@>
         text("return 0") <> semi
     }
 

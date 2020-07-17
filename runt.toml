@@ -1,0 +1,18 @@
+ver = "0.2.5"
+
+#[[tests]]
+#name = "should compile"
+#paths = [ "file-tests/should-compile/*.fuse" ]
+#cmd = [ "./fuse {}" ]
+
+#[[tests]]
+#name = "should fail"
+#paths = [ "file-tests/should-fail/*.fuse" ]
+#cmd = [ "./fuse {}" ]
+
+[[tests]]
+name = "should run"
+paths = [ "file-tests/should-run/*.fuse" ]
+cmd = """
+./bin/run-dahlia {} "-b c++"
+"""

@@ -35,7 +35,7 @@ T get_arg(string field, string type_name, json_t &json) {
   try {
     return json[field]["data"].get<T>();
   } catch(nlohmann::json::type_error err) {
-    std::cerr << "[Error] Expected `" << field << "' field with type " << type_name << std::endl;
+    std::cerr << "[Error] Expected `" << field << ".data' field with type " << type_name << std::endl;
     exit(2);
   }
 }

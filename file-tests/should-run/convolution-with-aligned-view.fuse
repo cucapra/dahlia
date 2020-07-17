@@ -1,18 +1,6 @@
-import "cassert" {
-  def assert(cond: bool);
-}
-
-// Helper function for checking the arrays.
-def check_arr(a: bit<32>[4], b: bit<32>[4]) {
-  for (let i = 0..4) {
-    assert(a[i] == b[i]);
-  }
-}
-
 decl arr: bit<32>[8 bank 4];
 decl filter: bit<32>[2 bank 2];
 decl result: bit<32>[4];
-decl gold: bit<32>[4];
 
 // Compute result[i] = arr[2 * i] * filter[2 * i] + arr[2 * i + 1] * filter[2 * i]
 for(let j = 0..4) {
@@ -24,5 +12,3 @@ for(let j = 0..4) {
     result[j] += v;
   }
 }
----
-check_arr(result, gold);
