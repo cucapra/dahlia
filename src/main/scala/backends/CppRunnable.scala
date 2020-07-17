@@ -17,6 +17,8 @@ import PrettyPrint.Doc._
   */
 private class CppRunnable extends CppLike {
 
+  var declMap: Set[Id] = Set()
+
   def emitType(typ: Type): Doc = typ match {
     case _: TVoid => text("void")
     case _: TBool => text("bool")
@@ -36,7 +38,19 @@ private class CppRunnable extends CppLike {
     case TAlias(n) => value(n)
   }
 
-  def emitArrayDecl(ta: TArray, id: Id) = emitType(ta) <+> text(s"$id")
+  def emitArrayDecl(ta: TArray, id: Id) =
+    emitType(ta) <+> text("*") <> text(s"$id")
+
+  override def emitDecl(id: Id, typ: Type): Doc = {
+    if (declMap.contains(id)) {
+      typ match {
+        case ta: TArray => emitArrayDecl(ta, id)
+        case _ => emitType(typ) <+> text("*") <> id
+      }
+    } else {
+      super.emitDecl(id, typ)
+    }
+  }
 
   def emitFor(cmd: CFor): Doc =
     text("for") <> emitRange(cmd.range) <+> scope {
@@ -93,6 +107,28 @@ private class CppRunnable extends CppLike {
     }
   }
 
+  def emitSerializeDecl: Decl => Doc = {
+    case Decl(id, _) => {
+      text("result") <> brackets(quote(id)) <+> text("=") <+> id <> semi
+    }
+  }
+
+  override def emitExpr(e: Expr): Doc = e match {
+    case EVar(id) => {
+      if (declMap.contains(id)) {
+        parens(text("*") <> value(id))
+      } else {
+        value(id)
+      }
+    }
+    case EArrAccess(id, idxs) =>
+      parens(text("*") <> id) <> ssep(
+        idxs.map(idx => brackets(emitExpr(idx))),
+        emptyDoc
+      )
+    case x => super.emitExpr(x)
+  }
+
   /**
     * Generates [[from_json]] and [[to_json]] for a given record. Used by the
     * json library to extract records from json.
@@ -141,6 +177,9 @@ private class CppRunnable extends CppLike {
     val parseHelpers =
       vsep(p.defs.collect({ case rec: RecordDef => recordHelpers(rec) }))
 
+    // add all decls to declMap
+    p.decls.foreach(d => declMap += d.id)
+
     // Generate code for the main kernel in this file.
     val kernel = vsep {
       includes.map(emitInclude) ++
@@ -155,13 +194,23 @@ private class CppRunnable extends CppLike {
     // Generate function calls to extract all kernel parameters from the JSON
     val getArgs: Doc = vsep(p.decls.map(emitParseDecl))
 
+    // Generate serialization of decls
+    val serializeArgs: Doc = vsep(p.decls.map(emitSerializeDecl))
+
     // Generate a main function that parses are kernel parameters and calls
     // the kernel function.
     val main = value("int main(int argc, char** argv)") <+> scope {
       text("using namespace flattening;") <@>
         cBind("v", cCall("parse_data", None, List(text("argc"), text("argv")))) <> semi <@>
         getArgs <@>
-        cCall(c.kernelName, None, p.decls.map(decl => value(decl.id.v))) <> semi <@>
+        cCall(
+          c.kernelName,
+          None,
+          p.decls.map(decl => text("&") <> value(decl.id.v))
+        ) <> semi <@>
+        text("json_t") <+> text("result") <> semi <@>
+        serializeArgs <@>
+        text("std::cout << result.dump(2) << std::endl") <> semi <@>
         text("return 0") <> semi
     }
 
