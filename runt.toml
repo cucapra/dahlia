@@ -3,13 +3,13 @@ ver = "0.2.5"
 [[tests]]
 name = "compile vivado"
 paths = [ "file-tests/should-compile/*.fuse" ]
-cmd = "./fuse {}"
+cmd = "./fuse {} | tail -n+2"
 expect_dir = "file-tests/vivado-out"
 
 [[tests]]
 name = "compile cpp"
 paths = [ "file-tests/should-run/*.fuse" ]
-cmd = "./fuse {} -b c++"
+cmd = "./fuse {} -b c++ | tail -n+2"
 expect_dir = "file-tests/cpp-out"
 
 [[tests]]
