@@ -8,9 +8,44 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+
     - name: Set up JDK 1.8
       uses: actions/setup-java@v1
       with:
         java-version: 1.8
-    - name: Run tests
+
+    - name: Tool versions
+      id: versions
+      run: |
+        echo "::set-output name=runt::$(grep ver runt.toml | awk '{print $3}' | tr -d '"')"
+
+    # Don't rebuild Dahlia if HEAD hash hasn't changed.
+    - name: Cache Dahlia
+      id: dahlia-cache
+      uses: actions/cache@v2
+      with:
+        path: |
+          ./target
+          ~/.sbt
+          ~/.ivy/cache
+        key: dahlia-sources-${{ runner.os }}-${{ hashFiles( '**/build.sbt' ) }}
+
+    - name: Run SBT tests
       run: sbt test
+
+    - name: Cache runt
+      id: runt-cache
+      uses: actions/cache@v2
+      with:
+        path: ~/.cargo/bin/runt
+        key: runt-bin-${{ runner.os }}-${{ steps.versions.outputs.runt }}
+
+    - name: Install runt
+      if: steps.runt-cache.outputs.cache-hit != 'true'
+      uses: actions-rs/cargo@v1
+      with:
+        command: install
+        args: runt --version ${{ steps.versions.outputs.runt }}
+
+    - name: Runt tests
+      run: runt -d -o fail
