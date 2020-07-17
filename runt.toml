@@ -1,18 +1,35 @@
 ver = "0.2.5"
 
-#[[tests]]
-#name = "should compile"
-#paths = [ "file-tests/should-compile/*.fuse" ]
-#cmd = [ "./fuse {}" ]
-
-#[[tests]]
-#name = "should fail"
-#paths = [ "file-tests/should-fail/*.fuse" ]
-#cmd = [ "./fuse {}" ]
+[[tests]]
+name = "compile vivado"
+paths = [ "file-tests/should-compile/*.fuse" ]
+cmd = "./fuse {}"
+expect_dir = "file-tests/vivado-out"
 
 [[tests]]
-name = "should run"
+name = "compile cpp"
+paths = [ "file-tests/should-run/*.fuse" ]
+cmd = "./fuse {} -b c++"
+expect_dir = "file-tests/cpp-out"
+
+[[tests]]
+name = "fail"
+paths = [ "file-tests/should-fail/*.fuse" ]
+cmd = "./fuse {}"
+
+[[tests]]
+name = "run"
 paths = [ "file-tests/should-run/*.fuse" ]
 cmd = """
 ./bin/run-dahlia {} "-b c++"
 """
+expect_dir = "file-tests/data"
+
+[[tests]]
+name = "run lower"
+paths = [ "file-tests/should-lower/*.fuse" ]
+cmd = """
+./bin/run-dahlia {} "-b c++ --lower"
+"""
+# Should compute the same results as should run
+expect_dir = "file-tests/data"

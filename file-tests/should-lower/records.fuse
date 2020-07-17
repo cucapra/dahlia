@@ -1,7 +1,3 @@
-import "cassert" {
-  def assert(cond: bool);
-}
-
 record point {
   x: bit<32>;
   y: bit<32>
@@ -9,7 +5,7 @@ record point {
 
 decl shape1: point[2];
 decl shape2: point[2];
-decl gold: point;
+decl result: point;
 
 let X: bit<32> = 0;
 let Y: bit<32> = 0;
@@ -22,7 +18,5 @@ for (let i: bit<1> = 0..2) {
   Y += y;
 }
 
-let res: point = { x = X; y = Y };
-
-assert(res.x == gold.x);
-assert(res.y == gold.y);
+let out: point = { x = X; y = Y };
+result := out;

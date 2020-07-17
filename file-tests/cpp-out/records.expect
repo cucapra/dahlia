@@ -1,0 +1,45 @@
+// git.status = dirty, build.date = Fri Jul 17 15:41:51 EDT 2020, git.hash = 0ba472d
+#include "parser.cpp"
+typedef struct {
+  int x;
+  int y;
+} point;
+/***************** Parse helpers  ******************/
+void to_json(nlohmann::json& j, const point& r) {
+  j = nlohmann::json{{"x", r.x}, {"y", r.y}};
+}
+void from_json(const nlohmann::json& j, point& r) {
+  j.at("x").get_to(r.x);
+  j.at("y").get_to(r.y);
+}
+/***************************************************/
+void kernel(vector<point> shape1, vector<point> shape2, point result) {
+  
+  int X = 0;
+  int Y = 0;
+  for(int i = 0; i < 2; i++) {
+    int x = (shape1[i].x + shape2[i].x);
+    int y = (shape1[i].y + shape2[i].y);
+    // combiner:
+    X += x;
+    Y += y;
+  }
+  point out = {
+    .x = X, .y = Y
+  };
+  result = out;
+  json_t __;
+  __["shape1"] = shape1;
+  __["shape2"] = shape2;
+  __["result"] = result;
+  std::cout << __.dump(2) << std::endl;
+}
+int main(int argc, char** argv) {
+  using namespace flattening;
+  auto v = parse_data(argc, argv);;
+  auto shape1 = get_arg<n_dim_vec_t<point, 1>>("shape1", "point[]", v);
+  auto shape2 = get_arg<n_dim_vec_t<point, 1>>("shape2", "point[]", v);
+  auto result = get_arg<point>("result", "point", v);
+  kernel(shape1, shape2, result);
+  return 0;
+}

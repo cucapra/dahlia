@@ -1,0 +1,51 @@
+// git.status = dirty, build.date = Fri Jul 17 15:41:51 EDT 2020, git.hash = 0ba472d
+#include <ap_int.h>
+extern "C" {
+  void kernel(float m1_int[32][32], float m2_int[32][32], float prod_int[32][32]) {
+    #pragma HLS INTERFACE m_axi port=m1_int offset=slave bundle=gmem
+    #pragma HLS INTERFACE s_axilite port=m1_int bundle=control
+    #pragma HLS INTERFACE m_axi port=m2_int offset=slave bundle=gmem
+    #pragma HLS INTERFACE s_axilite port=m2_int bundle=control
+    #pragma HLS INTERFACE m_axi port=prod_int offset=slave bundle=gmem
+    #pragma HLS INTERFACE s_axilite port=prod_int bundle=control
+    #pragma HLS INTERFACE s_axilite port=return bundle=control
+    float m1[32][32];
+    #pragma HLS resource variable=m1 core=RAM_1P_BRAM
+    #pragma HLS ARRAY_PARTITION variable=m1 cyclic factor=32 dim=2
+    float m2[32][32];
+    #pragma HLS resource variable=m2 core=RAM_1P_BRAM
+    #pragma HLS ARRAY_PARTITION variable=m2 cyclic factor=32 dim=1
+    float prod[32][32];
+    #pragma HLS resource variable=prod core=RAM_1P_BRAM
+    
+    
+    {
+      for(int i = 0; i < 32; i++) {
+        #pragma HLS UNROLL factor=1 skip_exit_check
+        #pragma HLS LOOP_FLATTEN off
+        for(int j = 0; j < 32; j++) {
+          #pragma HLS UNROLL factor=1 skip_exit_check
+          #pragma HLS LOOP_FLATTEN off
+          m1[i][j] = m1_int[i][j];
+          m2[i][j] = m2_int[i][j];
+        }
+      }
+      //---
+      for(int i = 0; i < 32; i++) {
+        #pragma HLS UNROLL factor=1 skip_exit_check
+        #pragma HLS LOOP_FLATTEN off
+        for(int j = 0; j < 32; j++) {
+          #pragma HLS UNROLL factor=1 skip_exit_check
+          #pragma HLS LOOP_FLATTEN off
+          for(int k = 0; k < 32; k++) {
+            #pragma HLS UNROLL factor=32 skip_exit_check
+            #pragma HLS LOOP_FLATTEN off
+            float mult = (m1[i][k] * m2[k][j]);
+            // combiner:
+            prod[i][j] += mult;
+          }
+        }
+      }
+    }
+  }
+}

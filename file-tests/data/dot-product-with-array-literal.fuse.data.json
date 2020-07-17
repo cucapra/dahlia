@@ -7,8 +7,8 @@
     "data": [3, 5, 7, 11],
     "bitwidth": 32
   },
-  "gold": {
-    "data": 133,
+  "result": {
+    "data": 0,
     "bitwidth": 32
   }
 }

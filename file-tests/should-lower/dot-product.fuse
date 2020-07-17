@@ -1,10 +1,6 @@
-import "cassert" {
-  def assert(cond: bool);
-}
-
 decl a: bit<32>[4];
 decl b: bit<32>[4];
-decl gold: bit<32>;
+decl result: bit<32>;
 
 let res: bit<32> = 0;
 for (let i: bit<2> = 0..4) {
@@ -13,4 +9,4 @@ for (let i: bit<2> = 0..4) {
   res += v;
 }
 
-assert(gold == res)
+result := res;

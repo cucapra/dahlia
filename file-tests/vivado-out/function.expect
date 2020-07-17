@@ -1,0 +1,15 @@
+// git.status = dirty, build.date = Fri Jul 17 15:41:51 EDT 2020, git.hash = 0ba472d
+#include <ap_int.h>
+void bar(ap_int<10> a[10]) {
+  #pragma HLS INLINE
+  a[1] = 10;
+}
+extern "C" {
+  void kernel() {
+    
+    #pragma HLS INTERFACE s_axilite port=return bundle=control
+    ap_int<10> x[10];
+    #pragma HLS resource variable=x core=RAM_1P_BRAM
+    bar(x);
+  }
+}
