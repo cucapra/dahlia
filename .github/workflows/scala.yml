@@ -31,7 +31,8 @@ jobs:
         key: dahlia-sources-${{ runner.os }}-${{ hashFiles( '**/build.sbt' ) }}
 
     - name: Run SBT tests
-      run: sbt test
+      run: |
+        sbt "; assembly; test"
 
     - name: Cache runt
       id: runt-cache
