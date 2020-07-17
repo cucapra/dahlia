@@ -253,7 +253,7 @@ private class FutilBackendHelper {
         throw NotImplemented(s"Futil backend cannot initialize memories", c.pos)
       case CLet(id, typ, Some(e)) => {
         val reg =
-          LibDecl(CompVar(s"$id"), Stdlib.register(bitsForType(typ, c.pos)))
+          LibDecl(genName(s"$id"), Stdlib.register(bitsForType(typ, c.pos)))
         val out = emitExpr(e)(store)
         val groupName = genName("let")
         val doneHole = Connect(
@@ -274,7 +274,7 @@ private class FutilBackendHelper {
       }
       case CLet(id, typ, None) => {
         val reg =
-          LibDecl(CompVar(s"$id"), Stdlib.register(bitsForType(typ, c.pos)))
+          LibDecl(genName(s"$id"), Stdlib.register(bitsForType(typ, c.pos)))
         val struct = List(reg)
         (struct, Empty, store + (CompVar(s"$id") -> reg.id))
       }
