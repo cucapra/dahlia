@@ -111,7 +111,8 @@ object Futil {
       case Connect(src, dest, None) =>
         dest.doc <+> equal <+> src.doc <> semi
       case Group(id, conns) =>
-        text("group") <+> id.doc <+>
+        text("group") <+> id.doc <>
+          angles(text("\"static\"") <> equal <> text(1.toString())) <+>
           scope(vsep(conns.map(_.doc)))
     }
 
