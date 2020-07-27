@@ -181,6 +181,8 @@ private class FutilBackendHelper {
             case "<=" => "le"
             case ">=" => "ge"
             case "!=" => "neq"
+            case "==" => "eq"
+            case "%" => "mod"
             case x =>
               throw NotImplemented(
                 s"Futil backend does not support '$x' yet.",
