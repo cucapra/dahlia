@@ -63,7 +63,7 @@ object GenerateExec {
     }
 
     val CXX =
-      Seq("g++", "--std=c++14", "-Wall", "-I", headerLocation.toString) ++ compilerOpts
+      Seq("g++", "-g", "--std=c++14", "-Wall", "-I", headerLocation.toString) ++ compilerOpts
 
     val stderr = new StringBuilder
     val logger = ProcessLogger(l => scribe.info(l), l => stderr ++= (l + "\n"))
