@@ -97,17 +97,10 @@ private class VivadoBackend extends CppLike {
       val argPragmas = func.args.map(arg =>
         arg.typ match {
           case _: TArray => {
-            text(
-              s"#pragma HLS INTERFACE m_axi port=${arg.id} offset=slave bundle=gmem"
-            ) <@>
-              text(
-                s"#pragma HLS INTERFACE s_axilite port=${arg.id} bundle=control"
-              )
+            text(s"#pragma HLS INTERFACE ap_none port=${arg.id}")
           }
           case _ =>
-            text(
-              s"#pragma HLS INTERFACE s_axilite port=${arg.id} bundle=control"
-            )
+            text(s"#pragma HLS INTERFACE ap_none port=${arg.id}")
         }
       )
 
