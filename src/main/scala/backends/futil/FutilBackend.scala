@@ -372,6 +372,7 @@ private class FutilBackendHelper {
             )
         }
       }
+      case _: CDecorate => (List(), SeqComp(List()), store)
       case x =>
         throw NotImplemented(s"Futil backend does not support $x yet", x.pos)
     }
