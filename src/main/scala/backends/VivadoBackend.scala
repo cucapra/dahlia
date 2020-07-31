@@ -9,7 +9,7 @@ import CompilerError._
 import PrettyPrint.Doc
 import PrettyPrint.Doc._
 
-private class VivadoBackend extends CppLike {
+private class VivadoBackend(config: Config) extends CppLike {
   val CppPreamble: Doc = text("""
     |#include <ap_int.h>
   """.stripMargin.trim)
@@ -89,21 +89,46 @@ private class VivadoBackend extends CppLike {
         cmd.body
     }
 
+  private def axiHeader(arg: Syntax.Decl): Doc = {
+    arg.typ match {
+      case _: TArray => {
+        text(
+          s"#pragma HLS INTERFACE m_axi port=${arg.id} offset=slave bundle=gmem"
+        ) <@>
+          text(
+            s"#pragma HLS INTERFACE s_axilite port=${arg.id} bundle=control"
+          )
+      }
+      case _ =>
+        text(
+          s"#pragma HLS INTERFACE s_axilite port=${arg.id} bundle=control"
+        )
+    }
+  }
+
+  private def apMemoryHeader(arg: Syntax.Decl): Doc = {
+    arg.typ match {
+      case _: TArray => {
+        text(s"#pragma HLS INTERFACE ap_memory port=${arg.id}")
+      }
+      case _ =>
+        text(
+          s"#pragma HLS INTERFACE s_axilite port=${arg.id} bundle=control"
+        )
+    }
+  }
+
   def emitFuncHeader(func: FuncDef, entry: Boolean = false): Doc = {
     // Error if function arguments are partitioned/ported.
     interfaceValid(func.args)
 
     if (entry) {
       val argPragmas = func.args.map(arg =>
-        arg.typ match {
-          case _: TArray => {
-            text(s"#pragma HLS INTERFACE ap_memory port=${arg.id}")
-          }
-          case _ =>
-            text(s"#pragma HLS INTERFACE ap_memory port=${arg.id}")
+        config.memoryInterface match {
+          case Axi => axiHeader(arg)
+          case ApMemory => apMemoryHeader(arg)
         }
       )
-
       vsep(argPragmas) <@>
         text(s"#pragma HLS INTERFACE s_axilite port=return bundle=control")
     } else {
@@ -147,7 +172,7 @@ private class VivadoBackend extends CppLike {
 
 }
 
-private class VivadoBackendHeader extends VivadoBackend {
+private class VivadoBackendHeader(c: Config) extends VivadoBackend(c) {
   override def emitCmd(c: Command): Doc = emptyDoc
 
   override def emitFunc(func: FuncDef, entry: Boolean): Doc = func match {
@@ -167,8 +192,8 @@ private class VivadoBackendHeader extends VivadoBackend {
 
 case object VivadoBackend extends Backend {
   def emitProg(p: Prog, c: Config) = c.header match {
-    case true => (new VivadoBackendHeader()).emitProg(p, c)
-    case false => (new VivadoBackend()).emitProg(p, c)
+    case true => (new VivadoBackendHeader(c)).emitProg(p, c)
+    case false => (new VivadoBackend(c)).emitProg(p, c)
   }
   val canGenerateHeader = true
 }

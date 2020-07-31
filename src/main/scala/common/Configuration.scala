@@ -14,6 +14,11 @@ object Configuration {
   final case object Cpp extends BackendOption
   final case object Futil extends BackendOption
 
+  // The type of Vivado memory interface to generate
+  sealed trait MemoryInterface
+  final case object ApMemory extends MemoryInterface
+  final case object Axi extends MemoryInterface
+
   val emptyConf = Config(null)
 
   case class Config(
@@ -26,7 +31,8 @@ object Configuration {
       header: Boolean = false, // Generate a header
       passDebug: Boolean = false, // Show AST after every state
       logLevel: scribe.Level = scribe.Level.Info,
-      enableLowering: Boolean = false // Enable lowering passes
+      enableLowering: Boolean = false, // Enable lowering passes
+      memoryInterface: MemoryInterface = Axi, // The memory interface to use for vivado
   )
 
 }
