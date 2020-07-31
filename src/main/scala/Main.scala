@@ -16,6 +16,11 @@ object Main {
     "futil" -> Futil
   )
 
+  val memoryInterfaces = Map(
+    "ap_memory" -> ApMemory,
+    "axi" -> Axi
+  )
+
   val parser = new scopt.OptionParser[Config]("fuse") {
 
     head("fuse", "0.0.1")
@@ -66,6 +71,17 @@ object Main {
     opt[Unit]("pass-debug")
       .action((_, c) => c.copy(passDebug = true))
       .text("Show the AST after every compiler pass. Default: false.")
+
+    opt[String]("memory-interface")
+      .validate(b =>
+        if (memoryInterfaces.contains(b)) success
+        else
+          failure(
+            s"Invalid memory interface. Valid memory interfaces are ${memoryInterfaces.keys.mkString(", ")}"
+          )
+      )
+      .action((m, c) => c.copy(memoryInterface = memoryInterfaces(m)))
+      .text("The memory interface to use for the Vivado backend. Default `axi`")
 
     cmd("run")
       .action((_, c) => c.copy(mode = Run, backend = Cpp))

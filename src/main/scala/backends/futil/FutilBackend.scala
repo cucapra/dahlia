@@ -51,7 +51,11 @@ private class FutilBackendHelper {
     */
   type Store = Map[CompVar, CompVar]
 
-  def emitArrayDecl(typ: TArray, id: Id): List[Structure] = {
+  /** `external` is a flag that differentiates between generating
+    *  external memories and internal memories. This is so that
+    *  we can generate external memories for `decl`s and internal
+    *  memories for local arrays. */
+  def emitArrayDecl(typ: TArray, id: Id, external: Boolean): List[Structure] = {
     // No support for multi-ported memories or banked memories.
     assertOrThrow(
       typ.ports == 1,
@@ -76,14 +80,25 @@ private class FutilBackendHelper {
       case 1 => {
         val size = typ.dims(0)._1
         val idxSize = bitsNeeded(size)
-        LibDecl(name, Stdlib.mem_d1(width, size, idxSize))
+        if (external) {
+          LibDecl(name, Stdlib.mem_d1_ext(width, size, idxSize))
+        } else {
+          LibDecl(name, Stdlib.mem_d1(width, size, idxSize))
+        }
       }
       case 2 => {
         val size0 = typ.dims(0)._1
         val size1 = typ.dims(1)._1
         val idxSize0 = bitsNeeded(size0)
         val idxSize1 = bitsNeeded(size1)
-        LibDecl(name, Stdlib.mem_d2(width, size0, size1, idxSize0, idxSize1))
+        if (external) {
+          LibDecl(
+            name,
+            Stdlib.mem_d2_ext(width, size0, size1, idxSize0, idxSize1)
+          )
+        } else {
+          LibDecl(name, Stdlib.mem_d2(width, size0, size1, idxSize0, idxSize1))
+        }
       }
       case 3 => {
         val size0 = typ.dims(0)._1
@@ -92,11 +107,27 @@ private class FutilBackendHelper {
         val idxSize0 = bitsNeeded(size0)
         val idxSize1 = bitsNeeded(size1)
         val idxSize2 = bitsNeeded(size2)
-        LibDecl(
-          name,
-          Stdlib
-            .mem_d3(width, size0, size1, size2, idxSize0, idxSize1, idxSize2)
-        )
+        if (external) {
+          LibDecl(
+            name,
+            Stdlib
+              .mem_d3_ext(
+                width,
+                size0,
+                size1,
+                size2,
+                idxSize0,
+                idxSize1,
+                idxSize2
+              )
+          )
+        } else {
+          LibDecl(
+            name,
+            Stdlib
+              .mem_d3(width, size0, size1, size2, idxSize0, idxSize1, idxSize2)
+          )
+        }
       }
       case n => throw NotImplemented(s"Arrays of size $n")
     }
@@ -107,7 +138,7 @@ private class FutilBackendHelper {
     *  represent the declaration `d`. Simply returns a `List[Structure]`.
     */
   def emitDecl(d: Decl): List[Structure] = d.typ match {
-    case tarr: TArray => emitArrayDecl(tarr, d.id)
+    case tarr: TArray => emitArrayDecl(tarr, d.id, true)
     case _: TBool => {
       val reg = LibDecl(CompVar(s"${d.id}"), Stdlib.register(1))
       List(reg)
@@ -193,7 +224,9 @@ private class FutilBackendHelper {
       }
       case EVar(id) =>
         val portName = if (lhs) "in" else "out"
-        val varName = store.get(CompVar(s"$id")).getOrThrow(Impossible(s"$id was not in `store`"))
+        val varName = store
+          .get(CompVar(s"$id"))
+          .getOrThrow(Impossible(s"$id was not in `store`"))
         val struct =
           if (lhs) List(Connect(ConstantPort(1, 1), varName.port("write_en")))
           else List()
@@ -250,7 +283,7 @@ private class FutilBackendHelper {
         (struct1 ++ struct2, con1.seq(con2), s2)
       }
       case CLet(id, Some(tarr: TArray), None) =>
-        (emitArrayDecl(tarr, id), Empty, store)
+        (emitArrayDecl(tarr, id, false), Empty, store)
       case CLet(_, Some(_: TArray), Some(_)) =>
         throw NotImplemented(s"Futil backend cannot initialize memories", c.pos)
       case CLet(id, typ, Some(e)) => {
