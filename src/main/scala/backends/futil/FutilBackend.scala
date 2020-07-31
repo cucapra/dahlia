@@ -51,6 +51,10 @@ private class FutilBackendHelper {
     */
   type Store = Map[CompVar, CompVar]
 
+  /** `external` is a flag that differentiates between generating
+    *  external memories and internal memories. This is so that
+    *  we can generate external memories for `decl`s and internal
+    *  memories for local arrays. */
   def emitArrayDecl(typ: TArray, id: Id, external: Boolean): List[Structure] = {
     // No support for multi-ported memories or banked memories.
     assertOrThrow(
