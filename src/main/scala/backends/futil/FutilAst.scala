@@ -110,9 +110,12 @@ object Futil {
         dest.doc <+> equal <+> guard.doc <+> text("?") <+> src.doc <> semi
       case Connect(src, dest, None) =>
         dest.doc <+> equal <+> src.doc <> semi
-      case Group(id, conns) =>
+      case Group(id, conns, Some(delay)) =>
         text("group") <+> id.doc <>
-          angles(text("\"static\"") <> equal <> text(1.toString())) <+>
+          angles(text("\"static\"") <> equal <> text(delay.toString())) <+>
+          scope(vsep(conns.map(_.doc)))
+      case Group(id, conns, None) =>
+        text("group") <+> id.doc <+>
           scope(vsep(conns.map(_.doc)))
     }
 
@@ -121,7 +124,8 @@ object Futil {
         case (LibDecl(thisId, _), LibDecl(thatId, _)) => thisId.compare(thatId)
         case (CompDecl(thisId, _), CompDecl(thatId, _)) =>
           thisId.compare(thatId)
-        case (Group(thisId, _), Group(thatId, _)) => thisId.compare(thatId)
+        case (Group(thisId, _, _), Group(thatId, _, _)) =>
+          thisId.compare(thatId)
         case (Connect(thisSrc, thisDest, _), Connect(thatSrc, thatDest, _)) => {
           if (thisSrc.compare(thatSrc) == 0) {
             thisDest.compare(thatDest)
@@ -133,18 +137,23 @@ object Futil {
         case (_, LibDecl(_, _)) => 1
         case (CompDecl(_, _), _) => -1
         case (_, CompDecl(_, _)) => 1
-        case (Group(_, _), _) => -1
-        case (_, Group(_, _)) => 1
+        case (Group(_, _, _), _) => -1
+        case (_, Group(_, _, _)) => 1
       }
     }
   }
   case class LibDecl(id: CompVar, ci: CompInst) extends Structure
   case class CompDecl(id: CompVar, comp: CompVar) extends Structure
-  case class Group(id: CompVar, connections: List[Connect]) extends Structure
+  case class Group(
+      id: CompVar,
+      connections: List[Connect],
+      staticDelay: Option[Int]
+  ) extends Structure
   object Group {
     def fromStructure(
         id: CompVar,
-        structure: List[Structure]
+        structure: List[Structure],
+        staticDelay: Option[Int]
     ): (Group, List[Structure]) = {
       val (connections, st) = structure.partitionMap[Connect, Structure](st =>
         st match {
@@ -152,7 +161,7 @@ object Futil {
           case s => Right(s)
         }
       )
-      (this(id, connections), st)
+      (this(id, connections, staticDelay), st)
     }
   }
   case class Connect(src: Port, dest: Port, guard: Option[GuardExpr] = None)
@@ -172,7 +181,6 @@ object Futil {
       case Or(left, right) => parens(left.doc <+> text("|") <+> right.doc)
     }
   }
-
   case class Atom(item: Port) extends GuardExpr
   case class And(left: GuardExpr, right: GuardExpr) extends GuardExpr
   case class Or(left: GuardExpr, right: GuardExpr) extends GuardExpr
@@ -262,7 +270,10 @@ object Stdlib {
       idxSize0: Int,
       idxSize1: Int
   ): Futil.CompInst =
-    Futil.CompInst("std_mem_d2_ext", List(width, size0, size1, idxSize0, idxSize1))
+    Futil.CompInst(
+      "std_mem_d2_ext",
+      List(width, size0, size1, idxSize0, idxSize1)
+    )
 
   def mem_d3(
       width: Int,

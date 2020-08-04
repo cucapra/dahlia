@@ -17,7 +17,8 @@ import CompilerError._
 private case class EmitOutput(
     val port: Port,
     val done: Port,
-    val structure: List[Structure]
+    val structure: List[Structure],
+    val delay: Option[Int]
 )
 
 private class FutilBackendHelper {
@@ -176,29 +177,30 @@ private class FutilBackendHelper {
     EmitOutput(
       comp.id.port("out"),
       ConstantPort(1, 1),
-      struct ++ e1Out.structure ++ e2Out.structure
+      struct ++ e1Out.structure ++ e2Out.structure,
+      Some(0)
     )
   }
 
-  /** `emitExpr(expr, lhs)(implicit store)` calculates the necessary structure
+  /** `emitExpr(expr, rhsInfo)(implicit store)` calculates the necessary structure
     *  to compute `expr`. It return the pair (Port, List[Structure]).
-    *  If `lhs = false`, then `Port` is the port that will hold the output
-    *  of computing this expression. If `lhs = true`, then `Port` represents
+    *  If `rhsInfo = None`, then `Port` is the port that will hold the output
+    *  of computing this expression. If `rhsInfo = Some(...)`, then `Port` represents
     *  the port that can be used to put a value into the location represented by
     *  `expr`.
     */
-  def emitExpr(expr: Expr, lhs: Boolean = false)(
+  def emitExpr(expr: Expr, rhsInfo: Option[(Port, Option[Int])] = None)(
       implicit store: Store
   ): EmitOutput =
     expr match {
       case EInt(v, _) => {
-        val _ = lhs
+        val _ = rhsInfo
         val const =
           LibDecl(
             genName("const"),
             Stdlib.constant(bitsForType(expr.typ, expr.pos), v)
           )
-        EmitOutput(const.id.port("out"), ConstantPort(1, 1), List(const))
+        EmitOutput(const.id.port("out"), ConstantPort(1, 1), List(const), Some(0))
       }
       case EBinop(op, e1, e2) => {
         val compName =
@@ -225,17 +227,26 @@ private class FutilBackendHelper {
         emitBinop(compName, e1, e2)
       }
       case EVar(id) =>
-        val portName = if (lhs) "in" else "out"
+        val portName = if (rhsInfo.isDefined) "in" else "out"
         val varName = store
           .get(CompVar(s"$id"))
           .getOrThrow(Impossible(s"$id was not in `store`"))
         val struct =
-          if (lhs) List(Connect(ConstantPort(1, 1), varName.port("write_en")))
-          else List()
+          rhsInfo match {
+            case Some((port, _)) => List(Connect(port, varName.port("write_en")))
+            case None => List()
+          }
+        // calculate static delay, rhsDelay + 1 for writes, 0 for reads
+        val delay =
+          rhsInfo match {
+            case Some((_, delay)) => delay.map(_ + 1)
+            case None => Some(0)
+          }
         EmitOutput(
           varName.port(portName),
-          varName.port("done"),
-          struct
+          if (rhsInfo.isDefined) varName.port("done") else ConstantPort(1, 1),
+          struct,
+          delay
         )
       case ECast(e, t) => {
         e.typ = Some(t)
@@ -255,14 +266,38 @@ private class FutilBackendHelper {
         })
 
         // The value is generated on `read_data` and written on `write_data`.
-        val portName = if (lhs) "write_data" else "read_data"
+        val portName = if (rhsInfo.isDefined) "write_data" else "read_data"
         val writeEnStruct =
-          if (lhs) List(Connect(ConstantPort(1, 1), arr.port("write_en")))
-          else List()
+          rhsInfo match {
+            case Some((port, _)) => List(Connect(port, arr.port("write_en")))
+            case None => List()
+          }
+        // calculate static delay, rhsDelay + 1 for writes, 0 for reads
+        val delay =
+          rhsInfo match {
+            case Some((_, delay)) => delay.map(_ + 1)
+            case None => Some(0)
+          }
         EmitOutput(
           arr.port(portName),
-          arr.port("done"),
-          indexing ++ writeEnStruct
+          if (rhsInfo.isDefined) arr.port("done") else ConstantPort(1, 1),
+          indexing ++ writeEnStruct,
+          delay
+        )
+      }
+      case EApp(Id("sqrt"), List(arg)) => {
+        val argOut = emitExpr(arg)
+        val sqrt = LibDecl(genName("sqrt"), Stdlib.sqrt())
+        val struct = List(
+          sqrt,
+          Connect(argOut.port, sqrt.id.port("in")),
+          Connect(ConstantPort(1, 1), sqrt.id.port("go"))
+        )
+        EmitOutput(
+          sqrt.id.port("out"),
+          sqrt.id.port("done"),
+          argOut.structure ++ struct,
+          Some(1)
         )
       }
       case x =>
@@ -302,7 +337,7 @@ private class FutilBackendHelper {
             ConstantPort(1, 1),
             reg.id.port("write_en")
           ) :: doneHole :: out.structure
-        val (group, st) = Group.fromStructure(groupName, struct)
+        val (group, st) = Group.fromStructure(groupName, struct, out.delay.map(_ + 1))
         (
           reg :: group :: st,
           Enable(group.id),
@@ -316,18 +351,22 @@ private class FutilBackendHelper {
         (struct, Empty, store + (CompVar(s"$id") -> reg.id))
       }
       case CUpdate(lhs, rhs) => {
-        val lOut = emitExpr(lhs, true)(store)
         val rOut = emitExpr(rhs)(store)
+        val lOut = emitExpr(lhs, Some((rOut.done, rOut.delay)))(store)
         val groupName = genName("upd")
         val doneHole =
-          Connect(lOut.done, HolePort(groupName, "done"))
+          Connect(
+            ConstantPort(1, 1),
+            HolePort(groupName, "done"),
+            Some(Atom(lOut.done))
+          )
         val struct =
           lOut.structure ++ rOut.structure ++ List(
-            Connect(rOut.port, lOut.port),
+            Connect(rOut.port, lOut.port, Some(Atom(rOut.done))),
             doneHole
           )
         val (group, other_st) =
-          Group.fromStructure(groupName, struct)
+          Group.fromStructure(groupName, struct, lOut.delay)
         (group :: other_st, Enable(group.id), store)
       }
       case CIf(cond, tbranch, fbranch) => {
@@ -338,7 +377,7 @@ private class FutilBackendHelper {
         val groupName = genName("cond")
         val doneHole = Connect(condOut.done, HolePort(groupName, "done"))
         val (group, st) =
-          Group.fromStructure(groupName, doneHole :: condOut.structure)
+          Group.fromStructure(groupName, doneHole :: condOut.structure, condOut.delay)
         val control = If(condOut.port, group.id, tCon, fCon)
         (group :: st ++ struct, control, store)
       }
@@ -348,7 +387,7 @@ private class FutilBackendHelper {
         val groupName = genName("cond")
         val doneHole = Connect(condOut.done, HolePort(groupName, "done"))
         val (condGroup, condDefs) =
-          Group.fromStructure(groupName, doneHole :: condOut.structure)
+          Group.fromStructure(groupName, doneHole :: condOut.structure, condOut.delay)
         val (bodyStruct, bodyCon, st) = emitCmd(body)
         val control = While(condOut.port, condGroup.id, bodyCon)
         (condGroup :: bodyStruct ++ condDefs, control, st)
