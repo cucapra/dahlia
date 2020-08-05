@@ -79,7 +79,4 @@ object LowerForLoops extends PartialTransformer {
   override def rewriteC(cmd: Command)(implicit env: Env) =
     mergeRewriteC(myRewriteC)(cmd, env)
 
-  //override def rewriteE(expr: Expr)(implicit env: Env) =
-  //mergeRewriteE(myRewriteE)(expr, env)
-
 }
