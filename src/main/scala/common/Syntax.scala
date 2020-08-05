@@ -115,7 +115,7 @@ object Syntax {
 
   sealed trait Expr extends Positional with TypeAnnotation {
     def isLVal = this match {
-      case _: EVar | _: EArrAccess => true
+      case _: EVar | _: EArrAccess | _: EPhysAccess => true
       case _ => false
     }
   }

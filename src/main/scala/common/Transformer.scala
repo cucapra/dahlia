@@ -17,11 +17,12 @@ object Transformer {
       * Top level function called on the AST.
       */
     def rewrite(p: Prog): Prog = {
-      val Prog(_, defs, _, _, cmd) = p
+      val Prog(_, defs, _, decls, cmd) = p
 
       val (ndefs, env) = rewriteDefSeq(defs)(emptyEnv)
-      val (ncmd, _) = rewriteC(cmd)(env)
-      p.copy(defs = ndefs.toList, cmd = ncmd)
+      val (ndecls, env1) = rewriteDeclSeq(decls)(env)
+      val (ncmd, _) = rewriteC(cmd)(env1)
+      p.copy(defs = ndefs.toList, decls = ndecls.toList, cmd = ncmd)
     }
 
     /**
@@ -50,15 +51,23 @@ object Transformer {
       rewriteSeqWith[Definition](rewriteDef(_: Definition)(_: Env))(defs)(env)
     }
 
+    def rewriteDeclSeq(ds: List[Decl])(implicit env: Env): (List[Decl], Env) =
+      (ds, env)
+
     def rewriteDef(defi: Definition)(implicit env: Env) = defi match {
-      case fdef @ FuncDef(_, _, _, bodyOpt) =>
-        bodyOpt match {
-          case None => (fdef, env)
+      case fdef @ FuncDef(_, args, _, bodyOpt) => {
+        val (nArgs, env1) = rewriteDeclSeq(args)
+
+        val (nBody, env2) = bodyOpt match {
+          case None => (None, env1)
           case Some(body) => {
-            val (nbody, env1) = rewriteC(body)
-            fdef.copy(bodyOpt = Some(nbody)) -> env1
+            val (nbody, nEnv) = rewriteC(body)
+            Some(nbody) -> nEnv
           }
         }
+
+        fdef.copy(args = nArgs, bodyOpt = nBody) -> env2
+      }
       case _: RecordDef => (defi, env)
     }
 
@@ -205,26 +214,27 @@ object Transformer {
     def mergeRewriteE(
         myRewriteE: PF[(Expr, Env), (Expr, Env)]
     ): PF[(Expr, Env), (Expr, Env)] = {
-        myRewriteE.orElse(partialRewriteE)
+      myRewriteE.orElse(partialRewriteE)
     }
     def mergeRewriteC(
         myRewriteC: PF[(Command, Env), (Command, Env)]
     ): PF[(Command, Env), (Command, Env)] = {
-        myRewriteC.orElse(partialRewriteC)
+      myRewriteC.orElse(partialRewriteC)
     }
   }
 
   /**
-   * Transformer that adds type annotations to newly created AST nodes
-   * returned from the transformer.
-   *
-   * XXX(rachit): The right way to make this work would be to use an
-   * environment returned from the TypeChecker and use it to add type
-   * annotations to every AST node.
-   */
+    * Transformer that adds type annotations to newly created AST nodes
+    * returned from the transformer.
+    *
+    * XXX(rachit): The right way to make this work would be to use an
+    * environment returned from the TypeChecker and use it to add type
+    * annotations to every AST node.
+    */
   abstract class TypedPartialTransformer extends PartialTransformer {
     private val partialRewriteE: PF[(Expr, Env), (Expr, Env)] =
       asPartial(super.rewriteE(_: Expr)(_: Env))
+
     /** Public wrapper for [[rewriteE]] that transfers type annotations
       * from the input [[expr]] to the expression resulting from [[rewriteE]].
       * Any subclasses that overwrite `rewriteE` should call this function.
