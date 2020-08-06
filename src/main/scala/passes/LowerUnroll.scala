@@ -25,7 +25,7 @@ object LowerUnroll extends PartialTransformer {
   type Env = ForEnv
   val emptyEnv = ForEnv(Map())
 
-  def cartesianProduct[T](llst: List[List[T]]): List[List[T]] = {
+  def cartesianProduct[T](llst: Seq[Seq[T]]): Seq[Seq[T]] = {
 
     /**
       * Prepend single element to all lists of list
@@ -34,30 +34,30 @@ object LowerUnroll extends PartialTransformer {
       * @param a accumulator for tail recursive implementation
       * @return list of lists with prepended element e
       */
-    def pel(e: T, ll: List[List[T]], a: List[List[T]] = Nil): List[List[T]] =
+    def pel(e: T, ll: Seq[Seq[T]], a: Seq[Seq[T]] = Nil): Seq[Seq[T]] =
       ll match {
         case Nil => a.reverse
-        case x :: xs => pel(e, xs, (e :: x) :: a)
+        case x +: xs => pel(e, xs, (e +: x) +: a)
       }
 
     llst match {
       case Nil => Nil
-      case x :: Nil => x.map(List(_))
-      case x :: _ =>
+      case x +: Nil => x.map(Seq(_))
+      case x +: _ =>
         x match {
           case Nil => Nil
           case _ =>
             llst
-              .foldRight(List(x))((l, a) => l.flatMap(x => pel(x, a)))
+              .foldRight(Seq(x))((l, a) => l.flatMap(x => pel(x, a)))
               .map(_.dropRight(x.size))
         }
     }
   }
 
-  def unbankedDecls(id: Id, ta: TArray): List[(Id, Type)] = {
+  def unbankedDecls(id: Id, ta: TArray): Seq[(Id, Type)] = {
     val TArray(typ, dims, ports) = ta
     val out = cartesianProduct(dims.map({
-      case (size, banks) => (0 to banks - 1).toList.map((size / banks, _))
+      case (size, banks) => (0 to banks - 1).map((size / banks, _))
     })).map(idxs => {
       val name = id.v + idxs.map(_._2).mkString("_")
       val dims = idxs.map({ case (s, _) => (s, 1) })
@@ -67,7 +67,7 @@ object LowerUnroll extends PartialTransformer {
     out
   }
 
-  override def rewriteDeclSeq(ds: List[Decl])(implicit env: Env) = {
+  override def rewriteDeclSeq(ds: Seq[Decl])(implicit env: Env) = {
     ds.flatMap(d =>
       d.typ match {
         case ta: TArray =>
@@ -117,7 +117,7 @@ object LowerUnroll extends PartialTransformer {
 
   def myRewriteE: PF[(Expr, Env), (Expr, Env)] = {
     case (EArrAccess(id, idxs), env) => {
-      val banks: List[Int] = idxs.map(idx =>
+      val banks: Seq[Int] = idxs.map(idx =>
         idx match {
           case EVar(id) => env.get(id).getOrElse(0)
           case _ => 0

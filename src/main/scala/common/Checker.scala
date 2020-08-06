@@ -60,7 +60,7 @@ object Checker {
       case _: ERational | _: EInt | _: EBool | _: EVar => env
       case ERecLiteral(fields) => checkESeq(fields.map(_._2))
       case EArrLiteral(idxs) => checkESeq(idxs)
-      case EBinop(_, e1, e2) => checkESeq(Vector(e1, e2))
+      case EBinop(_, e1, e2) => checkESeq(Seq(e1, e2))
       case EApp(_, args) => checkESeq(args)
       case ECast(e, _) => checkE(e)
       case ERecAccess(rec, _) => checkE(rec)
@@ -73,8 +73,8 @@ object Checker {
 
     def checkC(cmd: Command)(implicit env: Env): Env = cmd match {
       case _: CSplit | _: CView | CEmpty | _: CDecorate => env
-      case CPar(c1, c2) => checkCSeq(Vector(c1, c2))
-      case CSeq(c1, c2) => checkCSeq(Vector(c1, c2))
+      case CPar(c1, c2) => checkCSeq(Seq(c1, c2))
+      case CSeq(c1, c2) => checkCSeq(Seq(c1, c2))
       case CUpdate(lhs, rhs) => checkE(rhs)(checkLVal(lhs))
       case CReduce(_, lhs, rhs) => checkE(rhs)(checkLVal(lhs))
       case CLet(_, _, eOpt) => eOpt.map(checkE).getOrElse(env)

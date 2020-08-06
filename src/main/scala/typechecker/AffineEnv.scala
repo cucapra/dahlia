@@ -119,7 +119,7 @@ object AffineEnv {
     override def toString = {
       val lst =
         for { (ps, gs) <- phyRes.iterator.zip(gadgetMap.iterator) } yield (
-          ps.toList.map({ case (k, v) => s"$k -> $v" }).mkString(", "),
+          ps.map({ case (k, v) => s"$k -> $v" }).mkString(", "),
           gs.keys.mkString("{", ", ", "}")
         )
 
@@ -141,8 +141,8 @@ object AffineEnv {
     }
     def consumeResource(
         name: Id,
-        resources: List[Int]
-    )(implicit pos: Position, trace: List[String]): Environment = {
+        resources: Seq[Int]
+    )(implicit pos: Position, trace: Seq[String]): Environment = {
       phyRes.get(name) match {
         case None =>
           throw Impossible(s"No physical resource named $name.")

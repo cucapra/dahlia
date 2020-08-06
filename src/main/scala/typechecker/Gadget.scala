@@ -25,17 +25,17 @@ object Gadgets {
   trait Gadget {
     // Return the name of the resource, the list of banks to be consumed,
     // and a trace of transformations done on the original resource.
-    def getSummary(consume: ConsumeList): (Id, List[Int], List[String])
+    def getSummary(consume: ConsumeList): (Id, Seq[Int], Seq[String])
   }
 
-  case class ResourceGadget(resource: Id, banks: List[Int]) extends Gadget {
-    private def cross[A](acc: Seq[List[A]], l: Seq[A]): Seq[List[A]] = {
+  case class ResourceGadget(resource: Id, banks: Seq[Int]) extends Gadget {
+    private def cross[A](acc: Seq[Seq[A]], l: Seq[A]): Seq[Seq[A]] = {
       for { a <- acc; el <- l } yield a :+ el
     }
 
     override def toString = resource.toString
 
-    private def hyperBankToBank(hyperBanks: List[Int]) = {
+    private def hyperBankToBank(hyperBanks: Seq[Int]) = {
       if (hyperBanks.length != banks.length)
         throw Impossible("hyperbank size is different from original banking")
 
@@ -51,21 +51,21 @@ object Gadgets {
       * corresponding one dimensional banks.
       */
     def getSummary(consume: ConsumeList) = {
-      // Transform consumelist into a List[List[A]] where the inner list
+      // Transform consumelist into a Seq[Seq[A]] where the inner list
       // represents a sequence of banks for the dimension. These are
       // latter transformed to 1D banks.
-      val hyperBanks: Seq[List[Int]] =
-        consume.tail.foldLeft(consume.head.map(List(_)))({
+      val hyperBanks: Seq[Seq[Int]] =
+        consume.tail.foldLeft(consume.head.map(Seq(_)))({
           case (acc, banks) => cross(acc, banks)
         })
 
-      val outRes = hyperBanks.map(hyperBankToBank).toList
+      val outRes = hyperBanks.map(hyperBankToBank)
 
-      (resource, outRes, List(clString(List(outRes))))
+      (resource, outRes, Seq(clString(Seq(outRes))))
     }
   }
 
-  case class MultiDimGadget(underlying: Gadget, dim: List[DimSpec])
+  case class MultiDimGadget(underlying: Gadget, dim: Seq[DimSpec])
       extends Gadget {
 
     /**
@@ -78,7 +78,7 @@ object Gadgets {
         .map({ case (resources, (_, banks)) => resources.map(_ % banks) })
 
       val (res, sum, trace) = underlying.getSummary(resourceTransform)
-      (res, sum, clString(resourceTransform) :: trace)
+      (res, sum, clString(resourceTransform) +: trace)
     }
   }
 
@@ -89,7 +89,7 @@ object Gadgets {
     def getSummary(consume: ConsumeList) = {
       val outRes = transformer(consume)
       val (res, sum, trace) = underlying.getSummary(outRes)
-      (res, sum, clString(outRes) :: trace)
+      (res, sum, clString(outRes) +: trace)
     }
   }
 
@@ -101,13 +101,13 @@ object Gadgets {
     */
   def viewGadget(
       underlying: Gadget,
-      shrinks: List[Int],
-      arrDims: List[DimSpec]
+      shrinks: Seq[Int],
+      arrDims: Seq[DimSpec]
   ): ViewGadget = {
     // Multiply the resource requirements by the origBanking / shrink.
     // This simulates that shrinking "connects" multiple banks into a
     // single one.
-    val resourceMultipliers: List[Int] = shrinks
+    val resourceMultipliers: Seq[Int] = shrinks
       .zip(arrDims)
       .map({
         case (shrink, (_, oldBank)) => oldBank / shrink
@@ -146,8 +146,8 @@ object Gadgets {
     */
   def splitGadget(
       underlying: Gadget,
-      arrayDims: List[DimSpec],
-      @deprecated("Not used", "0.0.1") splitDims: List[DimSpec]
+      arrayDims: Seq[DimSpec],
+      @deprecated("Not used", "0.0.1") splitDims: Seq[DimSpec]
   ): ViewGadget = {
     viewGadget(underlying, arrayDims.map(_._2), arrayDims)
   }

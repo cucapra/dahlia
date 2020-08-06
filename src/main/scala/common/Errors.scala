@@ -21,9 +21,9 @@ object Errors {
       origRes: Int,
       conLocs: MultiSet[Position],
       pos: Position,
-      trace: List[String]
+      trace: Seq[String]
   ) = {
-    val prevCons = conLocs.setMap.toList
+    val prevCons = conLocs.setMap
       .dropRight(1)
       .map({
         case (loc, counts) =>
@@ -130,7 +130,7 @@ object Errors {
       bank: Int,
       origRes: Int,
       conLocs: MultiSet[Position]
-  )(implicit pos: Position, trace: List[String])
+  )(implicit pos: Position, trace: Seq[String])
       extends TypeError(
         alreadyConsumedError(id, bank, origRes, conLocs, pos, trace)
       )
