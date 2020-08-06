@@ -137,7 +137,11 @@ object Pretty {
     case CFor(r, pipe, par, com) =>
       text("for") <+> emitRange(r) <>
         (if (pipe) space <> text("pipeline") else emptyDoc) <+>
-        scope(emitCmd(par)) <+> text("combine") <+> scope(emitCmd(com))
+        scope(emitCmd(par)) <>
+        (if (com != CEmpty)
+          space <> text("combine") <+> scope(emitCmd(com))
+        else
+          emptyDoc)
     case CWhile(cond, pipe, body) =>
       text("while") <+> parens(cond) <>
         (if (pipe) space <> text("pipeline") else emptyDoc) <+> scope(

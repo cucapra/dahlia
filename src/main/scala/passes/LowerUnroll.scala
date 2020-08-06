@@ -8,22 +8,38 @@ import Syntax._
 import CompilerError._
 
 object LowerUnroll extends PartialTransformer {
-  case class ForEnv(idxMap: Map[Id, Int])
-      extends ScopeManager[ForEnv]
+  case class ForEnv(
+      idxMap: Map[Id, Int],
+      rewriteMap: Map[Id, Id],
+      localVars: Set[Id],
+      combineReg: Map[Id, Set[Id]] = Map()
+  ) extends ScopeManager[ForEnv]
       with Tracker[Id, Int, ForEnv] {
     def merge(that: ForEnv) = {
-      ForEnv(this.idxMap ++ that.idxMap)
+      ForEnv(
+        this.idxMap ++ that.idxMap,
+        this.rewriteMap ++ that.rewriteMap,
+        this.localVars ++ that.localVars
+      )
     }
 
     def get(key: Id) = this.idxMap.get(key)
+    def add(key: Id, bank: Int) =
+      this.copy(idxMap = this.idxMap + (key -> bank))
 
-    def add(key: Id, bank: Int) = {
-      ForEnv(this.idxMap + (key -> bank))
-    }
+    def rewriteGet(key: Id) = this.rewriteMap.get(key)
+    def rewriteAdd(k: Id, v: Id) =
+      this.copy(rewriteMap = this.rewriteMap + (k -> v))
+
+    def localVarAdd(key: Id) = this.copy(localVars = this.localVars + key)
+
+    def combineRegAdd(k: Id, v: Set[Id]) =
+      this.copy(combineReg = this.combineReg + (k -> v))
+    def combineRegGet(k: Id) = this.combineReg.get(k)
   }
 
   type Env = ForEnv
-  val emptyEnv = ForEnv(Map())
+  val emptyEnv = ForEnv(Map(), Map(), Set())
 
   def cartesianProduct[T](llst: Seq[Seq[T]]): Seq[Seq[T]] = {
 
@@ -56,15 +72,13 @@ object LowerUnroll extends PartialTransformer {
 
   def unbankedDecls(id: Id, ta: TArray): Seq[(Id, Type)] = {
     val TArray(typ, dims, ports) = ta
-    val out = cartesianProduct(dims.map({
+    cartesianProduct(dims.map({
       case (size, banks) => (0 to banks - 1).map((size / banks, _))
     })).map(idxs => {
       val name = id.v + idxs.map(_._2).mkString("_")
       val dims = idxs.map({ case (s, _) => (s, 1) })
       (Id(name), TArray(typ, dims, ports))
     })
-    println(out)
-    out
   }
 
   override def rewriteDeclSeq(ds: Seq[Decl])(implicit env: Env) = {
@@ -78,6 +92,7 @@ object LowerUnroll extends PartialTransformer {
   }
 
   def myRewriteC: PF[(Command, Env), (Command, Env)] = {
+    // Rewrite banked let bound memories
     case (CLet(id, Some(ta: TArray), None), env) => {
       val cmd =
         CPar(
@@ -87,35 +102,89 @@ object LowerUnroll extends PartialTransformer {
     }
     // Handle case for initialized, unbanked memories.
     case (CLet(id, Some(ta: TArray), init), env) => {
+      val nInit = init.map(i => rewriteE(i)(env)._1)
       if (ta.dims.exists({ case (_, bank) => bank > 1 })) {
         throw NotImplemented("Banked local arrays with initial values")
       }
-      CLet(id.copy(v = id.v + "0"), Some(ta), init) -> env
+      CLet(Id(v = id.v + "0"), Some(ta), nInit) -> env
     }
-    case (c @ CFor(range, pipeline, par, combine), env) => {
-
-      if (range.u > 1 && combine != CEmpty) {
-        throw NotImplemented("Unrolled for loops with combine blocks", c.pos)
+    // Rewrite let bound variables
+    case (c @ CLet(id, _, init), env) => {
+      val nInit = init.map(i => rewriteE(i)(env)._1)
+      val suf = env.idxMap.toList.sortBy(_._1.v).map(_._2).mkString("_")
+      val newName = id.copy(id.v + suf)
+      val nEnv = if (suf != "") {
+        env.localVarAdd(id)
+      } else {
+        env
       }
-
+      c.copy(id = newName, e = nInit) -> nEnv.rewriteAdd(id, newName)
+    }
+    case (c @ CFor(range, _, par, combine), env) => {
       if (range.u > 1 && range.s != 0) {
         throw NotImplemented("Unrolling loops with non-zero start idx", c.pos)
       }
 
-      val cmd = CPar((0 to range.u - 1).map(idx => {
-          val nRange = range.copy(e = range.e / range.u, u = 1).copy()
-          val nEnv = env.add(range.iter, idx)
-          val (npar, _) = rewriteC(par)(nEnv)
-          val (ncombine, _) = rewriteC(combine)(nEnv)
-          CFor(nRange, pipeline, npar, ncombine)
-      }))
+      // We need to compile A --- B --- C into
+      // {A0; A1 ... --- B0; B1 ... --- C0; C1}
+      val nested = par match {
+        case CSeq(cmds) => cmds
+        case _ => Seq(par)
+      }
+
+      val nPar = {
+        val seqOfSeqs = (0 to range.u - 1).map(idx => {
+          rewriteCSeq(nested)(env.add(range.iter, idx))._1
+        })
+        CSeq(seqOfSeqs.transpose.map(CPar.smart(_)))
+      }
+
+      // Run rewrite just to collect all the local variables
+      val locals = rewriteC(par)(env)._2.localVars
+      val nComb = rewriteC(combine)(locals.foldLeft(env)({
+        case (env, l) => {
+          val regs = (0 to range.u - 1).map(i => {
+            val suf = ((range.iter, i) :: env.idxMap.toList)
+              .sortBy(_._1.v)
+              .map(_._2)
+              .mkString("_")
+            Id(l.v + suf)
+          })
+          env.combineRegAdd(l, regs.toSet)
+        }
+      }))._1
+
+      val nRange = range.copy(e = range.e / range.u, u = 1).copy()
 
       // Refuse lowering without explicit type on iterator.
-      cmd -> env
+      c.copy(range = nRange, par = nPar, combine = nComb) -> env
+    }
+    case (c @ CReduce(rop, _, r), env) => {
+      val nR = r match {
+      case EVar(rId) => env.combineRegGet(rId).map(ids => {
+        import Syntax.{OpConstructor => OC}
+        val binop = rop.op match {
+          case "+=" => NumOp("+", OC.add)
+          case "-=" => NumOp("-", OC.sub)
+          case "*=" => NumOp("*", OC.mul)
+          case "/=" => NumOp("/", OC.div)
+          case op => throw Impossible(s"Unknown reduction operator: $op")
+        }
+        val localsArr = ids.toArray
+        val init = EVar(localsArr(0))
+        ids.foldLeft[Expr](init)({ case (l, r) => EBinop(binop, l, EVar(r)) })
+      }).getOrElse(r)
+      case _ =>
+        throw NotImplemented("LowerUnroll: Reduce with complex RHS expression")
+      }
+      c.copy(rhs = nR) -> env
     }
   }
 
   def myRewriteE: PF[(Expr, Env), (Expr, Env)] = {
+    case (e @ EVar(id), env) => {
+      env.rewriteGet(id).map(nId => EVar(nId)).getOrElse(e) -> env
+    }
     case (EArrAccess(id, idxs), env) => {
       val banks: Seq[Int] = idxs.map(idx =>
         idx match {
