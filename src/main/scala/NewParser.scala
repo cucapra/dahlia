@@ -196,10 +196,10 @@ object Parser {
   // For loops
   def range[_: P]: P[CRange] =
     P(
-      parens(kw("let") ~/ iden ~ "=" ~/ number ~/ ".." ~/ number)
+      parens(kw("let") ~/ iden ~ (":" ~ typ).? ~ "=" ~/ number ~/ ".." ~/ number)
         ~/ (kw("unroll") ~/ number).?
     ).map({
-      case (id, s, e, u) => CRange(id, s, e, u.getOrElse(1))
+      case (id, typ, s, e, u) => CRange(id, typ, s, e, u.getOrElse(1))
     })
   def cfor[_: P]: P[Command] = P(
     kw("for") ~/ range ~/ (kw("pipeline").!).? ~ block ~ (kw("combine") ~/ block).?

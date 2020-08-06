@@ -27,16 +27,21 @@ object Compiler {
 
   var allTime: Map[String, Double] = Map()
 
-  def time[R](name: String, block: => R): R = {
-    val t0 = System.nanoTime()
-    val result = block // call-by-name
-    val t1 = System.nanoTime()
-    val time = (t1 - t0) / 1000000.0
-    allTime += s"$name: " -> time
-    result
+  def time[R](name: String, block: => R)(implicit c: Config): R = {
+    if (c.logLevel == scribe.Level.Debug) {
+      val t0 = System.nanoTime()
+      val result = block // call-by-name
+      val t1 = System.nanoTime()
+      val time = (t1 - t0) / 1000000.0
+      allTime += s"$name: " -> time
+      result
+    } else {
+      block
+    }
   }
 
   def checkStringWithError(prog: String, c: Config = emptyConf) = {
+    implicit val conf = c
     val ast = time("parse", { FuseParser.parse(prog) })
     time("well formedness", { passes.WellFormedChecker.check(ast) })
     time("type checking", {
@@ -63,12 +68,14 @@ object Compiler {
   def codegen(ast: Prog, c: Config = emptyConf) = {
     val rast = passes.RewriteView.rewrite(ast);
     showDebug(rast, "Rewrite Views", c)
-    allTime.toList
-      .sortBy(-_._2)
-      .foreach({
-        case (pass, time) =>
-          System.err.println(f"$pass: ${time}%2.2f" + "ms")
-      })
+    if (c.logLevel == scribe.Level.Debug) {
+      allTime.toList
+        .sortBy(-_._2)
+        .foreach({
+          case (pass, time) =>
+            System.err.println(f"$pass: ${time}%2.2f" + "ms")
+        })
+    }
 
     // Perform program lowering if needed.
     val finalAst: Prog = if (c.enableLowering) {
