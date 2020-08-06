@@ -121,43 +121,47 @@ object LowerUnroll extends PartialTransformer {
       c.copy(id = newName, e = nInit) -> nEnv.rewriteAdd(id, newName)
     }
     case (c @ CFor(range, _, par, combine), env) => {
-      if (range.u > 1 && range.s != 0) {
+      if (range.u == 1) {
+        val (npar, env1) = env.withScopeAndRet(rewriteC(par)(_))
+        val (ncomb, env2) = rewriteC(combine)(env1)
+        c.copy(par = npar, combine = ncomb) -> env2
+      } else if (range.u > 1 && range.s != 0) {
         throw NotImplemented("Unrolling loops with non-zero start idx", c.pos)
-      }
-
-      // We need to compile A --- B --- C into
-      // {A0; A1 ... --- B0; B1 ... --- C0; C1}
-      val nested = par match {
-        case CSeq(cmds) => cmds
-        case _ => Seq(par)
-      }
-
-      val nPar = {
-        val seqOfSeqs = (0 to range.u - 1).map(idx => {
-          rewriteCSeq(nested)(env.add(range.iter, idx))._1
-        })
-        CSeq(seqOfSeqs.transpose.map(CPar.smart(_)))
-      }
-
-      // Run rewrite just to collect all the local variables
-      val locals = rewriteC(par)(env)._2.localVars
-      val nComb = rewriteC(combine)(locals.foldLeft(env)({
-        case (env, l) => {
-          val regs = (0 to range.u - 1).map(i => {
-            val suf = ((range.iter, i) :: env.idxMap.toList)
-              .sortBy(_._1.v)
-              .map(_._2)
-              .mkString("_")
-            Id(l.v + suf)
-          })
-          env.combineRegAdd(l, regs.toSet)
+      } else {
+        // We need to compile A --- B --- C into
+        // {A0; A1 ... --- B0; B1 ... --- C0; C1}
+        val nested = par match {
+          case CSeq(cmds) => cmds
+          case _ => Seq(par)
         }
-      }))._1
 
-      val nRange = range.copy(e = range.e / range.u, u = 1).copy()
+        val nPar = {
+          val seqOfSeqs = (0 to range.u - 1).map(idx => {
+            rewriteCSeq(nested)(env.add(range.iter, idx))._1
+          })
+          CSeq(seqOfSeqs.transpose.map(CPar.smart(_)))
+        }
 
-      // Refuse lowering without explicit type on iterator.
-      c.copy(range = nRange, par = nPar, combine = nComb) -> env
+        // Run rewrite just to collect all the local variables
+        val locals = rewriteC(par)(env)._2.localVars
+        val nComb = rewriteC(combine)(locals.foldLeft(env)({
+          case (env, l) => {
+            val regs = (0 to range.u - 1).map(i => {
+              val suf = ((range.iter, i) :: env.idxMap.toList)
+                .sortBy(_._1.v)
+                .map(_._2)
+                .mkString("_")
+                Id(l.v + suf)
+            })
+          env.combineRegAdd(l, regs.toSet)
+          }
+        }))._1
+
+        val nRange = range.copy(e = range.e / range.u, u = 1).copy()
+
+        // Refuse lowering without explicit type on iterator.
+        c.copy(range = nRange, par = nPar, combine = nComb) -> env
+      }
     }
     case (c @ CReduce(rop, _, r), env) => {
       val nR = r match {
