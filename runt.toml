@@ -21,13 +21,15 @@ cmd = "./fuse {}"
 name = "run"
 paths = [ "file-tests/should-run/*.fuse" ]
 cmd = """
-./bin/run-dahlia {} file-tests/data "-b c++"
+./bin/run-dahlia {} "-b c++"
 """
+expect_dir = "file-tests/data"
 
 [[tests]]
 name = "run lower"
 paths = [ "file-tests/should-lower/*.fuse" ]
 cmd = """
-./bin/run-dahlia {} file-tests/lower-data "-b c++ --lower"
+./bin/run-dahlia {} "-b c++ --lower"
 """
 # Should compute the same results as should run
+expect_dir = "file-tests/data"

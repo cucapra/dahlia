@@ -6,12 +6,10 @@ set -euf -o pipefail
 
 # Input dahlia program.
 prog="$1"
-# Folder with the data
-data_folder="$2"
 # Extra options for the Dahlia compiler.
-extra_opts="$3"
+extra_opts="$2"
 # Location of the JSON data.
-data="$data_folder/$(basename "$prog").data.json"
+data="./file-tests/data/$(basename "$prog").data.json"
 # Save the output file in a temporary location.
 out="$(mktemp).cpp"
 
