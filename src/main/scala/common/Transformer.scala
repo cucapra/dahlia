@@ -45,6 +45,12 @@ object Transformer {
       rewriteSeqWith[Expr](rewriteE(_: Expr)(_: Env))(exprs)(env)
     }
 
+    def rewriteCSeq(
+        cmds: Iterable[Command]
+    )(implicit env: Env): (Iterable[Command], Env) = {
+      rewriteSeqWith[Command](rewriteC(_: Command)(_: Env))(cmds)(env)
+    }
+
     def rewriteDefSeq(
         defs: Iterable[Definition]
     )(implicit env: Env): (Iterable[Definition], Env) = {
@@ -119,15 +125,13 @@ object Transformer {
 
     def rewriteC(cmd: Command)(implicit env: Env): (Command, Env) = cmd match {
       case _: CSplit | _: CView | CEmpty | _: CDecorate => (cmd, env)
-      case CPar(c1, c2) => {
-        val (nc1, env1) = rewriteC(c1)
-        val (nc2, env2) = rewriteC(c2)(env1)
-        CPar(nc1, nc2) -> env2
+      case CPar(cmds) => {
+        val (ncmds, env1) = rewriteCSeq(cmds)
+        CPar(ncmds.toSeq) -> env1
       }
-      case CSeq(c1, c2) => {
-        val (nc1, env1) = rewriteC(c1)
-        val (nc2, env2) = rewriteC(c2)(env1)
-        CSeq(nc1, nc2) -> env2
+      case CSeq(cmds) => {
+        val (ncmds, env1) = rewriteCSeq(cmds)
+        CSeq(ncmds.toSeq) -> env1
       }
       case CUpdate(lhs, rhs) => {
         val (nlhs, env1) = rewriteLVal(lhs)

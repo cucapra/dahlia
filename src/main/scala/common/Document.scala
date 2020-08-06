@@ -115,6 +115,9 @@ object PrettyPrint {
     def hsep(ds: Iterable[Doc]): Doc =
       folddoc(ds, (_ <+> _))
 
+    def vsep(ds: Iterable[Doc], sep: Doc): Doc =
+      folddoc(ds, (_ <@> sep <@> _))
+
     def vsep(ds: Iterable[Doc]): Doc =
       folddoc(ds, (_ <@> _))
 

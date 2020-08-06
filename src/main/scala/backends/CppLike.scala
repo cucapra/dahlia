@@ -121,8 +121,8 @@ object Cpp {
     }
 
     implicit def emitCmd(c: Command): Doc = c match {
-      case CPar(c1, c2) => c1 <@> c2
-      case CSeq(c1, c2) => c1 <@> text("//---") <@> c2
+      case CPar(cmds) => vsep(cmds.map(emitCmd))
+      case CSeq(cmds) => vsep(cmds.map(emitCmd), text("//---"))
       case l: CLet => emitLet(l)
       case CIf(cond, cons, alt) => {
         text("if") <+> parens(cond) <+> scope(cons) <> (alt match {

@@ -13,7 +13,7 @@ object Compiler {
 
   // Transformers to execute *before* type checking.
   val preTransformers: List[(String, PartialTransformer)] = List(
-    "Lower unroll and bank" -> passes.LowerUnroll,
+    //"Lower unroll and bank" -> passes.LowerUnroll,
     "Lower for loops" -> passes.LowerForLoops,
   )
 
@@ -39,6 +39,7 @@ object Compiler {
 
   def checkStringWithError(prog: String, c: Config = emptyConf) = {
     val preAst = FuseParser.parse(prog)
+    pprint.pprintln(preAst)
 
     // Run pre transformers if lowering is enabled
     val ast = if (c.enableLowering) {

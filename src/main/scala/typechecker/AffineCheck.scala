@@ -207,7 +207,8 @@ object AffineChecker {
       case (CLet(id, Some(ta @ TArray(_, _, _)), _), env) => {
         addPhysicalResource(id, ta, env)
       }
-      case (CSeq(c1, c2), env) => {
+      case (CSeq(c1 +: cmds), env) => {
+        val c2 = CSeq(cmds)
         // Abuse withScope to capture bindings created in this scope.
         val (nEnv, pDefs, gDefs) = env.withScope(1) { newScope =>
           checkC(c1)(newScope)
@@ -228,7 +229,8 @@ object AffineChecker {
         val env2 = checkC(c2)(nextEnv)
         env1 merge env2
       }
-      case (CPar(c1, c2), env) => checkC(c2)(checkC(c1)(env))
+      case (CPar(cmds), env) =>
+        cmds.foldLeft(env)({ case (e, c) => checkC(c)(e) })
       case (CFor(range, _, par, combine), env) => {
         val (e1, _, _) = env.withScope(range.u) { newScope =>
           checkC(par)(newScope)

@@ -78,13 +78,15 @@ object LowerUnroll extends PartialTransformer {
   }
 
   def myRewriteC: PF[(Command, Env), (Command, Env)] = {
-    case (CLet(id, Some(ta:TArray), None), env) => {
-      unbankedDecls(id, ta).foldLeft[Command](CEmpty)({ case (acc, (i, t)) => {
-        CPar(acc, CLet(i, Some(t), None))
-      }}) -> env
+    case (CLet(id, Some(ta: TArray), None), env) => {
+      val cmd =
+        CPar(
+          unbankedDecls(id, ta).map({ case (i, t) => CLet(i, Some(t), None) })
+        )
+      cmd -> env
     }
     // Handle case for initialized, unbanked memories.
-    case (CLet(id, Some(ta:TArray), init), env) => {
+    case (CLet(id, Some(ta: TArray), init), env) => {
       if (ta.dims.exists({ case (_, bank) => bank > 1 })) {
         throw NotImplemented("Banked local arrays with initial values")
       }
@@ -100,15 +102,13 @@ object LowerUnroll extends PartialTransformer {
         throw NotImplemented("Unrolling loops with non-zero start idx", c.pos)
       }
 
-      val cmd = (0 to range.u - 1).foldLeft[Command](CEmpty)({
-        case (acc, idx) => {
+      val cmd = CPar((0 to range.u - 1).map(idx => {
           val nRange = range.copy(e = range.e / range.u, u = 1).copy()
           val nEnv = env.add(range.iter, idx)
           val (npar, _) = rewriteC(par)(nEnv)
           val (ncombine, _) = rewriteC(combine)(nEnv)
-          CPar(acc, CFor(nRange, pipeline, npar, ncombine))
-        }
-      })
+          CFor(nRange, pipeline, npar, ncombine)
+      }))
 
       // Refuse lowering without explicit type on iterator.
       cmd -> env

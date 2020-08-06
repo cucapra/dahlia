@@ -41,7 +41,11 @@ object CapabilityChecker {
     }
 
     def myCheckC: PF[(Command, Env), Env] = {
-      case (CSeq(c1, c2), env) => checkC(c1)(env); checkC(c2)(env)
+      case (CSeq(cmds), env) => {
+        // Check all seq commands under the same environment
+        cmds.foreach(c => checkC(c)(env));
+        env
+      }
     }
 
     /**
