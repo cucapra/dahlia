@@ -168,8 +168,8 @@ object Syntax {
       extends Positional
 
   sealed trait Command extends Positional
-  case class CPar(c1: Command, c2: Command) extends Command
-  case class CSeq(c1: Command, c2: Command) extends Command
+  case class CPar(cmds: Seq[Command]) extends Command
+  case class CSeq(cmds: Seq[Command]) extends Command
   case class CLet(id: Id, var typ: Option[Type], e: Option[Expr])
       extends Command
   case class CView(id: Id, arrId: Id, dims: Seq[View]) extends Command
@@ -194,6 +194,58 @@ object Syntax {
   case class CExpr(exp: Expr) extends Command
   case class CBlock(cmd: Command) extends Command
   case object CEmpty extends Command
+
+  // Smart constructors for composition
+  object CPar {
+    def smart(c1: Command, c2: Command): Command = (c1, c2) match {
+      case (l: CPar, r: CPar) => l.copy(cmds = l.cmds ++ r.cmds)
+      case (l: CPar, r) => l.copy(cmds = l.cmds :+ r)
+      case (l, r: CPar) => r.copy(cmds = l +: r.cmds)
+      case (CEmpty, r) => r
+      case (l, CEmpty) => l
+      case _ => CPar(Seq(c1, c2))
+    }
+
+    def smart(cmds: Seq[Command]): Command = {
+      val flat = cmds.flatMap(cmd => cmd match {
+            case CPar(cs) => cs
+            case CEmpty => Seq()
+            case _ => Seq(cmd)
+      })
+      if (flat.length == 0) {
+        CEmpty
+      } else if (flat.length == 1) {
+        flat(0)
+      } else {
+        CPar(flat)
+      }
+    }
+  }
+  object CSeq {
+    def smart(c1: Command, c2: Command): Command = (c1, c2) match {
+      case (l: CSeq, r: CSeq) => l.copy(cmds = l.cmds ++ r.cmds)
+      case (l: CSeq, r) => l.copy(cmds = l.cmds :+ r)
+      case (l, r: CSeq) => r.copy(cmds = l +: r.cmds)
+      case (CEmpty, r) => r
+      case (l, CEmpty) => l
+      case _ => CSeq(Seq(c1, c2))
+    }
+
+    def smart(cmds: Seq[Command]): Command = {
+      val flat = cmds.flatMap(cmd => cmd match {
+          case CSeq(cs) => cs
+          case CEmpty => Seq()
+          case _ => Seq(cmd)
+      })
+      if (flat.length == 0) {
+        CEmpty
+      } else if (flat.length == 1) {
+        flat(0)
+      } else {
+        CSeq(flat)
+      }
+    }
+  }
 
   sealed trait Definition extends Positional
 

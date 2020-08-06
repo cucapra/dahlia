@@ -122,8 +122,8 @@ object Pretty {
   }
 
   implicit def emitCmd(c: Command)(implicit debug: Boolean): Doc = c match {
-    case CPar(c1, c2) => c1 <@> c2
-    case CSeq(c1, c2) => c1 <@> text("---") <@> c2
+    case CPar(cmds) => vsep(cmds.map(emitCmd))
+    case CSeq(cmds) => vsep(cmds.map(emitCmd), text("---"))
     case CLet(id, typ, e) =>
       text("let") <+> id <>
         typ.map(space <> colon <+> emitTyp(_)).getOrElse(emptyDoc) <>

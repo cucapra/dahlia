@@ -200,7 +200,12 @@ private class FutilBackendHelper {
             genName("const"),
             Stdlib.constant(bitsForType(expr.typ, expr.pos), v)
           )
-        EmitOutput(const.id.port("out"), ConstantPort(1, 1), List(const), Some(0))
+        EmitOutput(
+          const.id.port("out"),
+          ConstantPort(1, 1),
+          List(const),
+          Some(0)
+        )
       }
       case EBinop(op, e1, e2) => {
         val compName =
@@ -233,7 +238,8 @@ private class FutilBackendHelper {
           .getOrThrow(Impossible(s"$id was not in `store`"))
         val struct =
           rhsInfo match {
-            case Some((port, _)) => List(Connect(port, varName.port("write_en")))
+            case Some((port, _)) =>
+              List(Connect(port, varName.port("write_en")))
             case None => List()
           }
         // calculate static delay, rhsDelay + 1 for writes, 0 for reads
@@ -309,15 +315,25 @@ private class FutilBackendHelper {
   )(implicit store: Store): (List[Structure], Control, Store) =
     c match {
       case CBlock(cmd) => emitCmd(cmd)
-      case CPar(c1, c2) => {
-        val (struct1, con1, s1) = emitCmd(c1)
-        val (struct2, con2, s2) = emitCmd(c2)(s1)
-        (struct1 ++ struct2, con1.par(con2), s2)
+      case CPar(cmds) => {
+        cmds.foldLeft[(List[Structure], Control, Store)](
+          (List[Structure](), Empty, store)
+        )({
+          case ((struct, con, st), cmd) => {
+            val (s1, c1, st1) = emitCmd(cmd)(st)
+            (struct ++ s1, con.par(c1), st1)
+          }
+        })
       }
-      case CSeq(c1, c2) => {
-        val (struct1, con1, s1) = emitCmd(c1)
-        val (struct2, con2, s2) = emitCmd(c2)(s1)
-        (struct1 ++ struct2, con1.seq(con2), s2)
+      case CSeq(cmds) => {
+        cmds.foldLeft[(List[Structure], Control, Store)](
+          (List[Structure](), Empty, store)
+        )({
+          case ((struct, con, st), cmd) => {
+            val (s1, c1, st1) = emitCmd(cmd)(st)
+            (struct ++ s1, con.seq(c1), st1)
+          }
+        })
       }
       case CLet(id, Some(tarr: TArray), None) =>
         (emitArrayDecl(tarr, id, false), Empty, store)
@@ -337,7 +353,8 @@ private class FutilBackendHelper {
             ConstantPort(1, 1),
             reg.id.port("write_en")
           ) :: doneHole :: out.structure
-        val (group, st) = Group.fromStructure(groupName, struct, out.delay.map(_ + 1))
+        val (group, st) =
+          Group.fromStructure(groupName, struct, out.delay.map(_ + 1))
         (
           reg :: group :: st,
           Enable(group.id),
@@ -377,7 +394,11 @@ private class FutilBackendHelper {
         val groupName = genName("cond")
         val doneHole = Connect(condOut.done, HolePort(groupName, "done"))
         val (group, st) =
-          Group.fromStructure(groupName, doneHole :: condOut.structure, condOut.delay)
+          Group.fromStructure(
+            groupName,
+            doneHole :: condOut.structure,
+            condOut.delay
+          )
         val control = If(condOut.port, group.id, tCon, fCon)
         (group :: st ++ struct, control, store)
       }
@@ -387,7 +408,11 @@ private class FutilBackendHelper {
         val groupName = genName("cond")
         val doneHole = Connect(condOut.done, HolePort(groupName, "done"))
         val (condGroup, condDefs) =
-          Group.fromStructure(groupName, doneHole :: condOut.structure, condOut.delay)
+          Group.fromStructure(
+            groupName,
+            doneHole :: condOut.structure,
+            condOut.delay
+          )
         val (bodyStruct, bodyCon, st) = emitCmd(body)
         val control = While(condOut.port, condGroup.id, bodyCon)
         (condGroup :: bodyStruct ++ condDefs, control, st)

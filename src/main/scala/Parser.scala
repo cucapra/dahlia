@@ -231,13 +231,13 @@ private class FuseParser extends RegexParsers with PackratParsers {
   }
 
   lazy val parCmd: P[Command] = positioned {
-    simpleCmd ~ ";" ~ parCmd ^^ { case c1 ~ _ ~ c2 => CPar(c1, c2) } |
-      blockCmd ~ parCmd ^^ { case c1 ~ c2 => CPar(c1, c2) } |
+    simpleCmd ~ ";" ~ parCmd ^^ { case c1 ~ _ ~ c2 => CPar.smart(c1, c2) } |
+      blockCmd ~ parCmd ^^ { case c1 ~ c2 => CPar.smart(c1, c2) } |
       simpleCmd <~ ";" | blockCmd | simpleCmd
   }
 
   lazy val cmd: P[Command] = positioned {
-    parCmd ~ "---" ~ cmd ^^ { case c1 ~ _ ~ c2 => CSeq(c1, c2) } |
+    parCmd ~ "---" ~ cmd ^^ { case c1 ~ _ ~ c2 => CSeq.smart(c1, c2) } |
       parCmd
   }
 
