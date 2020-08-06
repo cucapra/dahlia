@@ -54,29 +54,33 @@ object LowerUnroll extends PartialTransformer {
     }
   }
 
+  def unbankedDecls(id: Id, ta: TArray): List[(Id, Type)] = {
+    val TArray(typ, dims, ports) = ta
+    cartesianProduct(dims.map({
+      case (size, banks) => (0 to banks - 1).toList.map((size / banks, _))
+    })).map(idxs => {
+      val name = id.v + idxs.map(_._2).mkString("_")
+      val dims = idxs.map({ case (s, _) => (s, 1) })
+      (Id(name), TArray(typ, dims, ports))
+    })
+  }
+
   override def rewriteDeclSeq(ds: List[Decl])(implicit env: Env) = {
     ds.flatMap(d =>
       d.typ match {
-        case TArray(typ, dims, ports) => {
-          cartesianProduct(dims.map({
-            case (size, banks) => (0 to banks - 1).toList.map((size / banks, _))
-          })).map(idxs => {
-            val name = d.id.v + idxs.map(_._2).mkString("_")
-            val dims = idxs.map({ case (s, _) => (s, 1) })
-            Decl(Id(name), TArray(typ, dims, ports))
-          })
-        }
+        case ta: TArray =>
+          unbankedDecls(d.id, ta).map((x: (Id, Type)) => Decl(x._1, x._2))
         case _ => List(d)
       }
     ) -> env
   }
 
-  //override def rewriteDecl(d: Decl)(implicit env: Env) = d.typ match {
-  //case TArray(typ, dims, ports) => {
-  //}
-  //}
-
   def myRewriteC: PF[(Command, Env), (Command, Env)] = {
+    case (CLet(id, Some(ta:TArray), None), env) => {
+      unbankedDecls(id, ta).foldLeft[Command](CEmpty)({ case (acc, (i, t)) => {
+        CPar(acc, CLet(i, Some(t), None))
+      }}) -> env
+    }
     case (c @ CFor(range, pipeline, par, combine), env) => {
 
       if (range.u > 1 && combine != CEmpty) {
@@ -87,7 +91,7 @@ object LowerUnroll extends PartialTransformer {
         throw NotImplemented("Unrolling loops with non-zero start idx", c.pos)
       }
 
-      val cmd = (0 to range.u-1).foldLeft[Command](CEmpty)({
+      val cmd = (0 to range.u - 1).foldLeft[Command](CEmpty)({
         case (acc, idx) => {
           val nRange = range.copy(e = range.e / range.u, u = 1).copy()
           val nEnv = env.add(range.iter, idx)
