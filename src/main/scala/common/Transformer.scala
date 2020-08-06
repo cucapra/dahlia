@@ -22,7 +22,7 @@ object Transformer {
       val (ndefs, env) = rewriteDefSeq(defs)(emptyEnv)
       val (ndecls, env1) = rewriteDeclSeq(decls)(env)
       val (ncmd, _) = rewriteC(cmd)(env1)
-      p.copy(defs = ndefs.toList, decls = ndecls.toList, cmd = ncmd)
+      p.copy(defs = ndefs.toSeq, decls = ndecls.toSeq, cmd = ncmd)
     }
 
     /**
@@ -31,10 +31,10 @@ object Transformer {
     def rewriteSeqWith[T](
         f: (T, Env) => (T, Env)
     )(iter: Iterable[T])(env: Env): (Iterable[T], Env) = {
-      val (ts, env1) = iter.foldLeft(List[T](), env)({
+      val (ts, env1) = iter.foldLeft(Seq[T](), env)({
         case ((ts, env), t) =>
           val (t1, env1) = f(t, env)
-          (t1 :: ts, env1)
+          (t1 +: ts, env1)
       })
       (ts.reverse, env1)
     }
@@ -51,7 +51,7 @@ object Transformer {
       rewriteSeqWith[Definition](rewriteDef(_: Definition)(_: Env))(defs)(env)
     }
 
-    def rewriteDeclSeq(ds: List[Decl])(implicit env: Env): (List[Decl], Env) =
+    def rewriteDeclSeq(ds: Seq[Decl])(implicit env: Env): (Seq[Decl], Env) =
       (ds, env)
 
     def rewriteDef(defi: Definition)(implicit env: Env) = defi match {
@@ -80,7 +80,7 @@ object Transformer {
         }
         case EArrLiteral(idxs) => {
           val (idxs1, env1) = rewriteESeq(idxs)
-          EArrLiteral(idxs1.toList) -> env1
+          EArrLiteral(idxs1.toSeq) -> env1
         }
         case EBinop(op, e1, e2) => {
           val (ne1, env1) = rewriteE(e1)
@@ -89,7 +89,7 @@ object Transformer {
         }
         case app @ EApp(_, args) => {
           val (nargs, env1) = rewriteESeq(args)
-          app.copy(args = nargs.toList) -> env1
+          app.copy(args = nargs.toSeq) -> env1
         }
         case cast @ ECast(e, _) => {
           val (e1, env1) = rewriteE(e)
@@ -101,17 +101,17 @@ object Transformer {
         }
         case acc @ EArrAccess(_, idxs) => {
           val (nidxs, env1) = rewriteESeq(idxs)
-          acc.copy(idxs = nidxs.toList) -> env1
+          acc.copy(idxs = nidxs.toSeq) -> env1
         }
         case acc @ EPhysAccess(_, bankIdxs) => {
-          val init = (List[(Expr, Expr)](), env)
+          val init = (Seq[(Expr, Expr)](), env)
           val (nBankIdxsReversed, nEnv) = bankIdxs.foldLeft(init)({
             case ((nBankIdxs, env), (bank, idx)) =>
               val (nBank, env1) = rewriteE(bank)(env)
               val (nIdx, env2) = rewriteE(idx)(env1)
-              ((nBank, nIdx) :: nBankIdxs, env2)
+              ((nBank, nIdx) +: nBankIdxs, env2)
           })
-          acc.copy(bankIdxs = nBankIdxsReversed.reverse.toList) -> nEnv
+          acc.copy(bankIdxs = nBankIdxsReversed.reverse) -> nEnv
         }
       }
 

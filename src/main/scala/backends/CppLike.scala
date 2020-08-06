@@ -34,7 +34,7 @@ object Cpp {
     /**
       * Helper to generate a function call that might have a type parameter
       */
-    def cCall(f: String, tParam: Option[Doc], args: List[Doc]): Doc = {
+    def cCall(f: String, tParam: Option[Doc], args: Seq[Doc]): Doc = {
       text(f) <> (if (tParam.isDefined) angles(tParam.get) else emptyDoc) <>
         parens(commaSep(args))
     }
@@ -104,7 +104,7 @@ object Cpp {
       case ERecAccess(rec, field) => rec <> dot <> field
       case ERecLiteral(fs) =>
         scope {
-          commaSep(fs.toList.map({
+          commaSep(fs.toSeq.map({
             case (id, expr) => dot <> id <+> equal <+> expr
           }))
         }

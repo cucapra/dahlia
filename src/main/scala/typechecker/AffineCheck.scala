@@ -86,7 +86,7 @@ object AffineChecker {
       val Prog(_, defs, _, decls, cmd) = p
 
       val topFunc = FuncDef(Id(""), decls, TVoid(), Some(cmd))
-      (defs ++ List(topFunc)).foldLeft(emptyEnv) {
+      (defs ++ Seq(topFunc)).foldLeft(emptyEnv) {
         case (e, d) => checkDef(d)(e)
       }
       ()
@@ -127,7 +127,7 @@ object AffineChecker {
       * Generate a ConsumeList corresponding to the underlying memory type and
       * the index accessors.
       */
-    private def getConsumeList(idxs: List[Expr], dims: List[DimSpec])(
+    private def getConsumeList(idxs: Seq[Expr], dims: Seq[DimSpec])(
         implicit arrId: Id
     ) = {
 
@@ -144,12 +144,12 @@ object AffineChecker {
                 (bres * (e - s), Range(s, e) +: consume)
             // Index is a statically known number.
             case TStaticInt(v) =>
-              (bres * 1, Vector(v % dims(dim)._2) +: consume)
+              (bres * 1, Seq(v % dims(dim)._2) +: consume)
             // Index is a dynamic number.
             case _: TSizedInt =>
               if (dims(dim)._2 != 1)
                 throw InvalidDynamicIndex(arrId, dims(dim)._2)
-              else (bres * 1, Vector(0) +: consume)
+              else (bres * 1, Seq(0) +: consume)
 
             case t =>
               throw UnexpectedType(idx.pos, "array indexing", "integer type", t)
@@ -215,13 +215,13 @@ object AffineChecker {
         // Recreate the resource usage patterns in this scope. Note that
         // any physical resource affected from lower parts of the scope
         // chain don't need to be changed.
-        val env1 = pDefs.toList.foldLeft[Env](nEnv ++ gDefs)({
+        val env1 = pDefs.foldLeft[Env](nEnv ++ gDefs)({
           case (e, (id, resource)) => e.addResource(id, resource)
         })
 
         // Create a new environment that has the same gadget definations and
         // physical resources as env1 but hasn't consumed anything.
-        val nextEnv = pDefs.toList.foldLeft[Env](env ++ gDefs)({
+        val nextEnv = pDefs.foldLeft[Env](env ++ gDefs)({
           case (e, (id, resource)) => e.addResource(id, resource.toFresh)
         })
 

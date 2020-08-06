@@ -25,7 +25,7 @@ object LoopChecker {
   private case class LEnv(
       stateMap: ScopedMap[Id, States] = ScopedMap(),
       nameMap: ScopedMap[Id, Id] = ScopedMap(),
-      exprMap: ScopedMap[Id, List[Expr]] = ScopedMap()
+      exprMap: ScopedMap[Id, Seq[Expr]] = ScopedMap()
   )(implicit val res: Int = 1)
       extends ScopeManager[LEnv] {
 

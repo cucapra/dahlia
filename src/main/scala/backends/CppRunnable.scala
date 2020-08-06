@@ -169,7 +169,7 @@ private class CppRunnable extends CppLike {
     )
 
     // Add parsing library to the list of includes.
-    val includes = Include("parser.cpp", List()) :: p.includes
+    val includes = Include("parser.cpp", List()) +: p.includes
 
     // Generate parsing helpers for all record defintions.
     val parseHelpers =
@@ -220,7 +220,7 @@ private class CppRunnableHeader extends CppRunnable {
   }
 
   override def emitProg(p: Prog, c: Config) = {
-    val includes = Include("parser.cpp", List()) :: p.includes
+    val includes = Include("parser.cpp", List()) +: p.includes
 
     val declarations =
       vsep(includes.map(emitInclude)) <@>
