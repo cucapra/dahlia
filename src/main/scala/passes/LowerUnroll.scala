@@ -56,13 +56,15 @@ object LowerUnroll extends PartialTransformer {
 
   def unbankedDecls(id: Id, ta: TArray): List[(Id, Type)] = {
     val TArray(typ, dims, ports) = ta
-    cartesianProduct(dims.map({
+    val out = cartesianProduct(dims.map({
       case (size, banks) => (0 to banks - 1).toList.map((size / banks, _))
     })).map(idxs => {
       val name = id.v + idxs.map(_._2).mkString("_")
       val dims = idxs.map({ case (s, _) => (s, 1) })
       (Id(name), TArray(typ, dims, ports))
     })
+    println(out)
+    out
   }
 
   override def rewriteDeclSeq(ds: List[Decl])(implicit env: Env) = {
@@ -80,6 +82,13 @@ object LowerUnroll extends PartialTransformer {
       unbankedDecls(id, ta).foldLeft[Command](CEmpty)({ case (acc, (i, t)) => {
         CPar(acc, CLet(i, Some(t), None))
       }}) -> env
+    }
+    // Handle case for initialized, unbanked memories.
+    case (CLet(id, Some(ta:TArray), init), env) => {
+      if (ta.dims.exists({ case (_, bank) => bank > 1 })) {
+        throw NotImplemented("Banked local arrays with initial values")
+      }
+      CLet(id.copy(v = id.v + "0"), Some(ta), init) -> env
     }
     case (c @ CFor(range, pipeline, par, combine), env) => {
 
