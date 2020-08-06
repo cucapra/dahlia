@@ -188,6 +188,8 @@ object Futil {
   /***** control *****/
   sealed trait Control extends Emitable {
     def seq(c: Control): Control = (this, c) match {
+      case (Empty, c) => c
+      case (c, Empty) => c
       case (seq0: SeqComp, seq1: SeqComp) => SeqComp(seq0.stmts ++ seq1.stmts)
       case (seq: SeqComp, _) => SeqComp(seq.stmts ++ List(c))
       case (_, seq: SeqComp) => SeqComp(this :: seq.stmts)
@@ -195,6 +197,8 @@ object Futil {
     }
 
     def par(c: Control): Control = (this, c) match {
+      case (Empty, c) => c
+      case (c, Empty) => c
       case (par0: ParComp, par1: ParComp) => ParComp(par0.stmts ++ par1.stmts)
       case (par0: ParComp, par1) => ParComp(par0.stmts ++ List(par1))
       case (par0, par1: ParComp) => ParComp(par0 :: par1.stmts)
