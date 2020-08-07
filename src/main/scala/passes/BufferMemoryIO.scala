@@ -9,16 +9,16 @@ import Syntax._
 object BufferMemoryIO extends PartialTransformer {
 
   // Env for storing the assignments for reads to replace
-  case class BufferEnv(map: Map[Expr, Command])
+  case class BufferEnv(map: Map[Expr, CLet])
       extends ScopeManager[BufferEnv]
-      with Tracker[Expr, Command, BufferEnv] {
+      with Tracker[Expr, CLet, BufferEnv] {
     def merge(that: BufferEnv) = {
       BufferEnv(this.map ++ that.map)
     }
 
     def get(key: Expr) = this.map.get(key)
 
-    def add(key: Expr, value: Command) = {
+    def add(key: Expr, value: CLet) = {
       BufferEnv(this.map + (key -> value))
     }
   }
@@ -37,6 +37,8 @@ object BufferMemoryIO extends PartialTransformer {
     Id(s"$base${idx(base)}")
   }
 
+  /** Constructs a (Command, Env) tuple from a command
+    * and an environment containing new let bindings. */
   def construct(
       cmd: Command,
       env: Env,
@@ -46,25 +48,34 @@ object BufferMemoryIO extends PartialTransformer {
       cmd -> emptyEnv
     } else {
       val tmps = env.map.values.foldRight(acc)(CPar(_, _))
-      CSeq(tmps, cmd) -> emptyEnv
+      CPar(tmps, cmd) -> emptyEnv
     }
   }
 
+  /** Replaces array accesses with reads from a temporary variable.
+    * Inserts a let binding into the Env and relies on the rewriteC.
+    * to insert this into the code. */
   def myRewriteE: PF[(Expr, Env), (Expr, Env)] = {
     case (e @ EArrAccess(id, _), env) => {
-      val readTmp = genName(s"${id}Read")
-      val read = CLet(readTmp, e.typ, Some(e))
-      val nEnv = env.add(e, read)
-      EVar(readTmp) -> nEnv
+      env.get(e) match {
+        case Some(let) => EVar(let.id) -> env
+        case None => {
+          val readTmp = genName(s"${id}Read")
+          val read = CLet(readTmp, None, Some(e))
+          val nEnv = env.add(e, read)
+          EVar(readTmp) -> nEnv
+        }
+      }
     }
   }
 
+  /** Simple wrapper that calls rewriteC with an emptyEnv
+    * and projects the first element of the result. */
   def rewrC(c: Command): Command = {
     rewriteC(c)(emptyEnv)._1
   }
 
   def myRewriteC: PF[(Command, Env), (Command, Env)] = {
-
     // no reason to rewrite direct reads into a variable
     case (c @ CLet(_, _, Some(EArrAccess(_, _))), _) => {
       c -> emptyEnv
@@ -105,11 +116,21 @@ object BufferMemoryIO extends PartialTransformer {
       construct(CUpdate(e, EVar(writeTmp)), env, writeLet)
     }
 
+    case (CUpdate(e, rhs), _) => {
+      val (rewrite, env) = rewriteE(rhs)(emptyEnv)
+      construct(CUpdate(e, rewrite), env)
+    }
+
     case (CReduce(rop, e @ EArrAccess(id, _), rhs), _) => {
       val writeTmp = genName(s"${id}Write")
       val (rewrite, env) = rewriteE(rhs)(emptyEnv)
       val writeLet = CLet(writeTmp, e.typ, Some(rewrite))
       construct(CReduce(rop, e, EVar(writeTmp)), env, writeLet)
+    }
+
+    case (CReduce(rop, e, rhs), _) => {
+      val (rewrite, env) = rewriteE(rhs)(emptyEnv)
+      construct(CReduce(rop, e, rewrite), env)
     }
   }
 
