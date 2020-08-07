@@ -94,9 +94,14 @@ object LowerUnroll extends PartialTransformer {
         // we return just the expression corresponding to that list.
         val eachIdx: Seq[Seq[(Int, Expr)]] = idxs
           .zip(v.dims)
+          .zip(dims.map(_._2))
           .map({
-            case ((idx, bank), View(suf, _, sh)) => {
-              val banks = bank.map(Seq(_)).getOrElse(0 until sh.getOrElse(1))
+            case (((idx, bank), View(suf, _, sh)), arrBank) => {
+              // TODO(rachit): This logic is incorrect. We need to have a map
+              // from input bank number to all the banks it maps to.
+              val banks =
+                bank.map(Seq(_)).getOrElse(0 until sh.getOrElse(arrBank))
+              println(banks)
               banks.map(bank => (bank, genViewAccessExpr(suf, idx)))
             }
           })
@@ -168,7 +173,6 @@ object LowerUnroll extends PartialTransformer {
     def dimsAdd(k: Id, v: Seq[DimSpec]) =
       this.copy(dimsMap = dimsMap + (k -> v))
     def dimsGet(k: Id) = {
-      println(k)
       this.dimsMap.get(k).get
     }
   }
