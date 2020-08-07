@@ -9,16 +9,16 @@ import Syntax._
 object BufferMemoryIO extends PartialTransformer {
 
   // Env for storing the assignments for reads to replace
-  case class BufferEnv(map: Map[Expr, Command])
+  case class BufferEnv(map: Map[Expr, CLet])
       extends ScopeManager[BufferEnv]
-      with Tracker[Expr, Command, BufferEnv] {
+      with Tracker[Expr, CLet, BufferEnv] {
     def merge(that: BufferEnv) = {
       BufferEnv(this.map ++ that.map)
     }
 
     def get(key: Expr) = this.map.get(key)
 
-    def add(key: Expr, value: Command) = {
+    def add(key: Expr, value: CLet) = {
       BufferEnv(this.map + (key -> value))
     }
   }
@@ -57,10 +57,15 @@ object BufferMemoryIO extends PartialTransformer {
     * to insert this into the code. */
   def myRewriteE: PF[(Expr, Env), (Expr, Env)] = {
     case (e @ EArrAccess(id, _), env) => {
-      val readTmp = genName(s"${id}Read")
-      val read = CLet(readTmp, e.typ, Some(e))
-      val nEnv = env.add(e, read)
-      EVar(readTmp) -> nEnv
+      env.get(e) match {
+        case Some(let) => EVar(let.id) -> env
+        case None => {
+          val readTmp = genName(s"${id}Read")
+          val read = CLet(readTmp, None, Some(e))
+          val nEnv = env.add(e, read)
+          EVar(readTmp) -> nEnv
+        }
+      }
     }
   }
 
@@ -111,11 +116,21 @@ object BufferMemoryIO extends PartialTransformer {
       construct(CUpdate(e, EVar(writeTmp)), env, writeLet)
     }
 
+    case (CUpdate(e, rhs), _) => {
+      val (rewrite, env) = rewriteE(rhs)(emptyEnv)
+      construct(CUpdate(e, rewrite), env)
+    }
+
     case (CReduce(rop, e @ EArrAccess(id, _), rhs), _) => {
       val writeTmp = genName(s"${id}Write")
       val (rewrite, env) = rewriteE(rhs)(emptyEnv)
       val writeLet = CLet(writeTmp, e.typ, Some(rewrite))
       construct(CReduce(rop, e, EVar(writeTmp)), env, writeLet)
+    }
+
+    case (CReduce(rop, e, rhs), _) => {
+      val (rewrite, env) = rewriteE(rhs)(emptyEnv)
+      construct(CReduce(rop, e, rewrite), env)
     }
   }
 
