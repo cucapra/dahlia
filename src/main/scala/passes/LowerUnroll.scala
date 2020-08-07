@@ -9,6 +9,97 @@ import CompilerError._
 import CodeGenHelpers._
 
 object LowerUnroll extends PartialTransformer {
+  private def cartesianProduct[T](llst: Seq[Seq[T]]): Seq[Seq[T]] = {
+    def pel(e: T, ll: Seq[Seq[T]], a: Seq[Seq[T]] = Nil): Seq[Seq[T]] =
+      ll match {
+        case Nil => a.reverse
+        case x +: xs => pel(e, xs, (e +: x) +: a)
+      }
+
+    llst match {
+      case Nil => Nil
+      case x +: Nil => x.map(Seq(_))
+      case x +: _ =>
+        x match {
+          case Nil => Nil
+          case _ =>
+            llst
+              .foldRight(Seq(x))((l, a) => l.flatMap(x => pel(x, a)))
+              .map(_.dropRight(x.size))
+        }
+    }
+  }
+
+  private def genViewAccessExpr(suffix: Suffix, idx: Expr): Expr =
+    suffix match {
+      case Aligned(factor, e2) => (EInt(factor) * e2) + idx
+      case Rotation(e) => e + idx
+    }
+
+  /**
+   * A "function" for transforming an access expression where each index
+   * in the array may or may not have a bank associated with it.
+   *
+   * For a given array and view:
+   * ```
+   * decl a: float[6 bank 3][4 bank 2];
+   * view a_v = a[3*i: bank 1][_: bank 1];
+   * ```
+   *
+   * The `TKey` corresponds to the bank the index for each dimension.
+   * For example, the following key have the respective meanings:
+   * 1. Seq(Some(0), Some(1): Bank 0 in dim 1 and Bank 1 in dim 2
+   * 2. Seq(None, Some(0)): All the banks in dim 1 and Bank 0 in dim 2.
+   *
+   * The function returns a map from a Seq[Int] (bank numbers) to the
+   * access expression that corresponds to it.
+   */
+  private type TKey = Seq[(Expr, Option[Int])]
+  private type TVal = Map[Seq[Int], Expr]
+  case class ViewTransformer(transform: TKey => TVal)
+  object ViewTransformer {
+    def fromArray(id: Id, ta: TArray) = {
+      // Get the name of all the memories
+      val t = (idxs: Seq[(Expr, Option[Int])]) => {
+        val allBanks: Seq[Seq[Int]] = ta.dims.zip(idxs).map({
+          case ((_, arrBank), (_, bank)) => {
+            bank.map(Seq(_)).getOrElse(0 until arrBank)
+          }
+        })
+        cartesianProduct(allBanks).map(banks => {
+          (banks, EArrAccess(Id(id.v + banks.mkString("_")), idxs.map(_._1)))
+        }).toMap
+      }
+      ViewTransformer(t)
+    }
+
+    def fromView(underlying: TArray, v: CView): ViewTransformer = {
+      val t = (idxs: Seq[(Expr, Option[Int])]) => {
+        if (idxs.length != underlying.dims.length) {
+          throw Impossible("LowerUnroll: Incorrect access dimensions")
+        }
+
+        // Get the set of expressions "generated" by each idx. If the idx
+        // key is None, we return the list with all expressions. Otherwise,
+        // we return just the expression corresponding to that list.
+        val eachIdx: Seq[Seq[(Int, Expr)]] = idxs.zip(v.dims).map({
+          case ((idx, bank), View(suf, _, sh)) => {
+            val banks = bank.map(Seq(_)).getOrElse(0 until sh.getOrElse(1))
+            banks.map(bank => (bank, genViewAccessExpr(suf, idx)))
+          }
+        })
+
+        // Take the cartesians product of all generated expressions from
+        // each index and tarnsform it into the result type
+        cartesianProduct(eachIdx).map(bankAndIdx => {
+          val (banks, indices) = bankAndIdx.unzip
+          (banks, EArrAccess(v.arrId, indices))
+        }).toMap
+      }
+      ViewTransformer(t)
+    }
+  }
+
   case class ForEnv(
       idxMap: Map[Id, Int],
       rewriteMap: Map[Id, Id],
@@ -56,35 +147,6 @@ object LowerUnroll extends PartialTransformer {
 
   type Env = ForEnv
   val emptyEnv = ForEnv(Map(), Map(), Set(), Map(), Map(), Map())
-
-  def cartesianProduct[T](llst: Seq[Seq[T]]): Seq[Seq[T]] = {
-
-    /**
-      * Prepend single element to all lists of list
-      * @param e single elemetn
-      * @param ll list of list
-      * @param a accumulator for tail recursive implementation
-      * @return list of lists with prepended element e
-      */
-    def pel(e: T, ll: Seq[Seq[T]], a: Seq[Seq[T]] = Nil): Seq[Seq[T]] =
-      ll match {
-        case Nil => a.reverse
-        case x +: xs => pel(e, xs, (e +: x) +: a)
-      }
-
-    llst match {
-      case Nil => Nil
-      case x +: Nil => x.map(Seq(_))
-      case x +: _ =>
-        x match {
-          case Nil => Nil
-          case _ =>
-            llst
-              .foldRight(Seq(x))((l, a) => l.flatMap(x => pel(x, a)))
-              .map(_.dropRight(x.size))
-        }
-    }
-  }
 
   def unbankedDecls(id: Id, ta: TArray): Seq[(Id, Type)] = {
     val TArray(typ, dims, ports) = ta
