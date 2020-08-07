@@ -48,7 +48,7 @@ object BufferMemoryIO extends PartialTransformer {
       cmd -> emptyEnv
     } else {
       val tmps = env.map.values.foldRight(acc)(CPar(_, _))
-      CSeq(tmps, cmd) -> emptyEnv
+      CPar(tmps, cmd) -> emptyEnv
     }
   }
 
@@ -69,7 +69,6 @@ object BufferMemoryIO extends PartialTransformer {
   def rewrC(c: Command): Command = {
     rewriteC(c)(emptyEnv)._1
   }
-
 
   def myRewriteC: PF[(Command, Env), (Command, Env)] = {
     // no reason to rewrite direct reads into a variable
