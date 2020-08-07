@@ -9,6 +9,12 @@ import CompilerError._
 import CodeGenHelpers._
 
 object LowerUnroll extends PartialTransformer {
+  var curIdx = 0
+  def genName(prefix: String): String = {
+    curIdx += 1;
+    prefix + curIdx
+  }
+
   private def cartesianProduct[T](llst: Seq[Seq[T]]): Seq[Seq[T]] = {
     def pel(e: T, ll: Seq[Seq[T]], a: Seq[Seq[T]] = Nil): Seq[Seq[T]] =
       ll match {
@@ -37,76 +43,96 @@ object LowerUnroll extends PartialTransformer {
     }
 
   /**
-   * A "function" for transforming an access expression where each index
-   * in the array may or may not have a bank associated with it.
-   *
-   * For a given array and view:
-   * ```
-   * decl a: float[6 bank 3][4 bank 2];
-   * view a_v = a[3*i: bank 1][_: bank 1];
-   * ```
-   *
-   * The `TKey` corresponds to the bank the index for each dimension.
-   * For example, the following key have the respective meanings:
-   * 1. Seq(Some(0), Some(1): Bank 0 in dim 1 and Bank 1 in dim 2
-   * 2. Seq(None, Some(0)): All the banks in dim 1 and Bank 0 in dim 2.
-   *
-   * The function returns a map from a Seq[Int] (bank numbers) to the
-   * access expression that corresponds to it.
-   */
+    * A "function" for transforming an access expression where each index
+    * in the array may or may not have a bank associated with it.
+    *
+    * For a given array and view:
+    * ```
+    * decl a: float[6 bank 3][4 bank 2];
+    * view a_v = a[3*i: bank 1][_: bank 1];
+    * ```
+    *
+    * The `TKey` corresponds to the bank the index for each dimension.
+    * For example, the following key have the respective meanings:
+    * 1. Seq(Some(0), Some(1): Bank 0 in dim 1 and Bank 1 in dim 2
+    * 2. Seq(None, Some(0)): All the banks in dim 1 and Bank 0 in dim 2.
+    *
+    * The function returns a map from a Seq[Int] (bank numbers) to the
+    * access expression that corresponds to it.
+    */
   private type TKey = Seq[(Expr, Option[Int])]
   private type TVal = Map[Seq[Int], Expr]
-  case class ViewTransformer(transform: TKey => TVal)
+  case class ViewTransformer(val t: TKey => TVal) extends AnyVal
   object ViewTransformer {
     def fromArray(id: Id, ta: TArray) = {
       // Get the name of all the memories
       val t = (idxs: Seq[(Expr, Option[Int])]) => {
-        val allBanks: Seq[Seq[Int]] = ta.dims.zip(idxs).map({
-          case ((_, arrBank), (_, bank)) => {
-            bank.map(Seq(_)).getOrElse(0 until arrBank)
-          }
-        })
-        cartesianProduct(allBanks).map(banks => {
-          (banks, EArrAccess(Id(id.v + banks.mkString("_")), idxs.map(_._1)))
-        }).toMap
+        val allBanks: Seq[Seq[Int]] = ta.dims
+          .zip(idxs)
+          .map({
+            case ((_, arrBank), (_, bank)) => {
+              bank.map(Seq(_)).getOrElse(0 until arrBank)
+            }
+          })
+        cartesianProduct(allBanks)
+          .map(banks => {
+            (banks, EArrAccess(Id(id.v + banks.mkString("_")), idxs.map(_._1)))
+          })
+          .toMap
       }
       ViewTransformer(t)
     }
 
-    def fromView(underlying: TArray, v: CView): ViewTransformer = {
+    def fromView(dims: Seq[DimSpec], v: CView): ViewTransformer = {
       val t = (idxs: Seq[(Expr, Option[Int])]) => {
-        if (idxs.length != underlying.dims.length) {
+        if (idxs.length != dims.length) {
           throw Impossible("LowerUnroll: Incorrect access dimensions")
         }
 
         // Get the set of expressions "generated" by each idx. If the idx
         // key is None, we return the list with all expressions. Otherwise,
         // we return just the expression corresponding to that list.
-        val eachIdx: Seq[Seq[(Int, Expr)]] = idxs.zip(v.dims).map({
-          case ((idx, bank), View(suf, _, sh)) => {
-            val banks = bank.map(Seq(_)).getOrElse(0 until sh.getOrElse(1))
-            banks.map(bank => (bank, genViewAccessExpr(suf, idx)))
-          }
-        })
+        val eachIdx: Seq[Seq[(Int, Expr)]] = idxs
+          .zip(v.dims)
+          .map({
+            case ((idx, bank), View(suf, _, sh)) => {
+              val banks = bank.map(Seq(_)).getOrElse(0 until sh.getOrElse(1))
+              banks.map(bank => (bank, genViewAccessExpr(suf, idx)))
+            }
+          })
 
         // Take the cartesians product of all generated expressions from
         // each index and tarnsform it into the result type
-        cartesianProduct(eachIdx).map(bankAndIdx => {
-          val (banks, indices) = bankAndIdx.unzip
-          (banks, EArrAccess(v.arrId, indices))
-        }).toMap
+        cartesianProduct(eachIdx)
+          .map(bankAndIdx => {
+            val (banks, indices) = bankAndIdx.unzip
+            (banks, EArrAccess(v.arrId, indices))
+          })
+          .toMap
       }
       ViewTransformer(t)
     }
   }
 
+  // XXX(rachit): There are three maps that currently track some form of
+  // rewriting: rewriteMap transforms local variables, combineReg transforms
+  // combine registers, and viewMap transforms arrays.
+  //
+  // Find the right abstraction for them and unify them.
   case class ForEnv(
+      // The bank a variable is current referring to.
       idxMap: Map[Id, Int],
+      // Rename for variables in the current binding.
       rewriteMap: Map[Id, Id],
+      // Set of variables bound by this scope.
+      // XXX(rachit): This should probably be a scoped set
       localVars: Set[Id],
+      // Set of variables a combine register refers to.
       combineReg: Map[Id, Set[Id]],
-      viewMap: Map[Id, (Id, Seq[Expr] => Expr)],
-      bankMap: Map[Id, Seq[Int]],
+      // Bindings for transformer for views.
+      viewMap: Map[Id, ViewTransformer],
+      // DimSpec of bound arrays in this context.
+      dimsMap: Map[Id, Seq[DimSpec]]
   ) extends ScopeManager[ForEnv]
       with Tracker[Id, Int, ForEnv] {
     def merge(that: ForEnv) = {
@@ -116,7 +142,7 @@ object LowerUnroll extends PartialTransformer {
         this.localVars ++ that.localVars,
         this.combineReg ++ that.combineReg,
         this.viewMap ++ that.viewMap,
-        this.bankMap ++ that.bankMap,
+        this.dimsMap ++ that.dimsMap
       )
     }
 
@@ -134,15 +160,17 @@ object LowerUnroll extends PartialTransformer {
       this.copy(combineReg = this.combineReg + (k -> v))
     def combineRegGet(k: Id) = this.combineReg.get(k)
 
-    def viewAdd(k: Id, v: (Id, Seq[Expr] => Expr)) =
+    def viewAdd(k: Id, v: ViewTransformer) =
       this.copy(viewMap = viewMap + (k -> v))
     def viewGet(k: Id) =
       this.viewMap.get(k)
 
-    def bankAdd(k: Id, v: Seq[Int]) =
-      this.copy(bankMap = bankMap + (k -> v))
-    def bankGet(k: Id) =
-      this.bankMap.get(k)
+    def dimsAdd(k: Id, v: Seq[DimSpec]) =
+      this.copy(dimsMap = dimsMap + (k -> v))
+    def dimsGet(k: Id) = {
+      println(k)
+      this.dimsMap.get(k).get
+    }
   }
 
   type Env = ForEnv
@@ -159,12 +187,6 @@ object LowerUnroll extends PartialTransformer {
     })
   }
 
-  private def genViewAccessExpr(view: View, idx: Expr): Expr =
-    view.suffix match {
-      case Aligned(factor, e2) => (EInt(factor) * e2) + idx
-      case Rotation(e) => e + idx
-    }
-
   override def rewriteDeclSeq(ds: Seq[Decl])(implicit env: Env) = {
     ds.flatMap(d =>
       d.typ match {
@@ -174,12 +196,31 @@ object LowerUnroll extends PartialTransformer {
         case _ => List(d)
       }
     ) -> ds.foldLeft[Env](env)({
-      case (env, Decl(id, typ)) => typ match {
-        case TArray(_, dims, _) => env.bankAdd(id, dims.map(_._2))
-        case _ => env
-      }
+      case (env, Decl(id, typ)) =>
+        typ match {
+          case TArray(_, dims, _) => env.dimsAdd(id, dims)
+          case _ => env
+        }
     })
   }
+
+  private def getBanks(arr: Id, idxs: Seq[Expr])(implicit env: Env) =
+    env
+      .dimsGet(arr)
+      .zip(idxs)
+      .map({
+        case ((_, bank), idx) =>
+          idx match {
+            case EInt(n, 10) => Some(n % bank)
+            case EInt(_, _) =>
+              throw NotImplemented(
+                "Indexing using non decimal integers",
+                idx.pos
+              )
+            case EVar(id) => env.get(id)
+            case _ => None
+          }
+      })
 
   def myRewriteC: PF[(Command, Env), (Command, Env)] = {
     // Rewrite banked let bound memories
@@ -211,17 +252,18 @@ object LowerUnroll extends PartialTransformer {
       c.copy(id = newName, e = nInit) -> nEnv.rewriteAdd(id, newName)
     }
     // Handle views
-    case (CView(id, arrId, dims), env) => {
-      val f = (es: Seq[Expr]) =>
-        EArrAccess(
-          arrId,
-          es.zip(dims)
-            .map({
-              case (idx, view) =>
-                genViewAccessExpr(view, idx)
-            })
-        )
-      (CEmpty, env.viewAdd(id, (arrId, f)))
+    case (v @ CView(id, arrId, dims), env) => {
+      val nDims = env
+        .dimsGet(arrId)
+        .zip(dims.map(_.shrink))
+        .map({
+          case ((len, bank), shrink) =>
+            (len, shrink.map(sh => bank / sh).getOrElse(bank))
+        })
+      val nEnv = env
+        .dimsAdd(id, nDims)
+        .viewAdd(id, ViewTransformer.fromView(env.dimsGet(arrId), v))
+      (CEmpty, nEnv)
     }
     case (c @ CFor(range, _, par, combine), env) => {
       if (range.u == 1) {
@@ -297,15 +339,41 @@ object LowerUnroll extends PartialTransformer {
     case (c @ CUpdate(lhs, _), env) =>
       lhs match {
         case e @ EVar(id) =>
-          c.copy(
-            lhs = env.rewriteGet(id).map(nId => EVar(nId)).getOrElse(e)) -> env
-        case EArrAccess(id, idxs) =>
-          env.viewGet(id).map({ case (arrId, transformer) => {
-            val upd = c.copy(lhs = transformer(idxs))
-            val dims = env.bankGet(arrId).get
-            cartesianProduct(dims.map(n => (0 to n-1)))
-            upd
-          }}).getOrElse(c) -> env
+          c.copy(lhs = env.rewriteGet(id).map(nId => EVar(nId)).getOrElse(e)) -> env
+        case EArrAccess(id, idxs) => {
+          val transformer = env.viewGet(id)
+          if (transformer.isDefined) {
+            val allExprs =
+              (transformer.get.t)(idxs.zip(getBanks(id, idxs)(env)))
+            // Calculate the value for all indices and let-bind them.
+            val (names, calcIndices) = idxs
+              .map(idx => {
+                val name = genName("_idx")
+                (Id(name), CLet(Id(name), None, Some(idx)))
+              })
+              .unzip
+            // Generate conditional assignment tree
+            val condAssign = allExprs.foldLeft[Command](CEmpty)({
+              case (cmd, (bankVals, accExpr)) => {
+                // TODO(rachit): % with the bank number.
+                val cond = names
+                  .zip(bankVals)
+                  .foldLeft[Expr](EBool(true))({
+                    case (expr, (n, bv)) =>
+                      EBinop(
+                        BoolOp("&&"),
+                        EBinop(EqOp("=="), EVar(n) % EInt(1), EInt(bv)),
+                        expr
+                      )
+                  })
+                CIf(cond, c.copy(lhs = accExpr), cmd)
+              }
+            })
+            CSeq.smart(calcIndices :+ condAssign) -> env
+          } else {
+            c -> env
+          }
+        }
         case _ => throw Impossible("Not an LHS")
       }
   }
