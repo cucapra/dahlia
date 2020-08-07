@@ -37,6 +37,8 @@ object BufferMemoryIO extends PartialTransformer {
     Id(s"$base${idx(base)}")
   }
 
+  /** Constructs a (Command, Env) tuple from a command
+    * and an environment containing new let bindings. */
   def construct(
       cmd: Command,
       env: Env,
@@ -50,6 +52,9 @@ object BufferMemoryIO extends PartialTransformer {
     }
   }
 
+  /** Replaces array accesses with reads from a temporary variable.
+    * Inserts a let binding into the Env and relies on the rewriteC.
+    * to insert this into the code. */
   def myRewriteE: PF[(Expr, Env), (Expr, Env)] = {
     case (e @ EArrAccess(id, _), env) => {
       val readTmp = genName(s"${id}Read")
@@ -59,12 +64,14 @@ object BufferMemoryIO extends PartialTransformer {
     }
   }
 
+  /** Simple wrapper that calls rewriteC with an emptyEnv
+    * and projects the first element of the result. */
   def rewrC(c: Command): Command = {
     rewriteC(c)(emptyEnv)._1
   }
 
-  def myRewriteC: PF[(Command, Env), (Command, Env)] = {
 
+  def myRewriteC: PF[(Command, Env), (Command, Env)] = {
     // no reason to rewrite direct reads into a variable
     case (c @ CLet(_, _, Some(EArrAccess(_, _))), _) => {
       c -> emptyEnv
