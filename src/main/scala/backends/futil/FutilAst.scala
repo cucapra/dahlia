@@ -179,11 +179,13 @@ object Futil {
       case Atom(item) => item.doc
       case And(left, right) => parens(left.doc <+> text("&") <+> right.doc)
       case Or(left, right) => parens(left.doc <+> text("|") <+> right.doc)
+      case Not(inner) => text("!") <> inner.doc
     }
   }
   case class Atom(item: Port) extends GuardExpr
   case class And(left: GuardExpr, right: GuardExpr) extends GuardExpr
   case class Or(left: GuardExpr, right: GuardExpr) extends GuardExpr
+  case class Not(inner: GuardExpr) extends GuardExpr
 
   /***** control *****/
   sealed trait Control extends Emitable {

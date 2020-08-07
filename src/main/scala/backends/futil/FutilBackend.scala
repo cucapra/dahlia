@@ -155,11 +155,11 @@ private class FutilBackendHelper {
   /** `emitBinop` is a helper function to generate the structure
     *  for `e1 binop e2`. The return type is described in `emitExpr`.
     */
-  def emitBinop(compName: String, e1: Expr, e2: Expr)(
+  def emitBinop(compName: String, e1: Expr, e2: Expr, rhsInfo: Option[(Port, Option[Int])] = None)(
       implicit store: Store
   ): EmitOutput = {
-    val e1Out = emitExpr(e1)
-    val e2Out = emitExpr(e2)
+    val e1Out = emitExpr(e1, rhsInfo)
+    val e2Out = emitExpr(e2, rhsInfo)
     assertOrThrow(
       bitsForType(e1.typ, e1.pos) == bitsForType(e2.typ, e2.pos),
       Impossible(
@@ -182,6 +182,41 @@ private class FutilBackendHelper {
     )
   }
 
+  def emitMultiCycleBinop(compName: String, e1: Expr, e2: Expr, rhsInfo: Option[(Port, Option[Int])] = None)(
+      implicit store: Store
+  ): EmitOutput = {
+    val comp = LibDecl(
+      genName(compName),
+      Stdlib.op(s"${compName}_pipe", bitsForType(e1.typ, e1.pos))
+    )
+
+    val e1Out = emitExpr(e1, rhsInfo)
+    val e2Out = emitExpr(e2, rhsInfo)
+
+    val struct = List(
+      comp,
+      Connect(e1Out.port, comp.id.port("left"), Some(Atom(e1Out.done))),
+      Connect(e2Out.port, comp.id.port("right"), Some(Atom(e2Out.done))),
+      Connect(
+        ConstantPort(1, 1),
+        comp.id.port("go"),
+        Some(
+          And(
+            Not(Atom(comp.id.port("done"))),
+            And(Atom(e1Out.done), Atom(e2Out.done))
+          )
+        )
+      )
+    )
+
+    EmitOutput(
+      comp.id.port("out"),
+      comp.id.port("done"),
+      struct ++ e1Out.structure ++ e2Out.structure,
+      e1Out.delay.flatMap((d) => e2Out.delay.map(_ + d + 2))
+    )
+  }
+
   /** `emitExpr(expr, rhsInfo)(implicit store)` calculates the necessary structure
     *  to compute `expr`. It return the pair (Port, List[Structure]).
     *  If `rhsInfo = None`, then `Port` is the port that will hold the output
@@ -200,7 +235,12 @@ private class FutilBackendHelper {
             genName("const"),
             Stdlib.constant(bitsForType(expr.typ, expr.pos), v)
           )
-        EmitOutput(const.id.port("out"), ConstantPort(1, 1), List(const), Some(0))
+        EmitOutput(
+          const.id.port("out"),
+          ConstantPort(1, 1),
+          List(const),
+          Some(0)
+        )
       }
       case EBinop(op, e1, e2) => {
         val compName =
@@ -224,7 +264,10 @@ private class FutilBackendHelper {
                 op.pos
               )
           }
-        emitBinop(compName, e1, e2)
+        op.op match {
+          case "*" | "/" => emitMultiCycleBinop(compName, e1, e2, rhsInfo)
+          case _ => emitBinop(compName, e1, e2, rhsInfo)
+        }
       }
       case EVar(id) =>
         val portName = if (rhsInfo.isDefined) "in" else "out"
@@ -233,7 +276,8 @@ private class FutilBackendHelper {
           .getOrThrow(Impossible(s"$id was not in `store`"))
         val struct =
           rhsInfo match {
-            case Some((port, _)) => List(Connect(port, varName.port("write_en")))
+            case Some((port, _)) =>
+              List(Connect(port, varName.port("write_en")))
             case None => List()
           }
         // calculate static delay, rhsDelay + 1 for writes, 0 for reads
@@ -334,10 +378,11 @@ private class FutilBackendHelper {
         )
         val struct =
           Connect(out.port, reg.id.port("in")) :: Connect(
-            ConstantPort(1, 1),
+            out.done,
             reg.id.port("write_en")
           ) :: doneHole :: out.structure
-        val (group, st) = Group.fromStructure(groupName, struct, out.delay.map(_ + 1))
+        val (group, st) =
+          Group.fromStructure(groupName, struct, out.delay.map(_ + 1))
         (
           reg :: group :: st,
           Enable(group.id),
@@ -377,7 +422,11 @@ private class FutilBackendHelper {
         val groupName = genName("cond")
         val doneHole = Connect(condOut.done, HolePort(groupName, "done"))
         val (group, st) =
-          Group.fromStructure(groupName, doneHole :: condOut.structure, condOut.delay)
+          Group.fromStructure(
+            groupName,
+            doneHole :: condOut.structure,
+            condOut.delay
+          )
         val control = If(condOut.port, group.id, tCon, fCon)
         (group :: st ++ struct, control, store)
       }
@@ -387,7 +436,11 @@ private class FutilBackendHelper {
         val groupName = genName("cond")
         val doneHole = Connect(condOut.done, HolePort(groupName, "done"))
         val (condGroup, condDefs) =
-          Group.fromStructure(groupName, doneHole :: condOut.structure, condOut.delay)
+          Group.fromStructure(
+            groupName,
+            doneHole :: condOut.structure,
+            condOut.delay
+          )
         val (bodyStruct, bodyCon, st) = emitCmd(body)
         val control = While(condOut.port, condGroup.id, bodyCon)
         (condGroup :: bodyStruct ++ condDefs, control, st)
