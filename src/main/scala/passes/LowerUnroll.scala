@@ -6,20 +6,26 @@ import Transformer._
 import EnvHelpers._
 import Syntax._
 import CompilerError._
+import CodeGenHelpers._
 
 object LowerUnroll extends PartialTransformer {
   case class ForEnv(
       idxMap: Map[Id, Int],
       rewriteMap: Map[Id, Id],
       localVars: Set[Id],
-      combineReg: Map[Id, Set[Id]] = Map()
+      combineReg: Map[Id, Set[Id]],
+      viewMap: Map[Id, (Id, Seq[Expr] => Expr)],
+      bankMap: Map[Id, Seq[Int]],
   ) extends ScopeManager[ForEnv]
       with Tracker[Id, Int, ForEnv] {
     def merge(that: ForEnv) = {
       ForEnv(
         this.idxMap ++ that.idxMap,
         this.rewriteMap ++ that.rewriteMap,
-        this.localVars ++ that.localVars
+        this.localVars ++ that.localVars,
+        this.combineReg ++ that.combineReg,
+        this.viewMap ++ that.viewMap,
+        this.bankMap ++ that.bankMap,
       )
     }
 
@@ -36,10 +42,20 @@ object LowerUnroll extends PartialTransformer {
     def combineRegAdd(k: Id, v: Set[Id]) =
       this.copy(combineReg = this.combineReg + (k -> v))
     def combineRegGet(k: Id) = this.combineReg.get(k)
+
+    def viewAdd(k: Id, v: (Id, Seq[Expr] => Expr)) =
+      this.copy(viewMap = viewMap + (k -> v))
+    def viewGet(k: Id) =
+      this.viewMap.get(k)
+
+    def bankAdd(k: Id, v: Seq[Int]) =
+      this.copy(bankMap = bankMap + (k -> v))
+    def bankGet(k: Id) =
+      this.bankMap.get(k)
   }
 
   type Env = ForEnv
-  val emptyEnv = ForEnv(Map(), Map(), Set())
+  val emptyEnv = ForEnv(Map(), Map(), Set(), Map(), Map(), Map())
 
   def cartesianProduct[T](llst: Seq[Seq[T]]): Seq[Seq[T]] = {
 
@@ -81,14 +97,26 @@ object LowerUnroll extends PartialTransformer {
     })
   }
 
+  private def genViewAccessExpr(view: View, idx: Expr): Expr =
+    view.suffix match {
+      case Aligned(factor, e2) => (EInt(factor) * e2) + idx
+      case Rotation(e) => e + idx
+    }
+
   override def rewriteDeclSeq(ds: Seq[Decl])(implicit env: Env) = {
     ds.flatMap(d =>
       d.typ match {
-        case ta: TArray =>
+        case ta: TArray => {
           unbankedDecls(d.id, ta).map((x: (Id, Type)) => Decl(x._1, x._2))
+        }
         case _ => List(d)
       }
-    ) -> env
+    ) -> ds.foldLeft[Env](env)({
+      case (env, Decl(id, typ)) => typ match {
+        case TArray(_, dims, _) => env.bankAdd(id, dims.map(_._2))
+        case _ => env
+      }
+    })
   }
 
   def myRewriteC: PF[(Command, Env), (Command, Env)] = {
@@ -119,6 +147,19 @@ object LowerUnroll extends PartialTransformer {
         env
       }
       c.copy(id = newName, e = nInit) -> nEnv.rewriteAdd(id, newName)
+    }
+    // Handle views
+    case (CView(id, arrId, dims), env) => {
+      val f = (es: Seq[Expr]) =>
+        EArrAccess(
+          arrId,
+          es.zip(dims)
+            .map({
+              case (idx, view) =>
+                genViewAccessExpr(view, idx)
+            })
+        )
+      (CEmpty, env.viewAdd(id, (arrId, f)))
     }
     case (c @ CFor(range, _, par, combine), env) => {
       if (range.u == 1) {
@@ -151,9 +192,9 @@ object LowerUnroll extends PartialTransformer {
                 .sortBy(_._1.v)
                 .map(_._2)
                 .mkString("_")
-                Id(l.v + suf)
+              Id(l.v + suf)
             })
-          env.combineRegAdd(l, regs.toSet)
+            env.combineRegAdd(l, regs.toSet)
           }
         }))._1
 
@@ -165,24 +206,46 @@ object LowerUnroll extends PartialTransformer {
     }
     case (c @ CReduce(rop, _, r), env) => {
       val nR = r match {
-      case EVar(rId) => env.combineRegGet(rId).map(ids => {
-        import Syntax.{OpConstructor => OC}
-        val binop = rop.op match {
-          case "+=" => NumOp("+", OC.add)
-          case "-=" => NumOp("-", OC.sub)
-          case "*=" => NumOp("*", OC.mul)
-          case "/=" => NumOp("/", OC.div)
-          case op => throw Impossible(s"Unknown reduction operator: $op")
-        }
-        val localsArr = ids.toArray
-        val init = EVar(localsArr(0))
-        ids.foldLeft[Expr](init)({ case (l, r) => EBinop(binop, l, EVar(r)) })
-      }).getOrElse(r)
-      case _ =>
-        throw NotImplemented("LowerUnroll: Reduce with complex RHS expression")
+        case EVar(rId) =>
+          env
+            .combineRegGet(rId)
+            .map(ids => {
+              import Syntax.{OpConstructor => OC}
+              val binop = rop.op match {
+                case "+=" => NumOp("+", OC.add)
+                case "-=" => NumOp("-", OC.sub)
+                case "*=" => NumOp("*", OC.mul)
+                case "/=" => NumOp("/", OC.div)
+                case op => throw Impossible(s"Unknown reduction operator: $op")
+              }
+              val localsArr = ids.toArray
+              val init = EVar(localsArr(0))
+              ids.foldLeft[Expr](init)({
+                case (l, r) => EBinop(binop, l, EVar(r))
+              })
+            })
+            .getOrElse(r)
+        case _ =>
+          throw NotImplemented(
+            "LowerUnroll: Reduce with complex RHS expression"
+          )
       }
       c.copy(rhs = nR) -> env
     }
+    case (c @ CUpdate(lhs, _), env) =>
+      lhs match {
+        case e @ EVar(id) =>
+          c.copy(
+            lhs = env.rewriteGet(id).map(nId => EVar(nId)).getOrElse(e)) -> env
+        case EArrAccess(id, idxs) =>
+          env.viewGet(id).map({ case (arrId, transformer) => {
+            val upd = c.copy(lhs = transformer(idxs))
+            val dims = env.bankGet(arrId).get
+            cartesianProduct(dims.map(n => (0 to n-1)))
+            upd
+          }}).getOrElse(c) -> env
+        case _ => throw Impossible("Not an LHS")
+      }
   }
 
   def myRewriteE: PF[(Expr, Env), (Expr, Env)] = {
