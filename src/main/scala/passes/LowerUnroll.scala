@@ -181,9 +181,11 @@ object LowerUnroll extends PartialTransformer {
 
     def dimsAdd(k: Id, v: Seq[DimSpec]) =
       this.copy(dimsMap = dimsMap + (k -> v))
-    def dimsGet(k: Id) = {
-      this.dimsMap.get(k).get
-    }
+    def dimsGet(k: Id) =
+      this.dimsMap
+        .get(k)
+        .getOrThrow(Impossible(s"Dimensions for `$k' not bound"))
+
   }
 
   type Env = ForEnv
@@ -254,13 +256,8 @@ object LowerUnroll extends PartialTransformer {
       .zip(arrDims)
       .map({
         case (idx, (_, arrBank)) => {
-          val bank = genName("_cond")
-          (
-            Id(bank),
-            CLet(
-              Id(bank),
-              None,
-              Some(idx mod EInt(arrBank))))
+          val bank = genName("_bank")
+          (Id(bank), CLet(Id(bank), None, Some(idx % EInt(arrBank))))
         }
       })
       .unzip
@@ -292,6 +289,8 @@ object LowerUnroll extends PartialTransformer {
           unbankedDecls(id, ta).map({ case (i, t) => CLet(i, Some(t), None) })
         )
       cmd -> env
+        .dimsAdd(id, ta.dims)
+        .viewAdd(id, ViewTransformer.fromArray(id, ta))
     }
     // Handle case for initialized, unbanked memories.
     case (CLet(id, Some(ta: TArray), init), env) => {
@@ -424,7 +423,6 @@ object LowerUnroll extends PartialTransformer {
             )
           val allExprs =
             (transformer.t)(physIdxs.map(idx => (idx._2, Some(idx._1))))
-          pprint.pprintln(allExprs)
           // Calculate the value for all indices and let-bind them.
           val arrDims = env.dimsGet(id)
           // Generate conditional assignment tree
