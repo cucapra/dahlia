@@ -68,8 +68,7 @@ object LowerUnroll extends PartialTransformer {
     def fromArray(id: Id, ta: TArray) = {
       // Get the name of all the memories
       val t = (idxs: Seq[(Expr, Option[Int])]) => {
-        ???
-        /*val allBanks: Seq[Seq[Int]] = ta.dims
+        val allBanks: Seq[Seq[Int]] = ta.dims
           .zip(idxs)
           .map({
             case ((_, arrBank), (_, bank)) => {
@@ -80,7 +79,7 @@ object LowerUnroll extends PartialTransformer {
           .map(banks => {
             (banks, EArrAccess(Id(id.v + banks.mkString("_")), idxs.map(_._1)))
           })
-          .toMap*/
+          .toMap
       }
       ViewTransformer(t)
     }
@@ -112,9 +111,7 @@ object LowerUnroll extends PartialTransformer {
               val banks: Seq[Int] = bank
                 .map(b => bankMap(b))
                 .getOrElse(bankMap.flatten)
-              banks.map(bank =>
-                (bank, (bank, genViewAccessExpr(suf, idxExpr)))
-              )
+              banks.map(bank => (bank, (bank, genViewAccessExpr(suf, idxExpr))))
             }
           })
 
@@ -214,7 +211,8 @@ object LowerUnroll extends PartialTransformer {
     ) -> ds.foldLeft[Env](env)({
       case (env, Decl(id, typ)) =>
         typ match {
-          case TArray(_, dims, _) => env.dimsAdd(id, dims)
+          case ta @ TArray(_, dims, _) =>
+            env.viewAdd(id, ViewTransformer.fromArray(id, ta)).dimsAdd(id, dims)
           case _ => env
         }
     })
@@ -237,6 +235,54 @@ object LowerUnroll extends PartialTransformer {
             case _ => None
           }
       })
+
+  // Generate a sequence of commands based on `allExps`
+  private def condCmd(
+      allExprs: TVal,
+      idxs: Seq[Expr],
+      arrDims: Seq[DimSpec],
+      newCommand: Expr => Command
+  ): Command = {
+    // If we got exactly on value in TVal, that means that the returned
+    // expression corresponds exactly to the input bank. In this case,
+    // don't generate a condition.
+    if (allExprs.size == 1) {
+      val elem = allExprs.toArray
+      return newCommand(elem(0)._2)
+    }
+    val (bankComps, prelude) = idxs
+      .zip(arrDims)
+      .map({
+        case (idx, (_, arrBank)) => {
+          val bank = genName("_cond")
+          (
+            Id(bank),
+            CLet(
+              Id(bank),
+              None,
+              Some(idx mod EInt(arrBank))))
+        }
+      })
+      .unzip
+    val condAssign = allExprs.foldLeft[Command](CEmpty)({
+      case (cmd, (bankVals, accExpr)) => {
+        val cond = bankVals
+          .zip(bankComps)
+          .foldLeft[Expr](EBool(true))({
+            case (expr, (bv, bankComp)) => {
+              EBinop(
+                BoolOp("&&"),
+                EBinop(EqOp("=="), EVar(bankComp), EInt(bv)),
+                expr
+              )
+            }
+          })
+        CIf(cond, newCommand(accExpr), cmd)
+      }
+    })
+
+    CPar.smart(prelude :+ condAssign)
+  }
 
   def myRewriteC: PF[(Command, Env), (Command, Env)] = {
     // Rewrite banked let bound memories
@@ -363,61 +409,34 @@ object LowerUnroll extends PartialTransformer {
               (transformer.get.t)(idxs.zip(getBanks(id, idxs)(env)))
             // Calculate the value for all indices and let-bind them.
             val arrDims = env.dimsGet(id)
-            // XXX(rachit): This duplicates the computation for the index.
-            val (idxNames, bankComps, prelude) = idxs
-              .zip(arrDims)
-              .map({
-                case (idx, (_, arrBank)) => {
-                  val name = genName("_idx")
-                  val bank = genName("_cond")
-                  (
-                    Id(name),
-                    Id(bank),
-                    CPar(
-                      Seq(
-                        CLet(Id(name), None, Some(idx)),
-                        CLet(
-                          Id(bank),
-                          None,
-                          Some(EVar(Id(name)) mod EInt(arrBank))
-                        )
-                      )
-                    )
-                  )
-                }
-              })
-              .unzip3
-            // Generate conditional assignment tree
-            val condAssign = allExprs.foldLeft[Command](CEmpty)({
-              case (cmd, (bankVals, accExpr)) => {
-                val cond = idxNames
-                  .zip(bankVals)
-                  .zip(bankComps)
-                  .foldLeft[Expr](EBool(true))({
-                    case (expr, ((n, bv), bankComp)) => {
-                      EBinop(
-                        BoolOp("&&"),
-                        EBinop(EqOp("=="), EVar(bankComp), EInt(bv)),
-                        expr
-                      )
-                    }
-                  })
-                CIf(cond, c.copy(lhs = accExpr), cmd)
-              }
-            })
-            rewriteC(CSeq.smart(prelude :+ condAssign))(env)
+            val newCmd =
+              condCmd(allExprs, idxs, arrDims, (e) => c.copy(lhs = e))
+            rewriteC(newCmd)(env)
           } else {
             c -> env
           }
         }
-        /*case (EPhysAccess(id, physIdxs)) => {
+        case (EPhysAccess(id, physIdxs)) => {
           val transformer = env
             .viewGet(id)
             .getOrThrow(
-              Impossible(s"Array $id has no transformer associated with it.")
+              Impossible(s"Array `$id' has no transformer associated with it.")
             )
-
-        }*/
+          val allExprs =
+            (transformer.t)(physIdxs.map(idx => (idx._2, Some(idx._1))))
+          pprint.pprintln(allExprs)
+          // Calculate the value for all indices and let-bind them.
+          val arrDims = env.dimsGet(id)
+          // Generate conditional assignment tree
+          val newCmd =
+            condCmd(
+              allExprs,
+              physIdxs.map(_._2),
+              arrDims,
+              (e) => c.copy(lhs = e)
+            )
+          rewriteC(newCmd)(env)
+        }
         case _ => throw Impossible("Not an LHS")
       }
   }
