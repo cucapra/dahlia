@@ -53,7 +53,7 @@ object Syntax {
       case TSizedInt(l, un) => s"${if (un) "u" else ""}bit<$l>"
       case TStaticInt(s) => s"static($s)"
       case TArray(t, dims, p) =>
-        s"$t{$p}" + dims.foldLeft("")({
+        (if (p > 1) s"$t{$p}" else s"$t") + dims.foldLeft("")({
           case (acc, (d, b)) => s"$acc[$d bank $b]"
         })
       case TIndex(s, d) => s"idx($s, $d)"

@@ -61,7 +61,7 @@ object Pretty {
     case EApp(fn, args) => fn <> parens(commaSep(args.map(emitExpr)))
     case EInt(v, base) => value(emitBaseInt(v, base))
     case ERational(d) => value(d)
-    case EBool(b) => value(if (b) 1 else 0)
+    case EBool(b) => value(if (b) "true" else "false")
     case EVar(id) => value(id)
     case EBinop(op, e1, e2) => parens(e1 <+> text(op.toString) <+> e2)
     case acc @ EArrAccess(id, idxs) => {

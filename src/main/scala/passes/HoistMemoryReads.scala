@@ -47,7 +47,7 @@ object HoistMemoryReads extends PartialTransformer {
     if (env.map.values.isEmpty && acc == CEmpty) {
       cmd -> emptyEnv
     } else {
-      CPar.smart(env.map.values.toSeq :+ cmd) -> emptyEnv
+      CPar.smart(env.map.values.toSeq :+ acc :+ cmd) -> emptyEnv
     }
   }
 
@@ -108,24 +108,24 @@ object HoistMemoryReads extends PartialTransformer {
       construct(CExpr(rewrite), env)
     }
 
-    case (CUpdate(e @ EArrAccess(id, _), rhs), _) => {
-      val writeTmp = genName(s"${id}_write")
+    /*case (CUpdate(e @ EArrAccess(id, _), rhs), _) => {
       val (rhsRewrite, env) = rewriteE(rhs)(emptyEnv)
+      val writeTmp = genName(s"${id}_write")
       val writeLet = CLet(writeTmp, e.typ, Some(rhsRewrite))
       construct(CUpdate(e, EVar(writeTmp)), env, writeLet)
-    }
+    }*/
 
     case (CUpdate(e, rhs), _) => {
       val (rewrite, env) = rewriteE(rhs)(emptyEnv)
       construct(CUpdate(e, rewrite), env)
     }
 
-    case (CReduce(rop, e @ EArrAccess(id, _), rhs), _) => {
+    /*case (CReduce(rop, e @ EArrAccess(id, _), rhs), _) => {
       val writeTmp = genName(s"${id}_write")
       val (rewrite, env) = rewriteE(rhs)(emptyEnv)
       val writeLet = CLet(writeTmp, e.typ, Some(rewrite))
       construct(CReduce(rop, e, EVar(writeTmp)), env, writeLet)
-    }
+    }*/
 
     case (CReduce(rop, e, rhs), _) => {
       val (rewrite, env) = rewriteE(rhs)(emptyEnv)

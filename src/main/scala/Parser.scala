@@ -203,7 +203,7 @@ private class FuseParser extends RegexParsers with PackratParsers {
 
   // If
   lazy val conditional: P[Command] = positioned {
-    "if" ~> parens(expr) ~ block ~ ("else" ~> block).? ^^ {
+    "if" ~> parens(expr) ~ block ~ ("else" ~> (block | cmd)).? ^^ {
       case cond ~ cons ~ alt =>
         CIf(cond, cons, if (alt.isDefined) alt.get else CEmpty)
     }
