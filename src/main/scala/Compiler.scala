@@ -15,7 +15,7 @@ object Compiler {
   val preTransformers: List[(String, PartialTransformer)] = List(
     "Hoist memory reads" -> passes.HoistMemoryReads,
     "Lower unroll and bank" -> passes.LowerUnroll,
-    "Lower for loops" -> passes.LowerForLoops,
+    "Lower for loops" -> passes.LowerForLoops
   )
 
   // Transformers to execute *after* type checking.
@@ -43,20 +43,25 @@ object Compiler {
 
     // Run pre transformers if lowering is enabled
     val ast = if (c.enableLowering) {
-      val transformed = preTransformers.foldLeft(preAst)({
+      preTransformers.foldLeft(preAst)({
         case (ast, (name, pass)) => {
           val newAst = pass.rewrite(ast)
           showDebug(newAst, name, c)
-          newAst
+          if (c.passDebug) {
+            try {
+              // Print and re-parse program with pass debug
+              FuseParser.parse(Pretty.emitProg(newAst)(false))
+            } catch {
+              case _: Errors.ParserError =>
+                throw CompilerError.Impossible(
+                  "Pretty printer generated a program that could not be parsed after code generation"
+                )
+            }
+          } else {
+            newAst
+          }
         }
       })
-      /// XXX(rachit): Prettify and reparse program to get better error
-      // locations
-      try {
-        FuseParser.parse(Pretty.emitProg(transformed)(false))
-      } catch {
-        case _: Errors.ParserError => throw CompilerError.Impossible("Pretty printer generated a program that could not be parsed after code generation")
-      }
     } else {
       preAst
     }
