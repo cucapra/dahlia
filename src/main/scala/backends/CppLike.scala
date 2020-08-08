@@ -127,6 +127,7 @@ object Cpp {
       case CIf(cond, cons, alt) => {
         text("if") <+> parens(cond) <+> scope(cons) <> (alt match {
           case CEmpty => emptyDoc
+          case _:CIf => space <> text("else") <+> alt
           case _ => space <> text("else") <+> scope(alt)
         })
       }
