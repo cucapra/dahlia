@@ -369,23 +369,29 @@ object LowerUnroll extends PartialTransformer {
         c.copy(range = nRange, par = nPar, combine = nComb) -> env
       }
     }
-    case (c @ CReduce(rop, _, r), env) => {
+    case (CReduce(rop, l, r), env) => {
+      import Syntax.{OpConstructor => OC}
+      val binop = rop.op match {
+        case "+=" => NumOp("+", OC.add)
+        case "-=" => NumOp("-", OC.sub)
+        case "*=" => NumOp("*", OC.mul)
+        case "/=" => NumOp("/", OC.div)
+        case op => throw Impossible(s"Unknown reduction operator: $op")
+      }
+      // Read the current value of the combine LHS
+      val (prelude, curVal) = l match {
+        case _:EArrAccess | _:EPhysAccess => {
+          val name = genName("_rread")
+          (Seq(CLet(Id(name), None, Some(l))), EVar(Id(name)))
+        }
+        case e => (Seq(), e)
+      }
       val nR = r match {
         case EVar(rId) =>
           env
             .combineRegGet(rId)
             .map(ids => {
-              import Syntax.{OpConstructor => OC}
-              val binop = rop.op match {
-                case "+=" => NumOp("+", OC.add)
-                case "-=" => NumOp("-", OC.sub)
-                case "*=" => NumOp("*", OC.mul)
-                case "/=" => NumOp("/", OC.div)
-                case op => throw Impossible(s"Unknown reduction operator: $op")
-              }
-              val localsArr = ids.toArray
-              val init = EVar(localsArr(0))
-              ids.foldLeft[Expr](init)({
+              ids.foldLeft[Expr](curVal)({
                 case (l, r) => EBinop(binop, l, EVar(r))
               })
             })
@@ -395,7 +401,8 @@ object LowerUnroll extends PartialTransformer {
             "LowerUnroll: Reduce with complex RHS expression"
           )
       }
-      c.copy(rhs = nR) -> env
+      val (cupd, env1) = rewriteC(CUpdate(l, nR))(env)
+      CSeq.smart(prelude :+ cupd) -> env1
     }
     case (c @ CUpdate(lhs, _), env) =>
       lhs match {

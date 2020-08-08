@@ -43,13 +43,20 @@ object Compiler {
 
     // Run pre transformers if lowering is enabled
     val ast = if (c.enableLowering) {
-      preTransformers.foldLeft(preAst)({
+      val transformed = preTransformers.foldLeft(preAst)({
         case (ast, (name, pass)) => {
           val newAst = pass.rewrite(ast)
           showDebug(newAst, name, c)
           newAst
         }
       })
+      /// XXX(rachit): Prettify and reparse program to get better error
+      // locations
+      try {
+        FuseParser.parse(Pretty.emitProg(transformed)(false))
+      } catch {
+        case _: Errors.ParserError => throw CompilerError.Impossible("Pretty printer generated a program that could not be parsed after code generation")
+      }
     } else {
       preAst
     }
