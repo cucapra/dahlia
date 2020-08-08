@@ -1,6 +1,7 @@
 package fuselang.passes
 
 import scala.{PartialFunction => PF}
+import fuselang.Utils.RichOption
 import fuselang.common._
 import Transformer._
 import EnvHelpers._
@@ -43,7 +44,7 @@ object LowerUnroll extends PartialTransformer {
     }
 
   /**
-    * A "function" for transforming an access expression where each index
+    * A function for transforming an access expression where each index
     * in the array may or may not have a bank associated with it.
     *
     * For a given array and view:
@@ -67,7 +68,8 @@ object LowerUnroll extends PartialTransformer {
     def fromArray(id: Id, ta: TArray) = {
       // Get the name of all the memories
       val t = (idxs: Seq[(Expr, Option[Int])]) => {
-        val allBanks: Seq[Seq[Int]] = ta.dims
+        ???
+        /*val allBanks: Seq[Seq[Int]] = ta.dims
           .zip(idxs)
           .map({
             case ((_, arrBank), (_, bank)) => {
@@ -78,7 +80,7 @@ object LowerUnroll extends PartialTransformer {
           .map(banks => {
             (banks, EArrAccess(Id(id.v + banks.mkString("_")), idxs.map(_._1)))
           })
-          .toMap
+          .toMap*/
       }
       ViewTransformer(t)
     }
@@ -89,20 +91,30 @@ object LowerUnroll extends PartialTransformer {
           throw Impossible("LowerUnroll: Incorrect access dimensions")
         }
 
+        // Bank and index for a dimension
+        type PhyIdx = (Int, Expr)
+
         // Get the set of expressions "generated" by each idx. If the idx
         // key is None, we return the list with all expressions. Otherwise,
         // we return just the expression corresponding to that list.
-        val eachIdx: Seq[Seq[(Int, Expr)]] = idxs
+        val eachIdx: Seq[Seq[(Int, PhyIdx)]] = idxs
           .zip(v.dims)
           .zip(dims.map(_._2))
           .map({
-            case (((idx, bank), View(suf, _, sh)), arrBank) => {
-              // TODO(rachit): This logic is incorrect. We need to have a map
-              // from input bank number to all the banks it maps to.
-              val banks =
-                bank.map(Seq(_)).getOrElse(0 until sh.getOrElse(arrBank))
-              println(banks)
-              banks.map(bank => (bank, genViewAccessExpr(suf, idx)))
+            case (((idxExpr, bank), View(suf, _, sh)), arrBank) => {
+              // bankMap[i] is the banks in the array that correspond to the
+              // bank `i` in this view.
+              val shrinkFactor = sh.getOrElse(1)
+              val viewBank = arrBank / shrinkFactor
+              val bankMap: Seq[Seq[Int]] = (0 until viewBank)
+                .map(s => (s.until(arrBank, viewBank)))
+              // Get the banks accessed by this bank.
+              val banks: Seq[Int] = bank
+                .map(b => bankMap(b))
+                .getOrElse(bankMap.flatten)
+              banks.map(bank =>
+                (bank, (bank, genViewAccessExpr(suf, idxExpr)))
+              )
             }
           })
 
@@ -110,8 +122,8 @@ object LowerUnroll extends PartialTransformer {
         // each index and tarnsform it into the result type
         cartesianProduct(eachIdx)
           .map(bankAndIdx => {
-            val (banks, indices) = bankAndIdx.unzip
-            (banks, EArrAccess(v.arrId, indices))
+            val (banks, phyIndices) = bankAndIdx.unzip
+            (banks, EPhysAccess(v.arrId, phyIndices))
           })
           .toMap
       }
@@ -350,34 +362,62 @@ object LowerUnroll extends PartialTransformer {
             val allExprs =
               (transformer.get.t)(idxs.zip(getBanks(id, idxs)(env)))
             // Calculate the value for all indices and let-bind them.
-            val (names, calcIndices) = idxs
-              .map(idx => {
-                val name = genName("_idx")
-                (Id(name), CLet(Id(name), None, Some(idx)))
+            val arrDims = env.dimsGet(id)
+            // XXX(rachit): This duplicates the computation for the index.
+            val (idxNames, bankComps, prelude) = idxs
+              .zip(arrDims)
+              .map({
+                case (idx, (_, arrBank)) => {
+                  val name = genName("_idx")
+                  val bank = genName("_cond")
+                  (
+                    Id(name),
+                    Id(bank),
+                    CPar(
+                      Seq(
+                        CLet(Id(name), None, Some(idx)),
+                        CLet(
+                          Id(bank),
+                          None,
+                          Some(EVar(Id(name)) mod EInt(arrBank))
+                        )
+                      )
+                    )
+                  )
+                }
               })
-              .unzip
+              .unzip3
             // Generate conditional assignment tree
             val condAssign = allExprs.foldLeft[Command](CEmpty)({
               case (cmd, (bankVals, accExpr)) => {
-                // TODO(rachit): % with the bank number.
-                val cond = names
+                val cond = idxNames
                   .zip(bankVals)
+                  .zip(bankComps)
                   .foldLeft[Expr](EBool(true))({
-                    case (expr, (n, bv)) =>
+                    case (expr, ((n, bv), bankComp)) => {
                       EBinop(
                         BoolOp("&&"),
-                        EBinop(EqOp("=="), EVar(n) % EInt(1), EInt(bv)),
+                        EBinop(EqOp("=="), EVar(bankComp), EInt(bv)),
                         expr
                       )
+                    }
                   })
                 CIf(cond, c.copy(lhs = accExpr), cmd)
               }
             })
-            CSeq.smart(calcIndices :+ condAssign) -> env
+            rewriteC(CSeq.smart(prelude :+ condAssign))(env)
           } else {
             c -> env
           }
         }
+        /*case (EPhysAccess(id, physIdxs)) => {
+          val transformer = env
+            .viewGet(id)
+            .getOrThrow(
+              Impossible(s"Array $id has no transformer associated with it.")
+            )
+
+        }*/
         case _ => throw Impossible("Not an LHS")
       }
   }

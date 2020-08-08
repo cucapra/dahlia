@@ -72,10 +72,9 @@ object RewriteView extends TypedPartialTransformer {
       // Rewrite the indexing expressions
       val (nBankIdxs, nEnv) = super.rewriteSeqWith({
         case ((bank, idx), env) =>
-          val (nBank, env1) = super.rewriteE(bank)(env)
-          val (nIdx, env2) = super.rewriteE(idx)(env1)
-          (nBank, nIdx) -> env2
-      }: ((Expr, Expr), Env) => ((Expr, Expr), Env))(bankIdxs)(env)
+          val (nIdx, env1) = super.rewriteE(idx)(env)
+          (bank, nIdx) -> env1
+      }: ((Int, Expr), Env) => ((Int, Expr), Env))(bankIdxs)(env)
 
       if (nEnv.get(arrId).isDefined) {
         throw NotImplemented("Rewriting physical accesses on views.")
