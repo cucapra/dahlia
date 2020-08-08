@@ -110,12 +110,11 @@ object Transformer {
           acc.copy(idxs = nidxs.toSeq) -> env1
         }
         case acc @ EPhysAccess(_, bankIdxs) => {
-          val init = (Seq[(Expr, Expr)](), env)
+          val init = (Seq[(Int, Expr)](), env)
           val (nBankIdxsReversed, nEnv) = bankIdxs.foldLeft(init)({
             case ((nBankIdxs, env), (bank, idx)) =>
-              val (nBank, env1) = rewriteE(bank)(env)
-              val (nIdx, env2) = rewriteE(idx)(env1)
-              ((nBank, nIdx) +: nBankIdxs, env2)
+              val (nIdx, env1) = rewriteE(idx)(env)
+              ((bank, nIdx) +: nBankIdxs, env1)
           })
           acc.copy(bankIdxs = nBankIdxsReversed.reverse) -> nEnv
         }

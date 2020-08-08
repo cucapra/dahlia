@@ -216,16 +216,12 @@ object TypeChecker {
             throw IncorrectAccessDims(id, dims.length, bankIdxs.length)
           }
           bankIdxs.foldLeft(env)((env, bankIdx) => {
-            val (bank, idx) = bankIdx
-            val (bankTyp, env1) = checkE(bank)(env)
-            val (idxTyp, env2) = checkE(idx)(env1)
-            bankTyp.matchOrError(bank.pos, "bank index", "integer type") {
+            val (_, idx) = bankIdx
+            val (idxTyp, env1) = checkE(idx)(env)
+            idxTyp.matchOrError(idx.pos, "array index", "integer type") {
               case _: IntType => ()
             }
-            idxTyp.matchOrError(bank.pos, "array index", "integer type") {
-              case _: IntType => ()
-            }
-            env2
+            env1
           })
           // Bind the type of to Id
           id.typ = Some(env(id));

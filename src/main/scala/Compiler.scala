@@ -26,7 +26,7 @@ object Compiler {
     if (c.passDebug) {
       val top = ("=" * 15) + pass + ("=" * 15)
       println(top)
-      println(Pretty.emitProg(ast)(true).trim)
+      println(Pretty.emitProg(ast)(c.logLevel == scribe.Level.Debug).trim)
       println("=" * top.length)
     }
   }
