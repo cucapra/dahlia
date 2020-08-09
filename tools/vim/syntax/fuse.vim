@@ -17,6 +17,7 @@ syn keyword fuseKeyword unroll record combine
 syn keyword fuseKeyword view split
 
 syntax match fuseComment "\v//.*$"
+syn region fuseComment start=/\v\/\*/ skip=/\v\\./ end=/\v\*\//
 
 hi link fuseKeyword  Keyword
 hi link fuseConstant  Constant
