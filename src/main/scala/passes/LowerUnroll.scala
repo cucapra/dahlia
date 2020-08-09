@@ -111,7 +111,7 @@ object LowerUnroll extends PartialTransformer {
               val banks: Seq[Int] = bank
                 .map(b => bankMap(b))
                 .getOrElse(bankMap.flatten)
-              banks.map(bank => (bank, (bank, genViewAccessExpr(suf, idxExpr))))
+              banks.map(bank => (bank, (bank, genViewAccessExpr(suf, idxExpr / EInt(arrBank)))))
             }
           })
 
@@ -239,6 +239,17 @@ object LowerUnroll extends PartialTransformer {
           }
       })
 
+  // Rewrite Seq(A0 --- B0, A1 --- B1, ...) to
+  // { A0; A1 ... } --- { B0; B1 ... }
+  private def interleaveSeq(cmds: Seq[Command]): Command = {
+    val nested = if (cmds.forall(cmd => cmd.isInstanceOf[CSeq])) {
+      cmds.collect[Seq[Command]]({ case CSeq(cmds) => cmds })
+    } else {
+      cmds.map(Seq(_))
+    }
+    CSeq.smart(nested.transpose.map(CPar.smart(_)))
+  }
+
   // Generate a sequence of commands based on `allExps`
   private def condCmd(
       allExprs: TVal,
@@ -331,7 +342,7 @@ object LowerUnroll extends PartialTransformer {
         c.copy(e = nInit) -> env
       } else {
         val suf = env.idxMap.toList.sortBy(_._1.v).map(_._2).mkString("_")
-        val newName = id.copy(id.v + suf)
+        val newName = id.copy(s"${id.v}_${suf}")
         c.copy(id = newName, e = nInit) -> env
           .localVarAdd(id)
           .rewriteAdd(id, newName)
@@ -352,47 +363,68 @@ object LowerUnroll extends PartialTransformer {
       (CEmpty, nEnv)
     }
     case (c @ CFor(range, _, par, combine), env) => {
-      if (range.u == 1) {
-        val (npar, env1) = env.withScopeAndRet(rewriteC(par)(_))
-        val (ncomb, env2) = rewriteC(combine)(env1)
-        c.copy(par = npar, combine = ncomb) -> env2
-      } else if (range.u > 1 && range.s != 0) {
-        throw NotImplemented("Unrolling loops with non-zero start idx", c.pos)
-      } else {
-        // We need to compile A --- B --- C into
-        // {A0; A1 ... --- B0; B1 ... --- C0; C1}
-        val nested = par match {
-          case CSeq(cmds) => cmds
-          case _ => Seq(par)
-        }
-
-        val nPar = {
-          val seqOfSeqs = (0 to range.u - 1).map(idx => {
-            rewriteCSeq(nested)(env.add(range.iter, idx))._1
-          })
-          CSeq(seqOfSeqs.transpose.map(CPar.smart(_)))
-        }
-
-        // Run rewrite just to collect all the local variables
-        val locals = rewriteC(par)(env)._2.localVars
-        val nComb = rewriteC(combine)(locals.foldLeft(env)({
-          case (env, l) => {
-            val regs = (0 to range.u - 1).map(i => {
-              val suf = ((range.iter, i) :: env.idxMap.toList)
-                .sortBy(_._1.v)
-                .map(_._2)
-                .mkString("_")
-              Id(l.v + suf)
-            })
-            env.combineRegAdd(l, regs.toSet)
-          }
-        }))._1
-
-        val nRange = range.copy(e = range.e / range.u, u = 1).copy()
-
-        // Refuse lowering without explicit type on iterator.
-        c.copy(range = nRange, par = nPar, combine = nComb) -> env
+      if (range.u > 1 && range.s != 0) {
+        throw NotImplemented("Unrolling loops with non-zero start idx", range.pos)
+      } // We need to compile A --- B --- C into
+      // {A0; A1 ... --- B0; B1 ... --- C0; C1}
+      val nested = par match {
+        case CSeq(cmds) => cmds
+        case _ => Seq(par)
       }
+
+      val (nestedRep, nestedLocals) = nested
+        .map(cmd => {
+          val (duplicated, envs) = (0 until range.u)
+            .map(idx => rewriteC(cmd)(env.add(range.iter, idx)))
+            .unzip
+          val allLocals = envs.flatMap(_.localVars).toSet
+          cmd match {
+            case _: CFor => {
+              // All duplicated bodies are going to be CFor
+              val (pars, combs) = duplicated
+                .collect[CFor]({ case c: CFor => c })
+                .map(cfor => (cfor.par, cfor.combine))
+                .unzip
+              // Merge all par and combines bodies using interleaveSeq
+              val nPar = interleaveSeq(pars)
+              val nComb = CPar.smart(combs)
+              val cfor = duplicated(0).asInstanceOf[CFor]
+              cfor.copy(par = nPar, combine = nComb) -> allLocals
+            }
+            case _ => {
+              CPar.smart(duplicated) -> allLocals
+            }
+          }
+        })
+        .unzip
+      val (nPar, locals) = (CSeq.smart(nestedRep), nestedLocals.flatten.toSet)
+
+      /*val nPar = {
+      val seqOfSeqs = (0 to range.u - 1).map(idx => {
+        rewriteCSeq(nested)(env.add(range.iter, idx))._1
+      })
+    interleaveSeq(seqOfSeqs)
+    }*/
+
+      val nEnv = locals.foldLeft(env)({
+        case (env, l) => {
+          val regs = (0 to range.u - 1).map(i => {
+            val suf = ((range.iter, i) :: env.idxMap.toList)
+              .sortBy(_._1.v)
+              .map(_._2)
+              .mkString("_")
+            Id(s"${l.v}_${suf}")
+          })
+          env.combineRegAdd(l, regs.toSet)
+        }
+      })
+      val nComb = rewriteC(combine)(nEnv)._1
+
+      val nRange = range.copy(e = range.e / range.u, u = 1).copy()
+
+      // Refuse lowering without explicit type on iterator.
+      c.copy(range = nRange, par = nPar, combine = nComb) -> env
+
     }
     case (CReduce(rop, l, r), env) => {
       import Syntax.{OpConstructor => OC}
@@ -432,7 +464,9 @@ object LowerUnroll extends PartialTransformer {
       }
       rewriteC(CSeq.smart(prelude :+ CUpdate(l, nR)))(nEnv)
     }
-    case (c @ CUpdate(lhs, _), env) =>
+    case (CUpdate(lhs, rhs), env0) =>
+      val (nRhs, env) = rewriteE(rhs)(env0)
+      val c = CUpdate(lhs, nRhs)
       lhs match {
         case e @ EVar(id) =>
           c.copy(lhs = env.rewriteGet(id).map(nId => EVar(nId)).getOrElse(e)) -> env
@@ -478,8 +512,10 @@ object LowerUnroll extends PartialTransformer {
     case (e @ EVar(id), env) => {
       env.rewriteGet(id).map(nId => EVar(nId)).getOrElse(e) -> env
     }
-    case (e: EArrAccess, _) =>
+    /*case (e: EArrAccess, _) => {
+      pprint.pprintln(e)
       throw PassError("Cannot transform reads inside other expressions", e.pos)
+    }*/
   }
 
   override def rewriteC(cmd: Command)(implicit env: Env) =

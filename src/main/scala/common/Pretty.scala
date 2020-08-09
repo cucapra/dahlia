@@ -126,7 +126,7 @@ object Pretty {
     case CSeq(cmds) => vsep(cmds.map(emitCmd), text("---"))
     case CLet(id, typ, e) =>
       text("let") <+> id <>
-        typ.map(space <> colon <+> emitTyp(_)).getOrElse(emptyDoc) <>
+        typ.map(colon <+> emitTyp(_)).getOrElse(emptyDoc) <>
         e.map(space <> equal <+> emitExpr(_)).getOrElse(emptyDoc) <> semi
     case CIf(cond, cons, alt) => {
       text("if") <+> parens(cond) <+> scope(cons) <> (alt match {
