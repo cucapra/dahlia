@@ -5,26 +5,32 @@ import fuselang.common._
 import Transformer._
 import EnvHelpers._
 import Syntax._
+import CompilerError._
 
 object HoistMemoryReads extends PartialTransformer {
 
-  // Env for storing the assignments for reads to replace
-  case class BufferEnv(map: Map[Expr, CLet])
-      extends ScopeManager[BufferEnv]
-      with Tracker[Expr, CLet, BufferEnv] {
-    def merge(that: BufferEnv) = {
-      BufferEnv(this.map ++ that.map)
+  case class HoistEnv(
+      // Map from Access expression to the bindings they created.
+      map: Map[EArrAccess, Id],
+      // Set of values modified by a command.
+      defines: Set[Id]
+  ) extends ScopeManager[HoistEnv]
+      with Tracker[EArrAccess, Id, HoistEnv] {
+    def merge(that: HoistEnv) = {
+      HoistEnv(this.map ++ that.map, this.defines ++ that.defines)
     }
 
-    def get(key: Expr) = this.map.get(key)
+    def get(key: EArrAccess) = this.map.get(key)
 
-    def add(key: Expr, value: CLet) = {
-      BufferEnv(this.map + (key -> value))
+    def add(key: EArrAccess, value: Id) = {
+      this.copy(this.map + (key -> value))
     }
+
+    def defineAdd(key: Id) = this.copy(defines = this.defines + key)
   }
 
-  type Env = BufferEnv
-  val emptyEnv = BufferEnv(Map())
+  type Env = HoistEnv
+  val emptyEnv = HoistEnv(Map(), Set())
 
   /** Helper for generating unique names. */
   var idx: Map[String, Int] = Map();
@@ -37,18 +43,30 @@ object HoistMemoryReads extends PartialTransformer {
     Id(s"$base${idx(base)}")
   }
 
-  /** Constructs a (Command, Env) tuple from a command
-    * and an environment containing new let bindings. */
+  // Returns the list of variables this expression reads from.
+  def readsFrom(e: Expr): Set[Id] = e match {
+    case EVar(id) => Set(id)
+    case _: EInt => Set()
+    case _ => throw NotImplemented(s"readsFrom calculation for: $e")
+  }
+
+  // Return a sequence of let bindings for all of the variables are defined
+  // by this environment.
   def construct(
-      cmd: Command,
-      env: Env,
-      acc: Command = CEmpty
-  ): (Command, Env) = {
-    if (env.map.values.isEmpty && acc == CEmpty) {
-      cmd -> emptyEnv
-    } else {
-      CPar.smart(env.map.values.toSeq :+ acc :+ cmd) -> emptyEnv
-    }
+      env: Env
+  ): (Seq[Command], Env) = {
+    // For all variables that read values being defined, return let-bindings.
+    val defines = env.defines
+    val (toBind, rest) = env.map
+      .partition({
+        case (e, _) => e.idxs.flatMap(readsFrom).exists(defines.contains)
+      })
+    val binds = toBind
+      .map({
+        case (acc, id) => CLet(id, None, Some(acc))
+      })
+      .toSeq
+    (binds, env.copy(map = rest))
   }
 
   /** Replaces array accesses with reads from a temporary variable.
@@ -57,11 +75,10 @@ object HoistMemoryReads extends PartialTransformer {
   def myRewriteE: PF[(Expr, Env), (Expr, Env)] = {
     case (e @ EArrAccess(id, _), env) => {
       env.get(e) match {
-        case Some(let) => EVar(let.id) -> env
+        case Some(id) => EVar(id) -> env
         case None => {
           val readTmp = genName(s"${id}_read")
-          val read = CLet(readTmp, None, Some(e))
-          val nEnv = env.add(e, read)
+          val nEnv = env.add(e, readTmp)
           EVar(readTmp) -> nEnv
         }
       }
@@ -75,38 +92,83 @@ object HoistMemoryReads extends PartialTransformer {
   }
 
   def myRewriteC: PF[(Command, Env), (Command, Env)] = {
-    // no reason to rewrite direct reads into a variable
-    case (c @ CLet(_, _, Some(EArrAccess(_, _))), _) => {
-      c -> emptyEnv
+    // Memory reads cannot percolate beyond a CSeq boundary. This simply
+    // traverses the program in normal order and defines reads from every
+    // command
+    case (CSeq(cmds), env) => {
+      // Traversing in normal order because the let-bindings cannot percolate
+      // beyond the ---.
+      CSeq.smart(cmds.map(cmd => {
+        // Use emptyEnv because rewrites from the surrounding context cannot
+        // be used.
+        val (nCmd, env) = rewriteC(cmd)(emptyEnv)
+        val defs = env.map.map({ case (e, id) => CLet(id, None, Some(e)) }).toSeq
+        CPar.smart(defs :+ nCmd)
+      })) -> env
     }
 
-    case (CLet(id, typ, Some(e)), _) => {
-      val (expr, env) = rewriteE(e)(emptyEnv)
-      construct(CLet(id, typ, Some(expr)), env)
+    /**
+      * IMPORTANT: The par rewriter traverses the program bottom up and
+      * tries to percolate memory reads to the topmost scope it can.
+      */
+    case (CPar(cmds), env) => {
+      cmds.foldRight[(Command, HoistEnv)]((CEmpty, env))({
+        case (cmd, (acc, env)) => {
+          val (nCmd, env1) = rewriteC(cmd)(env)
+          val (defs, env2)  = construct(env1)
+          CPar.smart(nCmd +: defs :+ acc) -> env2
+        }
+      })
+    }
+    case (CLet(id, _, Some(acc @ EArrAccess(_, _))), env) => {
+      // Remove this and try to percolate it upwards.
+      CEmpty -> env.add(acc, id)
     }
 
-    case (CIf(cond, cons, alt), _) => {
-      val (expr, env) = rewriteE(cond)(emptyEnv)
-      construct(
-        CIf(expr, rewrC(cons), rewrC(alt)),
-        env
-      )
+    case (c @ CLet(id, _, Some(e)), env) => {
+      val (expr, env1) = rewriteE(e)(env)
+      c.copy(e = Some(expr)) -> env1.defineAdd(id)
     }
 
-    case (CWhile(cond, pipeline, body), _) => {
-      val (expr, env) = rewriteE(cond)(emptyEnv)
-      construct(CWhile(expr, pipeline, rewrC(body)), env)
+    case (CIf(cond, cons, alt), env) => {
+      val (expr, env1) = rewriteE(cond)(env)
+      val (nCons, cEnv) = rewriteC(cons)(emptyEnv)
+      val (nAlt, aEnv) = rewriteC(alt)(emptyEnv)
+      CIf(
+        expr,
+        // Discard the environments because we can't percolate
+        // bindings outside their scopes.
+        CPar.smart(construct(cEnv)._1 :+ nCons),
+        CPar.smart(construct(aEnv)._1 :+ nAlt),
+      ) -> env1.copy(defines = cEnv.defines ++ aEnv.defines)
     }
 
-    case (CReturn(expr), _) => {
+    case (CWhile(cond, pipeline, body), env) => {
+      val (expr, cEnv) = rewriteE(cond)(emptyEnv)
+      val (nBody, bEnv) = rewriteC(body)(cEnv)
+      // The body may "define" certain variables by assigning to them.
+      // If there are memory accesses in the condition or the body that
+      // use such variables, psuh them to the top of the body.
+      val (bindings, rEnv) = construct(bEnv)
+      CWhile(expr, pipeline, CPar.smart(bindings :+ nBody)) -> env.merge(rEnv)
+    }
+
+    case (c@CFor(range, _, body, _), env) => {
+      val (nBody, bEnv) = rewriteC(body)(emptyEnv)
+      // The iterator in the loop is defined.
+      val (bindings, rEnv) = construct(bEnv.defineAdd(range.iter))
+      c.copy(par = CPar.smart(bindings :+ nBody)) -> env.merge(env.merge(rEnv))
+    }
+
+    /*case (CReturn(expr), _) => {
       val (rewriteExpr, env) = rewriteE(expr)(emptyEnv)
       construct(CReturn(rewriteExpr), env)
-    }
+    }*/
 
-    case (CExpr(expr), _) => {
+    /*case (CExpr(expr), _) => {
       val (rewrite, env) = rewriteE(expr)(emptyEnv)
       construct(CExpr(rewrite), env)
-    }
+    }*/
 
     /*case (CUpdate(e @ EArrAccess(id, _), rhs), _) => {
       val (rhsRewrite, env) = rewriteE(rhs)(emptyEnv)
@@ -115,9 +177,22 @@ object HoistMemoryReads extends PartialTransformer {
       construct(CUpdate(e, EVar(writeTmp)), env, writeLet)
     }*/
 
-    case (CUpdate(e, rhs), _) => {
-      val (rewrite, env) = rewriteE(rhs)(emptyEnv)
-      construct(CUpdate(e, rewrite), env)
+    // We naively rewrite memory reads in rhs without considering if the
+    // lhs updates it. This is fine because if there LHS updated them,
+    // we would have required the read to be moved up anyways.
+    case (CUpdate(lhs, rhs), env) => {
+      val (nR, env1) = rewriteE(rhs)(env)
+      // Set of bindings that cannot be percolated up.
+      val defined = lhs match {
+        // All access expressions from this array cannot be percolated up.
+        case EArrAccess(id, _) => id
+        // All access expressions that use this variable cannot be percolated
+        // up.
+        case EVar(id) => id
+        case _ => throw Impossible(s"Not an LHS: $lhs")
+      }
+      // Update the set of defines
+      CUpdate(lhs, nR) -> env1.defineAdd(defined)
     }
 
     /*case (CReduce(rop, e @ EArrAccess(id, _), rhs), _) => {
@@ -127,10 +202,12 @@ object HoistMemoryReads extends PartialTransformer {
       construct(CReduce(rop, e, EVar(writeTmp)), env, writeLet)
     }*/
 
-    case (CReduce(rop, e, rhs), _) => {
+    case (_:CReduce, _) => ???
+    case (_: CBlock, _) => ???
+    /*{
       val (rewrite, env) = rewriteE(rhs)(emptyEnv)
       construct(CReduce(rop, e, rewrite), env)
-    }
+    }*/
   }
 
   override def rewriteC(cmd: Command)(implicit env: Env) =

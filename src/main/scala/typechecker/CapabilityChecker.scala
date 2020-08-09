@@ -41,6 +41,8 @@ object CapabilityChecker {
     }
 
     def myCheckC: PF[(Command, Env), Env] = {
+      // Transfer capabilities from the surroundings for a block
+      case (CBlock(cmd), env) => checkC(cmd)(env)
       case (CSeq(cmds), env) => {
         // Check all seq commands under the same environment
         cmds.foreach(c => checkC(c)(env));
