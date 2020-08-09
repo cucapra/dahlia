@@ -362,12 +362,11 @@ object LowerUnroll extends PartialTransformer {
         .viewAdd(id, ViewTransformer.fromArray(id, ta))
     }
     // Handle case for initialized, unbanked memories.
-    case (CLet(id, Some(ta: TArray), init), env) => {
-      val nInit = init.map(i => rewriteE(i)(env)._1)
+    case (c@CLet(_, Some(ta: TArray), _), env) => {
       if (ta.dims.exists({ case (_, bank) => bank > 1 })) {
         throw NotImplemented("Banked local arrays with initial values")
       }
-      CLet(Id(v = id.v + "0"), Some(ta), nInit) -> env
+      c -> env
     }
     // Rewrite let bound variables if needed.
     case (c @ CLet(id, _, init), env) => {
@@ -436,13 +435,20 @@ object LowerUnroll extends PartialTransformer {
 
       val nEnv = locals.foldLeft(env)({
         case (env, l) => {
-          val regs = (0 to range.u - 1).map(i => {
-            val suf = ((range.iter, i) :: env.idxMap.toList)
-              .sortBy(_._1.v)
-              .map(_._2)
-              .mkString("_")
-            Id(s"${l.v}_${suf}")
-          })
+          val regs = if (range.u > 1) {
+            (0 until range.u).map(i => {
+              // XXX(rachit): über hack to get the name of all defined registers.
+              val suf = ((range.iter, i) :: env.idxMap.toList)
+                .sortBy(_._1.v)
+                .map(_._2)
+                .mkString("_")
+                Id(s"${l.v}_${suf}")
+            })
+          } else {
+            // XXX(rachit): Anther über hack to get the name register when
+            // no unrolling happened.
+            Set(Id(s"${l.v}_"))
+          }
           env.combineRegAdd(l, regs.toSet)
         }
       })
