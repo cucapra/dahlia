@@ -54,7 +54,7 @@ object Compiler {
             } catch {
               case _: Errors.ParserError =>
                 throw CompilerError.Impossible(
-                  "Pretty printer generated a program that could not be parsed after code generation"
+                  "Pretty printer generated a program that could not be parsed after code generation.\nUse the --pass-debug flag to see what the generated program looked like."
                 )
             }
           } else {
