@@ -41,6 +41,15 @@ private class CppRunnable extends CppLike {
 
   def emitArrayDecl(ta: TArray, id: Id) = emitType(ta) <+> text(s"$id")
 
+  override def emitLet(l: CLet) = l match {
+    case CLet(id, Some(TArray(typ, dims, _)), init) => {
+      emitType(typ) <+> id <> hsep(dims.map({
+        case (size, _) => brackets(text(size.toString))
+      })) <> init.map(i => space <> emitExpr(i)).getOrElse(emptyDoc) <> semi
+    }
+    case _ => super.emitLet(l)
+  }
+
   def emitFor(cmd: CFor): Doc =
     text("for") <> emitRange(cmd.range) <+> scope {
       cmd.par <> {
