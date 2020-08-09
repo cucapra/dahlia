@@ -25,6 +25,7 @@ object Futil {
   case class CompVar(name: String) extends Emitable with Ordered[CompVar] {
     override def doc(): Doc = text(name)
     def port(port: String): CompPort = CompPort(this, port)
+    def hole(port: String): HolePort = HolePort(this, port)
     def addSuffix(suffix: String): CompVar = CompVar(s"$name$suffix")
     override def compare(that: CompVar): Int = {
       this.name.compare(that.name)
@@ -93,6 +94,13 @@ object Futil {
       case (ConstantPort(_, _), _) => 1
       case (_, ConstantPort(_, _)) => -1
     }
+
+    // hack to support multi cycle binops
+    def rename(name: String): Port = this match {
+      case CompPort(id, _) => CompPort(id, name)
+      case HolePort(id, _) => HolePort(id, name)
+      case x => x
+    }
   }
 
   case class CompPort(id: CompVar, name: String) extends Port
@@ -117,6 +125,7 @@ object Futil {
       case Group(id, conns, None) =>
         text("group") <+> id.doc <+>
           scope(vsep(conns.map(_.doc)))
+      case Empty() => emptyDoc
     }
 
     def compare(that: Structure): Int = {
@@ -139,6 +148,8 @@ object Futil {
         case (_, CompDecl(_, _)) => 1
         case (Group(_, _, _), _) => -1
         case (_, Group(_, _, _)) => 1
+        case (Empty(), _) => -1
+        case (_, Empty()) => 1
       }
     }
   }
@@ -166,6 +177,7 @@ object Futil {
   }
   case class Connect(src: Port, dest: Port, guard: Option[GuardExpr] = None)
       extends Structure
+  case class Empty() extends Structure
 
   case class CompInst(id: String, args: List[Int]) extends Emitable {
     override def doc(): Doc = {

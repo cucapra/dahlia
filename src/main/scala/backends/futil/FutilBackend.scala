@@ -16,10 +16,17 @@ import CompilerError._
   */
 private case class EmitOutput(
     val port: Port,
-    val done: Port,
-    val structure: List[Structure],
-    val delay: Option[Int]
-)
+    val group: Option[CompVar],
+    val structure: List[Structure] = List(),
+    val delay: Option[Int] = None
+) {
+  def groupConnect(f: (CompVar) => Structure): Structure = {
+    this.group match {
+      case Some(compvar) => f(compvar)
+      case None => Empty()
+    }
+  }
+}
 
 private class FutilBackendHelper {
 
@@ -155,65 +162,220 @@ private class FutilBackendHelper {
   /** `emitBinop` is a helper function to generate the structure
     *  for `e1 binop e2`. The return type is described in `emitExpr`.
     */
-  def emitBinop(compName: String, e1: Expr, e2: Expr, rhsInfo: Option[(Port, Option[Int])] = None)(
+  def emitBinop(
+      compName: String,
+      e1: Expr,
+      e2: Expr
+  )(
       implicit store: Store
   ): EmitOutput = {
-    val e1Out = emitExpr(e1, rhsInfo)
-    val e2Out = emitExpr(e2, rhsInfo)
+    val e1Out = emitExpr(e1)
+    val e2Out = emitExpr(e2)
     assertOrThrow(
       bitsForType(e1.typ, e1.pos) == bitsForType(e2.typ, e2.pos),
       Impossible(
         "The widths of the left and right side of a binop didn't match."
       )
     )
-    val binop = Stdlib.op(s"$compName", bitsForType(e1.typ, e1.pos));
+    val eBitwidth = bitsForType(e1.typ, e1.pos)
+    val binop = Stdlib.op(s"$compName", eBitwidth);
 
+    val delay =
+      for (d1 <- e1Out.delay; d2 <- e2Out.delay) yield math.max(d1, d2)
     val comp = LibDecl(genName(compName), binop)
-    val struct = List(
-      comp,
-      Connect(e1Out.port, comp.id.port("left")),
-      Connect(e2Out.port, comp.id.port("right"))
-    )
-    EmitOutput(
-      comp.id.port("out"),
-      ConstantPort(1, 1),
-      struct ++ e1Out.structure ++ e2Out.structure,
-      Some(0)
-    )
+    val groupName = genName(s"${compName}_group")
+
+    delay match {
+      // combinational case
+      case Some(0) => {
+        val struct = List(
+          comp,
+          e1Out.groupConnect((v) => Connect(ConstantPort(1, 1), v.hole("go"))),
+          e2Out.groupConnect((v) => Connect(ConstantPort(1, 1), v.hole("go"))),
+          Connect(e1Out.port, comp.id.port("left")),
+          Connect(e2Out.port, comp.id.port("right")),
+          Connect(ConstantPort(1, 1), groupName.hole("done"))
+        )
+        val (group, st) = Group.fromStructure(groupName, struct, Some(0))
+        EmitOutput(
+          comp.id.port("out"),
+          Some(group.id),
+          group :: st ++ e1Out.structure ++ e2Out.structure,
+          delay = Some(0)
+        )
+      }
+      // we need to save the dones and values of the children
+      case _ => {
+        val leftVal =
+          LibDecl(genName("left_value"), Stdlib.register(eBitwidth))
+        val leftDone =
+          LibDecl(genName("left_done"), Stdlib.register(1))
+        val rightVal =
+          LibDecl(genName("right_value"), Stdlib.register(eBitwidth))
+        val rightDone =
+          LibDecl(genName("right_done"), Stdlib.register(1))
+        val bothDoneGuard = Some(
+          And(Atom(leftDone.id.port("out")), Atom(rightDone.id.port("out")))
+        )
+
+        val struct = List(
+          comp,
+          leftVal,
+          leftDone,
+          rightVal,
+          rightDone,
+          // tell children to go
+          e1Out.groupConnect((g) =>
+            Connect(
+              ConstantPort(1, 1),
+              g.hole("go"),
+              Some(Not(Atom(leftDone.id.port("out"))))
+            )
+          ),
+          e2Out.groupConnect((g) =>
+            Connect(
+              ConstantPort(1, 1),
+              g.hole("go"),
+              Some(Not(Atom(rightDone.id.port("out"))))
+            )
+          ),
+          // save values
+          Connect(
+            e1Out.port,
+            leftVal.id.port("in"),
+            e1Out.group.map((g) => Atom(g.hole("done")))
+          ),
+          Connect(
+            ConstantPort(1, 1),
+            leftVal.id.port("write_en"),
+            e1Out.group.map((g) => Atom(g.hole("done")))
+          ),
+          Connect(
+            e2Out.port,
+            rightVal.id.port("in"),
+            e2Out.group.map((g) => Atom(g.hole("done")))
+          ),
+          Connect(
+            ConstantPort(1, 1),
+            rightVal.id.port("write_en"),
+            e2Out.group.map((g) => Atom(g.hole("done")))
+          ),
+          // save done holes
+          Connect(
+            ConstantPort(1, 1),
+            leftDone.id.port("in"),
+            e1Out.group.map((g) => Atom(g.hole("done")))
+          ),
+          Connect(
+            ConstantPort(1, 1),
+            leftDone.id.port("write_en"),
+            e1Out.group.map((g) => Atom(g.hole("done")))
+          ),
+          Connect(
+            ConstantPort(1, 1),
+            rightDone.id.port("in"),
+            e2Out.group.map((g) => Atom(g.hole("done")))
+          ),
+          Connect(
+            ConstantPort(1, 1),
+            rightDone.id.port("write_en"),
+            e2Out.group.map((g) => Atom(g.hole("done")))
+          ),
+          // compute binop
+          Connect(leftVal.id.port("out"), comp.id.port("left"), bothDoneGuard),
+          Connect(
+            rightVal.id.port("out"),
+            comp.id.port("right"),
+            bothDoneGuard
+          ),
+          // signal done
+          Connect(ConstantPort(1, 1), groupName.hole("done"), bothDoneGuard)
+        )
+        val resetStruct = List(
+          Connect(
+            ConstantPort(1, 0),
+            leftDone.id.port("in"),
+            Some(Not(Atom(groupName.hole("go"))))
+          ),
+          Connect(
+            ConstantPort(1, 1),
+            leftDone.id.port("write_en"),
+            Some(Not(Atom(groupName.hole("go"))))
+          ),
+          Connect(
+            ConstantPort(1, 0),
+            rightDone.id.port("in"),
+            Some(Not(Atom(groupName.hole("go"))))
+          ),
+          Connect(
+            ConstantPort(1, 1),
+            rightDone.id.port("write_en"),
+            Some(Not(Atom(groupName.hole("go"))))
+          )
+        )
+        val (group, st) =
+          Group.fromStructure(groupName, struct, delay.map(_ + 1))
+        EmitOutput(
+          comp.id.port("out"),
+          Some(group.id),
+          group :: st ++ resetStruct ++ e1Out.structure ++ e2Out.structure,
+          delay = group.staticDelay
+        )
+      }
+    }
   }
 
-  def emitMultiCycleBinop(compName: String, e1: Expr, e2: Expr, rhsInfo: Option[(Port, Option[Int])] = None)(
+  def emitMultiCycleBinop(
+      compName: String,
+      e1: Expr,
+      e2: Expr,
+      delay: Option[Int] = None
+  )(
       implicit store: Store
   ): EmitOutput = {
+    val name = genName(compName)
     val comp = LibDecl(
-      genName(compName),
+      name,
       Stdlib.op(s"${compName}_pipe", bitsForType(e1.typ, e1.pos))
     )
 
-    val e1Out = emitExpr(e1, rhsInfo)
-    val e2Out = emitExpr(e2, rhsInfo)
+    val e1Out = emitExpr(e1)
+    val e2Out = emitExpr(e2)
+    // XXX(sam): doesn't work if they take different amounts of time :(
+    val bothDoneGuard = e1Out.group.flatMap((x) =>
+      e2Out.group.map((y) => And(Atom(x.hole("done")), Atom(y.hole("done"))))
+    )
+
+    val groupName = genName(s"${compName}_group")
 
     val struct = List(
       comp,
-      Connect(e1Out.port, comp.id.port("left"), Some(Atom(e1Out.done))),
-      Connect(e2Out.port, comp.id.port("right"), Some(Atom(e2Out.done))),
+      e1Out.groupConnect((g) => Connect(ConstantPort(1, 1), g.hole("go"))),
+      e2Out.groupConnect((g) => Connect(ConstantPort(1, 1), g.hole("go"))),
       Connect(
-        ConstantPort(1, 1),
-        comp.id.port("go"),
-        Some(
-          And(
-            Not(Atom(comp.id.port("done"))),
-            And(Atom(e1Out.done), Atom(e2Out.done))
-          )
-        )
-      )
+        e1Out.port,
+        comp.id.port("left"),
+        e1Out.group.map((p) => Atom(p.hole("done")))
+      ),
+      Connect(
+        e2Out.port,
+        comp.id.port("right"),
+        e2Out.group.map((p) => Atom(p.hole("done")))
+      ),
+      Connect(ConstantPort(1, 1), groupName.hole("done"), bothDoneGuard)
     )
+
+    val outDelay =
+      for (e1d <- e1Out.delay; e2d <- e2Out.delay; opd <- delay)
+        yield e1d + e2d + opd;
+
+    val (group, st) = Group.fromStructure(groupName, struct, outDelay)
 
     EmitOutput(
       comp.id.port("out"),
-      comp.id.port("done"),
-      struct ++ e1Out.structure ++ e2Out.structure,
-      e1Out.delay.flatMap((d) => e2Out.delay.map(_ + d + 2))
+      Some(group.id),
+      group :: st ++ e1Out.structure ++ e2Out.structure,
+      delay = outDelay
     )
   }
 
@@ -224,22 +386,29 @@ private class FutilBackendHelper {
     *  the port that can be used to put a value into the location represented by
     *  `expr`.
     */
-  def emitExpr(expr: Expr, rhsInfo: Option[(Port, Option[Int])] = None)(
+  def emitExpr(expr: Expr, rhsInfo: Option[EmitOutput] = None)(
       implicit store: Store
   ): EmitOutput =
     expr match {
       case EInt(v, _) => {
         val _ = rhsInfo
+        val groupName = genName("const_gr")
         val const =
           LibDecl(
             genName("const"),
             Stdlib.constant(bitsForType(expr.typ, expr.pos), v)
           )
+        val struct = List(
+          const,
+          Connect(ConstantPort(1, 1), groupName.hole("done"))
+        )
+        val (group, st) =
+          Group.fromStructure(groupName, struct, Some(0))
         EmitOutput(
           const.id.port("out"),
-          ConstantPort(1, 1),
-          List(const),
-          Some(0)
+          Some(group.id),
+          group :: st,
+          delay = Some(0)
         )
       }
       case EBinop(op, e1, e2) => {
@@ -265,33 +434,48 @@ private class FutilBackendHelper {
               )
           }
         op.op match {
-          case "*" | "/" => emitMultiCycleBinop(compName, e1, e2, rhsInfo)
-          case _ => emitBinop(compName, e1, e2, rhsInfo)
+          case "*" => emitMultiCycleBinop(compName, e1, e2, Some(3))
+          case "/" => emitMultiCycleBinop(compName, e1, e2, None)
+          case _ => emitBinop(compName, e1, e2)
         }
       }
-      case EVar(id) =>
-        val portName = if (rhsInfo.isDefined) "in" else "out"
+      case EVar(id) => {
         val varName = store
           .get(CompVar(s"$id"))
           .getOrThrow(Impossible(s"$id was not in `store`"))
-        val struct =
-          rhsInfo match {
-            case Some((port, _)) =>
-              List(Connect(port, varName.port("write_en")))
-            case None => List()
+
+        rhsInfo match {
+          // we are a lhs, so prepare for writes
+          case Some(rhsOut) => {
+            val groupName = genName(s"${id}_gr")
+            val struct = List(
+              Connect(
+                ConstantPort(1, 1),
+                varName.port("write_en"),
+                rhsOut.group.map((g) => Atom(g.hole("done")))
+              ),
+              Connect(varName.port("done"), groupName.hole("done"))
+            )
+            val (group, st) =
+              Group.fromStructure(groupName, struct, rhsOut.delay.map(_ + 1))
+            EmitOutput(
+              varName.port("in"),
+              Some(group.id),
+              group :: st,
+              group.staticDelay
+            )
           }
-        // calculate static delay, rhsDelay + 1 for writes, 0 for reads
-        val delay =
-          rhsInfo match {
-            case Some((_, delay)) => delay.map(_ + 1)
-            case None => Some(0)
+          // we are being read from
+          case None => {
+            EmitOutput(
+              varName.port("out"),
+              None,
+              List(),
+              Some(0)
+            )
           }
-        EmitOutput(
-          varName.port(portName),
-          if (rhsInfo.isDefined) varName.port("done") else ConstantPort(1, 1),
-          struct,
-          delay
-        )
+        }
+      }
       case ECast(e, t) => {
         e.typ = Some(t)
         expr.typ = Some(t)
@@ -309,39 +493,55 @@ private class FutilBackendHelper {
           }
         })
 
-        // The value is generated on `read_data` and written on `write_data`.
-        val portName = if (rhsInfo.isDefined) "write_data" else "read_data"
-        val writeEnStruct =
-          rhsInfo match {
-            case Some((port, _)) => List(Connect(port, arr.port("write_en")))
-            case None => List()
+        rhsInfo match {
+          // we are a lhs, so prepare for writes
+          case Some(rhsOut) => {
+            val groupName = genName(s"${arr.name}_write")
+            val struct = List(
+              Connect(
+                ConstantPort(1, 1),
+                arr.port("write_en"),
+                rhsOut.group.map((g) => Atom(g.hole("done")))
+              ),
+              Connect(arr.port("done"), groupName.hole("done"))
+            )
+            val (group, st) =
+              Group.fromStructure(groupName, struct, rhsOut.delay.map(_ + 1))
+            EmitOutput(
+              arr.port("write_data"),
+              Some(group.id),
+              group :: st,
+              group.staticDelay
+            )
           }
-        // calculate static delay, rhsDelay + 1 for writes, 0 for reads
-        val delay =
-          rhsInfo match {
-            case Some((_, delay)) => delay.map(_ + 1)
-            case None => Some(0)
+          // we are being read from
+          case None => {
+            EmitOutput(
+              arr.port("read_data"),
+              None,
+              indexing,
+              Some(0)
+            )
           }
-        EmitOutput(
-          arr.port(portName),
-          if (rhsInfo.isDefined) arr.port("done") else ConstantPort(1, 1),
-          indexing ++ writeEnStruct,
-          delay
-        )
+        }
       }
       case EApp(Id("sqrt"), List(arg)) => {
+        // XXX(sam) doesn't support complex argument expressions
         val argOut = emitExpr(arg)
         val sqrt = LibDecl(genName("sqrt"), Stdlib.sqrt())
+        val groupName = genName("sqrt_gr")
         val struct = List(
           sqrt,
           Connect(argOut.port, sqrt.id.port("in")),
-          Connect(ConstantPort(1, 1), sqrt.id.port("go"))
+          Connect(ConstantPort(1, 1), sqrt.id.port("go")),
+          Connect(sqrt.id.port("done"), groupName.hole("done"))
         )
+        val (group, st) = Group.fromStructure(groupName, struct, Some(1))
         EmitOutput(
           sqrt.id.port("out"),
-          sqrt.id.port("done"),
-          argOut.structure ++ struct,
-          Some(1)
+          Some(group.id),
+          group :: st ++ argOut.structure,
+          delay = Some(1)
         )
       }
       case x =>
@@ -376,15 +576,33 @@ private class FutilBackendHelper {
           reg.id.port("done"),
           HolePort(groupName, "done")
         )
-        val struct =
-          Connect(out.port, reg.id.port("in")) :: Connect(
-            out.done,
-            reg.id.port("write_en")
-          ) :: doneHole :: out.structure
+        val struct = List(
+          reg,
+          // tell child to go
+          out.groupConnect((g) =>
+            Connect(
+              ConstantPort(1, 1),
+              g.hole("go"),
+              Some(Not(Atom(g.hole("done"))))
+            )
+          ),
+          // write when child is done
+          Connect(
+            out.port,
+            reg.id.port("in"),
+            out.group.map((g) => Atom(g.hole("done")))
+          ),
+          Connect(
+            ConstantPort(1, 1),
+            reg.id.port("write_en"),
+            out.group.map((g) => Atom(g.hole("done")))
+          ),
+          doneHole
+        )
         val (group, st) =
           Group.fromStructure(groupName, struct, out.delay.map(_ + 1))
         (
-          reg :: group :: st,
+          group :: st ++ out.structure,
           Enable(group.id),
           store + (CompVar(s"$id") -> reg.id)
         )
@@ -397,53 +615,100 @@ private class FutilBackendHelper {
       }
       case CUpdate(lhs, rhs) => {
         val rOut = emitExpr(rhs)(store)
-        val lOut = emitExpr(lhs, Some((rOut.done, rOut.delay)))(store)
+        val lOut = emitExpr(lhs, Some(rOut))(store)
         val groupName = genName("upd")
         val doneHole =
           Connect(
             ConstantPort(1, 1),
             HolePort(groupName, "done"),
-            Some(Atom(lOut.done))
+            lOut.group.map((g) => Atom(g.hole("done")))
           )
-        val struct =
-          lOut.structure ++ rOut.structure ++ List(
-            Connect(rOut.port, lOut.port, Some(Atom(rOut.done))),
-            doneHole
-          )
+        val struct = List(
+          // tell child to go
+          rOut.groupConnect((g) =>
+            Connect(
+              ConstantPort(1, 1),
+              g.hole("go"),
+              Some(Not(Atom(g.hole("done"))))
+            )
+          ),
+          // connect outputs when done
+          Connect(
+            rOut.port,
+            lOut.port,
+            rOut.group.map((g) => Atom(g.hole("done")))
+          ),
+          doneHole
+        )
+        // val struct =
+        //   lOut.structure ++ rOut.structure ++ List(
+        //     Connect(rOut.port, lOut.port, Some(Atom(rOut.done))),
+        //     doneHole
+        //   )
         val (group, other_st) =
           Group.fromStructure(groupName, struct, lOut.delay)
-        (group :: other_st, Enable(group.id), store)
+        (
+          group :: other_st ++ lOut.structure ++ rOut.structure,
+          Enable(group.id),
+          store
+        )
       }
       case CIf(cond, tbranch, fbranch) => {
         val condOut = emitExpr(cond)
         val (tStruct, tCon, _) = emitCmd(tbranch)
         val (fStruct, fCon, _) = emitCmd(fbranch)
-        val struct = tStruct ++ fStruct
-        val groupName = genName("cond")
-        val doneHole = Connect(condOut.done, HolePort(groupName, "done"))
-        val (group, st) =
-          Group.fromStructure(
-            groupName,
-            doneHole :: condOut.structure,
-            condOut.delay
-          )
-        val control = If(condOut.port, group.id, tCon, fCon)
-        (group :: st ++ struct, control, store)
+        val struct = tStruct ++ fStruct ++ condOut.structure
+
+        condOut.group match {
+          // there's already a group for the condition
+          case Some(group) => {
+            val control = If(condOut.port, group, tCon, fCon)
+            (struct, control, store)
+          }
+          // we have to make a group for the condition
+          case None => {
+            val groupName = genName("cond")
+            val doneHole =
+              Connect(ConstantPort(1, 1), HolePort(groupName, "done"))
+            val (group, st) =
+              Group.fromStructure(
+                groupName,
+                List(doneHole),
+                condOut.delay
+              )
+            val control = If(condOut.port, groupName, tCon, fCon)
+            (group :: st ++ struct, control, store)
+          }
+        }
       }
       case CEmpty => (List(), SeqComp(List()), store)
       case CWhile(cond, _, body) => {
         val condOut = emitExpr(cond)
-        val groupName = genName("cond")
-        val doneHole = Connect(condOut.done, HolePort(groupName, "done"))
-        val (condGroup, condDefs) =
-          Group.fromStructure(
-            groupName,
-            doneHole :: condOut.structure,
-            condOut.delay
-          )
         val (bodyStruct, bodyCon, st) = emitCmd(body)
-        val control = While(condOut.port, condGroup.id, bodyCon)
-        (condGroup :: bodyStruct ++ condDefs, control, st)
+        val struct = condOut.structure ++ bodyStruct
+
+        condOut.group match {
+          // we already have a group for the condition
+          case Some(group) => {
+            val control = While(condOut.port, group, bodyCon)
+            (struct, control, store)
+          }
+          // need to make a group for the condition
+          case None => {
+            val groupName = genName("cond")
+            val doneHole =
+              Connect(ConstantPort(1, 1), HolePort(groupName, "done"))
+            val (condGroup, condDefs) =
+              Group.fromStructure(
+                groupName,
+                List(doneHole),
+                condOut.delay
+              )
+            val control = While(condOut.port, condGroup.id, bodyCon)
+            (condGroup :: condDefs ++ struct, control, st)
+          }
+        }
+
       }
       case _: CFor =>
         throw BackendError(
