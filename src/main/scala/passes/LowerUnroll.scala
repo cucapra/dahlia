@@ -77,7 +77,10 @@ object LowerUnroll extends PartialTransformer {
           })
         cartesianProduct(allBanks)
           .map(banks => {
-            (banks, EArrAccess(Id(id.v + banks.mkString("_")), idxs.map(_._1)))
+            (
+              banks,
+              EArrAccess(Id(s"${id.v}_${banks.mkString("_")}"), idxs.map(_._1))
+            )
           })
           .toMap
       }
@@ -111,7 +114,9 @@ object LowerUnroll extends PartialTransformer {
               val banks: Seq[Int] = bank
                 .map(b => bankMap(b))
                 .getOrElse(bankMap.flatten)
-              banks.map(bank => (bank, (bank, genViewAccessExpr(suf, idxExpr))))
+              banks.map(bank =>
+                (bank, (bank, genViewAccessExpr(suf, idxExpr / EInt(arrBank))))
+              )
             }
           })
 
@@ -196,7 +201,7 @@ object LowerUnroll extends PartialTransformer {
     cartesianProduct(dims.map({
       case (size, banks) => (0 to banks - 1).map((size / banks, _))
     })).map(idxs => {
-      val name = id.v + idxs.map(_._2).mkString("_")
+      val name = s"${id.v}_${idxs.map(_._2).mkString("_")}"
       val dims = idxs.map({ case (s, _) => (s, 1) })
       (Id(name), TArray(typ, dims, ports))
     })
@@ -374,6 +379,7 @@ object LowerUnroll extends PartialTransformer {
         }
 
         // Run rewrite just to collect all the local variables
+        // XXX(rachit): Don't run rewriteC again.
         val locals = rewriteC(par)(env)._2.localVars
         val nComb = rewriteC(combine)(locals.foldLeft(env)({
           case (env, l) => {
