@@ -111,7 +111,9 @@ object LowerUnroll extends PartialTransformer {
               val banks: Seq[Int] = bank
                 .map(b => bankMap(b))
                 .getOrElse(bankMap.flatten)
-              banks.map(bank => (bank, (bank, genViewAccessExpr(suf, idxExpr / EInt(arrBank)))))
+              banks.map(bank =>
+                (bank, (bank, genViewAccessExpr(suf, idxExpr / EInt(arrBank))))
+              )
             }
           })
 
