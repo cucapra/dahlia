@@ -1,0 +1,39 @@
+decl M_int: bit<32>[6][8];
+decl V_int: bit<32>[8];
+decl R_int: bit<32>[6];
+
+let M: bit<32>[6 bank 3][8 bank 4];
+let V: bit<32>[8 bank 4];
+let R: bit<32>[6 bank 3];
+
+view M_sh = M[_: bank 1][_: bank 1];
+view V_sh = V[_: bank 1];
+view R_sh = R[_: bank 1];
+
+{
+  for (let i: bit<3> = 0..6) {
+    for (let j: bit<4> = 0..8) {
+      M_sh[i][j] := M_int[i][j];
+    }
+    R_sh[i] := R_int[i];
+  }
+  for (let i: bit<4> = 0..8) {
+    V_sh[i] := V_int[i];
+  }
+
+  ---
+
+  for (let i: bit<3> = 0..6) unroll 3 {
+    for (let j: bit<4> = 0..8) unroll 4 {
+      let rs = M[i][j] * V[j];
+    } combine {
+      R[i] += rs;
+    }
+  }
+
+  ---
+  for (let i: bit<3> = 0..6) {
+    R_int[i] := R_sh[i];
+  }
+
+}
