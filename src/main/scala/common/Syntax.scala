@@ -44,7 +44,7 @@ object Syntax {
 
   sealed trait Type extends Positional {
     override def toString = this match {
-      case _: TVoid => "void"
+      case _: TVoid => ""
       case _: TBool => "bool"
       case _: TRational => "rational"
       case _: TFloat => "float"
