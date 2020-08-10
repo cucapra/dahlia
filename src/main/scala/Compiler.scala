@@ -13,6 +13,7 @@ object Compiler {
 
   // Transformers to execute *before* type checking.
   val preTransformers: List[(String, PartialTransformer)] = List(
+    "Sequentialize" -> passes.Sequentialize,
     "Hoist memory reads" -> passes.HoistMemoryReads,
     "Lower unroll and bank" -> passes.LowerUnroll,
     "Lower for loops" -> passes.LowerForLoops
