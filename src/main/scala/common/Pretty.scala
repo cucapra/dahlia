@@ -19,7 +19,7 @@ object Pretty {
   }
 
   def emitInclude(incl: Include)(implicit debug: Boolean): Doc = {
-    text("import") <+> text(incl.name) <+> scope(vsep(incl.defs.map(emitDef)))
+    text("import") <+> quote(text(incl.name)) <+> scope(vsep(incl.defs.map(emitDef)))
   }
 
   def emitDef(defi: Definition)(implicit debug: Boolean): Doc = defi match {
@@ -148,7 +148,7 @@ object Pretty {
         (if (pipe) space <> text("pipeline") else emptyDoc) <+> scope(
         emitCmd(body)
       )
-    case CDecorate(dec) => value(dec)
+    case CDecorate(dec) => text("decor") <+> quote(value(dec))
     case CUpdate(lhs, rhs) => lhs <+> colon <> equal <+> rhs <> semi
     case CReduce(rop, lhs, rhs) => lhs <+> text(rop.toString) <+> rhs <> semi
     case CReturn(e) => text("return") <+> e <> semi
