@@ -3,12 +3,12 @@ package fuselang.passes
 import scala.{PartialFunction => PF}
 import fuselang.Utils.RichOption
 import fuselang.common._
+import Syntax.{OpConstructor => OC}
 import Transformer._
 import EnvHelpers._
 import Syntax._
 import CompilerError._
 import CodeGenHelpers._
-
 object LowerUnroll extends PartialTransformer {
   var curIdx = 0
   def genName(prefix: String): String = {
@@ -130,7 +130,7 @@ object LowerUnroll extends PartialTransformer {
     }
   }
 
-  // XXX(rachit): There are three maps that currently track some form of
+  // XXX(rachit): There are two maps that currently track some form of
   // rewriting: rewriteMap transforms local variables, combineReg transforms
   // combine registers, and viewMap transforms arrays.
   //
@@ -143,8 +143,6 @@ object LowerUnroll extends PartialTransformer {
       // Set of variables bound by this scope.
       // XXX(rachit): This should probably be a scoped set
       localVars: Set[Id],
-      // Set of variables a combine register refers to.
-      combineReg: Map[Id, Set[Id]],
       // Bindings for transformer for views.
       viewMap: Map[Id, ViewTransformer],
       // DimSpec of bound arrays in this context.
@@ -156,7 +154,6 @@ object LowerUnroll extends PartialTransformer {
         this.idxMap ++ that.idxMap,
         this.rewriteMap ++ that.rewriteMap,
         this.localVars ++ that.localVars,
-        this.combineReg ++ that.combineReg,
         this.viewMap ++ that.viewMap,
         this.dimsMap ++ that.dimsMap
       )
@@ -171,10 +168,6 @@ object LowerUnroll extends PartialTransformer {
       this.copy(rewriteMap = this.rewriteMap + (k -> v))
 
     def localVarAdd(key: Id) = this.copy(localVars = this.localVars + key)
-
-    def combineRegAdd(k: Id, v: Set[Id]) =
-      this.copy(combineReg = this.combineReg + (k -> v))
-    def combineRegGet(k: Id) = this.combineReg.get(k)
 
     def viewAdd(k: Id, v: ViewTransformer) =
       this.copy(viewMap = viewMap + (k -> v))
@@ -191,7 +184,7 @@ object LowerUnroll extends PartialTransformer {
   }
 
   type Env = ForEnv
-  val emptyEnv = ForEnv(Map(), Map(), Set(), Map(), Map(), Map())
+  val emptyEnv = ForEnv(Map(), Map(), Set(), Map(), Map())
 
   def unbankedDecls(id: Id, ta: TArray): Seq[(Id, Type)] = {
     val TArray(typ, dims, ports) = ta
@@ -241,48 +234,138 @@ object LowerUnroll extends PartialTransformer {
           }
       })
 
-  // Rewrite Seq(A0 --- B0, A1 --- B1, ...) to
-  // { A0; A1 ... } --- { B0; B1 ... }
-  private def interleaveSeq(cmds: Seq[Command]): Seq[Command] = {
-    val nested = if (cmds.forall(cmd => cmd.isInstanceOf[CSeq])) {
-      cmds.collect[Seq[Command]]({ case CSeq(cmds) => cmds })
-    } else {
-      cmds.map(Seq(_))
-    }
-    nested.transpose.map(mergePar(_))
-  }
-
   /**
-   * Tries to merge Sequences of pars that contain only for loops.
-   * This is called when we generate for loops in parallel from an unroll.
-   * Transforms:
-   * ```
-   * for (let i ...) { A0 --- B0 };
-   * for (let i ...) { A1 --- B1 };
-   * ```
-   * into:
-   * ```
-   * for (let i ...) { mergePar(A0; A1) --- mergePar(B0; B1) }
-   * ```
-   * Read https://github.com/cucapra/dahlia/issues/311 for details.
-   */
+    * Tries to merge Sequences of pars that contain only for loops.
+    * This is called when we generate for loops in parallel from an unroll.
+    * Transforms:
+    * ```
+    * for (let i ...) { A0 --- B0 };
+    * for (let i ...) { A1 --- B1 };
+    * ```
+    * into:
+    * ```
+    * for (let i ...) { mergePar(A0; A1) --- mergePar(B0; B1) }
+    * ```
+    * Read https://github.com/cucapra/dahlia/issues/311 for details.
+    */
   private def mergePar(cmds: Seq[Command]): Command = {
-    // If all the commands are for loops, merge their bodies
-    if (cmds.forall(_.isInstanceOf[CFor])) {
+    if (cmds.isEmpty) {
+      CEmpty
+    } else if (cmds.length == 1) {
+      cmds(0)
+    }
+    // [{ a0 -- b0 -- ...}, {a1 -- b1 -- ..}]
+    // =>
+    // { merge([a0, a1]) -- merge([b0, b1]) }
+    else if (cmds.forall(_.isInstanceOf[CSeq])) {
+      CSeq.smart(
+        cmds.collect({ case CSeq(cs) => cs }).transpose.map(mergePar(_))
+      )
+    }
+    // [for (r) { b0 } combine { c0 }, for (r) { b1 } combine { c1 }, ...]
+    // =>
+    // for (r) { merge([b0, b1, ...]) } combine { merge(c0, c1, ...) }
+    else if (cmds.forall(_.isInstanceOf[CFor])) {
       val fors = cmds.map[CFor](_.asInstanceOf[CFor])
-      assert(
-        fors.map(_.range).distinct.length == 1,
-        "sequence of for loops had different ranges"
+      val merged = fors
+        .groupBy(f => f.range)
+        .map({
+          case (_, fors) => {
+            val cfor = fors.head
+            val (pars, combs) = fors.map(c => (c.par, c.combine)).unzip
+            // Recursively merge the generated par body of the loop
+            cfor.copy(
+              par = mergePar(pars),
+              combine = mergePar(combs)
+            )
+          }
+        })
+      CPar.smart(merged.toSeq)
+    }
+    // [while (c) { b0 }, while (c) { b1 }, ...]
+    // =>
+    // while (c) { merge([b0, b1]) }
+    else if (cmds.forall(_.isInstanceOf[CWhile])) {
+      val whiles = cmds.map[CWhile](_.asInstanceOf[CWhile])
+      val merged = whiles
+        .groupBy(w => w.cond)
+        .map({
+          case (_, whiles) =>
+            whiles.head.copy(
+              body = mergePar(whiles.map(_.body))
+            )
+        })
+      CPar.smart(merged.toSeq)
+    }
+    // [if (c) { t0 } else { f0 }, if (c) { t1 } else { f1 }, ...]
+    // =>
+    // if (c) { merge([t0, t1]) } else { merge([f0, f1]) }
+    else if (cmds.forall(_.isInstanceOf[CIf])) {
+      val ifs = cmds.map[CIf](_.asInstanceOf[CIf])
+      val merged = ifs.groupBy(i => i.cond).map({
+        case (_, ifs) => {
+          val cif = ifs.head
+          val (allCons, allAlts) = ifs.map(c => (c.cons, c.alt)).unzip
+          cif.copy(
+            cons = mergePar(allCons),
+            alt = mergePar(allAlts)
+          )
+        }
+      })
+      CPar.smart(merged.toSeq)
+    }
+    // [ {a0; b0, ...}, {a1; b1, ...} ]
+    // =>
+    // merge([a0, a1, ...]); merge([b0, b1, ...]) ...
+    else if (cmds.forall(_.isInstanceOf[CPar])) {
+      CPar(
+        cmds.collect({ case CPar(cs) => cs }).transpose.map(mergePar(_))
       )
-      val cfor = fors.head
-      val (pars, combs) = fors.map(c => (c.par, c.combine)).unzip
-      val mergedBody = interleaveSeq(pars)
-      // Recursively merge the generated par body of the loop
-      cfor.copy(
-        par = mergePar(mergedBody),
-        combine = CSeq.smart(combs)
-      )
-    } else {
+    }
+    // [ { b0 }, { b1 } ...]
+    // =>
+    // { merge([b0, b1 ...]) }
+    else if (cmds.forall(_.isInstanceOf[CBlock])) {
+      CBlock(mergePar(cmds.collect({ case CBlock(cmd) => cmd })))
+    }
+    // [ r0 += l1, r0 += l2, r1 += l3, r1 += l4 ... ]
+    // =>
+    // [ r1 += l1 + l2 + ...; r1 += l3 + l4 ]
+    else if (cmds.forall(_.isInstanceOf[CReduce])) {
+      val creds = cmds.collect[CReduce]({ case c: CReduce => c })
+      val merged = creds
+        .groupBy(c => c.lhs)
+        .map({
+          case (_, creds) => {
+            assert(
+              creds.map(c => c.rop).distinct.length == 1,
+              "Sequence of reduces with different reduction ops."
+            )
+            val cred = creds.head
+            val binop = cred.rop.op match {
+              case "+=" => NumOp("+", OC.add)
+              case "-=" => NumOp("-", OC.sub)
+              case "*=" => NumOp("*", OC.mul)
+              case "/=" => NumOp("/", OC.div)
+              case op =>
+                throw PassError(
+                  s"Unknown reduction operator: $op",
+                  cred.rop.pos
+                )
+            }
+            val rhs = creds
+              .map(_.rhs)
+              .tail
+              .foldLeft(cred.rhs)({
+                case (acc, l) => EBinop(binop, acc, l)
+              })
+            cred.copy(rhs = rhs)
+          }
+        })
+      CPar.smart(merged.toSeq)
+    }
+    // Just merge the statements
+    else {
       CPar.smart(cmds)
     }
   }
@@ -294,43 +377,33 @@ object LowerUnroll extends PartialTransformer {
       arrDims: Seq[DimSpec],
       newCommand: Expr => Command
   )(implicit env: Env): (Command, Env) = {
-    // If we got exactly on value in TVal, that means that the returned
+    // If we got exactly one value in TVal, that means that the returned
     // expression corresponds exactly to the input bank. In this case,
     // don't generate a condition.
     if (allExprs.size == 1) {
       val elem = allExprs.toArray
       return (newCommand(elem(0)._2), env)
     }
-    val (bankComps, prelude) = idxs
-      .zip(arrDims)
-      .map({
-        case (idx, (_, arrBank)) => {
-          val bank = genName("_bank")
-          (Id(bank), CLet(Id(bank), None, Some(idx % EInt(arrBank))))
-        }
-      })
-      .unzip
-    val condAssign = allExprs.foldLeft[Command](CEmpty)({
-      case (cmd, (bankVals, accExpr)) => {
+    val condAssigns = allExprs.map({
+      case (bankVals, accExpr) => {
         val cond = bankVals
-          .zip(bankComps)
+          .zip(idxs)
+          .zip(arrDims.map(_._2))
           .foldLeft[Expr](EBool(true))({
-            case (expr, (bv, bankComp)) => {
+            case (expr, ((bv, idx), arrBank)) => {
               EBinop(
                 BoolOp("&&"),
-                EBinop(EqOp("=="), EVar(bankComp), EInt(bv)),
+                EBinop(EqOp("=="), idx % EInt(arrBank), EInt(bv)),
                 expr
               )
             }
           })
-        CIf(cond, newCommand(accExpr), cmd)
+        CIf(cond, newCommand(accExpr), CEmpty)
       }
     })
 
     // Update the environment with all the newly generated names
-    CPar.smart(prelude :+ condAssign) -> bankComps.foldLeft[Env](env)({
-      case (e, n) => e.rewriteAdd(n, n)
-    })
+    CPar.smart(condAssigns.toSeq) -> env
   }
 
   def myRewriteC: PF[(Command, Env), (Command, Env)] = {
@@ -362,7 +435,7 @@ object LowerUnroll extends PartialTransformer {
         .viewAdd(id, ViewTransformer.fromArray(id, ta))
     }
     // Handle case for initialized, unbanked memories.
-    case (c@CLet(_, Some(ta: TArray), _), env) => {
+    case (c @ CLet(_, Some(ta: TArray), _), env) => {
       if (ta.dims.exists({ case (_, bank) => bank > 1 })) {
         throw NotImplemented("Banked local arrays with initial values")
       }
@@ -374,7 +447,7 @@ object LowerUnroll extends PartialTransformer {
       // Don't rewrite this name if there is already a binding in
       // rewrite map.
       val rewriteVal = env.rewriteGet(id)
-      if (rewriteVal.isDefined) {
+      val (cmd, nEnv) = if (rewriteVal.isDefined) {
         c.copy(e = nInit) -> env
       } else {
         val suf = env.idxMap.toList.sortBy(_._1.v).map(_._2).mkString("_")
@@ -383,6 +456,7 @@ object LowerUnroll extends PartialTransformer {
           .localVarAdd(id)
           .rewriteAdd(id, newName)
       }
+      (cmd, nEnv)
     }
     // Handle views
     case (v @ CView(id, arrId, dims), env) => {
@@ -399,102 +473,38 @@ object LowerUnroll extends PartialTransformer {
       (CEmpty, nEnv)
     }
     case (c @ CFor(range, _, par, combine), env) => {
-      if (range.u > 1 && range.s != 0) {
-        throw NotImplemented(
-          "Unrolling loops with non-zero start idx",
-          range.pos
-        )
+      if (range.u == 1) {
+        val (nPar, env1) = rewriteC(par)(env)
+        val (nComb, _) = rewriteC(combine)(env1)
+        c.copy(par = nPar, combine = nComb) -> env
+      } else {
+        mergePar((0 until range.u).map(idx => {
+          val nRange = range.copy(e = range.e / range.u, u = 1)
+          val nEnv = env.add(range.iter, idx)
+          rewriteC(c.copy(range = nRange))(nEnv)._1
+        })) -> env
       }
-      // Rewrite the nested commands and pull them up into the sequence. At
-      // this point, we haven't duplicated anything.
-      val nested: Seq[Command] = par match {
-        case CSeq(cmds) => cmds
-        case _ => Seq(par)
-      }
-      val (nestedRep, nestedLocals) = nested
-        .map(cmd => {
-          val (duplicated, envs) = if (range.u > 1) {
-            (0 until range.u)
-              .map(idx => rewriteC(cmd)(env.add(range.iter, idx)))
-              .unzip
-          } else {
-            val (nCmd, env1) = rewriteC(cmd)(env)
-            Seq(nCmd) -> Seq(env1)
-          }
-          val allLocals = envs.flatMap(_.localVars).toSet
-          val ret = cmd match {
-            case _: CFor => mergePar(duplicated)
-            case _ => {
-              CPar.smart(duplicated)
-            }
-          }
-          ret -> allLocals
-        })
-        .unzip
-      val (nPar, locals) = (CSeq.smart(nestedRep), nestedLocals.flatten.toSet)
-
-      val nEnv = locals.foldLeft(env)({
-        case (env, l) => {
-          val regs = if (range.u > 1) {
-            (0 until range.u).map(i => {
-              // XXX(rachit): über hack to get the name of all defined registers.
-              val suf = ((range.iter, i) :: env.idxMap.toList)
-                .sortBy(_._1.v)
-                .map(_._2)
-                .mkString("_")
-                Id(s"${l.v}_${suf}")
-            })
-          } else {
-            // XXX(rachit): Anther über hack to get the name register when
-            // no unrolling happened.
-            Set(Id(s"${l.v}_"))
-          }
-          env.combineRegAdd(l, regs.toSet)
-        }
-      })
-      val nComb = rewriteC(combine)(nEnv)._1
-
-      val nRange = range.copy(e = range.e / range.u, u = 1).copy()
-
-      c.copy(range = nRange, par = nPar, combine = nComb) -> env
     }
-    case (CReduce(rop, l, r), env) => {
-      import Syntax.{OpConstructor => OC}
-      val binop = rop.op match {
-        case "+=" => NumOp("+", OC.add)
-        case "-=" => NumOp("-", OC.sub)
-        case "*=" => NumOp("*", OC.mul)
-        case "/=" => NumOp("/", OC.div)
-        case op => throw PassError(s"Unknown reduction operator: $op", rop.pos)
+    case (c @ CReduce(_, l, r), env) => {
+      // Transform RHS. RHS cannot have an array read.
+      val (nR, nEnv) = r match {
+        case _: EArrAccess =>
+          throw PassError("Unexpected array read on reduce RHS.")
+        case _ => rewriteE(r)(env)
       }
-      // Read the current value of the combine LHS
-      val (prelude, curVal, nEnv) = l match {
-        case _: EArrAccess | _: EPhysAccess => {
-          val name = genName("_rread")
-          (
-            Seq(CLet(Id(name), None, Some(l))),
-            EVar(Id(name)),
-            env.rewriteAdd(Id(name), Id(name))
-          )
+      val nCmd = c.copy(rhs = nR)
+      l match {
+        case EArrAccess(id, idxs) if env.viewGet(id).isDefined => {
+          val allExprs =
+            (env.viewGet(id).get.t)(idxs.zip(getBanks(id, idxs)(env)))
+          // Calculate the value for all indices and let-bind them.
+          val arrDims = env.dimsGet(id).dims
+          val (newCmd, nEnv) =
+            condCmd(allExprs, idxs, arrDims, (e) => nCmd.copy(lhs = e))(env)
+          rewriteC(newCmd)(nEnv)
         }
-        case e => (Seq(), e, env)
+        case _ => nCmd.copy(lhs = rewriteE(l)(nEnv)._1) -> env
       }
-      val nR = r match {
-        case EVar(rId) =>
-          nEnv
-            .combineRegGet(rId)
-            .map(ids => {
-              ids.foldLeft[Expr](curVal)({
-                case (l, r) => EBinop(binop, l, EVar(r))
-              })
-            })
-            .getOrElse(r)
-        case _ =>
-          throw NotImplemented(
-            "LowerUnroll: Reduce with complex RHS expression"
-          )
-      }
-      rewriteC(CSeq.smart(prelude :+ CUpdate(l, nR)))(nEnv)
     }
     case (CUpdate(lhs, rhs), env0) =>
       val (nRhs, env) = rewriteE(rhs)(env0)
@@ -524,8 +534,10 @@ object LowerUnroll extends PartialTransformer {
             )
           val allExprs =
             (transformer.t)(physIdxs.map(idx => (idx._2, Some(idx._1))))
-          assert(allExprs.size == 1,
-            s"Physical access expression generated more than one expression")
+          assert(
+            allExprs.size == 1,
+            s"Physical access expression generated more than one expression"
+          )
           // Calculate the value for all indices and let-bind them.
           val arrDims = env.dimsGet(id).dims
           // Generate conditional assignment tree
@@ -556,8 +568,10 @@ object LowerUnroll extends PartialTransformer {
         )
       val allExprs =
         (transformer.t)(physIdxs.map(idx => (idx._2, Some(idx._1))))
-      assert(allExprs.size == 1,
-        s"Physical access expression generated more than one expression")
+      assert(
+        allExprs.size == 1,
+        s"Physical access expression generated more than one expression"
+      )
       val nExpr = allExprs.values.toArray
       rewriteE(nExpr(0))(env)
     }
