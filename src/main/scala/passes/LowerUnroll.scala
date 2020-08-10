@@ -512,7 +512,9 @@ object LowerUnroll extends PartialTransformer {
       lhs match {
         case e @ EVar(id) =>
           c.copy(lhs = env.rewriteGet(id).map(nId => EVar(nId)).getOrElse(e)) -> env
-        case EArrAccess(id, idxs) => {
+        case e@EArrAccess(id, idxs) => {
+          val nIdxs = idxs.map(rewriteE(_)(env)._1)
+          val nCmd = c.copy(lhs = e.copy(idxs = nIdxs))
           val transformer = env.viewGet(id)
           if (transformer.isDefined) {
             val allExprs =
@@ -520,10 +522,10 @@ object LowerUnroll extends PartialTransformer {
             // Calculate the value for all indices and let-bind them.
             val arrDims = env.dimsGet(id).dims
             val (newCmd, nEnv) =
-              condCmd(allExprs, idxs, arrDims, (e) => c.copy(lhs = e))(env)
+              condCmd(allExprs, idxs, arrDims, (e) => nCmd.copy(lhs = e))(env)
             rewriteC(newCmd)(nEnv)
           } else {
-            c -> env
+            nCmd -> env
           }
         }
         case (EPhysAccess(id, physIdxs)) => {
