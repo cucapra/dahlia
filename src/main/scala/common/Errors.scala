@@ -32,7 +32,7 @@ object Errors {
       .mkString("")
 
     s"""
-      |[${pos.line}.${pos.column}] Bank $bank for physical resource `$id' already consumed.
+      |[Line ${pos.line}, Column ${pos.column}] Bank $bank for physical resource `$id' already consumed.
       |${pos.longString}
       |
       |`${id}' originally had ${origRes} resource(s).
@@ -195,7 +195,7 @@ object Errors {
       extends TypeError(
         s"Access depends on a loop iteration variable",
         expr.pos,
-        s"\n[${used.pos.line}.${used.pos.column}] Last update was here:\n${used.pos.longString}"
+        s"\n[Line ${used.pos.line}, Column ${used.pos.column}] Last update was here:\n${used.pos.longString}"
       )
 
   // View errors
