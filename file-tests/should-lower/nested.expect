@@ -5,12 +5,16 @@ void kernel(vector<float> A0, vector<float> A1, vector<vector<float>> B0_0, vect
   
   float R0[4];
   float R1[4];
+  //---
   float inp_;
+  //---
   {
     int i = (int)0;
+    //---
     while((i <= (int)3)) {
       {
         int j = (int)0;
+        //---
         while((j <= (int)3)) {
           float tmp_0_0;
           float tmp_1_0;
@@ -35,11 +39,14 @@ void kernel(vector<float> A0, vector<float> A1, vector<vector<float>> B0_0, vect
             B0_1[i][j] = (tmp_0_1 + A_read0_0_1);
             B1_1[i][j] = (tmp_1_1 + A_read0_1_1);
           }
+          //---
           R1[i] += (tmp_1_0 + tmp_1_1);
           R0[i] += (tmp_0_0 + tmp_0_1);
+          //---
           j = (j + (int)1);
         }
       }
+      //---
       i = (i + (int)1);
     }
   }
