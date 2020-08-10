@@ -125,7 +125,6 @@ object Futil {
       case Group(id, conns, None) =>
         text("group") <+> id.doc <+>
           scope(vsep(conns.map(_.doc)))
-      case Empty() => emptyDoc
     }
 
     def compare(that: Structure): Int = {
@@ -148,8 +147,6 @@ object Futil {
         case (_, CompDecl(_, _)) => 1
         case (Group(_, _, _), _) => -1
         case (_, Group(_, _, _)) => 1
-        case (Empty(), _) => -1
-        case (_, Empty()) => 1
       }
     }
   }
@@ -177,7 +174,6 @@ object Futil {
   }
   case class Connect(src: Port, dest: Port, guard: Option[GuardExpr] = None)
       extends Structure
-  case class Empty() extends Structure
 
   case class CompInst(id: String, args: List[Int]) extends Emitable {
     override def doc(): Doc = {
@@ -202,6 +198,7 @@ object Futil {
   /***** control *****/
   sealed trait Control extends Emitable {
     def seq(c: Control): Control = (this, c) match {
+      case (_: Empty, c: Control) => c
       case (seq0: SeqComp, seq1: SeqComp) => SeqComp(seq0.stmts ++ seq1.stmts)
       case (seq: SeqComp, _) => SeqComp(seq.stmts ++ List(c))
       case (_, seq: SeqComp) => SeqComp(this :: seq.stmts)
@@ -209,6 +206,7 @@ object Futil {
     }
 
     def par(c: Control): Control = (this, c) match {
+      case (_: Empty, other: Control) => other
       case (par0: ParComp, par1: ParComp) => ParComp(par0.stmts ++ par1.stmts)
       case (par0: ParComp, par1) => ParComp(par0.stmts ++ List(par1))
       case (par0, par1: ParComp) => ParComp(par0 :: par1.stmts)
@@ -218,7 +216,7 @@ object Futil {
       case SeqComp(stmts) =>
         text("seq") <+> scope(vsep(stmts.map(_.doc)))
       case ParComp(stmts) =>
-        text("seq") <+> scope(vsep(stmts.map(_.doc)))
+        text("par") <+> scope(vsep(stmts.map(_.doc)))
       case If(port, cond, trueBr, falseBr) =>
         text("if") <+> port.doc <+> text("with") <+>
           cond.doc <+>
@@ -232,7 +230,7 @@ object Futil {
       case Print(_) =>
         throw Impossible("Futil does not support print")
       case Enable(id) => id.doc <> semi
-      case Empty => text("empty")
+      case Empty() => text("seq {}")
     }
   }
   case class SeqComp(stmts: List[Control]) extends Control
@@ -242,7 +240,7 @@ object Futil {
   case class While(port: Port, cond: CompVar, body: Control) extends Control
   case class Print(id: CompVar) extends Control
   case class Enable(id: CompVar) extends Control
-  case object Empty extends Control
+  case class Empty() extends Control
 }
 
 /** Represents all of the primitives in Futil. */
