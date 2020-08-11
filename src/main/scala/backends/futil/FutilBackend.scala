@@ -43,7 +43,8 @@ private class FutilBackendHelper {
   def bitsForType(t: Option[Type], pos: Position): Int = {
     t match {
       case Some(TSizedInt(width, _)) => width
-      case Some(TBool()) => 1
+      case Some(_:TBool) => 1
+      case Some(_:TVoid) => 0
       case x =>
         throw NotImplemented(
           s"Futil cannot infer bitwidth for type $x. Please manually annotate it using a cast expression.",
@@ -202,19 +203,8 @@ private class FutilBackendHelper {
       implicit store: Store
   ): EmitOutput =
     expr match {
-      case EInt(v, _) => {
-        val _ = rhsInfo
-        val const =
-          LibDecl(
-            genName("const"),
-            Stdlib.constant(bitsForType(expr.typ, expr.pos), v)
-          )
-        EmitOutput(
-          const.id.port("out"),
-          ConstantPort(1, 1),
-          List(const),
-          Some(0)
-        )
+      case _:EInt => {
+        throw PassError("Cannot compile unannotated constants. Wrap constant in `as` expression", expr.pos)
       }
       case EBinop(op, e1, e2) => {
         val compName =
@@ -267,14 +257,29 @@ private class FutilBackendHelper {
           struct,
           delay
         )
-      // Create a bit slicing adaptor for variables
-      case e @ ECast(ev@EVar(id), t) => {
-        if (rhsInfo.isDefined) {
-          throw NotImplemented("Slicing adaptors for LHS values")
-        }
-        val res = emitExpr(ev)
-        val vBits = bitsForType(id.typ, id.pos)
+      // Integers don't need adaptors
+      case ECast(EInt(v, _), typ) => {
+        val _ = rhsInfo
+        val const =
+          LibDecl(
+            genName("const"),
+            Stdlib.constant(bitsForType(Some(typ), expr.pos), v)
+          )
+        EmitOutput(
+          const.id.port("out"),
+          ConstantPort(1, 1),
+          List(const),
+          Some(0)
+        )
+      }
+      case ECast(e, t) => {
+        val vBits = bitsForType(e.typ, e.pos)
         val cBits = bitsForType (Some(t), e.pos)
+        //println(s"${Pretty.emitExpr(expr)(true).pretty}: ${e.typ}")
+        //e.typ = Some(t)
+        //expr.typ = Some(t)
+        val res = emitExpr(e)
+        // Dont slice if the underlying type is the same.
         if (vBits == cBits) {
           return res
         }
@@ -292,11 +297,6 @@ private class FutilBackendHelper {
           struct ++ res.structure,
           Some(0)
         )
-      }
-      case ECast(e, t) => {
-        e.typ = Some(t)
-        expr.typ = Some(t)
-        emitExpr(e)
       }
       case EArrAccess(id, accessors) => {
         val arr = store

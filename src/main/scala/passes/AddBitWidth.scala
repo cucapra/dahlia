@@ -31,18 +31,18 @@ object AddBitWidth extends TypedPartialTransformer {
         .zip(dims)
         .map({
           case (idx, (size, _)) => {
-            val idxTyp = TSizedInt(bitsNeeded(size), true)
-            rewriteE(idx)(ABEnv(Some(idxTyp)))._1
+            val adaptorBits = bitsNeeded(size)
+            val TSizedInt(idxBits, _) = idx.typ.get
+            val ne = rewriteE(idx)(ABEnv(None))._1
+            if (adaptorBits != idxBits) {
+              ECast(ne, TSizedInt(adaptorBits, true))
+            } else {
+              ne
+            }
           }
         })
       e.copy(idxs = nIdxs) -> env
     }
-    case (e: EVar, env) =>
-      if (env.curTyp.isDefined) {
-        (ECast(e, env.curTyp.get), env)
-      } else {
-        e -> env
-      }
     case (e: EInt, env) =>
       if (env.curTyp.isDefined) {
         (ECast(e, env.curTyp.get), env)
