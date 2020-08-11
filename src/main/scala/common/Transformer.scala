@@ -126,11 +126,11 @@ object Transformer {
       case _: CSplit | _: CView | CEmpty | _: CDecorate => (cmd, env)
       case CPar(cmds) => {
         val (ncmds, env1) = rewriteCSeq(cmds)
-        CPar(ncmds.toSeq) -> env1
+        CPar.smart(ncmds.toSeq) -> env1
       }
       case CSeq(cmds) => {
         val (ncmds, env1) = rewriteCSeq(cmds)
-        CSeq(ncmds.toSeq) -> env1
+        CSeq.smart(ncmds.toSeq) -> env1
       }
       case CUpdate(lhs, rhs) => {
         val (nlhs, env1) = rewriteLVal(lhs)

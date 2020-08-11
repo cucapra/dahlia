@@ -400,8 +400,7 @@ object LowerUnroll extends PartialTransformer {
           .zip(arrDims.map(_._2))
           .foldLeft[Expr](EBool(true))({
             case (expr, ((bv, idx), arrBank)) => {
-              EBinop(
-                BoolOp("&&"),
+              and(
                 EBinop(EqOp("=="), idx % EInt(arrBank), EInt(bv)),
                 expr
               )

@@ -57,6 +57,13 @@ object CodeGenHelpers {
     }
   }
 
+  def and(l: Expr, r: Expr) = (l, r) match {
+    case (EBool(true), r) => r
+    case (l, EBool(true)) => l
+    case (_, EBool(false)) | (EBool(false), _) => EBool(false)
+    case _ => EBinop(BoolOp("&&"), l, r)
+  }
+
   // Simple peephole optimization to turn: 1 * x => x, 0 + x => x, 0 * x => 0
   def binop(op: BOp, l: Expr, r: Expr) = (op, l, r) match {
     case (NumOp("*", _), EInt(1, _), r) => r

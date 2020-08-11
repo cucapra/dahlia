@@ -21,7 +21,8 @@ object Compiler {
 
   // Transformers to execute *after* type checking.
   val postTransformers: List[(String, TypedPartialTransformer)] = List(
-    "Rewrite views" -> passes.RewriteView
+    "Rewrite views" -> passes.RewriteView,
+    "Add bitwidth" -> passes.AddBitWidth
   )
 
   def showDebug(ast: Prog, pass: String, c: Config): Unit = {
