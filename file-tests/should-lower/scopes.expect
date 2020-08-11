@@ -1,0 +1,23 @@
+#include "parser.cpp"
+/***************** Parse helpers  ******************/
+/***************************************************/
+void kernel() {
+  
+  {
+    unsigned int C_i_j_ = 0;
+  }
+  //---
+  {
+    unsigned int C_i_j_ = 0;
+    //---
+    unsigned int x_ = C_i_j_;
+  }
+  json_t __;
+  std::cout << __.dump(2) << std::endl;
+}
+int main(int argc, char** argv) {
+  using namespace flattening;
+  auto v = parse_data(argc, argv);;
+  kernel();
+  return 0;
+}
