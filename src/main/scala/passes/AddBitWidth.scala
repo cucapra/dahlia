@@ -24,21 +24,41 @@ object AddBitWidth extends TypedPartialTransformer {
   val emptyEnv = ABEnv(None)
 
   def myRewriteE: PF[(Expr, Env), (Expr, Env)] = {
-    case (e:ECast, env) => e -> env
+    case (e: ECast, env) => e -> env
+    case (e @ EArrAccess(arrId, idxs), env) => {
+      val Some(TArray(_, dims, _)) = arrId.typ
+      val nIdxs = idxs
+        .zip(dims)
+        .map({
+          case (idx, (size, _)) => {
+            val idxTyp = TSizedInt(bitsNeeded(size), true)
+            rewriteE(idx)(ABEnv(Some(idxTyp)))._1
+          }
+        })
+      e.copy(idxs = nIdxs) -> env
+    }
+    case (e: EVar, env) =>
+      if (env.curTyp.isDefined) {
+        (ECast(e, env.curTyp.get), env)
+      } else {
+        e -> env
+      }
     case (e: EInt, env) =>
       if (env.curTyp.isDefined) {
         (ECast(e, env.curTyp.get), env)
       } else {
         e -> env
       }
-    case (expr @ EBinop(op:EqOp, l, r), env) => {
+    case (expr @ EBinop(op: EqOp, l, r), env) => {
       val typ = Subtyping.joinOf(l.typ.get, r.typ.get, op)
-      val nEnv = ABEnv(Some(typ).getOrThrow(PassError("No join for comparision")))
+      val nEnv = ABEnv(
+        Some(typ).getOrThrow(PassError("No join for comparision"))
+      )
       val (nl, _) = rewriteE(l)(nEnv)
       val (nr, _) = rewriteE(r)(nEnv)
       expr.copy(e1 = nl, e2 = nr) -> env
     }
-    case (expr @ EBinop(_:NumOp | _:BitOp, l, r), env) => {
+    case (expr @ EBinop(_: NumOp | _: BitOp, l, r), env) => {
       val nEnv = if (env.curTyp.isDefined) {
         env
       } else {
@@ -60,6 +80,20 @@ object AddBitWidth extends TypedPartialTransformer {
       val (ne, _) = rewriteE(e)(nEnv)
       cmd.copy(e = Some(ne)) -> env
     }
+  }
+
+  override def transferType(expr: Expr, f: PF[(Expr, Env), (Expr, Env)])(
+      implicit env: Env
+  ): (Expr, Env) = {
+    val (e1, env1) = f(expr, env)
+    val nTyp = e1 match {
+      case ECast(_, t) => {
+        Some(t)
+      }
+      case _ => expr.typ
+    }
+    e1.typ = nTyp
+    (e1, env1)
   }
 
   override def rewriteC(cmd: Command)(implicit env: Env) =
