@@ -9,10 +9,15 @@ import Syntax._
 import Configuration._
 import CompilerError._
 
-/** Helper class that gives names to the fields of the output of `emitExpr` and `emitBinop`.
-  *  - `port` holds either an input or output port that represents how data flows between exprs
-  *  - `done` holds the port that signals when the writing or reading from `port` is done
-  *  - `structure` represents additional structure involved in computing the expression
+/**
+  *  Helper class that gives names to the fields of the output of `emitExpr` and
+  *  `emitBinop`.
+  *  - `port` holds either an input or output port that represents how data
+  *    flows between exprs
+  *  - `done` holds the port that signals when the writing or reading from `port`
+  *     is done
+  *  - `structure` represents additional structure involved in computing the
+  *    expression.
   */
 private case class EmitOutput(
     val port: Port,
@@ -160,12 +165,14 @@ private class FutilBackendHelper {
   ): EmitOutput = {
     val e1Out = emitExpr(e1)
     val e2Out = emitExpr(e2)
+    val e1Bits = bitsForType(e1.typ, e1.pos)
+    val e2Bits = bitsForType(e2.typ, e2.pos)
     assertOrThrow(
-      bitsForType(e1.typ, e1.pos) == bitsForType(e2.typ, e2.pos),
+      e1Bits == e2Bits,
       Impossible(
         "The widths of the left and right side of a binop didn't match." +
-          s"\nleft: ${Pretty.emitExpr(e1)(false).pretty}" +
-          s"\nright: ${Pretty.emitExpr(e2)(false).pretty}"
+          s"\nleft: ${Pretty.emitExpr(e1)(false).pretty}: ${e1Bits}" +
+          s"\nright: ${Pretty.emitExpr(e2)(false).pretty}: ${e2Bits}"
       )
     )
     val binop = Stdlib.op(s"$compName", bitsForType(e1.typ, e1.pos));
@@ -260,6 +267,27 @@ private class FutilBackendHelper {
           struct,
           delay
         )
+      // Create a bit slicing adaptor for this wire.
+      case e @ ECast(ev@EVar(id), t) => {
+        if (rhsInfo.isDefined) {
+          throw NotImplemented("Slicing adaptors for LHS values")
+        }
+        val res = emitExpr(ev)
+        val sliceOp =
+          Stdlib.slice(bitsForType(id.typ, id.pos), bitsForType (Some(t), e.pos))
+        val comp = LibDecl(genName("slice"), sliceOp)
+        val struct = List(
+          comp,
+          Connect(res.port, comp.id.port("in"))
+        )
+
+        EmitOutput(
+          comp.id.port("out"),
+          ConstantPort(1, 1),
+          struct ++ res.structure,
+          Some(0)
+        )
+      }
       case ECast(e, t) => {
         e.typ = Some(t)
         expr.typ = Some(t)
@@ -269,7 +297,10 @@ private class FutilBackendHelper {
         val arr = store
           .get(CompVar(s"$id"))
           .getOrThrow(
-            BackendError(s"No array named `${id}' in the current store", expr.pos)
+            BackendError(
+              s"No array named `${id}' in the current store",
+              expr.pos
+            )
           )
         // We always need to specify and address on the `addr` ports. Generate
         // the additional structure.
@@ -322,7 +353,8 @@ private class FutilBackendHelper {
 
   def emitCmd(
       c: Command
-  )(implicit store: Store): (List[Structure], Control, Store) =
+  )(implicit store: Store): (List[Structure], Control, Store) = {
+    //println(Pretty.emitCmd(c)(false).pretty)
     c match {
       case CBlock(cmd) => emitCmd(cmd)
       case CPar(cmds) => {

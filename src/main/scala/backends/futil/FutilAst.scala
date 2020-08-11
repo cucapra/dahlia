@@ -216,7 +216,7 @@ object Futil {
             if (falseBr == Empty)
               emptyDoc
             else
-              space <+> text("else") <+> scope(falseBr.doc)
+              space <> text("else") <+> scope(falseBr.doc)
           )
       case While(port, cond, body) =>
         text("while") <+> port.doc <+> text("with") <+>
@@ -251,6 +251,9 @@ object Stdlib {
 
   def op(op: String, bitwidth: Int): Futil.CompInst =
     Futil.CompInst(s"std_$op", List(bitwidth))
+
+  def slice(in: Int, out: Int): Futil.CompInst =
+    Futil.CompInst(s"std_slice", List(in, out))
 
   def identity(bitwidth: Int): Futil.CompInst =
     Futil.CompInst(s"std_id", List(bitwidth))

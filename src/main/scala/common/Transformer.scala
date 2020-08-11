@@ -242,7 +242,7 @@ object Transformer {
       * from the input [[expr]] to the expression resulting from [[rewriteE]].
       * Any subclasses that overwrite `rewriteE` should call this function.
       */
-    def transferType(expr: Expr, f: (Expr, Env) => (Expr, Env))(
+    def transferType(expr: Expr, f: PF[(Expr, Env), (Expr, Env)])(
         implicit env: Env
     ): (Expr, Env) = {
       val (e1, env1) = f(expr, env)
@@ -254,9 +254,7 @@ object Transformer {
         myRewriteE: PF[(Expr, Env), (Expr, Env)]
     ): PF[(Expr, Env), (Expr, Env)] = {
       val func = (expr: Expr, env: Env) => {
-        val (e1, env1) = myRewriteE.orElse(partialRewriteE)(expr, env)
-        e1.typ = expr.typ
-        (e1, env1)
+        transferType(expr, myRewriteE.orElse(partialRewriteE))(env)
       }
       asPartial(func(_: Expr, _: Env))
     }
