@@ -267,14 +267,19 @@ private class FutilBackendHelper {
           struct,
           delay
         )
-      // Create a bit slicing adaptor for this wire.
+      // Create a bit slicing adaptor for variables
       case e @ ECast(ev@EVar(id), t) => {
         if (rhsInfo.isDefined) {
           throw NotImplemented("Slicing adaptors for LHS values")
         }
         val res = emitExpr(ev)
+        val vBits = bitsForType(id.typ, id.pos)
+        val cBits = bitsForType (Some(t), e.pos)
+        if (vBits == cBits) {
+          return res
+        }
         val sliceOp =
-          Stdlib.slice(bitsForType(id.typ, id.pos), bitsForType (Some(t), e.pos))
+          Stdlib.slice(vBits, cBits)
         val comp = LibDecl(genName("slice"), sliceOp)
         val struct = List(
           comp,
