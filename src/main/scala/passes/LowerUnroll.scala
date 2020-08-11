@@ -8,7 +8,10 @@ import Transformer._
 import EnvHelpers._
 import Syntax._
 import CompilerError._
+import Errors._
 import CodeGenHelpers._
+import ScopeMap._
+
 object LowerUnroll extends PartialTransformer {
   var curIdx = 0
   def genName(prefix: String): String = {
@@ -136,13 +139,10 @@ object LowerUnroll extends PartialTransformer {
   //
   // Find the right abstraction for them and unify them.
   case class ForEnv(
-      // The bank a variable is current referring to.
+      // The bank an iterator implies in this context.
       idxMap: Map[Id, Int],
-      // Rename for variables in the current binding.
-      rewriteMap: Map[Id, Id],
-      // Set of variables bound by this scope.
-      // XXX(rachit): This should probably be a scoped set
-      localVars: Set[Id],
+      // Rename the variables in this context.
+      rewrites: ScopedMap[Id, Id],
       // Bindings for transformer for views.
       viewMap: Map[Id, ViewTransformer],
       // DimSpec of bound arrays in this context.
@@ -150,24 +150,31 @@ object LowerUnroll extends PartialTransformer {
   ) extends ScopeManager[ForEnv]
       with Tracker[Id, Int, ForEnv] {
     def merge(that: ForEnv) = {
-      ForEnv(
-        this.idxMap ++ that.idxMap,
-        this.rewriteMap ++ that.rewriteMap,
-        this.localVars ++ that.localVars,
-        this.viewMap ++ that.viewMap,
-        this.dimsMap ++ that.dimsMap
-      )
+      assert(this == that, "Tried to merge different unroll envs")
+      this
+    }
+
+    override def withScopeAndRet[V](inScope: Env =>  (V, Env)) = {
+      val (ret, nEnv) = inScope(this.copy(rewrites = rewrites.addScope))
+      val rws = nEnv.rewrites.endScope match {
+        case Some((_, rs)) => rs
+        case None => throw Impossible("unroll env failed to end scope.")
+      }
+      ret -> nEnv.copy(rewrites = rws)
     }
 
     def get(key: Id) = this.idxMap.get(key)
     def add(key: Id, bank: Int) =
       this.copy(idxMap = this.idxMap + (key -> bank))
 
-    def rewriteGet(key: Id) = this.rewriteMap.get(key)
-    def rewriteAdd(k: Id, v: Id) =
-      this.copy(rewriteMap = this.rewriteMap + (k -> v))
-
-    def localVarAdd(key: Id) = this.copy(localVars = this.localVars + key)
+    def rewriteGet(key: Id) = this.rewrites.get(key)
+    def rewriteAdd(k: Id, v: Id) = {
+      val newRewrites = this.rewrites.add(k, v) match {
+        case None => throw AlreadyBound(k)
+        case Some(rw) => rw
+      }
+      this.copy(rewrites = newRewrites)
+    }
 
     def viewAdd(k: Id, v: ViewTransformer) =
       this.copy(viewMap = viewMap + (k -> v))
@@ -184,7 +191,7 @@ object LowerUnroll extends PartialTransformer {
   }
 
   type Env = ForEnv
-  val emptyEnv = ForEnv(Map(), Map(), Set(), Map(), Map())
+  val emptyEnv = ForEnv(Map(), ScopedMap(), Map(), Map())
 
   def unbankedDecls(id: Id, ta: TArray): Seq[(Id, Type)] = {
     val TArray(typ, dims, ports) = ta
@@ -302,16 +309,18 @@ object LowerUnroll extends PartialTransformer {
     // if (c) { merge([t0, t1]) } else { merge([f0, f1]) }
     else if (cmds.forall(_.isInstanceOf[CIf])) {
       val ifs = cmds.map[CIf](_.asInstanceOf[CIf])
-      val merged = ifs.groupBy(i => i.cond).map({
-        case (_, ifs) => {
-          val cif = ifs.head
-          val (allCons, allAlts) = ifs.map(c => (c.cons, c.alt)).unzip
-          cif.copy(
-            cons = mergePar(allCons),
-            alt = mergePar(allAlts)
-          )
-        }
-      })
+      val merged = ifs
+        .groupBy(i => i.cond)
+        .map({
+          case (_, ifs) => {
+            val cif = ifs.head
+            val (allCons, allAlts) = ifs.map(c => (c.cons, c.alt)).unzip
+            cif.copy(
+              cons = mergePar(allCons),
+              alt = mergePar(allAlts)
+            )
+          }
+        })
       CPar.smart(merged.toSeq)
     }
     // [ {a0; b0, ...}, {a1; b1, ...} ]
@@ -453,7 +462,6 @@ object LowerUnroll extends PartialTransformer {
         val suf = env.idxMap.toList.sortBy(_._1.v).map(_._2).mkString("_")
         val newName = id.copy(s"${id.v}_${suf}")
         c.copy(id = newName, e = nInit) -> env
-          .localVarAdd(id)
           .rewriteAdd(id, newName)
       }
       (cmd, nEnv)
@@ -474,8 +482,11 @@ object LowerUnroll extends PartialTransformer {
     }
     case (c @ CFor(range, _, par, combine), env) => {
       if (range.u == 1) {
-        val (nPar, env1) = rewriteC(par)(env)
-        val (nComb, _) = rewriteC(combine)(env1)
+        val ((nPar, nComb), _) = env.withScopeAndRet(env => {
+          val (p, e1) = rewriteC(par)(env)
+          val (c, _) = rewriteC(combine)(e1)
+          (p, c) -> e1
+        })
         c.copy(par = nPar, combine = nComb) -> env
       } else {
         mergePar((0 until range.u).map(idx => {
@@ -512,7 +523,7 @@ object LowerUnroll extends PartialTransformer {
       lhs match {
         case e @ EVar(id) =>
           c.copy(lhs = env.rewriteGet(id).map(nId => EVar(nId)).getOrElse(e)) -> env
-        case e@EArrAccess(id, idxs) => {
+        case e @ EArrAccess(id, idxs) => {
           val nIdxs = idxs.map(rewriteE(_)(env)._1)
           val nCmd = c.copy(lhs = e.copy(idxs = nIdxs))
           val transformer = env.viewGet(id)
