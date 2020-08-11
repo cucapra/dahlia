@@ -275,14 +275,10 @@ private class FutilBackendHelper {
       case ECast(e, t) => {
         val vBits = bitsForType(e.typ, e.pos)
         val cBits = bitsForType (Some(t), e.pos)
-        //println(s"${Pretty.emitExpr(expr)(true).pretty}: ${e.typ}")
-        //e.typ = Some(t)
-        //expr.typ = Some(t)
-        val res = emitExpr(e)
-        // Dont slice if the underlying type is the same.
-        if (vBits == cBits) {
-          return res
+        if (cBits > vBits) {
+          throw NotImplemented("Cast expressions that imply zero-padding", expr.pos)
         }
+        val res = emitExpr(e)
         val sliceOp =
           Stdlib.slice(vBits, cBits)
         val comp = LibDecl(genName("slice"), sliceOp)
