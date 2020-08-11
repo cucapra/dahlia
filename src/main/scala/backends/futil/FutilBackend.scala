@@ -163,7 +163,9 @@ private class FutilBackendHelper {
     assertOrThrow(
       bitsForType(e1.typ, e1.pos) == bitsForType(e2.typ, e2.pos),
       Impossible(
-        "The widths of the left and right side of a binop didn't match."
+        "The widths of the left and right side of a binop didn't match." +
+          s"\nleft: ${Pretty.emitExpr(e1)(false).pretty}" +
+          s"\nright: ${Pretty.emitExpr(e2)(false).pretty}"
       )
     )
     val binop = Stdlib.op(s"$compName", bitsForType(e1.typ, e1.pos));
@@ -223,6 +225,10 @@ private class FutilBackendHelper {
             case "%" => "mod"
             case "&&" => "and"
             case "||" => "or"
+            case "&" => "and"
+            case "|" => "or"
+            case ">>" => "rsh"
+            case "<<" => "lsh"
             case x =>
               throw NotImplemented(
                 s"Futil backend does not support '$x' yet.",
@@ -235,7 +241,7 @@ private class FutilBackendHelper {
         val portName = if (rhsInfo.isDefined) "in" else "out"
         val varName = store
           .get(CompVar(s"$id"))
-          .getOrThrow(Impossible(s"$id was not in `store`"))
+          .getOrThrow(BackendError(s"`$id' was not in store", expr.pos))
         val struct =
           rhsInfo match {
             case Some((port, _)) =>
@@ -260,7 +266,11 @@ private class FutilBackendHelper {
         emitExpr(e)
       }
       case EArrAccess(id, accessors) => {
-        val arr = store(CompVar(s"$id"))
+        val arr = store
+          .get(CompVar(s"$id"))
+          .getOrThrow(
+            BackendError(s"No array named `${id}' in the current store", expr.pos)
+          )
         // We always need to specify and address on the `addr` ports. Generate
         // the additional structure.
         val indexing = accessors.zipWithIndex.foldLeft(List[Structure]())({
@@ -335,8 +345,10 @@ private class FutilBackendHelper {
           }
         })
       }
-      case CLet(id, Some(tarr: TArray), None) =>
-        (emitArrayDecl(tarr, id, false), Empty, store)
+      case CLet(id, Some(tarr: TArray), None) => {
+        val arr = CompVar(s"$id")
+        (emitArrayDecl(tarr, id, false), Empty, store + (arr -> arr))
+      }
       case CLet(_, Some(_: TArray), Some(_)) =>
         throw NotImplemented(s"Futil backend cannot initialize memories", c.pos)
       case CLet(id, typ, Some(e)) => {
@@ -402,7 +414,7 @@ private class FutilBackendHelper {
         val control = If(condOut.port, group.id, tCon, fCon)
         (group :: st ++ struct, control, store)
       }
-      case CEmpty => (List(), SeqComp(List()), store)
+      case CEmpty => (List(), Empty, store)
       case CWhile(cond, _, body) => {
         val condOut = emitExpr(cond)
         val groupName = genName("cond")
@@ -438,10 +450,11 @@ private class FutilBackendHelper {
             )
         }
       }
-      case _: CDecorate => (List(), SeqComp(List()), store)
+      case _: CDecorate => (List(), Empty, store)
       case x =>
         throw NotImplemented(s"Futil backend does not support $x yet", x.pos)
     }
+  }
 
   def emitProg(p: Prog, c: Config): String = {
     val _ = c

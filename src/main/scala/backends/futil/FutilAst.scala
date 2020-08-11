@@ -208,13 +208,16 @@ object Futil {
       case SeqComp(stmts) =>
         text("seq") <+> scope(vsep(stmts.map(_.doc)))
       case ParComp(stmts) =>
-        text("seq") <+> scope(vsep(stmts.map(_.doc)))
+        text("par") <+> scope(vsep(stmts.map(_.doc)))
       case If(port, cond, trueBr, falseBr) =>
         text("if") <+> port.doc <+> text("with") <+>
           cond.doc <+>
-          scope(trueBr.doc) <+>
-          text("else") <+>
-          scope(falseBr.doc)
+          scope(trueBr.doc) <> (
+            if (falseBr == Empty)
+              emptyDoc
+            else
+              space <+> text("else") <+> scope(falseBr.doc)
+          )
       case While(port, cond, body) =>
         text("while") <+> port.doc <+> text("with") <+>
           cond.doc <+>
