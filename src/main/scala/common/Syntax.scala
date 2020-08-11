@@ -44,7 +44,7 @@ object Syntax {
 
   sealed trait Type extends Positional {
     override def toString = this match {
-      case _: TVoid => ""
+      case _: TVoid => "void"
       case _: TBool => "bool"
       case _: TRational => "rational"
       case _: TFloat => "float"
@@ -54,7 +54,7 @@ object Syntax {
       case TStaticInt(s) => s"static($s)"
       case TArray(t, dims, p) =>
         (if (p > 1) s"$t{$p}" else s"$t") + dims.foldLeft("")({
-          case (acc, (d, b)) => s"$acc[$d bank $b]"
+          case (acc, (d, b)) => s"$acc[$d${if (b > 1) s" bank $b" else ""}]"
         })
       case TIndex(s, d) => s"idx($s, $d)"
       case TFun(args, ret) => s"${args.mkString("->")} -> ${ret}"
