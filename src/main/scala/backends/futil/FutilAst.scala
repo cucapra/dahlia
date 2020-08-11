@@ -208,7 +208,7 @@ object Futil {
       case SeqComp(stmts) =>
         text("seq") <+> scope(vsep(stmts.map(_.doc)))
       case ParComp(stmts) =>
-        text("par") <+> scope(vsep(stmts.map(_.doc)))
+        text("seq") <+> scope(vsep(stmts.map(_.doc)))
       case If(port, cond, trueBr, falseBr) =>
         text("if") <+> port.doc <+> text("with") <+>
           cond.doc <+>
