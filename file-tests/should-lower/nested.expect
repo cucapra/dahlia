@@ -20,28 +20,29 @@ void kernel(vector<float> A0, vector<float> A1, vector<vector<float>> B0_0, vect
           float tmp_1_0;
           float tmp_0_1;
           float tmp_1_1;
-          tmp_0_0 = B0_0[i][j];
-          tmp_1_0 = B1_0[i][j];
-          tmp_0_1 = B0_1[i][j];
-          tmp_1_1 = B1_1[i][j];
+          tmp_0_0 = B0_0[(unsigned int)i][(unsigned int)j];
+          tmp_1_0 = B1_0[(unsigned int)i][(unsigned int)j];
+          tmp_0_1 = B0_1[(unsigned int)i][(unsigned int)j];
+          tmp_1_1 = B1_1[(unsigned int)i][(unsigned int)j];
           //---
           if ((inp_ > 0.2)) {
             float A_read0_0_0;
             float A_read0_1_0;
             float A_read0_0_1;
             float A_read0_1_1;
-            A_read0_0_0 = A0[i];
-            A_read0_1_0 = A1[i];
-            A_read0_0_1 = A0[i];
-            A_read0_1_1 = A1[i];
-            B0_0[i][j] = (tmp_0_0 + A_read0_0_0);
-            B1_0[i][j] = (tmp_1_0 + A_read0_1_0);
-            B0_1[i][j] = (tmp_0_1 + A_read0_0_1);
-            B1_1[i][j] = (tmp_1_1 + A_read0_1_1);
+            A_read0_0_0 = A0[(unsigned int)i];
+            A_read0_1_0 = A1[(unsigned int)i];
+            A_read0_0_1 = A0[(unsigned int)i];
+            A_read0_1_1 = A1[(unsigned int)i];
+            //---
+            B0_0[(unsigned int)i][(unsigned int)j] = (tmp_0_0 + A_read0_0_0);
+            B1_0[(unsigned int)i][(unsigned int)j] = (tmp_1_0 + A_read0_1_0);
+            B0_1[(unsigned int)i][(unsigned int)j] = (tmp_0_1 + A_read0_0_1);
+            B1_1[(unsigned int)i][(unsigned int)j] = (tmp_1_1 + A_read0_1_1);
           }
           //---
-          R1[i] += (tmp_1_0 + tmp_1_1);
-          R0[i] += (tmp_0_0 + tmp_0_1);
+          R1[(unsigned int)i] += (tmp_1_0 + tmp_1_1);
+          R0[(unsigned int)i] += (tmp_0_0 + tmp_0_1);
           //---
           j = (j + (int)1);
         }

@@ -4,7 +4,6 @@
 void kernel(vector<int> arr, vector<int> filter, vector<int> result) {
   
   for(int j = 0; j < 4; j++) {
-    
     for(int i = 0; i < 2; i++) {
       int v = (arr[((2 * j) + i)] * filter[i]);
       // combiner:
