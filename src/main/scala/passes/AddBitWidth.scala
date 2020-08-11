@@ -32,12 +32,13 @@ object AddBitWidth extends TypedPartialTransformer {
         .map({
           case (idx, (size, _)) => {
             val adaptorBits = bitsNeeded(size)
-            val TSizedInt(idxBits, _) = idx.typ.get
             val ne = rewriteE(idx)(ABEnv(None))._1
-            if (adaptorBits != idxBits) {
-              ECast(ne, TSizedInt(adaptorBits, true))
-            } else {
-              ne
+            idx.typ.get match {
+              case TSizedInt(idxBits, _) if adaptorBits != idxBits =>
+                ECast(ne, TSizedInt(adaptorBits, true))
+              case TStaticInt(_) =>
+                ECast(ne, TSizedInt(adaptorBits, true))
+              case _ => ne
             }
           }
         })
@@ -49,11 +50,11 @@ object AddBitWidth extends TypedPartialTransformer {
       } else {
         e -> env
       }
-    case (expr @ EBinop(op: EqOp, l, r), env) => {
-      val typ = Subtyping.joinOf(l.typ.get, r.typ.get, op)
-      val nEnv = ABEnv(
-        Some(typ).getOrThrow(PassError("No join for comparision"))
-      )
+    case (expr @ EBinop(_: EqOp | _: CmpOp, l, r), env) => {
+      val typ = Subtyping
+        .joinOf(l.typ.get, r.typ.get, expr.op)
+        .getOrThrow(PassError("No join for comparision"))
+      val nEnv = ABEnv(Some(typ))
       val (nl, _) = rewriteE(l)(nEnv)
       val (nr, _) = rewriteE(r)(nEnv)
       expr.copy(e1 = nl, e2 = nr) -> env
@@ -73,6 +74,14 @@ object AddBitWidth extends TypedPartialTransformer {
   }
 
   def myRewriteC: PF[(Command, Env), (Command, Env)] = {
+    case (CUpdate(l, r), env) => {
+      val nEnv = ABEnv(
+        Some(l.typ.getOrThrow(PassError("LHS is missing type")))
+      )
+      val (nL, _) = rewriteLVal(l)(ABEnv(None))
+      val (nR, _) = rewriteE(r)(nEnv)
+      CUpdate(nL, nR) -> env
+    }
     case (cmd @ CLet(_, typ, Some(e)), env) => {
       val nEnv = ABEnv(
         Some(typ.getOrThrow(PassError("Binding is missing type")))

@@ -68,7 +68,7 @@ object Pretty {
     case EInt(v, base) => value(emitBaseInt(v, base))
     case ERational(d) => value(d)
     case EBool(b) => value(if (b) "true" else "false")
-    case EVar(id) => e.typ.map(t => emitId(id) <> text("&") <> emitTyp(t)).getOrElse(emitId(id))
+    case EVar(id) => emitId(id)
     case EBinop(op, e1, e2) => parens(e1 <+> text(op.toString) <+> e2)
     case acc @ EArrAccess(id, idxs) => {
       val doc = id <> ssep(idxs.map(idx => brackets(emitExpr(idx))), emptyDoc)
