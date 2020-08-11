@@ -19,10 +19,11 @@ object Compiler {
     "Lower for loops" -> passes.LowerForLoops
   )
 
-  // Transformers to execute *after* type checking.
-  val postTransformers: List[(String, TypedPartialTransformer)] = List(
-    "Rewrite views" -> passes.RewriteView,
-    "Add bitwidth" -> passes.AddBitWidth
+  // Transformers to execute *after* type checking. Boolean indicates if the
+  // pass should only run during lowering.
+  val postTransformers: List[(String, (TypedPartialTransformer, Boolean))] = List(
+    "Rewrite views" -> (passes.RewriteView, false),
+    "Add bitwidth" -> (passes.AddBitWidth, true)
   )
 
   def showDebug(ast: Prog, pass: String, c: Config): Unit = {
@@ -80,9 +81,13 @@ object Compiler {
   }
 
   def codegen(ast: Prog, c: Config = emptyConf) = {
+    // Filter out transformers not running in this mode
+    val toRun = postTransformers.filter({ case (_, (_, onlyLower)) => {
+      !onlyLower || c.enableLowering
+    }})
     // Run post transformers
-    val transformedAst = postTransformers.foldLeft(ast)({
-      case (ast, (name, pass)) => {
+    val transformedAst = toRun.foldLeft(ast)({
+      case (ast, (name, (pass, _))) => {
         val newAst = pass.rewrite(ast)
         showDebug(newAst, name, c)
         newAst
