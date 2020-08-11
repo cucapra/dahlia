@@ -4,11 +4,11 @@
 void kernel() {
   
   {
-    unsigned int C_i_j_ = 0;
+    unsigned int C_i_j_ = (unsigned int)0;
   }
   //---
   {
-    unsigned int C_i_j_ = 0;
+    unsigned int C_i_j_ = (unsigned int)0;
     //---
     unsigned int x_ = C_i_j_;
   }
