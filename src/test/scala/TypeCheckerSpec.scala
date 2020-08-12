@@ -758,6 +758,19 @@ class TypeCheckerSpec extends FunSpec {
   }
 
   describe("Loop depedency in unrolled context") {
+    it("defined use inside multiple unrolled contexts") {
+      typeCheck("""
+        decl q: ubit<32>[8 bank 2];
+
+        for (let i: ubit<4> = 0..8) unroll 2 {
+          q[i] := 0;
+          ---
+          for (let j: ubit<4> = 0..8) unroll 2 {
+            let q0: ubit<32> = q[i];
+          }
+        }
+        """)
+    }
     it("use after define in an unrolled loop is not allowed") {
       assertThrows[LoopDepSequential] {
         typeCheck("""

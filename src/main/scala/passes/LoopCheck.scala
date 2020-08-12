@@ -20,8 +20,6 @@ object LoopChecker {
 
   def check(p: Prog) = LCheck.check(p)
 
-  // Loop checker environment doesn't need to track any information. Empty
-  // environment that just runs the commands.
   private case class LEnv(
       stateMap: ScopedMap[Id, States] = ScopedMap(),
       nameMap: ScopedMap[Id, Id] = ScopedMap(),
@@ -59,23 +57,13 @@ object LoopChecker {
 
     def checkExprMap(idxs: Option[EArrAccess]): (LEnv, Boolean) = res match {
       case 1 => (this, false)
-      case _ =>
-        idxs match {
-          case Some(EArrAccess(id, idxs)) =>
-            exprMap.get(id) match {
-              case None =>
-                (this.copy(exprMap = exprMap.add(id, idxs).get), true)
-              case Some(idxlist) => {
-                for (i <- 0 to stateMap.length - 1) {
-                  if (idxlist(i) != idxs(i)) {
-                    return (this, true)
-                  }
-                }
-                (this, false)
-              }
-            }
-          case None => (this, true)
-        }
+      case _ => idxs.map({ case EArrAccess(id, idxs) => exprMap.get(id) match {
+        case None => (this.copy(exprMap = exprMap.add(id, idxs).get), true)
+        case Some(oldIdxs) =>
+            val shouldCheck =
+              idxs.zip(oldIdxs).exists({ case (nIdx, oIdx) => nIdx != oIdx })
+            (this, shouldCheck)
+      }}).getOrElse((this, true))
     }
     //check and update the state table
     def updateState(
