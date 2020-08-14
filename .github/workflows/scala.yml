@@ -49,6 +49,6 @@ jobs:
         args: runt --version ${{ steps.versions.outputs.runt }}
 
     - name: Runt tests
-      run: runt -d -o fail
-      env:
-        JAVA_TOOL_OPTIONS: ""
+      run: |
+        unset JAVA_TOOL_OPTIONS
+        runt -d -o fail
