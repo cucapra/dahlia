@@ -43,8 +43,8 @@ private class FutilBackendHelper {
   def bitsForType(t: Option[Type], pos: Position): Int = {
     t match {
       case Some(TSizedInt(width, _)) => width
-      case Some(_:TBool) => 1
-      case Some(_:TVoid) => 0
+      case Some(_: TBool) => 1
+      case Some(_: TVoid) => 0
       case x =>
         throw NotImplemented(
           s"Futil cannot infer bitwidth for type $x. Please manually annotate it using a cast expression.",
@@ -192,6 +192,43 @@ private class FutilBackendHelper {
     )
   }
 
+  def emitMultiCycleBinop(
+      compName: String,
+      e1: Expr,
+      e2: Expr,
+      delay: Option[Int]
+  )(
+      implicit store: Store
+  ): EmitOutput = {
+    val e1Out = emitExpr(e1)
+    val e2Out = emitExpr(e2)
+    val e1Bits = bitsForType(e1.typ, e1.pos)
+    val e2Bits = bitsForType(e2.typ, e2.pos)
+    assertOrThrow(
+      e1Bits == e2Bits,
+      Impossible(
+        "The widths of the left and right side of a binop didn't match." +
+          s"\nleft: ${Pretty.emitExpr(e1)(false).pretty}: ${e1Bits}" +
+          s"\nright: ${Pretty.emitExpr(e2)(false).pretty}: ${e2Bits}"
+      )
+    )
+    val binop = Stdlib.op(s"$compName", bitsForType(e1.typ, e1.pos));
+
+    val comp = LibDecl(genName(compName), binop)
+    val struct = List(
+      comp,
+      Connect(e1Out.port, comp.id.port("left")),
+      Connect(e2Out.port, comp.id.port("right")),
+      Connect(ConstantPort(1, 1), comp.id.port("go"))
+    )
+    EmitOutput(
+      comp.id.port("out"),
+      comp.id.port("done"),
+      struct ++ e1Out.structure ++ e2Out.structure,
+      delay
+    )
+  }
+
   /** `emitExpr(expr, rhsInfo)(implicit store)` calculates the necessary structure
     *  to compute `expr`. It return the pair (Port, List[Structure]).
     *  If `rhsInfo = None`, then `Port` is the port that will hold the output
@@ -203,16 +240,19 @@ private class FutilBackendHelper {
       implicit store: Store
   ): EmitOutput =
     expr match {
-      case _:EInt => {
-        throw PassError("Cannot compile unannotated constants. Wrap constant in `as` expression", expr.pos)
+      case _: EInt => {
+        throw PassError(
+          "Cannot compile unannotated constants. Wrap constant in `as` expression",
+          expr.pos
+        )
       }
       case EBinop(op, e1, e2) => {
         val compName =
           op.op match {
             case "+" => "add"
             case "-" => "sub"
-            case "*" => "mult"
-            case "/" => "div"
+            case "*" => "mult_pipe"
+            case "/" => "div_pipe"
             case "<" => "lt"
             case ">" => "gt"
             case "<=" => "le"
@@ -232,7 +272,12 @@ private class FutilBackendHelper {
                 op.pos
               )
           }
-        emitBinop(compName, e1, e2)
+        op.op match {
+          case "*" => emitMultiCycleBinop(compName, e1, e2, Some(3))
+          case "/" => emitMultiCycleBinop(compName, e1, e2, None)
+          case "%" => emitMultiCycleBinop(compName, e1, e2, None)
+          case _ => emitBinop(compName, e1, e2)
+        }
       }
       case EVar(id) =>
         val portName = if (rhsInfo.isDefined) "in" else "out"
@@ -274,9 +319,12 @@ private class FutilBackendHelper {
       }
       case ECast(e, t) => {
         val vBits = bitsForType(e.typ, e.pos)
-        val cBits = bitsForType (Some(t), e.pos)
+        val cBits = bitsForType(Some(t), e.pos)
         if (cBits > vBits) {
-          throw NotImplemented("Cast expressions that imply zero-padding", expr.pos)
+          throw NotImplemented(
+            "Cast expressions that imply zero-padding",
+            expr.pos
+          )
         }
         val res = emitExpr(e)
         val sliceOp =
