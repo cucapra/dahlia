@@ -50,3 +50,5 @@ jobs:
 
     - name: Runt tests
       run: runt -d -o fail
+      env:
+        JAVA_TOOL_OPTIONS: ""
