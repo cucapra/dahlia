@@ -3,8 +3,7 @@ package fuselang.passes
 import scala.{PartialFunction => PF}
 import fuselang.common._
 import Syntax._
-// import CodeGenHelpers._
-// import CompilerError._
+import CompilerError._
 import Transformer._
 import EnvHelpers._
 
@@ -99,8 +98,10 @@ object HoistSlowBinop extends TypedPartialTransformer {
       val (rewrRhs, nEnv) = rewriteE(rhs)(env)
       construct(CUpdate(rewrLhs, rewrRhs), nEnv)
     }
-    // XXX(sam): I probably should deal with `*=`
     case (CReduce(rop, lhs, rhs), _) => {
+      rop.op match {
+        case "*=" | "/=" => throw NotImplemented(s"Hoisting $rop.op")
+      }
       val (rewrLhs, env) = rewriteE(lhs)(emptyEnv)
       val (rewrRhs, nEnv) = rewriteE(rhs)(env)
       construct(CReduce(rop, rewrLhs, rewrRhs), nEnv)

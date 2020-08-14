@@ -265,7 +265,7 @@ private class FutilBackendHelper {
             case ">=" => "ge"
             case "!=" => "neq"
             case "==" => "eq"
-            case "%" => "mod"
+            case "%" => "mod_pipe"
             case "&&" => "and"
             case "||" => "or"
             case "&" => "and"
@@ -279,9 +279,17 @@ private class FutilBackendHelper {
               )
           }
         op.op match {
-          case "*" => emitMultiCycleBinop(compName, e1, e2, Some(3))
-          case "/" => emitMultiCycleBinop(compName, e1, e2, None)
-          case "%" => emitMultiCycleBinop(compName, e1, e2, None)
+          case "*" =>
+            emitMultiCycleBinop(
+              compName,
+              e1,
+              e2,
+              Stdlib.staticTimingMap("mult")
+            )
+          case "/" =>
+            emitMultiCycleBinop(compName, e1, e2, Stdlib.staticTimingMap("div"))
+          case "%" =>
+            emitMultiCycleBinop(compName, e1, e2, Stdlib.staticTimingMap("mod"))
           case _ => emitBinop(compName, e1, e2)
         }
       }
@@ -403,7 +411,7 @@ private class FutilBackendHelper {
           sqrt.id.port("out"),
           sqrt.id.port("done"),
           argOut.structure ++ struct,
-          Some(17)
+          Stdlib.staticTimingMap("sqrt")
         )
       }
       case x =>

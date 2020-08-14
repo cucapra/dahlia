@@ -317,4 +317,11 @@ object Stdlib {
 
   def sqrt(): Futil.CompInst =
     Futil.CompInst("std_sqrt", List())
+
+  val staticTimingMap: Map[String, Option[Int]] = Map(
+    "sqrt" -> Some(17),
+    "mult" -> Some(3),
+    "div" -> None,
+    "mod" -> None
+  )
 }
