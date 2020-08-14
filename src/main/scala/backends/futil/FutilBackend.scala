@@ -188,7 +188,8 @@ private class FutilBackendHelper {
       comp.id.port("out"),
       ConstantPort(1, 1),
       struct ++ e1Out.structure ++ e2Out.structure,
-      Some(0)
+      for (d1 <- e1Out.delay; d2 <- e2Out.delay)
+        yield d1 + d2
     )
   }
 
@@ -219,13 +220,18 @@ private class FutilBackendHelper {
       comp,
       Connect(e1Out.port, comp.id.port("left")),
       Connect(e2Out.port, comp.id.port("right")),
-      Connect(ConstantPort(1, 1), comp.id.port("go"))
+      Connect(
+        ConstantPort(1, 1),
+        comp.id.port("go"),
+        Some(Not(Atom(comp.id.port("done"))))
+      )
     )
     EmitOutput(
       comp.id.port("out"),
       comp.id.port("done"),
       struct ++ e1Out.structure ++ e2Out.structure,
-      delay
+      for (d1 <- e1Out.delay; d2 <- e2Out.delay; d3 <- delay)
+        yield d1 + d2 + d3
     )
   }
 
@@ -387,13 +393,17 @@ private class FutilBackendHelper {
         val struct = List(
           sqrt,
           Connect(argOut.port, sqrt.id.port("in")),
-          Connect(ConstantPort(1, 1), sqrt.id.port("go"))
+          Connect(
+            ConstantPort(1, 1),
+            sqrt.id.port("go"),
+            Some(Not(Atom(sqrt.id.port("done"))))
+          )
         )
         EmitOutput(
           sqrt.id.port("out"),
           sqrt.id.port("done"),
           argOut.structure ++ struct,
-          Some(1)
+          Some(17)
         )
       }
       case x =>
@@ -403,7 +413,6 @@ private class FutilBackendHelper {
   def emitCmd(
       c: Command
   )(implicit store: Store): (List[Structure], Control, Store) = {
-    //println(Pretty.emitCmd(c)(false).pretty)
     c match {
       case CBlock(cmd) => emitCmd(cmd)
       case CPar(cmds) => {
@@ -443,7 +452,7 @@ private class FutilBackendHelper {
         )
         val struct =
           Connect(out.port, reg.id.port("in")) :: Connect(
-            ConstantPort(1, 1),
+            out.done,
             reg.id.port("write_en")
           ) :: doneHole :: out.structure
         val (group, st) =

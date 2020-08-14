@@ -52,11 +52,7 @@ object HoistSlowBinop extends TypedPartialTransformer {
   def binopRecur(expr: Expr, env: Env): (Expr, Env) = {
     expr match {
       // only recur when children are binops
-      case EBinop(_, _, _) => {
-        val (nExpr, nEnv) = rewriteE(expr)(env)
-        val let = CLet(genName("bin_read"), None, Some(nExpr))
-        (EVar(let.id), nEnv.add(nExpr, let))
-      }
+      case EBinop(_, _, _) => rewriteE(expr)(env)
       case _ => (expr, env)
     }
   }
@@ -66,20 +62,14 @@ object HoistSlowBinop extends TypedPartialTransformer {
       env.get(e) match {
         case Some(let) => (EVar(let.id), env)
         case None => {
-          val top = env.map.isEmpty
           val (leftRead, leftEnv) = binopRecur(left, env)
           val (rightRead, rightEnv) = binopRecur(right, leftEnv)
-          // println(EBinop(op, leftRead, rightRead))
-          if (top) {
-            EBinop(op, leftRead, rightRead) -> rightEnv
-          } else {
-            val let = CLet(
-              genName("bin_read"),
-              None,
-              Some(EBinop(op, leftRead, rightRead))
-            )
-            EVar(let.id) -> rightEnv.add(EBinop(op, leftRead, rightRead), let)
-          }
+          val let = CLet(
+            genName("bin_read"),
+            None,
+            Some(EBinop(op, leftRead, rightRead))
+          )
+          EVar(let.id) -> rightEnv.add(EBinop(op, leftRead, rightRead), let)
         }
       }
     }
