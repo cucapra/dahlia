@@ -101,6 +101,7 @@ object HoistSlowBinop extends TypedPartialTransformer {
     case (CReduce(rop, lhs, rhs), _) => {
       rop.op match {
         case "*=" | "/=" => throw NotImplemented(s"Hoisting $rop.op")
+        case _ => ()
       }
       val (rewrLhs, env) = rewriteE(lhs)(emptyEnv)
       val (rewrRhs, nEnv) = rewriteE(rhs)(env)
