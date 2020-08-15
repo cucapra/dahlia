@@ -9,67 +9,93 @@ import CompilerError._
 
 object Sequentialize extends PartialTransformer {
 
-  case class SeqEnv(uses: Set[Id]) extends ScopeManager[SeqEnv] {
+  case class SeqEnv(uses: Set[Id], defines: Set[Id])
+      extends ScopeManager[SeqEnv] {
     def merge(that: SeqEnv) = {
-      SeqEnv(this.uses union that.uses)
+      SeqEnv(this.uses union that.uses, this.defines intersect that.defines)
     }
     def add(x: Id) =
       this.copy(uses = this.uses + x)
+    def addDefine(x: Id) =
+      this.copy(defines = this.defines + x)
   }
 
   type Env = SeqEnv
-  val emptyEnv = SeqEnv(Set())
+  val emptyEnv = SeqEnv(Set(), Set())
 
   def myRewriteE: PF[(Expr, Env), (Expr, Env)] = {
     case (e @ EVar(id), env) => e -> env.add(id)
-    case (e @ EArrAccess(id, _), env) => e -> env.add(id)
-    case (e @ EPhysAccess(id, _), env) => e -> env.add(id)
+    case (e @ EArrAccess(id, idxs), env) => {
+      val (nIdxs, e1) = rewriteESeq(idxs)(env)
+      e.copy(idxs = nIdxs.toSeq) -> e1.add(id)
+    }
+    case (e: EPhysAccess, _) =>
+      throw NotImplemented("Physical accesses in sequentialize", e.pos)
   }
 
+  override def rewriteLVal(e: Expr)(implicit env: SeqEnv): (Expr, SeqEnv) =
+    e match {
+      case EVar(id) => e -> env.addDefine(id)
+      case e @ EArrAccess(id, idxs) => {
+        val (nIdxs, e1) = rewriteESeq(idxs)(env)
+        e.copy(idxs = nIdxs.toSeq) -> e1.addDefine(id)
+      }
+      case e: EPhysAccess =>
+        throw NotImplemented("Physical accesses in sequentialize", e.pos)
+      case e =>
+        throw Impossible(s"Not an LVal: ${Pretty.emitExpr(e)(false).pretty}")
+    }
+
   def myRewriteC: PF[(Command, Env), (Command, Env)] = {
-    case (c@CUpdate(lhs, rhs), env) => {
+    case (CUpdate(lhs, rhs), env) => {
       val (nRhs, e1) = rewriteE(rhs)(env)
-      val i = lhs match {
-        case EVar(id) => id
-        case EArrAccess(id, _) => id
-        case EPhysAccess(id, _) => id
-        case _ => throw Impossible("Not an LVal")
-      }
-      c.copy(rhs = nRhs) -> e1.add(i)
+      val (nLhs, e2) = rewriteLVal(lhs)(e1)
+      CUpdate(nLhs, nRhs) -> e2
     }
-    case (c@CReduce(_, lhs, rhs), env) => {
+    case (c @ CReduce(_, lhs, rhs), env) => {
       val (nRhs, e1) = rewriteE(rhs)(env)
-      val i = lhs match {
-        case EVar(id) => id
-        case EArrAccess(id, _) => id
-        case EPhysAccess(id, _) => id
-        case _ => throw Impossible("Not an LVal")
-      }
-      c.copy(rhs = nRhs) -> e1.add(i)
+      val (nLhs, e2) = rewriteLVal(lhs)(e1)
+      c.copy(lhs = nLhs, rhs = nRhs) -> e2
     }
-    case (c@CLet(id, _, Some(init)), env) => {
+    case (c @ CLet(id, _, Some(init)), env) => {
       val (nInit, e1) = rewriteE(init)(env)
-      c.copy(e = Some(nInit)) -> e1.add(id)
+      c.copy(e = Some(nInit)) -> e1.addDefine(id)
     }
     case (CPar(cmds), _) => {
       import scala.collection.mutable.{Set => SetM, Buffer}
-      val allConflicts: SetM[Id] = SetM()
-      var curConficts: SetM[Id] = SetM()
+      val allDefines: SetM[Id] = SetM()
+      val allUses: SetM[Id] = SetM()
+      var curDefines: SetM[Id] = SetM()
+      var curUses: SetM[Id] = SetM()
       val newSeq: Buffer[Buffer[Command]] = Buffer(Buffer())
 
       for (cmd <- cmds) {
-        val (nCmd, e1) = rewriteC(cmd)(SeqEnv(Set()))
-        if (curConficts.intersect(e1.uses).size == 0) {
-          curConficts ++= e1.uses
+        val (nCmd, e1) = rewriteC(cmd)(SeqEnv(Set(), Set()))
+        /*println(Pretty.emitCmd(cmd)(false).pretty)
+        println(s"""
+          uses: ${e1.uses}
+          defines: ${e1.defines}
+          curDefines: ${curDefines}
+          curUses: ${curUses}
+          conflicts: ${curDefines.intersect(e1.uses).size == 0 && curUses.intersect(e1.defines).size == 0}
+          =====================
+          """)*/
+        if (curDefines.intersect(e1.uses).size == 0 &&
+            curUses.intersect(e1.defines).size == 0) {
           newSeq.last += nCmd
         } else {
-          curConficts = SetM()
+          curUses = SetM()
+          curDefines = SetM()
           newSeq += Buffer(nCmd)
         }
-        allConflicts ++= e1.uses
+        curUses ++= e1.uses
+        curDefines ++= e1.defines
+        allDefines ++= e1.defines
+        allUses ++= e1.uses
       }
       CSeq.smart(newSeq.map(ps => CPar.smart(ps.toSeq)).toSeq) -> SeqEnv(
-        allConflicts.toSet
+        allUses.toSet,
+        allDefines.toSet
       )
     }
   }
