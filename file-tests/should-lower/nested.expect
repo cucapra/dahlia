@@ -5,9 +5,7 @@ void kernel(vector<float> A0, vector<float> A1, vector<vector<float>> B0_0, vect
   
   float R0[4];
   float R1[4];
-  //---
   float inp_;
-  //---
   {
     int i = (int)0;
     //---
