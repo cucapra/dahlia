@@ -17,6 +17,7 @@ object GenerateExec {
   var headerLocation = Paths.get("src/main/resources/headers")
   val headerFallbackLocation = Paths.get("_headers/")
 
+
   // Not the compiler directory, check if the fallback directory has been setup.
   if (Files.exists(headerLocation) == false) {
     // Fallback for headers not setup. Unpack headers from JAR file.

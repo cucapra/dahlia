@@ -16,15 +16,17 @@ object Compiler {
     "Hoist memory reads" -> passes.HoistMemoryReads,
     "Sequentialize" -> passes.Sequentialize,
     "Lower unroll and bank" -> passes.LowerUnroll,
-    "Lower for loops" -> passes.LowerForLoops
+    "Lower for loops" -> passes.LowerForLoops,
+    "Hoist slow binops" -> passes.HoistSlowBinop
   )
 
   // Transformers to execute *after* type checking. Boolean indicates if the
   // pass should only run during lowering.
-  val postTransformers: List[(String, (TypedPartialTransformer, Boolean))] = List(
-    "Rewrite views" -> (passes.RewriteView, false),
-    "Add bitwidth" -> (passes.AddBitWidth, true)
-  )
+  val postTransformers: List[(String, (TypedPartialTransformer, Boolean))] =
+    List(
+      "Rewrite views" -> (passes.RewriteView, false),
+      "Add bitwidth" -> (passes.AddBitWidth, true)
+    )
 
   def showDebug(ast: Prog, pass: String, c: Config): Unit = {
     if (c.passDebug) {
@@ -82,9 +84,11 @@ object Compiler {
 
   def codegen(ast: Prog, c: Config = emptyConf) = {
     // Filter out transformers not running in this mode
-    val toRun = postTransformers.filter({ case (_, (_, onlyLower)) => {
-      !onlyLower || c.enableLowering
-    }})
+    val toRun = postTransformers.filter({
+      case (_, (_, onlyLower)) => {
+        !onlyLower || c.enableLowering
+      }
+    })
     // Run post transformers
     val transformedAst = toRun.foldLeft(ast)({
       case (ast, (name, (pass, _))) => {
