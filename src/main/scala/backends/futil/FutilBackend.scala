@@ -176,6 +176,14 @@ private class FutilBackendHelper {
           s"\nright: ${Pretty.emitExpr(e2)(false).pretty}: ${e2Bits}"
       )
     )
+    assertOrThrow(
+      e1Out.delay == Some(0) && e2Out.delay == Some(0),
+      NotImplemented(
+        "Non-combinational children of a combinational binop.",
+        e1.pos
+      )
+    )
+
     val binop = Stdlib.op(s"$compName", bitsForType(e1.typ, e1.pos));
 
     val comp = LibDecl(genName(compName), binop)
@@ -188,8 +196,7 @@ private class FutilBackendHelper {
       comp.id.port("out"),
       ConstantPort(1, 1),
       struct ++ e1Out.structure ++ e2Out.structure,
-      for (d1 <- e1Out.delay; d2 <- e2Out.delay)
-        yield d1 + d2
+      Some(0)
     )
   }
 
@@ -213,6 +220,13 @@ private class FutilBackendHelper {
           s"\nright: ${Pretty.emitExpr(e2)(false).pretty}: ${e2Bits}"
       )
     )
+    assertOrThrow(
+      e1Out.delay == e2Out.delay,
+      NotImplemented(
+        "Different delays on children of a multi-cycle binop.",
+        e1.pos
+      )
+    )
     val binop = Stdlib.op(s"$compName", bitsForType(e1.typ, e1.pos));
 
     val comp = LibDecl(genName(compName), binop)
@@ -231,7 +245,7 @@ private class FutilBackendHelper {
       comp.id.port("done"),
       struct ++ e1Out.structure ++ e2Out.structure,
       for (d1 <- e1Out.delay; d2 <- e2Out.delay; d3 <- delay)
-        yield d1 + d2 + d3
+        yield Integer.max(d1, d2) + d3
     )
   }
 
