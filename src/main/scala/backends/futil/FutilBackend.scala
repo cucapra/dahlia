@@ -272,6 +272,7 @@ private class FutilBackendHelper {
             case "|" => "or"
             case ">>" => "rsh"
             case "<<" => "lsh"
+            case "^" => "xor"
             case x =>
               throw NotImplemented(
                 s"Futil backend does not support '$x' yet.",
