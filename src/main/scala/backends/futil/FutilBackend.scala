@@ -66,11 +66,11 @@ private class FutilBackendHelper {
     // No support for multi-ported memories or banked memories.
     assertOrThrow(
       typ.ports == 1,
-      NotImplemented("Emitting multi-ported memories.")
+      NotImplemented("Multi-ported memories.")
     )
     assertOrThrow(
       typ.dims.forall(_._2 == 1),
-      NotImplemented("Banked memories.")
+      Impossible("Banked memories should be lowered. Did you pass the `--lower` flag to the compiler?.")
     )
 
     val width = typ.typ match {
@@ -265,7 +265,7 @@ private class FutilBackendHelper {
             case ">=" => "ge"
             case "!=" => "neq"
             case "==" => "eq"
-            case "%" => "mod_pipe"
+            case "%" => "mod"
             case "&&" => "and"
             case "||" => "or"
             case "&" => "and"
@@ -289,8 +289,8 @@ private class FutilBackendHelper {
             )
           case "/" =>
             emitMultiCycleBinop(compName, e1, e2, Stdlib.staticTimingMap("div"))
-          case "%" =>
-            emitMultiCycleBinop(compName, e1, e2, Stdlib.staticTimingMap("mod"))
+          //case "%" =>
+            //emitMultiCycleBinop(compName, e1, e2, Stdlib.staticTimingMap("mod"))
           case _ => emitBinop(compName, e1, e2)
         }
       }
@@ -530,7 +530,7 @@ private class FutilBackendHelper {
       }
       case _: CFor =>
         throw BackendError(
-          "for loops cannot be directly generated. Use the --lower flag to turn them into while loops."
+          "for loops cannot be directly generated. Use the `--lower` flag to turn them into while loops."
         )
       case c @ CReduce(op, e1, e2) => {
         // rewrite statements of the form
@@ -550,6 +550,8 @@ private class FutilBackendHelper {
         }
       }
       case _: CDecorate => (List(), Empty, store)
+      case CExpr(e) =>
+        throw BackendError(s"Compiling a pure expression to FuTIL is not meaningful since it cannot be observed. Consider replacing it with a let-bound expression:\n\nlet _x = ${Pretty.emitExpr(e)(false).pretty};")
       case x =>
         throw NotImplemented(s"Futil backend does not support $x yet", x.pos)
     }
