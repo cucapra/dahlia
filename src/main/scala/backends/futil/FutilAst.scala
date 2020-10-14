@@ -241,6 +241,7 @@ object Futil {
 }
 
 /** Represents all of the primitives in Futil. */
+// extend fixed_point primitive
 object Stdlib {
   def register(bitwidth: Int): Futil.CompInst =
     Futil.CompInst("std_reg", List(bitwidth))
@@ -317,11 +318,30 @@ object Stdlib {
 
   def sqrt(): Futil.CompInst =
     Futil.CompInst("std_sqrt", List())
+  
+  // Extended AST to support fixed point constant and operations
+  def fixed_point(
+      width: Int,
+      int_bit: Int,
+      frac_bit: Int,
+      value1: Int,
+      value2: Int 
+  ): Futil.CompInst =
+    Futil.CompInst("fixed_p_std_const", List(width, int_bit, frac_bit, value1, value2))
 
+  def fxd_p_op(op: String,
+      width: Int,
+      int_bit: Int,
+      frac_bit: Int
+  ): Futil.CompInst =
+    Futil.CompInst(s"fixed_p_std_$op", List(width, int_bit, frac_bit))
+
+/////
   val staticTimingMap: Map[String, Option[Int]] = Map(
     "sqrt" -> Some(17),
     "mult" -> Some(3),
     "div" -> None,
     "mod" -> None
   )
+
 }

@@ -2,8 +2,8 @@ decl a0_0: fix<16,8>[2][2];
 decl b0_0: fix<16,8>[2][2];
 decl result0_0: fix<16,8>[2][2];
 
-for (let i = 0..2) {
-  for (let j = 0..2) {
+for (let i: ubit<1> = 0..2) {
+  for (let j: ubit<1> = 0..2) {
     result0_0[i][j] := a0_0[i][j] + b0_0[i][j];
   }
 }
