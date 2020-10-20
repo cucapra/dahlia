@@ -337,7 +337,7 @@ private class FutilBackendHelper {
         val cBits = bitsForType(Some(t), e.pos)
         if (cBits > vBits) {
           throw NotImplemented(
-            "Cast expressions that imply zero-padding",
+            s"Cast implies zero-padding from $vBits to $cBits bits",
             expr.pos
           )
         }
