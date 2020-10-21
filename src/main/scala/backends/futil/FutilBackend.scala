@@ -31,6 +31,7 @@ private class FutilBackendHelper {
   /** Helper for generating unique names. */
   var idx: Map[String, Int] = Map();
   def genName(base: String): CompVar = {
+    // update idx
     idx get base match {
       case Some(n) => idx = idx + (base -> (n + 1))
       case None => idx = idx + (base -> 0)
@@ -308,35 +309,6 @@ private class FutilBackendHelper {
               op.pos
             )
         }
-<<<<<<< HEAD
-=======
-        } else {
-          val compName =op.op match {
-            case "+" => "add"
-            case "-" => "sub"
-            case "*" => "mult_pipe"
-            case "/" => "div_pipe"
-            case "<" => "lt"
-            case ">" => "gt"
-            case "<=" => "le"
-            case ">=" => "ge"
-            case "!=" => "neq"
-            case "==" => "eq"
-            case "%" => "mod"
-            case "&&" => "and"
-            case "||" => "or"
-            case "&" => "and"
-            case "|" => "or"
-            case ">>" => "rsh"
-            case "<<" => "lsh"
-            case "^" => "xor"
-            case x =>
-              throw NotImplemented(
-                s"Futil backend does not support '$x' yet.",
-                op.pos
-              )
-          }
->>>>>>> f28f8c3f4b73af2a1b601b17e3a45c85e1c59a25
         op.op match {
           case "*" =>
             emitMultiCycleBinop(
@@ -347,8 +319,8 @@ private class FutilBackendHelper {
             )
           case "/" =>
             emitMultiCycleBinop(compName, e1, e2, Stdlib.staticTimingMap("div"))
-          //case "%" =>
-            //emitMultiCycleBinop(compName, e1, e2, Stdlib.staticTimingMap("mod"))
+          case "%" =>
+            emitMultiCycleBinop(compName, e1, e2, Stdlib.staticTimingMap("mod"))
           case _ => emitBinop(compName, e1, e2)
         }
       }
