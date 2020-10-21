@@ -336,12 +336,10 @@ object Stdlib {
   ): Futil.CompInst =
     Futil.CompInst(s"fixed_p_std_$op", List(width, int_bit, frac_bit))
 
-/////
   val staticTimingMap: Map[String, Option[Int]] = Map(
     "sqrt" -> Some(17),
     "mult" -> Some(3),
     "div" -> None,
     "mod" -> None
   )
-
 }
