@@ -31,7 +31,6 @@ private class FutilBackendHelper {
   /** Helper for generating unique names. */
   var idx: Map[String, Int] = Map();
   def genName(base: String): CompVar = {
-    // update idx
     idx get base match {
       case Some(n) => idx = idx + (base -> (n + 1))
       case None => idx = idx + (base -> 0)
@@ -39,20 +38,11 @@ private class FutilBackendHelper {
     CompVar(s"$base${idx(base)}")
   }
 
- // Helper to differentiate operations between fixedpoints and other types.
- def isfixedpoint(ty: Option[Type]) : Boolean ={
-   ty match {
-     case Some(TFixed(_, _, _)) => true 
-     case _ => false
-   }
- }
   /** Extracts the bits needed from an optional type annotation. */
-  // Q - extend fixedpints ?
   def bitsForType(t: Option[Type], pos: Position): (Int, Option[Int]) = {
     t match {
       case Some(TSizedInt(width, _)) => (width, None)
-      case Some(TFixed(t, i, _)) => (t, Some(i)) // my change
-      // case Some(_: TRational) =>
+      case Some(TFixed(t, i, _)) => (t, Some(i))
       case Some(_: TBool) => (1, None)
       case Some(_: TVoid) => (0, None)
       case x =>
@@ -89,7 +79,10 @@ private class FutilBackendHelper {
         assert(unsigned, NotImplemented("Arrays of signed integers."))
         size
       }
-      //later expand fixd point
+      case TFixed(size,_, unsigned) => {
+        assert(unsigned, NotImplemented("Arrays of signed fixedpoints."))
+        size
+      }
       case x => throw NotImplemented(s"Arrays of $x")
     }
     val name = CompVar(s"${id}")
@@ -170,46 +163,13 @@ private class FutilBackendHelper {
       assert(unsigned, NotImplemented("Generating signed fixed points", d.pos))
       val reg = LibDecl(CompVar(s"${d.id}"), Stdlib.register(ltotal))
       List(reg)
-    } // my change 
+    }  
     case x => throw NotImplemented(s"Type $x not implemented for decls.", x.pos)
   }
 
-  /** `emitBinopF` is a helper function to generate the structure
-    *  for `e1 binop e2`. when the given type is fixed points The return type is described in `emitExpr`.
+  /** `emitBinop` is a helper function to generate the structure
+    *  for `e1 binop e2`. The return type is described in `emitExpr`.
     */
-  def emitBinopF(compName: String, e1: Expr, e2: Expr)(
-      implicit store: Store
-  ): EmitOutput = {
-    val e1Out = emitExpr(e1)
-    val e2Out = emitExpr(e2)
-    val (e1Bits, Some(int_bit1) ) = bitsForType(e1.typ, e1.pos)
-    val (e2Bits, Some(_) ) = bitsForType(e2.typ, e2.pos)
-    assertOrThrow( // later extend this to support different bit addtion
-      e1Bits == e2Bits,
-      Impossible(
-        "The widths of the left and right side of a binop didn't match." +
-          s"\nleft: ${Pretty.emitExpr(e1)(false).pretty}: ${e1Bits}" +
-          s"\nright: ${Pretty.emitExpr(e2)(false).pretty}: ${e2Bits}"
-      )
-    )
-    val frac_bit = e1Bits - int_bit1
-    val binop = Stdlib.fxd_p_op(s"$compName", e1Bits, int_bit1, frac_bit); // do Stdlib.fxd_p_op instead of Stdlib.op
-
-    val comp = LibDecl(genName(compName), binop)
-    val struct = List(
-      comp,
-      Connect(e1Out.port, comp.id.port("left")),
-      Connect(e2Out.port, comp.id.port("right"))
-    )
-    EmitOutput(
-      comp.id.port("out"),
-      ConstantPort(1, 1),
-      struct ++ e1Out.structure ++ e2Out.structure,
-      for (d1 <- e1Out.delay; d2 <- e2Out.delay)
-        yield d1 + d2
-    )
-  }
-
   def emitBinop(compName: String, e1: Expr, e2: Expr)(
       implicit store: Store
   ): EmitOutput = {
@@ -225,22 +185,42 @@ private class FutilBackendHelper {
           s"\nright: ${Pretty.emitExpr(e2)(false).pretty}: ${e2Bits}"
       )
     )
-    val (typ_b, _) = bitsForType(e1.typ, e1.pos)
-    val binop = Stdlib.op(s"$compName", typ_b);
-
-    val comp = LibDecl(genName(compName), binop)
-    val struct = List(
-      comp,
-      Connect(e1Out.port, comp.id.port("left")),
-      Connect(e2Out.port, comp.id.port("right"))
-    )
-    EmitOutput(
-      comp.id.port("out"),
-      ConstantPort(1, 1),
-      struct ++ e1Out.structure ++ e2Out.structure,
-      for (d1 <- e1Out.delay; d2 <- e2Out.delay)
-        yield d1 + d2
-    )
+    bitsForType(e1.typ, e1.pos) match  {
+      case (e1Bits, None) => {
+        val binop = Stdlib.op(s"$compName", e1Bits);
+        val comp = LibDecl(genName(compName), binop)
+        val struct = List(
+          comp,
+          Connect(e1Out.port, comp.id.port("left")),
+          Connect(e2Out.port, comp.id.port("right"))
+        )
+        EmitOutput(
+          comp.id.port("out"),
+          ConstantPort(1, 1),
+          struct ++ e1Out.structure ++ e2Out.structure,
+          for (d1 <- e1Out.delay; d2 <- e2Out.delay)
+          yield d1 + d2
+        )
+      }
+      // if there is additional information about the integer bit, use fixed point binary operation
+      case (e1Bits, Some(int_bit1)) => {
+        val frac_bit = e1Bits - int_bit1
+        val binop = Stdlib.fxd_p_op(s"$compName", e1Bits, int_bit1, frac_bit);
+        val comp = LibDecl(genName(compName), binop)
+        val struct = List(
+          comp,
+          Connect(e1Out.port, comp.id.port("left")),
+          Connect(e2Out.port, comp.id.port("right"))
+        )
+        EmitOutput(
+          comp.id.port("out"),
+          ConstantPort(1, 1),
+          struct ++ e1Out.structure ++ e2Out.structure,
+          for (d1 <- e1Out.delay; d2 <- e2Out.delay)
+            yield d1 + d2
+        )
+      }
+    }
   }
 
   def emitMultiCycleBinop(
@@ -304,47 +284,30 @@ private class FutilBackendHelper {
         )
       }
       case EBinop(op, e1, e2) => {
-        // if the typ of e1 is  fixed points do fixed point binary operation 
-        if (isfixedpoint(e1.typ)) {
-          val compName =op.op match {
-            case "+" => "add"
-            case "-" => "sub"
-            case "*" => "mult"
-            case "/" => "div"
-            case x =>
-              throw NotImplemented(
-                s"Futil backend does not support '$x' yet.",
-                op.pos
-              )
-          }
-          op.op match {
-          case _ => emitBinopF(compName, e1, e2)
+        val compName =op.op match {
+          case "+" => "add"
+          case "-" => "sub"
+          case "*" => "mult_pipe"
+          case "/" => "div_pipe"
+          case "<" => "lt"
+          case ">" => "gt"
+          case "<=" => "le"
+          case ">=" => "ge"
+          case "!=" => "neq"
+          case "==" => "eq"
+          case "%" => "mod_pipe"
+          case "&&" => "and"
+          case "||" => "or"
+          case "&" => "and"
+          case "|" => "or"
+          case ">>" => "rsh"
+          case "<<" => "lsh"
+          case x =>
+            throw NotImplemented(
+              s"Futil backend does not support '$x' yet.",
+              op.pos
+            )
         }
-        } else {
-          val compName =op.op match {
-            case "+" => "add"
-            case "-" => "sub"
-            case "*" => "mult_pipe"
-            case "/" => "div_pipe"
-            case "<" => "lt"
-            case ">" => "gt"
-            case "<=" => "le"
-            case ">=" => "ge"
-            case "!=" => "neq"
-            case "==" => "eq"
-            case "%" => "mod_pipe"
-            case "&&" => "and"
-            case "||" => "or"
-            case "&" => "and"
-            case "|" => "or"
-            case ">>" => "rsh"
-            case "<<" => "lsh"
-            case x =>
-              throw NotImplemented(
-                s"Futil backend does not support '$x' yet.",
-                op.pos
-              )
-          }
         op.op match {
           case "*" =>
             emitMultiCycleBinop(
@@ -358,7 +321,6 @@ private class FutilBackendHelper {
           case "%" =>
             emitMultiCycleBinop(compName, e1, e2, Stdlib.staticTimingMap("mod"))
           case _ => emitBinop(compName, e1, e2)
-        }
         }
       }
       case EVar(id) =>
@@ -411,7 +373,7 @@ private class FutilBackendHelper {
         val fpconst = 
         LibDecl(
              genName("fpconst"),
-             Stdlib.fixed_point( width, int_bit, frac_bit, v_1, v_2) // use fixed_point primitive 
+             Stdlib.fixed_point( width, int_bit, frac_bit, v_1, v_2) 
            )
         EmitOutput(
            fpconst.id.port("out"),
