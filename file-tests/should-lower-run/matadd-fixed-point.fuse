@@ -2,8 +2,8 @@ decl a: fix<16,8>[2][2];
 decl b: fix<16,8>[2][2];
 decl result: fix<16,8>[2][2];
 
-for (let i: bit<1> = 0..2) {
-  for (let j: bit<1> = 0..2) {
+for (let i: bit<2> = 0..2) {
+  for (let j: bit<2> = 0..2) {
     result[i][j] := a[i][j] + b[i][j];
   }
 }
