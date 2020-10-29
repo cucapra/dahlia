@@ -17,9 +17,9 @@ void kernel(vector<vector<double>> a0_0, vector<vector<double>> b0_0, vector<vec
 int main(int argc, char** argv) {
   using namespace flattening;
   auto v = parse_data(argc, argv);;
-  auto a0_0 = get_arg<n_dim_vec_t<double, 2>>("a0_0", "fix<16,8>[][]", v);
-  auto b0_0 = get_arg<n_dim_vec_t<double, 2>>("b0_0", "fix<16,8>[][]", v);
-  auto result0_0 = get_arg<n_dim_vec_t<double, 2>>("result0_0", "fix<16,8>[][]", v);
+  auto a0_0 = get_arg<n_dim_vec_t<double, 2>>("a0_0", "ufix<16,8>[][]", v);
+  auto b0_0 = get_arg<n_dim_vec_t<double, 2>>("b0_0", "ufix<16,8>[][]", v);
+  auto result0_0 = get_arg<n_dim_vec_t<double, 2>>("result0_0", "ufix<16,8>[][]", v);
   kernel(a0_0, b0_0, result0_0);
   return 0;
 }

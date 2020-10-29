@@ -40,11 +40,12 @@ private class FutilBackendHelper {
   }
 
   /** Extracts the bits needed from an optional type annotation. */
-  def bitsForType(t: Option[Type], pos: Position): Int = {
+  def bitsForType(t: Option[Type], pos: Position): (Int, Option[Int]) = {
     t match {
-      case Some(TSizedInt(width, _)) => width
-      case Some(_: TBool) => 1
-      case Some(_: TVoid) => 0
+      case Some(TSizedInt(width, _)) => (width, None)
+      case Some(TFixed(t, i, _)) => (t, Some(i))
+      case Some(_: TBool) => (1, None)
+      case Some(_: TVoid) => (0, None)
       case x =>
         throw NotImplemented(
           s"Futil cannot infer bitwidth for type $x. Please manually annotate it using a cast expression.",
@@ -77,6 +78,10 @@ private class FutilBackendHelper {
       case _: TBool => 1
       case TSizedInt(size, unsigned) => {
         assert(unsigned, NotImplemented("Arrays of signed integers."))
+        size
+      }
+      case TFixed(size,_, unsigned) => {
+        assert(unsigned, NotImplemented("Arrays of signed fixedpoints."))
         size
       }
       case x => throw NotImplemented(s"Arrays of $x")
@@ -155,6 +160,11 @@ private class FutilBackendHelper {
       val reg = LibDecl(CompVar(s"${d.id}"), Stdlib.register(size))
       List(reg)
     }
+    case TFixed(ltotal, _ , unsigned)=>{
+      assert(unsigned, NotImplemented("Generating signed fixed points", d.pos))
+      val reg = LibDecl(CompVar(s"${d.id}"), Stdlib.register(ltotal))
+      List(reg)
+    }  
     case x => throw NotImplemented(s"Type $x not implemented for decls.", x.pos)
   }
 
@@ -166,8 +176,8 @@ private class FutilBackendHelper {
   ): EmitOutput = {
     val e1Out = emitExpr(e1)
     val e2Out = emitExpr(e2)
-    val e1Bits = bitsForType(e1.typ, e1.pos)
-    val e2Bits = bitsForType(e2.typ, e2.pos)
+    val (e1Bits, _ ) = bitsForType(e1.typ, e1.pos)
+    val (e2Bits, _ ) = bitsForType(e2.typ, e2.pos)
     assertOrThrow(
       e1Bits == e2Bits,
       Impossible(
@@ -176,21 +186,42 @@ private class FutilBackendHelper {
           s"\nright: ${Pretty.emitExpr(e2)(false).pretty}: ${e2Bits}"
       )
     )
-    val binop = Stdlib.op(s"$compName", bitsForType(e1.typ, e1.pos));
-
-    val comp = LibDecl(genName(compName), binop)
-    val struct = List(
-      comp,
-      Connect(e1Out.port, comp.id.port("left")),
-      Connect(e2Out.port, comp.id.port("right"))
-    )
-    EmitOutput(
-      comp.id.port("out"),
-      ConstantPort(1, 1),
-      struct ++ e1Out.structure ++ e2Out.structure,
-      for (d1 <- e1Out.delay; d2 <- e2Out.delay)
-        yield d1 + d2
-    )
+    bitsForType(e1.typ, e1.pos) match  {
+      case (e1Bits, None) => {
+        val binop = Stdlib.op(s"$compName", e1Bits);
+        val comp = LibDecl(genName(compName), binop)
+        val struct = List(
+          comp,
+          Connect(e1Out.port, comp.id.port("left")),
+          Connect(e2Out.port, comp.id.port("right"))
+        )
+        EmitOutput(
+          comp.id.port("out"),
+          ConstantPort(1, 1),
+          struct ++ e1Out.structure ++ e2Out.structure,
+          for (d1 <- e1Out.delay; d2 <- e2Out.delay)
+          yield d1 + d2
+        )
+      }
+      // if there is additional information about the integer bit, use fixed point binary operation
+      case (e1Bits, Some(int_bit1)) => {
+        val frac_bit = e1Bits - int_bit1
+        val binop = Stdlib.fxd_p_op(s"$compName", e1Bits, int_bit1, frac_bit);
+        val comp = LibDecl(genName(compName), binop)
+        val struct = List(
+          comp,
+          Connect(e1Out.port, comp.id.port("left")),
+          Connect(e2Out.port, comp.id.port("right"))
+        )
+        EmitOutput(
+          comp.id.port("out"),
+          ConstantPort(1, 1),
+          struct ++ e1Out.structure ++ e2Out.structure,
+          for (d1 <- e1Out.delay; d2 <- e2Out.delay)
+            yield d1 + d2
+        )
+      }
+    }
   }
 
   def emitMultiCycleBinop(
@@ -203,8 +234,8 @@ private class FutilBackendHelper {
   ): EmitOutput = {
     val e1Out = emitExpr(e1)
     val e2Out = emitExpr(e2)
-    val e1Bits = bitsForType(e1.typ, e1.pos)
-    val e2Bits = bitsForType(e2.typ, e2.pos)
+    val (e1Bits, _) = bitsForType(e1.typ, e1.pos)
+    val (e2Bits, _) = bitsForType(e2.typ, e2.pos)
     assertOrThrow(
       e1Bits == e2Bits,
       Impossible(
@@ -213,7 +244,8 @@ private class FutilBackendHelper {
           s"\nright: ${Pretty.emitExpr(e2)(false).pretty}: ${e2Bits}"
       )
     )
-    val binop = Stdlib.op(s"$compName", bitsForType(e1.typ, e1.pos));
+    val (typ_b, _) = bitsForType(e1.typ, e1.pos)
+    val binop = Stdlib.op(s"$compName", typ_b);
 
     val comp = LibDecl(genName(compName), binop)
     val struct = List(
@@ -253,32 +285,30 @@ private class FutilBackendHelper {
         )
       }
       case EBinop(op, e1, e2) => {
-        val compName =
-          op.op match {
-            case "+" => "add"
-            case "-" => "sub"
-            case "*" => "mult_pipe"
-            case "/" => "div_pipe"
-            case "<" => "lt"
-            case ">" => "gt"
-            case "<=" => "le"
-            case ">=" => "ge"
-            case "!=" => "neq"
-            case "==" => "eq"
-            case "%" => "mod"
-            case "&&" => "and"
-            case "||" => "or"
-            case "&" => "and"
-            case "|" => "or"
-            case ">>" => "rsh"
-            case "<<" => "lsh"
-            case "^" => "xor"
-            case x =>
-              throw NotImplemented(
-                s"Futil backend does not support '$x' yet.",
-                op.pos
-              )
-          }
+        val compName =op.op match {
+          case "+" => "add"
+          case "-" => "sub"
+          case "*" => "mult_pipe"
+          case "/" => "div_pipe"
+          case "<" => "lt"
+          case ">" => "gt"
+          case "<=" => "le"
+          case ">=" => "ge"
+          case "!=" => "neq"
+          case "==" => "eq"
+          case "%" => "mod_pipe"
+          case "&&" => "and"
+          case "||" => "or"
+          case "&" => "and"
+          case "|" => "or"
+          case ">>" => "rsh"
+          case "<<" => "lsh"
+          case x =>
+            throw NotImplemented(
+              s"Futil backend does not support '$x' yet.",
+              op.pos
+            )
+        }
         op.op match {
           case "*" =>
             emitMultiCycleBinop(
@@ -289,8 +319,8 @@ private class FutilBackendHelper {
             )
           case "/" =>
             emitMultiCycleBinop(compName, e1, e2, Stdlib.staticTimingMap("div"))
-          //case "%" =>
-            //emitMultiCycleBinop(compName, e1, e2, Stdlib.staticTimingMap("mod"))
+          case "%" =>
+            emitMultiCycleBinop(compName, e1, e2, Stdlib.staticTimingMap("mod"))
           case _ => emitBinop(compName, e1, e2)
         }
       }
@@ -320,10 +350,11 @@ private class FutilBackendHelper {
       // Integers don't need adaptors
       case ECast(EInt(v, _), typ) => {
         val _ = rhsInfo
+        val (typ_b, _) = bitsForType(Some(typ), expr.pos)
         val const =
-          LibDecl(
+        LibDecl(
             genName("const"),
-            Stdlib.constant(bitsForType(Some(typ), expr.pos), v)
+            Stdlib.constant(typ_b, v)
           )
         EmitOutput(
           const.id.port("out"),
@@ -332,9 +363,29 @@ private class FutilBackendHelper {
           Some(0)
         )
       }
+      // Cast ERational to fixed_points 
+      case ECast(ERational(d), typ) =>{
+        val _ = rhsInfo
+        val (width, Some(int_bit)) = bitsForType(Some(typ), expr.pos)
+        val frac_bit = width - int_bit
+        val lst = d.split('.')
+        val v_1 = lst(0).toInt
+        val v_2 = lst(1).toInt
+        val fpconst = 
+        LibDecl(
+             genName("fpconst"),
+             Stdlib.fixed_point( width, int_bit, frac_bit, v_1, v_2) 
+           )
+        EmitOutput(
+           fpconst.id.port("out"),
+           ConstantPort(1, 1),
+           List(fpconst),
+           Some(0)
+         )
+      }
       case ECast(e, t) => {
-        val vBits = bitsForType(e.typ, e.pos)
-        val cBits = bitsForType(Some(t), e.pos)
+        val (vBits, _) = bitsForType(e.typ, e.pos)
+        val (cBits, _) = bitsForType(Some(t), e.pos)
         if (cBits > vBits) {
           throw NotImplemented(
             s"Cast implies zero-padding from $vBits to $cBits bits",
@@ -450,9 +501,34 @@ private class FutilBackendHelper {
       }
       case CLet(_, Some(_: TArray), Some(_)) =>
         throw NotImplemented(s"Futil backend cannot initialize memories", c.pos)
-      case CLet(id, typ, Some(e)) => {
+      // if not clearly specified, Cast the TRational to TFixed  
+      case CLet(id, Some(TFixed(t, i, un)), Some(e)) =>
+      { 
         val reg =
-          LibDecl(genName(s"$id"), Stdlib.register(bitsForType(typ, c.pos)))
+          LibDecl(genName(s"$id"), Stdlib.register(t))
+        val out = emitExpr(ECast(e,TFixed(t, i, un)))(store)
+                val groupName = genName("let")
+        val doneHole = Connect(
+          reg.id.port("done"),
+          HolePort(groupName, "done")
+        )
+        val struct =
+          Connect(out.port, reg.id.port("in")) :: Connect(
+            out.done,
+            reg.id.port("write_en")
+          ) :: doneHole :: out.structure
+        val (group, st) =
+          Group.fromStructure(groupName, struct, out.delay.map(_ + 1))
+        (
+          reg :: group :: st,
+          Enable(group.id),
+          store + (CompVar(s"$id") -> reg.id)
+        )
+      }
+      case CLet(id, typ, Some(e)) => {
+        val (typ_b, _) = bitsForType(typ, c.pos) 
+        val reg =
+          LibDecl(genName(s"$id"), Stdlib.register(typ_b))
         val out = emitExpr(e)(store)
         val groupName = genName("let")
         val doneHole = Connect(
@@ -473,8 +549,9 @@ private class FutilBackendHelper {
         )
       }
       case CLet(id, typ, None) => {
+        val (typ_b, _) = bitsForType(typ, c.pos)
         val reg =
-          LibDecl(genName(s"$id"), Stdlib.register(bitsForType(typ, c.pos)))
+          LibDecl(genName(s"$id"), Stdlib.register(typ_b))
         val struct = List(reg)
         (struct, Empty, store + (CompVar(s"$id") -> reg.id))
       }
