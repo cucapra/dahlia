@@ -336,6 +336,17 @@ object Stdlib {
   ): Futil.CompInst =
     Futil.CompInst(s"fixed_p_std_$op", List(width, int_bit, frac_bit))
 
+  def diff_width_add (
+      width: Int,
+      int_width1: Int, 
+      fract_width1: Int,
+      int_width2: Int,
+      fract_width2: Int,
+      out_width: Int
+  ): Futil.CompInst = 
+    Futil.CompInst("fixed_p_std_add_dbit", List(width, int_width1, fract_width1,
+                      int_width2, fract_width2, out_width))
+
   val staticTimingMap: Map[String, Option[Int]] = Map(
     "sqrt" -> Some(17),
     "mult" -> Some(3),

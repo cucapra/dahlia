@@ -205,24 +205,30 @@ private class FutilBackendHelper {
       }
       // if there is additional information about the integer bit, use fixed point binary operation
       case (e1Bits, Some(int_bit1)) => {
-        val frac_bit = e1Bits - int_bit1
-        val binop = Stdlib.fxd_p_op(s"$compName", e1Bits, int_bit1, frac_bit);
+        val (e2Bits, Some(int_bit2) ) = bitsForType(e2.typ, e2.pos)
+        val frac_bit1 = e1Bits - int_bit1
+        val frac_bit2 = e2Bits - int_bit2
+        val out_bit = int_bit1 + frac_bit2
+        val binop = if (compName =="add" && frac_bit1!=frac_bit2 ) 
+                        Stdlib.diff_width_add(e1Bits, int_bit1, frac_bit1,
+                                                  int_bit2, frac_bit2, out_bit) 
+                    else Stdlib.fxd_p_op(s"$compName", e1Bits, int_bit1, frac_bit1);
         val comp = LibDecl(genName(compName), binop)
         val struct = List(
-          comp,
-          Connect(e1Out.port, comp.id.port("left")),
-          Connect(e2Out.port, comp.id.port("right"))
-        )
+                        comp,
+                        Connect(e1Out.port, comp.id.port("left")),
+                        Connect(e2Out.port, comp.id.port("right"))
+                        )
         EmitOutput(
-          comp.id.port("out"),
-          ConstantPort(1, 1),
-          struct ++ e1Out.structure ++ e2Out.structure,
-          for (d1 <- e1Out.delay; d2 <- e2Out.delay)
-            yield d1 + d2
+            comp.id.port("out"),
+            ConstantPort(1, 1),
+            struct ++ e1Out.structure ++ e2Out.structure,
+            for (d1 <- e1Out.delay; d2 <- e2Out.delay)
+              yield d1 + d2
         )
       }
     }
-  }
+}
 
   def emitMultiCycleBinop(
       compName: String,
