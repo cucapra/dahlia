@@ -54,6 +54,12 @@ private class FutilBackendHelper {
     }
   }
 
+  def signed(typ: Option[Type]) ={
+    typ match {
+      case Some(TSizedInt(_, un)) => if (un==false) true 
+      case _ => false 
+    }
+  }
   /** Store mappings from Dahlia variables to
     * generated Futil variables.
     */
@@ -76,12 +82,12 @@ private class FutilBackendHelper {
 
     val width = typ.typ match {
       case _: TBool => 1
-      case TSizedInt(size, unsigned) => {
-        assert(unsigned, NotImplemented("Arrays of signed integers."))
+      case TSizedInt(size, _) => {
+        //assert(unsigned, NotImplemented("Arrays of signed integers."))
         size
       }
-      case TFixed(size,_, unsigned) => {
-        assert(unsigned, NotImplemented("Arrays of signed fixedpoints."))
+      case TFixed(size,_, _) => {
+        //assert(unsigned, NotImplemented("Arrays of signed fixedpoints."))
         size
       }
       case x => throw NotImplemented(s"Arrays of $x")
@@ -155,8 +161,8 @@ private class FutilBackendHelper {
       val reg = LibDecl(CompVar(s"${d.id}"), Stdlib.register(1))
       List(reg)
     }
-    case TSizedInt(size, unsigned) => {
-      assert(unsigned, NotImplemented("Generating signed integers", d.pos))
+    case TSizedInt(size, _) => {
+      //assert(unsigned, NotImplemented("Generating signed integers", d.pos))
       val reg = LibDecl(CompVar(s"${d.id}"), Stdlib.register(size))
       List(reg)
     }
@@ -188,7 +194,11 @@ private class FutilBackendHelper {
     )
     bitsForType(e1.typ, e1.pos) match  {
       case (e1Bits, None) => {
-        val binop = Stdlib.op(s"$compName", e1Bits);
+        println(e1.typ)
+        //if (e1.typ== Some(bit<_>)) {println("here")}
+        //else{
+        //val binop = Stdlib.op(s"$compName", e1Bits);
+        val binop = if (signed(e1.typ)==true) Stdlib.u_op(s"$compName", e1Bits) else Stdlib.op(s"$compName", e1Bits)
         val comp = LibDecl(genName(compName), binop)
         val struct = List(
           comp,

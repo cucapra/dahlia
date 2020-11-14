@@ -347,6 +347,9 @@ object Stdlib {
     Futil.CompInst("fixed_p_std_add_dbit", List(width, int_width1, fract_width1,
                       int_width2, fract_width2, out_width))
 
+  def u_op(op: String, bitwidth: Int): Futil.CompInst =
+    Futil.CompInst(s"std_u$op", List(bitwidth))
+
   val staticTimingMap: Map[String, Option[Int]] = Map(
     "sqrt" -> Some(17),
     "mult" -> Some(3),
