@@ -316,6 +316,38 @@ object Stdlib {
       List(width, size0, size1, size2, idxSize0, idxSize1, idxSize2)
     )
 
+    def mem_d4(
+        width: Int,
+        size0: Int,
+        size1: Int,
+        size2: Int,
+        size3: Int,
+        idxSize0: Int,
+        idxSize1: Int,
+        idxSize2: Int,
+        idxSize3: Int
+    ): Futil.CompInst =
+      Futil.CompInst(
+        "std_mem_d4",
+        List(width, size0, size1, size2, size3, idxSize0, idxSize1, idxSize2, idxSize3)
+      )
+
+    def mem_d4_ext(
+        width: Int,
+        size0: Int,
+        size1: Int,
+        size2: Int,
+        size3: Int,
+        idxSize0: Int,
+        idxSize1: Int,
+        idxSize2: Int,
+        idxSize3: Int
+    ): Futil.CompInst =
+      Futil.CompInst(
+        "std_mem_d4_ext",
+        List(width, size0, size1, size2, size3, idxSize0, idxSize1, idxSize2, idxSize3)
+      )
+
   def sqrt(): Futil.CompInst =
     Futil.CompInst("std_sqrt", List())
   
