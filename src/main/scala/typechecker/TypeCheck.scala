@@ -87,8 +87,14 @@ object TypeChecker {
             _: TRational
             ) =>
           TBool()
+        case (t1: TFixed, t2: TFixed) if t1 == t2 => TBool()
         case _ =>
-          throw BinopError(op, "float, integer, rational, or double", t1, t2)
+          throw BinopError(
+            op,
+            "float, integer, rational, fixed-point, or double",
+            t1,
+            t2
+          )
       }
     case _: NumOp =>
       joinOf(t1, t2, op).getOrThrow(NoJoin(op.pos, op.toString, t1, t2))
@@ -113,7 +119,9 @@ object TypeChecker {
   )(implicit env: Environment): (Type, Environment) = {
     val (typ, nEnv) = _checkE(e)
     if (e.typ.isDefined && typ != e.typ.get) {
-      throw Impossible(s"$e was type checked multiple times and given different types.")
+      throw Impossible(
+        s"$e was type checked multiple times and given different types."
+      )
     }
     e.typ = Some(typ)
     typ -> nEnv
@@ -287,8 +295,8 @@ object TypeChecker {
   private def checkC(cmd: Command)(implicit env: Environment): Environment =
     cmd match {
       case CBlock(cmd) => env.withScope(checkC(cmd)(_))
-      case CPar(cmds) => cmds.foldLeft(env)({case (env, c) => checkC(c)(env)})
-      case CSeq(cmds) => cmds.foldLeft(env)({case (env, c) => checkC(c)(env)})
+      case CPar(cmds) => cmds.foldLeft(env)({ case (env, c) => checkC(c)(env) })
+      case CSeq(cmds) => cmds.foldLeft(env)({ case (env, c) => checkC(c)(env) })
       case CIf(cond, cons, alt) => {
         val (cTyp, e1) = checkE(cond)(env)
         cTyp.matchOrError(cond.pos, "if condition", "bool") {
