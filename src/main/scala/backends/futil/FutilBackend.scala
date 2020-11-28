@@ -166,8 +166,8 @@ private class FutilBackendHelper {
       val reg = LibDecl(CompVar(s"${d.id}"), Stdlib.register(size))
       List(reg)
     }
-    case TFixed(ltotal, _ , unsigned)=>{
-      assert(unsigned, NotImplemented("Generating signed fixed points", d.pos))
+    case TFixed(ltotal, _ , _)=>{
+      //assert(unsigned, NotImplemented("Generating signed fixed points", d.pos))
       val reg = LibDecl(CompVar(s"${d.id}"), Stdlib.register(ltotal))
       List(reg)
     }  
@@ -194,11 +194,8 @@ private class FutilBackendHelper {
     )
     bitsForType(e1.typ, e1.pos) match  {
       case (e1Bits, None) => {
-        println(e1.typ)
-        //if (e1.typ== Some(bit<_>)) {println("here")}
-        //else{
-        //val binop = Stdlib.op(s"$compName", e1Bits);
-        val binop = if (signed(e1.typ)==true) Stdlib.u_op(s"$compName", e1Bits) else Stdlib.op(s"$compName", e1Bits)
+        val binop = if (signed(e1.typ)==true) Stdlib.s_op(s"$compName", e1Bits) 
+        else Stdlib.op(s"$compName", e1Bits)
         val comp = LibDecl(genName(compName), binop)
         val struct = List(
           comp,
@@ -219,7 +216,10 @@ private class FutilBackendHelper {
         val frac_bit1 = e1Bits - int_bit1
         val frac_bit2 = e2Bits - int_bit2
         val out_bit = int_bit1 + frac_bit2
-        val binop = if (compName =="add" && frac_bit1!=frac_bit2 ) 
+        val binop = if (compName =="add" && frac_bit1!=frac_bit2 &&(signed(e1.typ)==true)) 
+                        Stdlib.sdiff_width_add(e1Bits, int_bit1, frac_bit1, int_bit2, frac_bit2, out_bit)  
+                    else if (signed(e1.typ)==true) Stdlib.s_op(s"$compName", e1Bits) 
+                    else if (compName =="add" && frac_bit1!=frac_bit2 ) 
                         Stdlib.diff_width_add(e1Bits, int_bit1, frac_bit1,
                                                   int_bit2, frac_bit2, out_bit) 
                     else Stdlib.fxd_p_op(s"$compName", e1Bits, int_bit1, frac_bit1);

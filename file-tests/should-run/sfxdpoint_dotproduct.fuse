@@ -1,0 +1,12 @@
+decl a0: fix<16,8>[4];
+decl b0: fix<16,8>[4];
+decl result: fix<16,8>;
+
+let res: fix<16,8> = 0.0;
+for (let i: ubit<4> = 0..4) {
+  let v = a0[i] * b0[i];
+} combine {
+  res += v;
+}
+
+result := res;
