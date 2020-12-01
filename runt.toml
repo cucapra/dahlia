@@ -18,6 +18,11 @@ paths = [ "file-tests/should-lower/*.fuse" ]
 cmd = "./fuse {} --lower -b c++ -l error | tail -n+2"
 
 [[tests]]
+name = "compile futil"
+paths = [ "file-tests/should-futil/*.fuse" ]
+cmd = "./fuse {} --lower -b futil -l error | tail -n+2"
+
+[[tests]]
 name = "fail"
 paths = [ "file-tests/should-fail/*.fuse" ]
 cmd = "./fuse {}"
