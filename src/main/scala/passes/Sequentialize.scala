@@ -12,7 +12,7 @@ object Sequentialize extends PartialTransformer {
   case class SeqEnv(uses: Set[Id], defines: Set[Id])
       extends ScopeManager[SeqEnv] {
     def merge(that: SeqEnv) = {
-      SeqEnv(this.uses union that.uses, this.defines intersect that.defines)
+      SeqEnv(this.uses union that.uses, this.defines union that.defines)
     }
     def add(x: Id) =
       this.copy(uses = this.uses + x)
@@ -80,8 +80,8 @@ object Sequentialize extends PartialTransformer {
           conflicts: ${curDefines.intersect(e1.uses).size == 0 && curUses.intersect(e1.defines).size == 0}
           =====================
           """)*/
-        if (curDefines.intersect(e1.uses).size == 0 &&
-            curUses.intersect(e1.defines).size == 0) {
+        if (curDefines.intersect(e1.uses).isEmpty &&
+            curUses.intersect(e1.defines).isEmpty) {
           newSeq.last += nCmd
         } else {
           curUses = SetM()
