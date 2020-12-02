@@ -350,6 +350,9 @@ object Stdlib {
 
   def sqrt(): Futil.CompInst =
     Futil.CompInst("std_sqrt", List())
+
+  def exp(): Futil.CompInst =
+    Futil.CompInst("std_exp", List())
   
   // Extended AST to support fixed point constant and operations
   def fixed_point(
@@ -382,6 +385,7 @@ object Stdlib {
   val staticTimingMap: Map[String, Option[Int]] = Map(
     "sqrt" -> Some(17),
     "mult" -> Some(3),
+    "exp" -> None,
     "div" -> None,
     "mod" -> None
   )

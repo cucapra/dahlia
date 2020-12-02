@@ -514,6 +514,25 @@ private class FutilBackendHelper {
           Stdlib.staticTimingMap("sqrt")
         )
       }
+      case EApp(Id("exp"), List(exponent_)) => {
+         val exponentOut = emitExpr(exponent_)
+         val exp = LibDecl(genName("exp"), Stdlib.exp())
+         val struct = List(
+           exp,
+           Connect(exponentOut.port, exp.id.port("exponent")),
+           Connect(
+             ConstantPort(1, 1),
+             exp.id.port("go"),
+             Some(Not(Atom(exp.id.port("done"))))
+           )
+        )
+        EmitOutput(
+          exp.id.port("out"),
+          exp.id.port("done"),
+          exponentOut.structure ++ struct,
+          Stdlib.staticTimingMap("exp")
+        )
+      }
       case x =>
         throw NotImplemented(s"Futil backend does not support $x yet.", x.pos)
     }
