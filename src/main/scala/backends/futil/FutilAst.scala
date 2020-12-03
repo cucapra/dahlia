@@ -337,25 +337,27 @@ object Stdlib {
     Futil.CompInst(s"fixed_p_std_$op", List(width, int_bit, frac_bit))
 
   def diff_width_add (
-      width: Int,
+      width1: Int,
+      width2: Int,
       int_width1: Int, 
       fract_width1: Int,
       int_width2: Int,
       fract_width2: Int,
       out_width: Int
   ): Futil.CompInst = 
-    Futil.CompInst("fixed_p_std_add_dbit", List(width, int_width1, fract_width1,
+    Futil.CompInst("fixed_p_std_add_dbit", List(width1, width2, int_width1, fract_width1,
                       int_width2, fract_width2, out_width))
 
     def sdiff_width_add (
-      width: Int,
+      width1: Int,
+      width2: Int,
       int_width1: Int, 
       fract_width1: Int,
       int_width2: Int,
       fract_width2: Int,
       out_width: Int
   ): Futil.CompInst = 
-    Futil.CompInst("sfixed_p_std_add_dbit", List(width, int_width1, fract_width1,
+    Futil.CompInst("sfixed_p_std_add_dbit", List(width1, width2, int_width1, fract_width1,
                       int_width2, fract_width2, out_width))
 
   def s_op(op: String, bitwidth: Int): Futil.CompInst =

@@ -1,5 +1,6 @@
 package fuselang.backend.futil
 
+import scala.math.max
 import scala.util.parsing.input.{Position}
 
 import fuselang.backend.futil.Futil._
@@ -89,11 +90,9 @@ private class FutilBackendHelper {
     val width = typ.typ match {
       case _: TBool => 1
       case TSizedInt(size, _) => {
-        //assert(unsigned, NotImplemented("Arrays of signed integers."))
         size
       }
       case TFixed(size, _, _) => {
-        //assert(unsigned, NotImplemented("Arrays of signed fixedpoints."))
         size
       }
       case x => throw NotImplemented(s"Arrays of $x")
@@ -168,12 +167,10 @@ private class FutilBackendHelper {
       List(reg)
     }
     case TSizedInt(size, _) => {
-      //assert(unsigned, NotImplemented("Generating signed integers", d.pos))
       val reg = LibDecl(CompVar(s"${d.id}"), Stdlib.register(size))
       List(reg)
     }
     case TFixed(ltotal, _, _) => {
-      //assert(unsigned, NotImplemented("Generating signed fixed points", d.pos))
       val reg = LibDecl(CompVar(s"${d.id}"), Stdlib.register(ltotal))
       List(reg)
     }
@@ -190,9 +187,9 @@ private class FutilBackendHelper {
     val e2Out = emitExpr(e2)
     val (e1Bits, e1Int) = bitsForType(e1.typ, e1.pos)
     val (e2Bits, e2Int) = bitsForType(e2.typ, e2.pos)
-    // Throw error on numeric or bitwidht mismatch.
+    // Throw error on numeric or bitwidth mismatch.
     (e1Int, e2Int) match {
-      case (Some(_), Some(_)) => { /* Fixed-points allow this */ }
+      case (Some(_), Some(_)) => { /* Fixed-points allow this */}
       case (None, None) => {
         assertOrThrow(
           e1Bits == e2Bits,
@@ -236,13 +233,14 @@ private class FutilBackendHelper {
         val (e2Bits, Some(intBit2)) = bitsForType(e2.typ, e2.pos)
         val fracBit1 = e1Bits - intBit1
         val fracBit2 = e2Bits - intBit2
-        val outBit = intBit1 + fracBit2
+        val outBit = max(intBit1, intBit2) + max(fracBit1, fracBit2)
         val binop =
           if (fracBit1 != fracBit2) {
             if (signed(e1.typ)) {
               // TODO: This only works for add.
               Stdlib.sdiff_width_add(
                 e1Bits,
+                e2Bits,
                 intBit1,
                 fracBit1,
                 intBit2,
@@ -253,6 +251,7 @@ private class FutilBackendHelper {
               // TODO: This only works for add.
               Stdlib.diff_width_add(
                 e1Bits,
+                e2Bits,
                 intBit1,
                 fracBit1,
                 intBit2,
