@@ -363,6 +363,13 @@ object Stdlib {
   def s_op(op: String, bitwidth: Int): Futil.CompInst =
     Futil.CompInst(s"std_s$op", List(bitwidth))
 
+  def fxd_p_sop(op: String,
+      width: Int,
+      int_bit: Int,
+      frac_bit: Int
+  ): Futil.CompInst =
+    Futil.CompInst(s"fixed_p_std_s$op", List(width, int_bit, frac_bit))
+
   val staticTimingMap: Map[String, Option[Int]] = Map(
     "sqrt" -> Some(17),
     "mult" -> Some(3),

@@ -57,6 +57,8 @@ private class FutilBackendHelper {
     }
   }
 
+  /** Returns true if the given int or fixed point is signed
+    */
   def signed(typ: Option[Type]) = {
     typ match {
       case Some(TSizedInt(_, un)) => un == false
@@ -237,7 +239,7 @@ private class FutilBackendHelper {
         val binop =
           if (fracBit1 != fracBit2) {
             if (signed(e1.typ)) {
-              // TODO: This only works for add.
+              assertOrThrow(compName =="add", NotImplemented("Signed diffwidth computation other than addition"))
               Stdlib.sdiff_width_add(
                 e1Bits,
                 e2Bits,
@@ -248,7 +250,7 @@ private class FutilBackendHelper {
                 outBit
               )
             } else {
-              // TODO: This only works for add.
+              assertOrThrow(compName =="add", NotImplemented("Diffwidth computation other than addition"))
               Stdlib.diff_width_add(
                 e1Bits,
                 e2Bits,
@@ -260,7 +262,7 @@ private class FutilBackendHelper {
               )
             }
           } else if (signed(e1.typ)) {
-            Stdlib.s_op(s"$compName", e1Bits)
+            Stdlib.fxd_p_sop(s"$compName", e1Bits, intBit1, fracBit1);
           } else {
             Stdlib.fxd_p_op(s"$compName", e1Bits, intBit1, fracBit1);
           }
@@ -291,18 +293,38 @@ private class FutilBackendHelper {
   ): EmitOutput = {
     val e1Out = emitExpr(e1)
     val e2Out = emitExpr(e2)
-    val (e1Bits, _) = bitsForType(e1.typ, e1.pos)
-    val (e2Bits, _) = bitsForType(e2.typ, e2.pos)
-    assertOrThrow(
-      e1Bits == e2Bits,
-      Impossible(
-        "The widths of the left and right side of a binop didn't match." +
-          s"\nleft: ${Pretty.emitExpr(e1)(false).pretty}: ${e1Bits}" +
-          s"\nright: ${Pretty.emitExpr(e2)(false).pretty}: ${e2Bits}"
-      )
-    )
+    val (e1Bits, e1Int) = bitsForType(e1.typ, e1.pos)
+    val (e2Bits, e2Int) = bitsForType(e2.typ, e2.pos)
+    (e1Int, e2Int) match {
+      case (Some(intBit1), Some(intBit2)) => { 
+        assertOrThrow(
+          intBit1 == intBit2,
+          NotImplemented(
+            "Multiplication between different int-bitwith fixed points" 
+        )
+        )
+      }
+      case (None, None) => {
+        assertOrThrow(
+          e1Bits == e2Bits,
+          Impossible(
+            "The widths of the left and right side of a binop didn't match." +
+              s"\nleft: ${Pretty.emitExpr(e1)(false).pretty}: ${e1Bits}" +
+              s"\nright: ${Pretty.emitExpr(e2)(false).pretty}: ${e2Bits}"
+          )
+        )
+      }
+      case _ => {
+        throw Impossible(
+          "Cannot perform mixed arithmetic between fixed-point and non-fixed-point numbers" +
+            s"\nleft: ${Pretty.emitExpr(e1)(false).pretty}" +
+            s"\nright: ${Pretty.emitExpr(e2)(false).pretty}"
+        )
+      }
+    }
     val (typ_b, _) = bitsForType(e1.typ, e1.pos)
-    val binop = Stdlib.op(s"$compName", typ_b);
+    val binop = if (signed(e1.typ)) Stdlib.s_op(s"$compName", typ_b) 
+                else Stdlib.op(s"$compName", typ_b);
 
     val comp = LibDecl(genName(compName), binop)
     val struct = List(
