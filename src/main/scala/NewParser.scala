@@ -34,7 +34,7 @@ object Parser {
     import fastparse.NoWhitespace._
     P(CharIn("a-zA-Z_") ~ CharsWhileIn("a-zA-Z0-9_").?).!.map({
       case rest => Id(rest)
-    })
+    }).opaque("Expected valid identifier")
   }
 
   def number[_: P]: P[Int] =
