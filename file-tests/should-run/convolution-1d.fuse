@@ -1,17 +1,6 @@
-import "cassert" {
-  def assert(cond: bool);
-}
-
-def check_arr(a: bit<32>[8], b: bit<32>[8]) = {
-  for (let i = 0..7) {
-    assert(a[i] == b[i]);
-  }
-}
-
 decl arr: bit<32>[8 bank 4];
 decl filter: bit<32>[2 bank 2];
 decl result: bit<32>[8];
-decl gold: bit<32>[8];
 
 for(let j = 0..7) {
   view v_a = arr[j!: +2 bank 2];
@@ -22,5 +11,3 @@ for(let j = 0..7) {
     result[j] += v;
   }
 }
----
-check_arr(result, gold);

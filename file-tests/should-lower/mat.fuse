@@ -1,0 +1,14 @@
+decl A: float[4 bank 2][4 bank 2];
+decl B: float[4 bank 2][4 bank 2];
+decl C: float[4 bank 2][4 bank 2];
+
+for (let i: bit<3> = 0..4) unroll 2 {
+  for (let j: bit<3> = 0..4) unroll 2 {
+    for (let k: bit<3> = 0..4) unroll 2 {
+      let x = A[i][k] * B[k][j];
+    } combine {
+      C[i][j] += x;
+    }
+  }
+}
+

@@ -3,8 +3,6 @@
 /***************************************************/
 void kernel(vector<int> a, vector<int> result, vector<int> filter) {
   
-  
-  
   for(int j = 0; j < 4; j++) {
     for(int i = 0; i < 3; i++) {
       int x = (filter[i] * a[(((i * 2) + ((j >> 1) * 6)) + (j & 1))]);

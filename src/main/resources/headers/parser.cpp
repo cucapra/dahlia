@@ -10,7 +10,7 @@ using std::map;
 using json_t = nlohmann::json;
 
 /**
- * Implementing generic flatten that taks vector<vector<...<T>>..> and produces
+ * Implementing generic flatten that takes vector<vector<...<T>>..> and produces
  * vector<T>. For an overview of the technique, see:
  * https://stackoverflow.com/questions/29995642/create-n-dimensional-vector-with-given-sizes
  */
@@ -31,7 +31,7 @@ namespace flattening {
  * Function to extract a base value type from a Json object.
  */
 template <typename T>
-T get_arg(string field, string type_name, json_t &json) {
+T get_arg(const string& field, const string& type_name, const json_t &json) {
   try {
     return json[field]["data"].get<T>();
   } catch(nlohmann::json::type_error err) {

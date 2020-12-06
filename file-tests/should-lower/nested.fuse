@@ -1,0 +1,16 @@
+decl A: float[8 bank 2];
+decl B: float[8 bank 2][8 bank 2];
+let R: float[8 bank 2];
+let inp: float;
+
+for (let i: bit<4> = 0..8) unroll 2 {
+  for (let j: bit<4> = 0..8) unroll 2 {
+    let tmp = B[i][j];
+    ---
+    if (inp > 0.2) {
+      B[i][j] := tmp + A[i];
+    }
+  } combine {
+    R[i] += tmp
+  }
+}

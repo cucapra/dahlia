@@ -25,7 +25,7 @@ object Info {
 
     def consumeResources(
         resources: Seq[Int]
-    )(implicit pos: Position, trace: List[String]) = {
+    )(implicit pos: Position, trace: Seq[String]) = {
 
       // Make sure banks exist.
       val missingBank = resources.find(!avBanks.containsAtLeast(_, 1))
@@ -67,7 +67,7 @@ object Info {
   }
 
   object ArrayInfo {
-    private def cross[A](acc: List[List[A]], l: List[A]): List[List[A]] =
+    private def cross[A](acc: Seq[Seq[A]], l: Seq[A]): Seq[Seq[A]] =
       for { a <- acc; el <- l } yield a :+ el
 
     private def hyperBankToBank(maxBanks: Iterable[Int])(hyperBank: Seq[Int]) =
@@ -81,7 +81,7 @@ object Info {
       val startResources: MultiSet[Int] = fromSeq(
         banks
           .map(b => List.tabulate(b)(identity))
-          .foldLeft(List(List[Int]()))({
+          .foldLeft(Seq(Seq[Int]()))({
             case (acc, b) => cross(acc, b)
           })
           .map(hyperBankToBank(banks))

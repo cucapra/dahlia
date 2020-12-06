@@ -34,7 +34,7 @@ object Cpp {
     /**
       * Helper to generate a function call that might have a type parameter
       */
-    def cCall(f: String, tParam: Option[Doc], args: List[Doc]): Doc = {
+    def cCall(f: String, tParam: Option[Doc], args: Seq[Doc]): Doc = {
       text(f) <> (if (tParam.isDefined) angles(tParam.get) else emptyDoc) <>
         parens(commaSep(args))
     }
@@ -104,7 +104,7 @@ object Cpp {
       case ERecAccess(rec, field) => rec <> dot <> field
       case ERecLiteral(fs) =>
         scope {
-          commaSep(fs.toList.map({
+          commaSep(fs.toSeq.map({
             case (id, expr) => dot <> id <+> equal <+> expr
           }))
         }
@@ -121,12 +121,13 @@ object Cpp {
     }
 
     implicit def emitCmd(c: Command): Doc = c match {
-      case CPar(c1, c2) => c1 <@> c2
-      case CSeq(c1, c2) => c1 <@> text("//---") <@> c2
+      case CPar(cmds) => vsep(cmds.map(emitCmd))
+      case CSeq(cmds) => vsep(cmds.map(emitCmd), text("//---"))
       case l: CLet => emitLet(l)
       case CIf(cond, cons, alt) => {
         text("if") <+> parens(cond) <+> scope(cons) <> (alt match {
           case CEmpty => emptyDoc
+          case _:CIf => space <> text("else") <+> alt
           case _ => space <> text("else") <+> scope(alt)
         })
       }

@@ -19,13 +19,19 @@ object Pretty {
   }
 
   def emitInclude(incl: Include)(implicit debug: Boolean): Doc = {
-    text("import") <+> text(incl.name) <+> scope(vsep(incl.defs.map(emitDef)))
+    text("import") <+> quote(text(incl.name)) <+> scope(
+      vsep(incl.defs.map(emitDef))
+    )
   }
 
   def emitDef(defi: Definition)(implicit debug: Boolean): Doc = defi match {
     case FuncDef(id, args, ret, bodyOpt) => {
+      val retDoc = ret match {
+        case _:TVoid => emptyDoc
+        case _ => colon <+> emitTyp(ret)
+      }
       text("def") <+> id <> parens(ssep(args.map(emitDecl), comma <> space)) <+>
-        emitTyp(ret) <> bodyOpt.map(emitCmd).getOrElse(semi)
+        retDoc <> bodyOpt.map(emitCmd).getOrElse(semi)
     }
     case RecordDef(name, fields) => {
       text("record") <+> name <+> scope(vsep(fields.map({
@@ -44,7 +50,7 @@ object Pretty {
   implicit def emitId(id: Id)(implicit debug: Boolean): Doc = {
     val idv = value(id.v)
     if (debug)
-      id.typ.map(t => brackets(idv <> colon <+> emitTyp(t))).getOrElse(idv)
+      id.typ.map(t => idv <> text("@") <> emitTyp(t)).getOrElse(idv)
     else idv
   }
 
@@ -61,15 +67,15 @@ object Pretty {
     case EApp(fn, args) => fn <> parens(commaSep(args.map(emitExpr)))
     case EInt(v, base) => value(emitBaseInt(v, base))
     case ERational(d) => value(d)
-    case EBool(b) => value(if (b) 1 else 0)
-    case EVar(id) => value(id)
+    case EBool(b) => value(if (b) "true" else "false")
+    case EVar(id) => emitId(id)
     case EBinop(op, e1, e2) => parens(e1 <+> text(op.toString) <+> e2)
     case acc @ EArrAccess(id, idxs) => {
       val doc = id <> ssep(idxs.map(idx => brackets(emitExpr(idx))), emptyDoc)
       if (debug)
-        brackets(
-          doc <> colon <+> acc.consumable.map(emitConsume).getOrElse(emptyDoc)
-        )
+        acc.consumable
+          .map(ann => brackets(doc <> colon <+> emitConsume(ann)))
+          .getOrElse(doc)
       else doc
     }
     case acc @ EPhysAccess(id, idxs) => {
@@ -77,7 +83,7 @@ object Pretty {
         ssep(
           idxs.map({
             case (bank, idx) =>
-              braces(emitExpr(bank)) <> brackets(emitExpr(idx))
+              braces(text(bank.toString)) <> brackets(emitExpr(idx))
           }),
           emptyDoc
         )
@@ -101,9 +107,12 @@ object Pretty {
   def emitRange(range: CRange)(implicit debug: Boolean): Doc = {
     val CRange(id, t, s, e, u) = range
 
-    val typAnnot = t.map(x => text(":") <+> text(x.toString)).getOrElse(emptyDoc)
+    val typAnnot =
+      t.map(x => text(":") <+> text(x.toString)).getOrElse(emptyDoc)
     parens(
-      text("let") <+> id <> typAnnot <+> equal <+> value(s) <+> text("..") <+> value(e)
+      text("let") <+> id <> typAnnot <+> equal <+> value(s) <+> text("..") <+> value(
+        e
+      )
     ) <>
       (if (u > 1) space <> text("unroll") <+> value(u) else emptyDoc)
   }
@@ -122,28 +131,33 @@ object Pretty {
   }
 
   implicit def emitCmd(c: Command)(implicit debug: Boolean): Doc = c match {
-    case CPar(c1, c2) => c1 <@> c2
-    case CSeq(c1, c2) => c1 <@> text("---") <@> c2
+    case CPar(cmds) => vsep(cmds.map(emitCmd))
+    case CSeq(cmds) => vsep(cmds.map(emitCmd), text("---"))
     case CLet(id, typ, e) =>
       text("let") <+> id <>
-        typ.map(space <> colon <+> emitTyp(_)).getOrElse(emptyDoc) <>
+        typ.map(colon <+> emitTyp(_)).getOrElse(emptyDoc) <>
         e.map(space <> equal <+> emitExpr(_)).getOrElse(emptyDoc) <> semi
     case CIf(cond, cons, alt) => {
       text("if") <+> parens(cond) <+> scope(cons) <> (alt match {
         case CEmpty => emptyDoc
+        case _: CIf => space <> text("else") <+> alt
         case _ => space <> text("else") <+> scope(alt)
       })
     }
     case CFor(r, pipe, par, com) =>
       text("for") <+> emitRange(r) <>
         (if (pipe) space <> text("pipeline") else emptyDoc) <+>
-        scope(emitCmd(par)) <+> text("combine") <+> scope(emitCmd(com))
+        scope(emitCmd(par)) <>
+        (if (com != CEmpty)
+           space <> text("combine") <+> scope(emitCmd(com))
+         else
+           emptyDoc)
     case CWhile(cond, pipe, body) =>
       text("while") <+> parens(cond) <>
         (if (pipe) space <> text("pipeline") else emptyDoc) <+> scope(
         emitCmd(body)
       )
-    case CDecorate(dec) => value(dec)
+    case CDecorate(dec) => text("decor") <+> quote(value(dec))
     case CUpdate(lhs, rhs) => lhs <+> colon <> equal <+> rhs <> semi
     case CReduce(rop, lhs, rhs) => lhs <+> text(rop.toString) <+> rhs <> semi
     case CReturn(e) => text("return") <+> e <> semi

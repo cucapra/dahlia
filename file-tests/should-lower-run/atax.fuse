@@ -1,0 +1,60 @@
+decl A_int: ubit<32>[8][8];
+decl x_int: ubit<32>[8];
+decl y_int: ubit<32>[8];
+decl tmp_int: ubit<32>[8];
+
+let A: ubit<32>[8][8 bank 2];
+let x: ubit<32>[8 bank 2];
+let y: ubit<32>[8 bank 2];
+let tmp: ubit<32>[8 bank 2];
+
+view A_sh = A[_: bank 1][_: bank 1];
+view x_sh = x[_: bank 1];
+view y_sh = y[_: bank 1];
+view tmp_sh = tmp[_: bank 1];
+
+// Move data into local memories
+for (let i: ubit<4> = 0 .. 8) {
+  for (let j: ubit<4> = 0 .. 8) {
+    A_sh[i][j] := A_int[i][j];
+  }
+  x_sh[i] := x_int[i];
+  y_sh[i] := y_int[i];
+  tmp_sh[i] := tmp_int[i];
+}
+
+---
+
+for (let i: ubit<4> = 0..8) {
+  y_sh[i] := (0 as ubit<32>);
+}
+
+---
+
+for (let i: ubit<4> = 0..8) {
+  tmp_sh[i] := (0 as ubit<32>);
+  ---
+  for (let j: ubit<4> = 0..8) unroll 2 {
+    let out = A[i][j] * x[j];
+  } combine {
+    tmp_sh[i] += out;
+  }
+  ---
+  for (let j: ubit<4> = 0..8) unroll 2 {
+    let y0: ubit<32> = y[j];
+    ---
+    y[j] := y0 + A[i][j] * tmp_sh[i];
+  }
+}
+
+---
+
+// Move data into local memories
+for (let i: ubit<4> = 0 .. 8) {
+  for (let j: ubit<4> = 0 .. 8) {
+    A_int[i][j] := A_sh[i][j];
+  }
+  x_int[i] := x_sh[i];
+  y_int[i] := y_sh[i];
+  tmp_int[i] := tmp_sh[i];
+}

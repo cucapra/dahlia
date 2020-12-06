@@ -53,8 +53,8 @@ object Syntax {
       case TSizedInt(l, un) => s"${if (un) "u" else ""}bit<$l>"
       case TStaticInt(s) => s"static($s)"
       case TArray(t, dims, p) =>
-        s"$t{$p}" + dims.foldLeft("")({
-          case (acc, (d, b)) => s"$acc[$d bank $b]"
+        (if (p > 1) s"$t{$p}" else s"$t") + dims.foldLeft("")({
+          case (acc, (d, b)) => s"$acc[$d${if (b > 1) s" bank $b" else ""}]"
         })
       case TIndex(s, d) => s"idx($s, $d)"
       case TFun(args, ret) => s"${args.mkString("->")} -> ${ret}"
@@ -81,13 +81,13 @@ object Syntax {
   case class TFloat() extends Type
   case class TDouble() extends Type
   case class TFixed(ltotal: Int, lint: Int, unsigned: Boolean) extends Type
-  case class TFun(args: List[Type], ret: Type) extends Type
+  case class TFun(args: Seq[Type], ret: Type) extends Type
   case class TRecType(name: Id, fields: Map[Id, Type]) extends Type
   case class TAlias(name: Id) extends Type
 
   // Each dimension has a length and a bank
   type DimSpec = (Int, Int)
-  case class TArray(typ: Type, dims: List[DimSpec], ports: Int) extends Type {
+  case class TArray(typ: Type, dims: Seq[DimSpec], ports: Int) extends Type {
     dims.zipWithIndex.foreach({
       case ((len, bank), dim) =>
         if (bank > len || len % bank != 0) {
@@ -115,7 +115,7 @@ object Syntax {
 
   sealed trait Expr extends Positional with TypeAnnotation {
     def isLVal = this match {
-      case _: EVar | _: EArrAccess => true
+      case _: EVar | _: EArrAccess | _: EPhysAccess => true
       case _ => false
     }
   }
@@ -123,16 +123,16 @@ object Syntax {
   case class ERational(d: String) extends Expr
   case class EBool(v: Boolean) extends Expr
   case class EBinop(op: BOp, e1: Expr, e2: Expr) extends Expr
-  case class EArrAccess(id: Id, idxs: List[Expr])
+  case class EArrAccess(id: Id, idxs: Seq[Expr])
       extends Expr
       with ConsumableAnnotation
-  case class EPhysAccess(id: Id, bankIdxs: List[(Expr, Expr)])
+  case class EPhysAccess(id: Id, bankIdxs: Seq[(Int, Expr)])
       extends Expr
       with ConsumableAnnotation
-  case class EArrLiteral(idxs: List[Expr]) extends Expr
+  case class EArrLiteral(idxs: Seq[Expr]) extends Expr
   case class ERecAccess(rec: Expr, fieldName: Id) extends Expr
   case class ERecLiteral(fields: Map[Id, Expr]) extends Expr
-  case class EApp(func: Id, args: List[Expr]) extends Expr
+  case class EApp(func: Id, args: Seq[Expr]) extends Expr
   case class EVar(id: Id) extends Expr
   case class ECast(e: Expr, castType: Type) extends Expr
 
@@ -168,12 +168,12 @@ object Syntax {
       extends Positional
 
   sealed trait Command extends Positional
-  case class CPar(c1: Command, c2: Command) extends Command
-  case class CSeq(c1: Command, c2: Command) extends Command
+  case class CPar(cmds: Seq[Command]) extends Command
+  case class CSeq(cmds: Seq[Command]) extends Command
   case class CLet(id: Id, var typ: Option[Type], e: Option[Expr])
       extends Command
-  case class CView(id: Id, arrId: Id, dims: List[View]) extends Command
-  case class CSplit(id: Id, arrId: Id, factors: List[Int]) extends Command
+  case class CView(id: Id, arrId: Id, dims: Seq[View]) extends Command
+  case class CSplit(id: Id, arrId: Id, factors: Seq[Int]) extends Command
   case class CIf(cond: Expr, cons: Command, alt: Command) extends Command
   case class CFor(
       range: CRange,
@@ -195,6 +195,58 @@ object Syntax {
   case class CBlock(cmd: Command) extends Command
   case object CEmpty extends Command
 
+  // Smart constructors for composition
+  object CPar {
+    def smart(c1: Command, c2: Command): Command = (c1, c2) match {
+      case (l: CPar, r: CPar) => l.copy(cmds = l.cmds ++ r.cmds)
+      case (l: CPar, r) => l.copy(cmds = l.cmds :+ r)
+      case (l, r: CPar) => r.copy(cmds = l +: r.cmds)
+      case (CEmpty, r) => r
+      case (l, CEmpty) => l
+      case _ => CPar(Seq(c1, c2))
+    }
+
+    def smart(cmds: Seq[Command]): Command = {
+      val flat = cmds.flatMap(cmd => cmd match {
+            case CPar(cs) => cs
+            case CEmpty => Seq()
+            case _ => Seq(cmd)
+      })
+      if (flat.length == 0) {
+        CEmpty
+      } else if (flat.length == 1) {
+        flat(0)
+      } else {
+        CPar(flat)
+      }
+    }
+  }
+  object CSeq {
+    def smart(c1: Command, c2: Command): Command = (c1, c2) match {
+      case (l: CSeq, r: CSeq) => l.copy(cmds = l.cmds ++ r.cmds)
+      case (l: CSeq, r) => l.copy(cmds = l.cmds :+ r)
+      case (l, r: CSeq) => r.copy(cmds = l +: r.cmds)
+      case (CEmpty, r) => r
+      case (l, CEmpty) => l
+      case _ => CSeq(Seq(c1, c2))
+    }
+
+    def smart(cmds: Seq[Command]): Command = {
+      val flat = cmds.flatMap(cmd => cmd match {
+          case CSeq(cs) => cs
+          case CEmpty => Seq()
+          case _ => Seq(cmd)
+      })
+      if (flat.length == 0) {
+        CEmpty
+      } else if (flat.length == 1) {
+        flat(0)
+      } else {
+        CSeq(flat)
+      }
+    }
+  }
+
   sealed trait Definition extends Positional
 
   /**
@@ -203,7 +255,7 @@ object Syntax {
     */
   case class FuncDef(
       id: Id,
-      args: List[Decl],
+      args: Seq[Decl],
       retTy: Type,
       bodyOpt: Option[Command]
   ) extends Definition
@@ -220,14 +272,14 @@ object Syntax {
   /**
     * An include with the name of the module and function definitions.
     */
-  case class Include(name: String, defs: List[FuncDef]) extends Positional
+  case class Include(name: String, defs: Seq[FuncDef]) extends Positional
 
   case class Decl(id: Id, typ: Type) extends Positional
   case class Prog(
-      includes: List[Include],
-      defs: List[Definition],
-      decors: List[CDecorate],
-      decls: List[Decl],
+      includes: Seq[Include],
+      defs: Seq[Definition],
+      decors: Seq[CDecorate],
+      decls: Seq[Decl],
       cmd: Command
   ) extends Positional
 

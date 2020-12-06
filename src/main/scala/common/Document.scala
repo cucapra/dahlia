@@ -115,6 +115,9 @@ object PrettyPrint {
     def hsep(ds: Iterable[Doc]): Doc =
       folddoc(ds, (_ <+> _))
 
+    def vsep(ds: Iterable[Doc], sep: Doc): Doc =
+      folddoc(ds, (_ <@> sep <@> _))
+
     def vsep(ds: Iterable[Doc]): Doc =
       folddoc(ds, (_ <@> _))
 
@@ -122,7 +125,7 @@ object PrettyPrint {
 
     def surround(d: Doc, s: Doc) = enclose(s, d, s)
 
-    def commaSep(docs: List[Doc]) = hsep(docs, comma <> space)
+    def commaSep(docs: Seq[Doc]) = hsep(docs, comma <> space)
 
     def scope(doc: Doc, indent: Int = 2): Doc =
       lbrace <> nest(emptyDoc <@> doc, indent) <@> rbrace

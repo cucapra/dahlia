@@ -33,6 +33,11 @@ object WellFormedChecker {
     }
 
     def myCheckE: PF[(Expr, Env), Env] = {
+      case (expr: EPhysAccess, _) =>
+        throw CompilerError.PassError(
+          "Physical accesses should be removed up the lowering passes.",
+          expr.pos
+        )
       case (expr: ERecLiteral, _) =>
         throw NotInBinder(expr.pos, "Record Literal")
       case (expr: EArrLiteral, _) =>

@@ -1,18 +1,6 @@
-import "cassert" {
-  def assert(cond: bool);
-}
-
-def check_arr(a: bit<32>[4], b: bit<32>[4]) = {
-  for (let i = 0..4) {
-    assert(a[i] == b[i]);
-  }
-}
-
 decl a: bit<32>[12 bank 6];
 decl result: bit<32>[4];
 decl filter: bit<32>[3 bank 3];
-
-decl gold: bit<32>[4];
 
 split v = a[by 3];
 // The pattern represented by sh_v cannot be recreated without split.
@@ -25,5 +13,3 @@ for (let j = 0..4) {
     result[j] += x;
   }
 }
----
-check_arr(gold, result);

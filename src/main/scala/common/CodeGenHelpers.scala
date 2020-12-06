@@ -52,9 +52,16 @@ object CodeGenHelpers {
   def fastMod(l: Expr, r: Expr) = r match {
     case EInt(n, _) if (isPowerOfTwo(n)) => l & EInt(n - 1, 10)
     case e => {
-      scribe.warn(s"Cannot generate fast division for dynamic expression $e")
+      scribe.warn(s"Cannot generate fast modulus for dynamic expression $e")
       l mod r
     }
+  }
+
+  def and(l: Expr, r: Expr) = (l, r) match {
+    case (EBool(true), r) => r
+    case (l, EBool(true)) => l
+    case (_, EBool(false)) | (EBool(false), _) => EBool(false)
+    case _ => EBinop(BoolOp("&&"), l, r)
   }
 
   // Simple peephole optimization to turn: 1 * x => x, 0 + x => x, 0 * x => 0

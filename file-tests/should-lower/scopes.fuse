@@ -1,0 +1,8 @@
+{
+  let C_i_j: ubit<32> = 0;
+}
+{
+  let C_i_j: ubit<32> = 0;
+  ---
+    let x = C_i_j;
+}

@@ -16,8 +16,6 @@ extern "C" {
     #pragma HLS ARRAY_PARTITION variable=m2 cyclic factor=32 dim=1
     float prod[32][32];
     #pragma HLS resource variable=prod core=RAM_1P_BRAM
-    
-    
     {
       for(int i = 0; i < 32; i++) {
         #pragma HLS UNROLL factor=1 skip_exit_check

@@ -1,0 +1,8 @@
+decl ext: float[4];
+decl out: float;
+
+let internal: float[4];
+
+internal[2] := ext[2];
+---
+out := internal[2];

@@ -59,8 +59,8 @@ object LowerForLoops extends PartialTransformer {
       // Rewrite par and combine
       val (npar, _) = rewriteC(par)(nEnv)
       val (ncombine, _) = rewriteC(combine)(nEnv)
-      val body = CSeq(CSeq(npar, ncombine), upd)
-      CBlock(CSeq(init, CWhile(cond, false, body))) -> nEnv
+      val body = CSeq.smart(Seq(npar, ncombine, upd))
+      CBlock(CSeq.smart(Seq(init, CWhile(cond, false, body)))) -> nEnv
     }
   }
 
@@ -78,8 +78,5 @@ object LowerForLoops extends PartialTransformer {
 
   override def rewriteC(cmd: Command)(implicit env: Env) =
     mergeRewriteC(myRewriteC)(cmd, env)
-
-  //override def rewriteE(expr: Expr)(implicit env: Env) =
-  //mergeRewriteE(myRewriteE)(expr, env)
 
 }

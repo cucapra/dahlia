@@ -179,15 +179,19 @@ object Futil {
       case Atom(item) => item.doc
       case And(left, right) => parens(left.doc <+> text("&") <+> right.doc)
       case Or(left, right) => parens(left.doc <+> text("|") <+> right.doc)
+      case Not(inner) => text("!") <> inner.doc
     }
   }
   case class Atom(item: Port) extends GuardExpr
   case class And(left: GuardExpr, right: GuardExpr) extends GuardExpr
   case class Or(left: GuardExpr, right: GuardExpr) extends GuardExpr
+  case class Not(inner: GuardExpr) extends GuardExpr
 
   /***** control *****/
   sealed trait Control extends Emitable {
     def seq(c: Control): Control = (this, c) match {
+      case (Empty, c) => c
+      case (c, Empty) => c
       case (seq0: SeqComp, seq1: SeqComp) => SeqComp(seq0.stmts ++ seq1.stmts)
       case (seq: SeqComp, _) => SeqComp(seq.stmts ++ List(c))
       case (_, seq: SeqComp) => SeqComp(this :: seq.stmts)
@@ -195,6 +199,8 @@ object Futil {
     }
 
     def par(c: Control): Control = (this, c) match {
+      case (Empty, c) => c
+      case (c, Empty) => c
       case (par0: ParComp, par1: ParComp) => ParComp(par0.stmts ++ par1.stmts)
       case (par0: ParComp, par1) => ParComp(par0.stmts ++ List(par1))
       case (par0, par1: ParComp) => ParComp(par0 :: par1.stmts)
@@ -204,13 +210,16 @@ object Futil {
       case SeqComp(stmts) =>
         text("seq") <+> scope(vsep(stmts.map(_.doc)))
       case ParComp(stmts) =>
-        text("seq") <+> scope(vsep(stmts.map(_.doc)))
+        text("par") <+> scope(vsep(stmts.map(_.doc)))
       case If(port, cond, trueBr, falseBr) =>
         text("if") <+> port.doc <+> text("with") <+>
           cond.doc <+>
-          scope(trueBr.doc) <+>
-          text("else") <+>
-          scope(falseBr.doc)
+          scope(trueBr.doc) <> (
+          if (falseBr == Empty)
+            emptyDoc
+          else
+            space <> text("else") <+> scope(falseBr.doc)
+        )
       case While(port, cond, body) =>
         text("while") <+> port.doc <+> text("with") <+>
           cond.doc <+>
@@ -232,6 +241,7 @@ object Futil {
 }
 
 /** Represents all of the primitives in Futil. */
+// extend fixed_point primitive
 object Stdlib {
   def register(bitwidth: Int): Futil.CompInst =
     Futil.CompInst("std_reg", List(bitwidth))
@@ -244,6 +254,9 @@ object Stdlib {
 
   def op(op: String, bitwidth: Int): Futil.CompInst =
     Futil.CompInst(s"std_$op", List(bitwidth))
+
+  def slice(in: Int, out: Int): Futil.CompInst =
+    Futil.CompInst(s"std_slice", List(in, out))
 
   def identity(bitwidth: Int): Futil.CompInst =
     Futil.CompInst(s"std_id", List(bitwidth))
@@ -303,6 +316,73 @@ object Stdlib {
       List(width, size0, size1, size2, idxSize0, idxSize1, idxSize2)
     )
 
+    def mem_d4(
+        width: Int,
+        size0: Int,
+        size1: Int,
+        size2: Int,
+        size3: Int,
+        idxSize0: Int,
+        idxSize1: Int,
+        idxSize2: Int,
+        idxSize3: Int
+    ): Futil.CompInst =
+      Futil.CompInst(
+        "std_mem_d4",
+        List(width, size0, size1, size2, size3, idxSize0, idxSize1, idxSize2, idxSize3)
+      )
+
+    def mem_d4_ext(
+        width: Int,
+        size0: Int,
+        size1: Int,
+        size2: Int,
+        size3: Int,
+        idxSize0: Int,
+        idxSize1: Int,
+        idxSize2: Int,
+        idxSize3: Int
+    ): Futil.CompInst =
+      Futil.CompInst(
+        "std_mem_d4_ext",
+        List(width, size0, size1, size2, size3, idxSize0, idxSize1, idxSize2, idxSize3)
+      )
+
   def sqrt(): Futil.CompInst =
     Futil.CompInst("std_sqrt", List())
+  
+  // Extended AST to support fixed point constant and operations
+  def fixed_point(
+      width: Int,
+      int_bit: Int,
+      frac_bit: Int,
+      value1: Int,
+      value2: Int 
+  ): Futil.CompInst =
+    Futil.CompInst("fixed_p_std_const", List(width, int_bit, frac_bit, value1, value2))
+
+  def fxd_p_op(op: String,
+      width: Int,
+      int_bit: Int,
+      frac_bit: Int
+  ): Futil.CompInst =
+    Futil.CompInst(s"fixed_p_std_$op", List(width, int_bit, frac_bit))
+
+  def diff_width_add (
+      width: Int,
+      int_width1: Int, 
+      fract_width1: Int,
+      int_width2: Int,
+      fract_width2: Int,
+      out_width: Int
+  ): Futil.CompInst = 
+    Futil.CompInst("fixed_p_std_add_dbit", List(width, int_width1, fract_width1,
+                      int_width2, fract_width2, out_width))
+
+  val staticTimingMap: Map[String, Option[Int]] = Map(
+    "sqrt" -> Some(17),
+    "mult" -> Some(3),
+    "div" -> None,
+    "mod" -> None
+  )
 }

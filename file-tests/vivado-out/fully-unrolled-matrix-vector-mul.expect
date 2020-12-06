@@ -18,9 +18,6 @@ extern "C" {
     ap_int<32> R[6];
     #pragma HLS resource variable=R core=RAM_1P_BRAM
     #pragma HLS ARRAY_PARTITION variable=R cyclic factor=3 dim=1
-    
-    
-    
     {
       for(int i = 0; i < 6; i++) {
         #pragma HLS UNROLL factor=1 skip_exit_check

@@ -1,16 +1,12 @@
-import "cassert" {
-  def assert(cond: bool);
-}
-
-decl a: bit<32>[4];
-decl b: bit<32>[4];
-decl gold: bit<32>;
+decl a0: bit<32>[4];
+decl b0: bit<32>[4];
+decl result: bit<32>;
 
 let res: bit<32> = 0;
 for (let i = 0..4) {
-  let v = a[i] * b[i];
+  let v = a0[i] * b0[i];
 } combine {
   res += v;
 }
 
-assert(gold == res);
+result := res;

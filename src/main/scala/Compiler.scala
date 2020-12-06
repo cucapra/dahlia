@@ -7,14 +7,32 @@ import java.nio.file.{Files, Paths, Path, StandardOpenOption}
 import common._
 import Configuration._
 import Syntax._
+import Transformer.{PartialTransformer, TypedPartialTransformer}
 
 object Compiler {
+
+  // Transformers to execute *before* type checking.
+  val preTransformers: List[(String, PartialTransformer)] = List(
+    "Hoist memory reads" -> passes.HoistMemoryReads,
+    "Sequentialize" -> passes.Sequentialize,
+    "Lower unroll and bank" -> passes.LowerUnroll,
+    "Lower for loops" -> passes.LowerForLoops,
+    "Hoist slow binops" -> passes.HoistSlowBinop
+  )
+
+  // Transformers to execute *after* type checking. Boolean indicates if the
+  // pass should only run during lowering.
+  val postTransformers: List[(String, (TypedPartialTransformer, Boolean))] =
+    List(
+      "Rewrite views" -> (passes.RewriteView, false),
+      "Add bitwidth" -> (passes.AddBitWidth, true)
+    )
 
   def showDebug(ast: Prog, pass: String, c: Config): Unit = {
     if (c.passDebug) {
       val top = ("=" * 15) + pass + ("=" * 15)
       println(top)
-      println(Pretty.emitProg(ast)(true).trim)
+      println(Pretty.emitProg(ast)(c.logLevel == scribe.Level.Debug).trim)
       println("=" * top.length)
     }
   }
@@ -25,68 +43,61 @@ object Compiler {
     case Futil => backend.futil.FutilBackend
   }
 
-  var allTime: Map[String, Double] = Map()
-
-  def time[R](name: String, block: => R)(implicit c: Config): R = {
-    if (c.logLevel == scribe.Level.Debug) {
-      val t0 = System.nanoTime()
-      val result = block // call-by-name
-      val t1 = System.nanoTime()
-      val time = (t1 - t0) / 1000000.0
-      allTime += s"$name: " -> time
-      result
-    } else {
-      block
-    }
-  }
-
   def checkStringWithError(prog: String, c: Config = emptyConf) = {
-    implicit val conf = c
-    val ast = time("parse", { FuseParser.parse(prog) })
-    time("well formedness", { passes.WellFormedChecker.check(ast) })
-    time("type checking", {
-      typechecker.TypeChecker.typeCheck(ast); showDebug(ast, "Type Checking", c)
-    })
-    time(
-      "bounds checking", { passes.BoundsChecker.check(ast) }
-    ); // Doesn't modify the AST.
-    time(
-      "loop checking", { passes.LoopChecker.check(ast) }
-    ); // Doesn't modify the AST.
-    time(
-      "dependent loop checking", { passes.DependentLoops.check(ast) }
-    ); // Doesn't modify the AST.
-    time("capability checking", { typechecker.CapabilityChecker.check(ast) });
+    val preAst = FuseParser.parse(prog)
+
+    // Run pre transformers if lowering is enabled
+    val ast = if (c.enableLowering) {
+      preTransformers.foldLeft(preAst)({
+        case (ast, (name, pass)) => {
+          val newAst = pass.rewrite(ast)
+          showDebug(newAst, name, c)
+          if (c.passDebug) {
+            try {
+              // Print and re-parse program with pass debug
+              FuseParser.parse(Pretty.emitProg(newAst)(false))
+            } catch {
+              case _: Errors.ParserError =>
+                throw CompilerError.Impossible(
+                  "Pretty printer generated a program that could not be parsed after code generation.\nUse the --pass-debug flag to see what the generated program looked like."
+                )
+            }
+          } else {
+            newAst
+          }
+        }
+      })
+    } else {
+      preAst
+    }
+    passes.WellFormedChecker.check(ast)
+    typechecker.TypeChecker.typeCheck(ast);
+    showDebug(ast, "Type Checking", c)
+    passes.BoundsChecker.check(ast); // Doesn't modify the AST.
+    passes.LoopChecker.check(ast); // Doesn't modify the AST.
+    passes.DependentLoops.check(ast); // Doesn't modify the AST.
+    typechecker.CapabilityChecker.check(ast);
     showDebug(ast, "Capability Checking", c)
     typechecker.AffineChecker.check(ast); // Doesn't modify the AST
-    time(
-      "affine checking", { typechecker.AffineChecker.check(ast) }
-    ); // Doesn't modify the AST
     ast
   }
 
   def codegen(ast: Prog, c: Config = emptyConf) = {
-    val rast = passes.RewriteView.rewrite(ast);
-    showDebug(rast, "Rewrite Views", c)
-    if (c.logLevel == scribe.Level.Debug) {
-      allTime.toList
-        .sortBy(-_._2)
-        .foreach({
-          case (pass, time) =>
-            System.err.println(f"$pass: ${time}%2.2f" + "ms")
-        })
-    }
-
-    // Perform program lowering if needed.
-    val finalAst: Prog = if (c.enableLowering) {
-      val fast = passes.LowerForLoops.rewrite(rast)
-      showDebug(fast, "LowerForLoops", c)
-      fast
-    } else {
-      rast
-    }
-
-    toBackend(c.backend).emit(finalAst, c)
+    // Filter out transformers not running in this mode
+    val toRun = postTransformers.filter({
+      case (_, (_, onlyLower)) => {
+        !onlyLower || c.enableLowering
+      }
+    })
+    // Run post transformers
+    val transformedAst = toRun.foldLeft(ast)({
+      case (ast, (name, (pass, _))) => {
+        val newAst = pass.rewrite(ast)
+        showDebug(newAst, name, c)
+        newAst
+      }
+    })
+    toBackend(c.backend).emit(transformedAst, c)
   }
 
   // Outputs red text to the console

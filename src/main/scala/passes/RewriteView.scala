@@ -22,9 +22,9 @@ import fuselang.Utils.RichOption
   * [[fuselang.StateHelper.State]].
   */
 object RewriteView extends TypedPartialTransformer {
-  case class ViewEnv(map: Map[Id, List[Expr] => Expr])
+  case class ViewEnv(map: Map[Id, Seq[Expr] => Expr])
       extends ScopeManager[ViewEnv]
-      with Tracker[Id, List[Expr] => Expr, ViewEnv] {
+      with Tracker[Id, Seq[Expr] => Expr, ViewEnv] {
     def merge(that: ViewEnv) = {
       if (this.map.keys != that.map.keys)
         throw Impossible("Tried to merge ViewEnvs with different keys.")
@@ -33,7 +33,7 @@ object RewriteView extends TypedPartialTransformer {
 
     def get(arrId: Id) = this.map.get(arrId)
 
-    def add(arrId: Id, func: List[Expr] => Expr) =
+    def add(arrId: Id, func: Seq[Expr] => Expr) =
       ViewEnv(this.map + (arrId -> func))
   }
 
@@ -63,30 +63,29 @@ object RewriteView extends TypedPartialTransformer {
       val (nIdxs, nEnv) = super.rewriteESeq(idxs)(env)
       val rewrite = nEnv.get(arrId)
       if (rewrite.isDefined) {
-        rewriteE((rewrite.get)(nIdxs.toList))(nEnv)
+        rewriteE((rewrite.get)(nIdxs.toSeq))(nEnv)
       } else {
-        acc.copy(idxs = nIdxs.toList) -> nEnv
+        acc.copy(idxs = nIdxs.toSeq) -> nEnv
       }
     }
     case (acc @ EPhysAccess(arrId, bankIdxs), env) => {
       // Rewrite the indexing expressions
       val (nBankIdxs, nEnv) = super.rewriteSeqWith({
         case ((bank, idx), env) =>
-          val (nBank, env1) = super.rewriteE(bank)(env)
-          val (nIdx, env2) = super.rewriteE(idx)(env1)
-          (nBank, nIdx) -> env2
-      }: ((Expr, Expr), Env) => ((Expr, Expr), Env))(bankIdxs)(env)
+          val (nIdx, env1) = super.rewriteE(idx)(env)
+          (bank, nIdx) -> env1
+      }: ((Int, Expr), Env) => ((Int, Expr), Env))(bankIdxs)(env)
 
       if (nEnv.get(arrId).isDefined) {
         throw NotImplemented("Rewriting physical accesses on views.")
       }
-      acc.copy(bankIdxs = nBankIdxs.toList) -> nEnv
+      acc.copy(bankIdxs = nBankIdxs.toSeq) -> nEnv
     }
   }
 
   def myRewriteC: PF[(Command, Env), (Command, Env)] = {
     case (CView(id, arrId, dims), env) => {
-      val f = (es: List[Expr]) =>
+      val f = (es: Seq[Expr]) =>
         EArrAccess(
           arrId,
           es.zip(dims)
@@ -103,18 +102,18 @@ object RewriteView extends TypedPartialTransformer {
         case TArray(_, dims, _) => dims.map(_._2)
         case t => throw Impossible(s"Array has type $t in $c")
       }
-      val f = (es: List[Expr]) => {
+      val f = (es: Seq[Expr]) => {
         val it = es.iterator
         // For each dimension, if it was split by more than 1, group the next
         // two accessors.
         val groups = factors.map({
-          case factor => List(it.next, it.next) -> factor
+          case factor => Seq(it.next, it.next) -> factor
         })
         val idxs = groups
           .zip(arrBanks)
           .map({
-            case ((List(i), _), _) => i
-            case ((List(i, j), factor), arrBank) =>
+            case ((Seq(i), _), _) => i
+            case ((Seq(i, j), factor), arrBank) =>
               splitAccessExpr(i, j, arrBank, arrBank / factor)
           })
         EArrAccess(arrId, idxs)

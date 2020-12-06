@@ -46,17 +46,17 @@ object Parser {
   // Types
   def typAtom[_: P]: P[Type] = P(
     kw("float").!.map(_ => TFloat()) |
-    kw("double").!.map(_ => TDouble()) |
-    kw("bool").!.map(_ => TBool()) |
-    (kw("bit") ~/ angular(number)).map(s => TSizedInt(s, false)) |
-    (kw("ubit") ~/ angular(number)).map(s => TSizedInt(s, true)) |
-    (kw("fix") ~/ angular(number ~ "," ~ number)).map({
-      case (s1, s2) => TFixed(s1, s2, false)
-    }) |
-    (kw("ufix") ~/ angular(number ~ "," ~ number)).map({
-      case (s1, s2) => TFixed(s1, s2, true)
-    }) |
-    iden.map(TAlias(_))
+      kw("double").!.map(_ => TDouble()) |
+      kw("bool").!.map(_ => TBool()) |
+      (kw("bit") ~/ angular(number)).map(s => TSizedInt(s, false)) |
+      (kw("ubit") ~/ angular(number)).map(s => TSizedInt(s, true)) |
+      (kw("fix") ~/ angular(number ~ "," ~ number)).map({
+        case (s1, s2) => TFixed(s1, s2, false)
+      }) |
+      (kw("ufix") ~/ angular(number ~ "," ~ number)).map({
+        case (s1, s2) => TFixed(s1, s2, true)
+      }) |
+      iden.map(TAlias(_))
   )
   def typIdx[_: P]: P[DimSpec] =
     P(brackets(number ~ (kw("bank") ~ number).?)).map({
@@ -64,14 +64,16 @@ object Parser {
     })
   def typ[_: P]: P[Type] =
     P(typAtom ~ (braces(number).? ~ typIdx.rep(1)).?).map({
-      case (typ, Some((ports, dims))) => TArray(typ, dims.toList, ports.getOrElse(1))
+      case (typ, Some((ports, dims))) =>
+        TArray(typ, dims.toList, ports.getOrElse(1))
       case (typ, None) => typ
     })
 
   // Literals
-  def uInt[_: P]: P[Expr] = P(
-    "0" | "-".? ~ (CharIn("1-9") ~ CharsWhileIn("0-9").?)
-  ).!.map((n: String) => EInt(n.toInt)).opaque("integer")
+  def uInt[_: P]: P[Expr] =
+    P(
+      "0" | "-".? ~ (CharIn("1-9") ~ CharsWhileIn("0-9").?)
+    ).!.map((n: String) => EInt(n.toInt)).opaque("integer")
   def hex[_: P]: P[Expr] =
     P("0x" ~/ CharIn("0-9a-fA-F").rep(1)).!.map((n: String) =>
       EInt(Integer.parseInt(n.substring(2), 16), 16)
@@ -80,10 +82,11 @@ object Parser {
     P("0" ~ CharsWhileIn("0-7")).!.map((n: String) =>
       EInt(Integer.parseInt(n.substring(1), 8), 8)
     ).opaque("ocatal")
-  def rational[_: P]: P[Expr] = P(
-    "-".? ~ ("0" | (CharIn("1-9") ~ CharsWhileIn("0-9").?)) ~
-             "." ~/ CharsWhileIn("0-9")
-  ).!.map(ERational(_)).opaque("rational")
+  def rational[_: P]: P[Expr] =
+    P(
+      "-".? ~ ("0" | (CharIn("1-9") ~ CharsWhileIn("0-9").?)) ~
+        "." ~/ CharsWhileIn("0-9")
+    ).!.map(ERational(_)).opaque("rational")
   def boolean[_: P]: P[Expr] =
     P(StringIn("true", "false")).!.map({
       case "true" => EBool(true)
@@ -93,13 +96,15 @@ object Parser {
   // Compound literals
 
   def recLitField[_: P]: P[(Id, Expr)] =
-    P(iden ~ "=" ~/ expr).map({
-      case (id, e) => (id, e)
-    }).opaque("<iden> = <expr>")
+    P(iden ~ "=" ~/ expr)
+      .map({
+        case (id, e) => (id, e)
+      })
+      .opaque("<iden> = <expr>")
   def arrIn[_: P]: P[Expr] =
-      P(expr.rep(1, sep = ",").map(es => EArrLiteral(es.toList)))
+    P(expr.rep(1, sep = ",").map(es => EArrLiteral(es.toList)))
   def recIn[_: P]: P[Expr] =
-      P(recLitField.rep(1, sep = ";").map(fs => ERecLiteral(fs.toMap)))
+    P(recLitField.rep(1, sep = ";").map(fs => ERecLiteral(fs.toMap)))
   def compoundLiteral[_: P]: P[Expr] =
     P(braces(recIn | arrIn)).opaque("array or record literal")
 
@@ -118,55 +123,60 @@ object Parser {
 
   // Atoms that start with identifiers
   def appOrVar[_: P]: P[Expr] =
-    P(iden ~/ parens(expr.rep(sep=",")).?).map({
+    P(iden ~/ parens(expr.rep(sep = ",")).?).map({
       case (f, Some(args)) => EApp(f, args.toList)
       case (id, None) => EVar(id)
     })
 
   def simpleAtom[_: P]: P[Expr] = P(
     exprCast |
-    compoundLiteral |
-    arrayAccess |
-    rational |
-    hex |
-    octal |
-    uInt |
-    boolean |
-    appOrVar
+      compoundLiteral |
+      arrayAccess |
+      rational |
+      hex |
+      octal |
+      uInt |
+      boolean |
+      appOrVar
   )
 
   // Record access syntax
-  def recAccess[_: P]: P[Expr] = P(
-    (simpleAtom ~ ("." ~ iden).rep).map({
-      case (rec, fields) => fields.foldLeft[Expr](rec)({
-        case (expr, field) => ERecAccess(expr, field)
-      })
+  def recAccess[_: P]: P[Expr] =
+    P((simpleAtom ~ ("." ~ iden).rep).map({
+      case (rec, fields) =>
+        fields.foldLeft[Expr](rec)({
+          case (expr, field) => ERecAccess(expr, field)
+        })
     }))
 
   // Binary operators
   import Syntax.{OpConstructor => OC}
-  def mulOps[_: P]: P[BOp] = P(
-    StringIn("/", "*", "%").!
-  ).map({
-    case "/" => NumOp("/", OC.div)
-    case "*" => NumOp("*", OC.mul)
-    case "%" => NumOp("%", OC.mod)
-  })
-  def addOps[_: P]: P[BOp] = P(
-    StringIn("+", "-").!
-  ).map({
-    case "+" => NumOp("+", OC.add)
-    case "-" => NumOp("-", OC.sub)
-  })
-  def eqOps[_: P]: P[BOp] = P(
-    StringIn("==", "!=", ">=", "<=", ">", "<").!
-  ).map({
-    case op@("==" | "!=") => EqOp(op)
-    case op@(">=" | "<=" | ">" | "<") => CmpOp(op)
-  })
-  def shOps[_: P]: P[BOp] = P(
-    StringIn(">>", "<<").!
-  ).map(op => BitOp(op))
+  def mulOps[_: P]: P[BOp] =
+    P(
+      StringIn("/", "*", "%").!
+    ).map({
+      case "/" => NumOp("/", OC.div)
+      case "*" => NumOp("*", OC.mul)
+      case "%" => NumOp("%", OC.mod)
+    })
+  def addOps[_: P]: P[BOp] =
+    P(
+      StringIn("+", "-").!
+    ).map({
+      case "+" => NumOp("+", OC.add)
+      case "-" => NumOp("-", OC.sub)
+    })
+  def eqOps[_: P]: P[BOp] =
+    P(
+      StringIn("==", "!=", ">=", "<=", ">", "<").!
+    ).map({
+      case op @ ("==" | "!=") => EqOp(op)
+      case op @ (">=" | "<=" | ">" | "<") => CmpOp(op)
+    })
+  def shOps[_: P]: P[BOp] =
+    P(
+      StringIn(">>", "<<").!
+    ).map(op => BitOp(op))
   def bAnd[_: P]: P[BOp] = P("&".!.map(op => BitOp(op)))
   def bOr[_: P]: P[BOp] = P("|".!.map(op => BitOp(op)))
   def bXor[_: P]: P[BOp] = P("^".!.map(op => BitOp(op)))
@@ -174,11 +184,12 @@ object Parser {
   def or[_: P]: P[BOp] = P("||".!.map(op => BoolOp(op)))
 
   // Helper to generate binary op parsers
-  def parseOp[_: P](atom: =>P[Expr], op: =>P[BOp]): P[Expr] = {
+  def parseOp[_: P](atom: => P[Expr], op: => P[BOp]): P[Expr] = {
     (atom ~ (op ~ atom).rep).map({
-      case (left, rights) => rights.foldLeft[Expr](left)({
-        case (left, (op, right)) => EBinop(op, left, right)
-      })
+      case (left, rights) =>
+        rights.foldLeft[Expr](left)({
+          case (left, (op, right)) => EBinop(op, left, right)
+        })
     })
   }
   def binMul[_: P]: P[Expr] = P(parseOp(recAccess, mulOps))
@@ -196,17 +207,20 @@ object Parser {
   // For loops
   def range[_: P]: P[CRange] =
     P(
-      parens(kw("let") ~/ iden ~ (":" ~ typ).? ~ "=" ~/ number ~/ ".." ~/ number)
+      parens(
+        kw("let") ~/ iden ~ (":" ~ typ).? ~ "=" ~/ number ~/ ".." ~/ number
+      )
         ~/ (kw("unroll") ~/ number).?
     ).map({
       case (id, typ, s, e, u) => CRange(id, typ, s, e, u.getOrElse(1))
     })
-  def cfor[_: P]: P[Command] = P(
-    kw("for") ~/ range ~/ (kw("pipeline").!).? ~ block ~ (kw("combine") ~/ block).?
-  ).map({
-    case (range, pl, par, c) =>
-      CFor(range, pl.isDefined, par, c.getOrElse(CEmpty))
-  })
+  def cfor[_: P]: P[Command] =
+    P(
+      kw("for") ~/ range ~/ (kw("pipeline").!).? ~ block ~ (kw("combine") ~/ block).?
+    ).map({
+      case (range, pl, par, c) =>
+        CFor(range, pl.isDefined, par, c.getOrElse(CEmpty))
+    })
 
   // While loops
   def whLoop[_: P]: P[Command] =
@@ -227,20 +241,22 @@ object Parser {
     })
 
   // Update expressions
-  def upd[_: P]: P[Command] = P(
-    expr ~/ (StringIn(":=", "+=", "*=", "-=", "/=").! ~/ expr).?
-  ).map({
-    case (l, Some((":=", r))) => CUpdate(l, r)
-    case (l, Some((op, r))) => CReduce(ROp(op), l, r)
-    case (l, None) => CExpr(l)
-  })
+  def upd[_: P]: P[Command] =
+    P(
+      expr ~/ (StringIn(":=", "+=", "*=", "-=", "/=").! ~/ expr).?
+    ).map({
+      case (l, Some((":=", r))) => CUpdate(l, r)
+      case (l, Some((op, r))) => CReduce(ROp(op), l, r)
+      case (l, None) => CExpr(l)
+    })
 
   // Views
-  def viewSuffix[_: P]: P[Suffix] = P(
-    "_".!.map(_ => Rotation(EInt(0))) |
-    (number ~ "*" ~/ expr).map({ case (fac, e) => Aligned(fac, e) }) |
-    (expr ~ "!").map(e => Rotation(e))
-  ).opaque("<view-suffix>: _ | <number> * <expr> | <expr> !")
+  def viewSuffix[_: P]: P[Suffix] =
+    P(
+      "_".!.map(_ => Rotation(EInt(0))) |
+        (number ~ "*" ~/ expr).map({ case (fac, e) => Aligned(fac, e) }) |
+        (expr ~ "!").map(e => Rotation(e))
+    ).opaque("<view-suffix>: _ | <number> * <expr> | <expr> !")
   def viewParam[_: P]: P[View] =
     P(viewSuffix ~/ ":" ~ ("+" ~ number).? ~ (kw("bank") ~/ number).?).map({
       case (suf, prefixOpt, shrinkOpt) => View(suf, prefixOpt, shrinkOpt)
@@ -250,33 +266,31 @@ object Parser {
       case (id, arrId, params) => CView(id, arrId, params.toList)
     })
   def split[_: P]: P[Command] =
-    P(kw("split") ~/ iden ~ "=" ~ iden ~ brackets(kw("by") ~/ number).rep(1)).map({
-      case (id, arrId, factors) => CSplit(id, arrId, factors.toList)
-    })
+    P(kw("split") ~/ iden ~ "=" ~ iden ~ brackets(kw("by") ~/ number).rep(1))
+      .map({
+        case (id, arrId, factors) => CSplit(id, arrId, factors.toList)
+      })
 
   def simpleCmd[_: P]: P[Command] = P(
     bind |
-    view |
-    split |
-    (kw("return") ~/ expr).map(e => CReturn(e)) |
-    upd
+      view |
+      split |
+      (kw("return") ~/ expr).map(e => CReturn(e)) |
+      upd
   )
 
   // Block commands
   def block[_: P]: P[Command] = P(braces(cmd))
   def blockCmd[_: P]: P[Command] = P(cfor | ifElse | whLoop | block | decor)
 
-  def parCmd[_: P]: P[Command] = P(
-    (blockCmd | (simpleCmd ~/ ";")).rep
-  ).map(cmds => cmds.foldLeft[Command](CEmpty)({
-    case (pre, cmd) => CPar(pre, cmd)
-  }))
+  def parCmd[_: P]: P[Command] =
+    P(
+      (blockCmd | (simpleCmd ~/ ";")).rep
+    ).map(cmds => CPar(cmds))
 
   def cmd[_: P]: P[Command] =
     P(parCmd ~ ("---" ~/ parCmd).rep).map({
-      case (init, rest) => rest.foldLeft[Command](init)({
-        case (acc, r) => CSeq(acc, r)
-      })
+      case (init, rest) => CSeq(init +: rest)
     })
 
   // Functions
@@ -290,17 +304,18 @@ object Parser {
       case None => TVoid()
     })
   def funcSignature[_: P]: P[FuncDef] =
-    P(kw("def") ~/ iden ~ parens(args.rep(sep=",")) ~ retTyp ~ ";").map({
+    P(kw("def") ~/ iden ~ parens(args.rep(sep = ",")) ~ retTyp ~ ";").map({
       case (fn, args, ret) => FuncDef(fn, args.toList, ret, None)
     })
   def funcDef[_: P]: P[FuncDef] =
-    P(kw("def") ~/ iden ~ parens(args.rep(sep=",")) ~ retTyp ~ "=" ~ block).map({
-      case (fn, args, ret, body) => FuncDef(fn, args.toList, ret, Some(body))
-    })
+    P(kw("def") ~/ iden ~ parens(args.rep(sep = ",")) ~ retTyp ~ "=" ~ block)
+      .map({
+        case (fn, args, ret, body) => FuncDef(fn, args.toList, ret, Some(body))
+      })
 
   // Record definitions
   def recordDef[_: P]: P[RecordDef] =
-    P(kw("record") ~/ iden ~ braces(args.rep(sep=";"))).map({
+    P(kw("record") ~/ iden ~ braces(args.rep(sep = ";"))).map({
       case (n, fs) => RecordDef(n, fs.map(d => d.id -> d.typ).toMap)
     })
 
@@ -310,30 +325,34 @@ object Parser {
 
   // include statements
   def include[_: P]: P[Include] =
-    P(kw("import") ~/ stringVal ~ braces(funcSignature.rep)).map({
-      case (name, funcs) => Include(name, funcs.toList)
-    }).opaque("import <string> { <function signatures> }")
+    P(kw("import") ~/ stringVal ~ braces(funcSignature.rep))
+      .map({
+        case (name, funcs) => Include(name, funcs.toList)
+      })
+      .opaque("import <string> { <function signatures> }")
 
   // Top-level decorations
   def decor[_: P]: P[CDecorate] =
     P(kw("decor") ~/ stringVal).map(CDecorate(_)).opaque("decor <string>")
 
-  def prog[_: P]: P[Prog] = P(
-    Start ~
-    include.rep.opaque("include statements") ~/
-    (funcDef | recordDef).rep.opaque("function and record definitions") ~/
-    decor.rep.opaque("top-level decors") ~/
-    decl.rep.opaque("declarations") ~/
-    cmd.?.opaque("<command>") ~
-    End
-  ).map({
+  def prog[_: P]: P[Prog] =
+    P(
+      Start ~
+        include.rep.opaque("include statements") ~/
+        (funcDef | recordDef).rep.opaque("function and record definitions") ~/
+        decor.rep.opaque("top-level decors") ~/
+        decl.rep.opaque("declarations") ~/
+        cmd.?.opaque("<command>") ~
+        End
+    ).map({
       case (incls, fns, decors, decls, cmd) =>
         Prog(
           incls.toList,
           fns.toList,
           decors.toList,
           decls.toList,
-          cmd.getOrElse(CEmpty))
+          cmd.getOrElse(CEmpty)
+        )
     })
 
   def parse(str: String): Prog = {

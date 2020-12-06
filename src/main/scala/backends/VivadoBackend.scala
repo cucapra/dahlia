@@ -17,7 +17,7 @@ private class VivadoBackend(config: Config) extends CppLike {
   def unroll(n: Int): Doc =
     value(s"#pragma HLS UNROLL factor=$n skip_exit_check")
 
-  def interfaceValid(decls: List[Decl]) =
+  def interfaceValid(decls: Seq[Decl]) =
     decls.collect({
       case Decl(id, typ: TArray) => {
         if (typ.ports > 1)
@@ -34,7 +34,7 @@ private class VivadoBackend(config: Config) extends CppLike {
       }
     })
 
-  def bankAndResource(id: Id, ports: Int, banks: List[Int]): Doc = {
+  def bankAndResource(id: Id, ports: Int, banks: Seq[Int]): Doc = {
     val bankPragma = banks.zipWithIndex.map({
       case (1, _) => emptyDoc
       case (bank, dim) =>
@@ -51,10 +51,10 @@ private class VivadoBackend(config: Config) extends CppLike {
     val resPragma = text(
       s"#pragma HLS resource variable=${id} core=${resource}"
     )
-    vsep(resPragma :: bankPragma)
+    vsep(resPragma +: bankPragma)
   }
 
-  def memoryPragmas(decls: List[Decl]): List[Doc] =
+  def memoryPragmas(decls: Seq[Decl]): Seq[Doc] =
     decls
       .collect({
         case Decl(id, typ: TArray) =>
@@ -140,7 +140,7 @@ private class VivadoBackend(config: Config) extends CppLike {
   def emitArrayDecl(ta: TArray, id: Id): Doc =
     emitType(ta.typ) <+> id <> generateDims(ta.dims)
 
-  def generateDims(dims: List[DimSpec]): Doc =
+  def generateDims(dims: Seq[DimSpec]): Doc =
     ssep(dims.map(d => brackets(value(d._1))), emptyDoc)
 
   def emitType(typ: Type): Doc = typ match {
