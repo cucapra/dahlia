@@ -265,7 +265,6 @@ object AffineChecker {
             // This works correctly with capabilities.
             (argExpr.typ.get, argExpr) match {
               case (ta: TArray, EVar(gadget)) => {
-                println("HERE")
                 val consumeList = ta.dims.map(dim => 0.until(dim._2))
                 e.consumeWithGadget(gadget, consumeList)(argExpr.pos)
               }
