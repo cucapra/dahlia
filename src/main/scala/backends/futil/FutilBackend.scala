@@ -154,6 +154,39 @@ private class FutilBackendHelper {
           )
         }
       }
+      case 4 => {
+              val size0 = typ.dims(0)._1
+              val size1 = typ.dims(1)._1
+              val size2 = typ.dims(2)._1
+              val size3 = typ.dims(3)._1
+              val idxSize0 = bitsNeeded(size0)
+              val idxSize1 = bitsNeeded(size1)
+              val idxSize2 = bitsNeeded(size2)
+              val idxSize3 = bitsNeeded(size3)
+              if (external) {
+                LibDecl(
+                  name,
+                  Stdlib
+                    .mem_d4_ext(
+                      width,
+                      size0,
+                      size1,
+                      size2,
+                      size3,
+                      idxSize0,
+                      idxSize1,
+                      idxSize2,
+                      idxSize3
+                    )
+                )
+              } else {
+                LibDecl(
+                  name,
+                  Stdlib
+                    .mem_d4(width, size0, size1, size2, size3, idxSize0, idxSize1, idxSize2, idxSize3)
+                )
+              }
+            }
       case n => throw NotImplemented(s"Arrays of size $n")
     }
     List(mem)
@@ -542,6 +575,25 @@ private class FutilBackendHelper {
           Stdlib.staticTimingMap("sqrt")
         )
       }
+      case EApp(Id("exp"), List(exponent_)) => {
+         val exponentOut = emitExpr(exponent_)
+         val exp = LibDecl(genName("exp"), Stdlib.exp())
+         val struct = List(
+           exp,
+           Connect(exponentOut.port, exp.id.port("exponent")),
+           Connect(
+             ConstantPort(1, 1),
+             exp.id.port("go"),
+             Some(Not(Atom(exp.id.port("done"))))
+           )
+        )
+        EmitOutput(
+          exp.id.port("out"),
+          exp.id.port("done"),
+          exponentOut.structure ++ struct,
+          Stdlib.staticTimingMap("exp")
+        )
+      }
       case x =>
         throw NotImplemented(s"Futil backend does not support $x yet.", x.pos)
     }
@@ -728,7 +780,7 @@ private class FutilBackendHelper {
       "prog",
       List(
         Import("primitives/std.lib"),
-        Component("main", List(), List(), struct.sorted, control)
+        Component(if (c.kernelName == "kernel") "main" else c.kernelName, List(), List(), struct.sorted, control)
       )
     ).emit
   }

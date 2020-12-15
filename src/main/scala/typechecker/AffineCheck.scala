@@ -271,7 +271,7 @@ object AffineChecker {
               case (_: TArray, expr) => {
                 throw Impossible(s"Type of $expr is ${argExpr.typ.get}")
               }
-              case _ => e
+              case _ => checkE(argExpr)(env)
             }
           }
         })
