@@ -191,7 +191,7 @@ private class FutilBackendHelper {
     val (e2Bits, e2Int) = bitsForType(e2.typ, e2.pos)
     // Throw error on numeric or bitwidth mismatch.
     (e1Int, e2Int) match {
-      case (Some(_), Some(_)) => { /* Fixed-points allow this */}
+      case (Some(_), Some(_)) => { /* Fixed-points allow this */ }
       case (None, None) => {
         assertOrThrow(
           e1Bits == e2Bits,
@@ -230,7 +230,8 @@ private class FutilBackendHelper {
             yield d1 + d2
         )
       }
-      // if there is additional information about the integer bit, use fixed point binary operation
+      // if there is additional information about the integer bit,
+      // use fixed point binary operation
       case (e1Bits, Some(intBit1)) => {
         val (e2Bits, Some(intBit2)) = bitsForType(e2.typ, e2.pos)
         val fracBit1 = e1Bits - intBit1
@@ -238,29 +239,24 @@ private class FutilBackendHelper {
         val outBit = max(intBit1, intBit2) + max(fracBit1, fracBit2)
         val binop =
           if (fracBit1 != fracBit2) {
-            if (signed(e1.typ)) {
-              assertOrThrow(compName =="add", NotImplemented("Signed diffwidth computation other than addition"))
-              Stdlib.sdiff_width_add(
-                e1Bits,
-                e2Bits,
-                intBit1,
-                fracBit1,
-                intBit2,
-                fracBit2,
-                outBit
-              )
-            } else {
-              assertOrThrow(compName =="add", NotImplemented("Diffwidth computation other than addition"))
-              Stdlib.diff_width_add(
-                e1Bits,
-                e2Bits,
-                intBit1,
-                fracBit1,
-                intBit2,
-                fracBit2,
-                outBit
-              )
-            }
+            assertOrThrow(
+              compName == "add",
+              NotImplemented("Signed diffwidth computation other than addition")
+            )
+
+            val prim =
+              if (signed(e1.typ)) Stdlib.sdiff_width_add _
+              else Stdlib.diff_width_add _
+
+            prim(
+              e1Bits,
+              e2Bits,
+              intBit1,
+              fracBit1,
+              intBit2,
+              fracBit2,
+              outBit
+            )
           } else if (signed(e1.typ)) {
             Stdlib.fxd_p_sop(s"$compName", e1Bits, intBit1, fracBit1);
           } else {
@@ -296,12 +292,12 @@ private class FutilBackendHelper {
     val (e1Bits, e1Int) = bitsForType(e1.typ, e1.pos)
     val (e2Bits, e2Int) = bitsForType(e2.typ, e2.pos)
     (e1Int, e2Int) match {
-      case (Some(intBit1), Some(intBit2)) => { 
+      case (Some(intBit1), Some(intBit2)) => {
         assertOrThrow(
           intBit1 == intBit2,
           NotImplemented(
-            "Multiplication between different int-bitwith fixed points" 
-        )
+            "Multiplication between different int-bitwith fixed points"
+          )
         )
       }
       case (None, None) => {
@@ -323,8 +319,9 @@ private class FutilBackendHelper {
       }
     }
     val (typ_b, _) = bitsForType(e1.typ, e1.pos)
-    val binop = if (signed(e1.typ)) Stdlib.s_op(s"$compName", typ_b) 
-                else Stdlib.op(s"$compName", typ_b);
+    val binop =
+      if (signed(e1.typ)) Stdlib.s_op(s"$compName", typ_b)
+      else Stdlib.op(s"$compName", typ_b);
 
     val comp = LibDecl(genName(compName), binop)
     val struct = List(
