@@ -1,5 +1,6 @@
 package fuselang.backend.futil
 
+import scala.math.max
 import scala.util.parsing.input.{Position}
 
 import fuselang.backend.futil.Futil._
@@ -39,7 +40,9 @@ private class FutilBackendHelper {
     CompVar(s"$base${idx(base)}")
   }
 
-  /** Extracts the bits needed from an optional type annotation. */
+  /** Extracts the bits needed from an optional type annotation.
+    *  Returns (total size, Option[integral]) bits for the computation.
+    */
   def bitsForType(t: Option[Type], pos: Position): (Int, Option[Int]) = {
     t match {
       case Some(TSizedInt(width, _)) => (width, None)
@@ -51,6 +54,16 @@ private class FutilBackendHelper {
           s"Futil cannot infer bitwidth for type $x. Please manually annotate it using a cast expression.",
           pos
         )
+    }
+  }
+
+  /** Returns true if the given int or fixed point is signed
+    */
+  def signed(typ: Option[Type]) = {
+    typ match {
+      case Some(TSizedInt(_, un)) => un == false
+      case Some(TFixed(_, _, un)) => un == false
+      case _ => false
     }
   }
 
@@ -78,12 +91,10 @@ private class FutilBackendHelper {
 
     val width = typ.typ match {
       case _: TBool => 1
-      case TSizedInt(size, unsigned) => {
-        assert(unsigned, NotImplemented("Arrays of signed integers."))
+      case TSizedInt(size, _) => {
         size
       }
-      case TFixed(size, _, unsigned) => {
-        assert(unsigned, NotImplemented("Arrays of signed fixedpoints."))
+      case TFixed(size, _, _) => {
         size
       }
       case x => throw NotImplemented(s"Arrays of $x")
@@ -190,13 +201,11 @@ private class FutilBackendHelper {
       val reg = LibDecl(CompVar(s"${d.id}"), Stdlib.register(1))
       List(reg)
     }
-    case TSizedInt(size, unsigned) => {
-      assert(unsigned, NotImplemented("Generating signed integers", d.pos))
+    case TSizedInt(size, _) => {
       val reg = LibDecl(CompVar(s"${d.id}"), Stdlib.register(size))
       List(reg)
     }
-    case TFixed(ltotal, _, unsigned) => {
-      assert(unsigned, NotImplemented("Generating signed fixed points", d.pos))
+    case TFixed(ltotal, _, _) => {
       val reg = LibDecl(CompVar(s"${d.id}"), Stdlib.register(ltotal))
       List(reg)
     }
@@ -211,19 +220,35 @@ private class FutilBackendHelper {
   ): EmitOutput = {
     val e1Out = emitExpr(e1)
     val e2Out = emitExpr(e2)
-    val (e1Bits, _) = bitsForType(e1.typ, e1.pos)
-    val (e2Bits, _) = bitsForType(e2.typ, e2.pos)
-    assertOrThrow(
-      e1Bits == e2Bits,
-      Impossible(
-        "The widths of the left and right side of a binop didn't match." +
-          s"\nleft: ${Pretty.emitExpr(e1)(false).pretty}: ${e1Bits}" +
-          s"\nright: ${Pretty.emitExpr(e2)(false).pretty}: ${e2Bits}"
-      )
-    )
+    val (e1Bits, e1Int) = bitsForType(e1.typ, e1.pos)
+    val (e2Bits, e2Int) = bitsForType(e2.typ, e2.pos)
+    // Throw error on numeric or bitwidth mismatch.
+    (e1Int, e2Int) match {
+      case (Some(_), Some(_)) => { /* Fixed-points allow this */ }
+      case (None, None) => {
+        assertOrThrow(
+          e1Bits == e2Bits,
+          Impossible(
+            "The widths of the left and right side of a binop didn't match." +
+              s"\nleft: ${Pretty.emitExpr(e1)(false).pretty}: ${e1Bits}" +
+              s"\nright: ${Pretty.emitExpr(e2)(false).pretty}: ${e2Bits}"
+          )
+        )
+      }
+      case _ => {
+        throw Impossible(
+          "Cannot perform mixed arithmetic between fixed-point and non-fixed-point numbers" +
+            s"\nleft: ${Pretty.emitExpr(e1)(false).pretty}" +
+            s"\nright: ${Pretty.emitExpr(e2)(false).pretty}"
+        )
+      }
+    }
+
     bitsForType(e1.typ, e1.pos) match {
       case (e1Bits, None) => {
-        val binop = Stdlib.op(s"$compName", e1Bits);
+        val binop =
+          if (signed(e1.typ)) Stdlib.s_op(s"$compName", e1Bits)
+          else Stdlib.op(s"$compName", e1Bits)
         val comp = LibDecl(genName(compName), binop)
         val struct = List(
           comp,
@@ -238,23 +263,38 @@ private class FutilBackendHelper {
             yield d1 + d2
         )
       }
-      // if there is additional information about the integer bit, use fixed point binary operation
-      case (e1Bits, Some(int_bit1)) => {
-        val (e2Bits, Some(int_bit2)) = bitsForType(e2.typ, e2.pos)
-        val frac_bit1 = e1Bits - int_bit1
-        val frac_bit2 = e2Bits - int_bit2
-        val out_bit = int_bit1 + frac_bit2
+      // if there is additional information about the integer bit,
+      // use fixed point binary operation
+      case (e1Bits, Some(intBit1)) => {
+        val (e2Bits, Some(intBit2)) = bitsForType(e2.typ, e2.pos)
+        val fracBit1 = e1Bits - intBit1
+        val fracBit2 = e2Bits - intBit2
+        val outBit = max(intBit1, intBit2) + max(fracBit1, fracBit2)
         val binop =
-          if (compName == "add" && frac_bit1 != frac_bit2)
-            Stdlib.diff_width_add(
-              e1Bits,
-              int_bit1,
-              frac_bit1,
-              int_bit2,
-              frac_bit2,
-              out_bit
+          if (fracBit1 != fracBit2) {
+            assertOrThrow(
+              compName == "add",
+              NotImplemented("Signed diffwidth computation other than addition")
             )
-          else Stdlib.fxd_p_op(s"$compName", e1Bits, int_bit1, frac_bit1);
+
+            val prim =
+              if (signed(e1.typ)) Stdlib.sdiff_width_add _
+              else Stdlib.diff_width_add _
+
+            prim(
+              e1Bits,
+              e2Bits,
+              intBit1,
+              fracBit1,
+              intBit2,
+              fracBit2,
+              outBit
+            )
+          } else if (signed(e1.typ)) {
+            Stdlib.fxd_p_sop(s"$compName", e1Bits, intBit1, fracBit1);
+          } else {
+            Stdlib.fxd_p_op(s"$compName", e1Bits, intBit1, fracBit1);
+          }
         val comp = LibDecl(genName(compName), binop)
         val struct = List(
           comp,
@@ -282,18 +322,39 @@ private class FutilBackendHelper {
   ): EmitOutput = {
     val e1Out = emitExpr(e1)
     val e2Out = emitExpr(e2)
-    val (e1Bits, _) = bitsForType(e1.typ, e1.pos)
-    val (e2Bits, _) = bitsForType(e2.typ, e2.pos)
-    assertOrThrow(
-      e1Bits == e2Bits,
-      Impossible(
-        "The widths of the left and right side of a binop didn't match." +
-          s"\nleft: ${Pretty.emitExpr(e1)(false).pretty}: ${e1Bits}" +
-          s"\nright: ${Pretty.emitExpr(e2)(false).pretty}: ${e2Bits}"
-      )
-    )
+    val (e1Bits, e1Int) = bitsForType(e1.typ, e1.pos)
+    val (e2Bits, e2Int) = bitsForType(e2.typ, e2.pos)
+    (e1Int, e2Int) match {
+      case (Some(intBit1), Some(intBit2)) => {
+        assertOrThrow(
+          intBit1 == intBit2,
+          NotImplemented(
+            "Multiplication between different int-bitwith fixed points"
+          )
+        )
+      }
+      case (None, None) => {
+        assertOrThrow(
+          e1Bits == e2Bits,
+          Impossible(
+            "The widths of the left and right side of a binop didn't match." +
+              s"\nleft: ${Pretty.emitExpr(e1)(false).pretty}: ${e1Bits}" +
+              s"\nright: ${Pretty.emitExpr(e2)(false).pretty}: ${e2Bits}"
+          )
+        )
+      }
+      case _ => {
+        throw Impossible(
+          "Cannot perform mixed arithmetic between fixed-point and non-fixed-point numbers" +
+            s"\nleft: ${Pretty.emitExpr(e1)(false).pretty}" +
+            s"\nright: ${Pretty.emitExpr(e2)(false).pretty}"
+        )
+      }
+    }
     val (typ_b, _) = bitsForType(e1.typ, e1.pos)
-    val binop = Stdlib.op(s"$compName", typ_b);
+    val binop =
+      if (signed(e1.typ)) Stdlib.s_op(s"$compName", typ_b)
+      else Stdlib.op(s"$compName", typ_b);
 
     val comp = LibDecl(genName(compName), binop)
     val struct = List(
