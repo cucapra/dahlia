@@ -102,6 +102,10 @@ object Futil {
 
   sealed trait Structure extends Emitable with Ordered[Structure] {
     override def doc(): Doc = this match {
+      case Invoke(id, connects) => {
+         val connections = connects.map((c: InvokeConnect) => c.doc)
+         text("invoke") <+> id.doc <> parens(hsep(connections, comma)) <> text("()")
+      }
       case CompDecl(id, comp) =>
         id.doc <+> equal <+> comp.doc <> semi
       case LibDecl(id, comp) =>
@@ -110,6 +114,8 @@ object Futil {
         dest.doc <+> equal <+> guard.doc <+> text("?") <+> src.doc <> semi
       case Connect(src, dest, None) =>
         dest.doc <+> equal <+> src.doc <> semi
+      case InvokeConnect(src, dest) =>
+        dest.id.doc <+> equal <+> src.doc
       case Group(id, conns, Some(delay)) =>
         text("group") <+> id.doc <>
           angles(text("\"static\"") <> equal <> text(delay.toString())) <+>
@@ -139,6 +145,11 @@ object Futil {
         case (_, CompDecl(_, _)) => 1
         case (Group(_, _, _), _) => -1
         case (_, Group(_, _, _)) => 1
+        /* TODO: What does this even do ? */
+        case (Invoke(_, _), _) => -1
+        case (_, Invoke(_, _)) => 1
+        case (InvokeConnect(_, _), _) => -1
+        case (_, InvokeConnect(_, _)) => 1
       }
     }
   }
@@ -166,7 +177,8 @@ object Futil {
   }
   case class Connect(src: Port, dest: Port, guard: Option[GuardExpr] = None)
       extends Structure
-
+  case class InvokeConnect(src: Port, dest: PortDef) extends Structure
+  case class Invoke(id: CompVar, inputs: List[InvokeConnect]) extends Structure
   case class CompInst(id: String, args: List[Int]) extends Emitable {
     override def doc(): Doc = {
       val strList = args.map((x: Int) => text(x.toString()))
