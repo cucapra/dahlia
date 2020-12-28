@@ -791,7 +791,6 @@ private class FutilBackendHelper {
         case _ => store
       }
     )
-    /* TODO: Map over `p`, for each x, if x is an InvokeDecl, include the respective component body below. */
     val (cmdStruct, control, _) = emitCmd(p.cmd)(store)
     val struct = declStruct ++ cmdStruct
     Namespace(
