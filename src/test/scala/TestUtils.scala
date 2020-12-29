@@ -12,6 +12,6 @@ object TestUtils {
     Syntax.Id(s)
   }
 
-  def parseAst(s: String) = Parser.parse(s)
+  def parseAst(s: String) = Parser(s).parse()
   def typeCheck(s: String) = checkStringWithError(s)
 }
