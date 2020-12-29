@@ -125,7 +125,7 @@ object Compiler {
         val version = getClass.getResourceAsStream("/version.properties")
         val meta = Source
           .fromInputStream(version)
-          .getLines
+          .getLines()
           .filter(l => l.trim != "")
           .mkString(", ")
         val commentPre = toBackend(c.backend).commentPrefix

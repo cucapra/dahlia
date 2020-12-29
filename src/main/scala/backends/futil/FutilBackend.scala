@@ -782,7 +782,7 @@ private class FutilBackendHelper {
         Import("primitives/std.lib"),
         Component(if (c.kernelName == "kernel") "main" else c.kernelName, List(), List(), struct.sorted, control)
       )
-    ).emit
+    ).emit()
   }
 }
 

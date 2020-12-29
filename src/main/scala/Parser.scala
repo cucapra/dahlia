@@ -258,7 +258,10 @@ case class Parser(input: String) {
           CFor(range, pl.isDefined, par, c)
         case (range, pl, CBlock(par), None) =>
           CFor(range, pl.isDefined, par, CEmpty)
-        case _ => throw CompilerError.Impossible("Result of parsing a block command was not CBlock")
+        case _ =>
+          throw CompilerError.Impossible(
+            "Result of parsing a block command was not CBlock"
+          )
       })
     )
 
@@ -267,7 +270,10 @@ case class Parser(input: String) {
     positioned(
       P(kw("while") ~/ parens(expr) ~ kw("pipeline").!.? ~/ block).map({
         case (cond, pl, CBlock(body)) => CWhile(cond, pl.isDefined, body)
-        case _ => throw CompilerError.Impossible("Result of parsing a block command was not CBlock")
+        case _ =>
+          throw CompilerError.Impossible(
+            "Result of parsing a block command was not CBlock"
+          )
       })
     )
 
@@ -279,7 +285,10 @@ case class Parser(input: String) {
           CIf(cond, cons, alt)
         case (cond, CBlock(cons), None) =>
           CIf(cond, cons, CEmpty)
-        case _ => throw CompilerError.Impossible("Result of parsing a block command was not CBlock")
+        case _ =>
+          throw CompilerError.Impossible(
+            "Result of parsing a block command was not CBlock"
+          )
       })
     )
 
@@ -383,7 +392,10 @@ case class Parser(input: String) {
         .map({
           case (fn, args, ret, CBlock(body)) =>
             FuncDef(fn, args.toList, ret, Some(body))
-        case _ => throw CompilerError.Impossible("Result of parsing a block command was not CBlock")
+          case _ =>
+            throw CompilerError.Impossible(
+              "Result of parsing a block command was not CBlock"
+            )
         })
     )
 
@@ -437,12 +449,16 @@ case class Parser(input: String) {
   def parse(): Prog = {
     fastparse.parse[Prog](input, prog(_)) match {
       case Parsed.Success(e, _) => e
-      case Parsed.Failure(_, index, extra) =>
+      case Parsed.Failure(_, index, extra) => {
         val traced = extra.trace()
         val loc = OffsetPosition(input, index)
         val msg = Errors.withPos(s"Expected ${traced.failure.label}", loc)
 
         throw Errors.ParserError(msg)
+      }
+      // XXX(rachit): Scala 2.13.4 complains that this pattern is not exhaustive.
+      // This is not true...
+      case _ => ???
     }
   }
 }

@@ -23,7 +23,7 @@ object Main {
 
   val parser = new scopt.OptionParser[Config]("fuse") {
 
-    head("fuse", "0.0.1")
+    head("dahlia", "0.0.1")
 
     arg[File]("<srcfile>")
       .required()

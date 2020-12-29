@@ -1,13 +1,13 @@
 name := "Fuse"
 version := "0.0.2"
 
-scalaVersion := "2.13.2"
+scalaVersion := "2.13.4"
 
 libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.0.8" % "test",
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2",
   "com.lihaoyi" %% "fastparse" % "2.2.2",
-  "com.github.scopt" %% "scopt" % "3.7.1",
+  "com.github.scopt" %% "scopt" % "4.0.0",
   "com.outr" %% "scribe" % "2.7.9",
   "com.lihaoyi" %% "sourcecode" % "0.1.7"
 )
@@ -20,6 +20,9 @@ scalacOptions ++= Seq(
   "-Ywarn-value-discard",
   "-Xfatal-warnings"
 )
+
+// Reload changes to this file.
+Global / onChangedBuildSource := ReloadOnSourceChanges
 
 // Disable options in sbt console.
 scalacOptions in (Compile, console) ~=

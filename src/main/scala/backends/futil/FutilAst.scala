@@ -13,13 +13,13 @@ object Futil {
         case _ => false
       }
     )
-    text("cells") <+> scope(vsep(cells.map(_.doc))) <@>
-      text("wires") <+> scope(vsep(connections.map(_.doc)))
+    text("cells") <+> scope(vsep(cells.map(_.doc()))) <@>
+      text("wires") <+> scope(vsep(connections.map(_.doc())))
   }
 
   sealed trait Emitable {
     def doc(): Doc
-    def emit(): String = this.doc.pretty
+    def emit(): String = this.doc().pretty
   }
 
   case class CompVar(name: String) extends Emitable with Ordered[CompVar] {
@@ -31,14 +31,14 @@ object Futil {
     }
   }
   case class PortDef(id: CompVar, width: Int) extends Emitable {
-    override def doc(): Doc = parens(text("port") <+> id.doc <+> value(width))
+    override def doc(): Doc = parens(text("port") <+> id.doc() <+> value(width))
   }
 
   /**** definition statements *****/
   case class Namespace(name: String, comps: List[NamespaceStatement])
       extends Emitable {
     override def doc(): Doc =
-      vsep(comps.map(_.doc))
+      vsep(comps.map(_.doc()))
   }
 
   /** The statements that can appear in a `define/namespace` construct. */
@@ -48,12 +48,12 @@ object Futil {
       case Component(name, inputs, outputs, structure, control) => {
         text("component") <+>
           text(name) <>
-          parens(hsep(inputs.map(_.doc))) <+>
+          parens(hsep(inputs.map(_.doc()))) <+>
           text("->") <+>
-          parens(hsep(outputs.map(_.doc))) <+>
+          parens(hsep(outputs.map(_.doc()))) <+>
           scope(
             emitCompStructure(structure) <@>
-              text("control") <+> scope(control.doc)
+              text("control") <+> scope(control.doc())
           )
       }
     }
@@ -72,10 +72,10 @@ object Futil {
   sealed trait Port extends Emitable with Ordered[Port] {
     override def doc(): Doc = this match {
       case CompPort(id, name) =>
-        id.doc <> dot <> text(name)
-      case ThisPort(id) => id.doc
+        id.doc() <> dot <> text(name)
+      case ThisPort(id) => id.doc()
       case HolePort(id, name) =>
-        id.doc <> brackets(text(name))
+        id.doc() <> brackets(text(name))
       case ConstantPort(width, value) =>
         text(width.toString) <> text("'d") <> text(value.toString)
     }
@@ -103,20 +103,20 @@ object Futil {
   sealed trait Structure extends Emitable with Ordered[Structure] {
     override def doc(): Doc = this match {
       case CompDecl(id, comp) =>
-        id.doc <+> equal <+> comp.doc <> semi
+        id.doc() <+> equal <+> comp.doc() <> semi
       case LibDecl(id, comp) =>
-        id.doc <+> equal <+> text("prim") <+> comp.doc <> semi
+        id.doc() <+> equal <+> text("prim") <+> comp.doc() <> semi
       case Connect(src, dest, Some(guard)) =>
-        dest.doc <+> equal <+> guard.doc <+> text("?") <+> src.doc <> semi
+        dest.doc() <+> equal <+> guard.doc() <+> text("?") <+> src.doc() <> semi
       case Connect(src, dest, None) =>
-        dest.doc <+> equal <+> src.doc <> semi
+        dest.doc() <+> equal <+> src.doc() <> semi
       case Group(id, conns, Some(delay)) =>
-        text("group") <+> id.doc <>
+        text("group") <+> id.doc() <>
           angles(text("\"static\"") <> equal <> text(delay.toString())) <+>
-          scope(vsep(conns.map(_.doc)))
+          scope(vsep(conns.map(_.doc())))
       case Group(id, conns, None) =>
-        text("group") <+> id.doc <+>
-          scope(vsep(conns.map(_.doc)))
+        text("group") <+> id.doc() <+>
+          scope(vsep(conns.map(_.doc())))
     }
 
     def compare(that: Structure): Int = {
@@ -176,10 +176,10 @@ object Futil {
 
   sealed trait GuardExpr extends Emitable {
     override def doc(): Doc = this match {
-      case Atom(item) => item.doc
-      case And(left, right) => parens(left.doc <+> text("&") <+> right.doc)
-      case Or(left, right) => parens(left.doc <+> text("|") <+> right.doc)
-      case Not(inner) => text("!") <> inner.doc
+      case Atom(item) => item.doc()
+      case And(left, right) => parens(left.doc() <+> text("&") <+> right.doc())
+      case Or(left, right) => parens(left.doc() <+> text("|") <+> right.doc())
+      case Not(inner) => text("!") <> inner.doc()
     }
   }
   case class Atom(item: Port) extends GuardExpr
@@ -208,25 +208,25 @@ object Futil {
     }
     override def doc(): Doc = this match {
       case SeqComp(stmts) =>
-        text("seq") <+> scope(vsep(stmts.map(_.doc)))
+        text("seq") <+> scope(vsep(stmts.map(_.doc())))
       case ParComp(stmts) =>
-        text("par") <+> scope(vsep(stmts.map(_.doc)))
+        text("par") <+> scope(vsep(stmts.map(_.doc())))
       case If(port, cond, trueBr, falseBr) =>
-        text("if") <+> port.doc <+> text("with") <+>
-          cond.doc <+>
-          scope(trueBr.doc) <> (
+        text("if") <+> port.doc() <+> text("with") <+>
+          cond.doc() <+>
+          scope(trueBr.doc()) <> (
           if (falseBr == Empty)
             emptyDoc
           else
-            space <> text("else") <+> scope(falseBr.doc)
+            space <> text("else") <+> scope(falseBr.doc())
         )
       case While(port, cond, body) =>
-        text("while") <+> port.doc <+> text("with") <+>
-          cond.doc <+>
-          scope(body.doc)
+        text("while") <+> port.doc() <+> text("with") <+>
+          cond.doc() <+>
+          scope(body.doc())
       case Print(_) =>
         throw Impossible("Futil does not support print")
-      case Enable(id) => id.doc <> semi
+      case Enable(id) => id.doc() <> semi
       case Empty => text("empty")
     }
   }
@@ -353,14 +353,14 @@ object Stdlib {
 
   def exp(): Futil.CompInst =
     Futil.CompInst("std_exp", List())
-  
+
   // Extended AST to support fixed point constant and operations
   def fixed_point(
       width: Int,
       int_bit: Int,
       frac_bit: Int,
       value1: Int,
-      value2: Int 
+      value2: Int
   ): Futil.CompInst =
     Futil.CompInst("fixed_p_std_const", List(width, int_bit, frac_bit, value1, value2))
 
@@ -374,24 +374,24 @@ object Stdlib {
   def diff_width_add (
       width1: Int,
       width2: Int,
-      int_width1: Int, 
+      int_width1: Int,
       fract_width1: Int,
       int_width2: Int,
       fract_width2: Int,
       out_width: Int
-  ): Futil.CompInst = 
+  ): Futil.CompInst =
     Futil.CompInst("fixed_p_std_add_dbit", List(width1, width2, int_width1, fract_width1,
                       int_width2, fract_width2, out_width))
 
     def sdiff_width_add (
       width1: Int,
       width2: Int,
-      int_width1: Int, 
+      int_width1: Int,
       fract_width1: Int,
       int_width2: Int,
       fract_width2: Int,
       out_width: Int
-  ): Futil.CompInst = 
+  ): Futil.CompInst =
     Futil.CompInst("sfixed_p_std_add_dbit", List(width1, width2, int_width1, fract_width1,
                       int_width2, fract_width2, out_width))
 

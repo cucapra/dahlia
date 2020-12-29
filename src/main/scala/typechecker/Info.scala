@@ -35,7 +35,7 @@ object Info {
         conLocs ++ resources.foldLeft(conLocs) {
           case (newConLocs, res) =>
             newConLocs + (res -> newConLocs
-              .getOrElse(res, emptyMultiSet[Position])
+              .getOrElse(res, emptyMultiSet[Position]())
               .add(pos))
         }
 
