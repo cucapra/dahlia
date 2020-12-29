@@ -158,6 +158,16 @@ class TypeCheckerSpec extends FunSpec {
         }
         """)
     }
+    it("variables not available outside block scope") {
+      assertThrows[Unbound] {
+        typeCheck("""
+          {
+            let x = 10;
+          }
+          x;
+          """)
+      }
+    }
   }
 
   describe("Binary operations") {

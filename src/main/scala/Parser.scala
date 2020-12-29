@@ -254,8 +254,11 @@ case class Parser(input: String) {
       P(
         kw("for") ~/ range ~/ (kw("pipeline").!).? ~ block ~ (kw("combine") ~/ block).?
       ).map({
-        case (range, pl, par, c) =>
-          CFor(range, pl.isDefined, par, c.getOrElse(CEmpty))
+        case (range, pl, CBlock(par), Some(CBlock(c))) =>
+          CFor(range, pl.isDefined, par, c)
+        case (range, pl, CBlock(par), None) =>
+          CFor(range, pl.isDefined, par, CEmpty)
+        case _ => throw CompilerError.Impossible("Result of parsing a block command was not CBlock")
       })
     )
 
@@ -263,7 +266,8 @@ case class Parser(input: String) {
   def whLoop[_: P]: P[Command] =
     positioned(
       P(kw("while") ~/ parens(expr) ~ kw("pipeline").!.? ~/ block).map({
-        case (cond, pl, body) => CWhile(cond, pl.isDefined, body)
+        case (cond, pl, CBlock(body)) => CWhile(cond, pl.isDefined, body)
+        case _ => throw CompilerError.Impossible("Result of parsing a block command was not CBlock")
       })
     )
 
@@ -271,7 +275,11 @@ case class Parser(input: String) {
   def ifElse[_: P]: P[Command] =
     positioned(
       P(kw("if") ~/ parens(expr) ~ block ~ (kw("else") ~/ block).?).map({
-        case (cond, cons, alt) => CIf(cond, cons, alt.getOrElse(CEmpty))
+        case (cond, CBlock(cons), Some(CBlock(alt))) =>
+          CIf(cond, cons, alt)
+        case (cond, CBlock(cons), None) =>
+          CIf(cond, cons, CEmpty)
+        case _ => throw CompilerError.Impossible("Result of parsing a block command was not CBlock")
       })
     )
 
@@ -336,19 +344,19 @@ case class Parser(input: String) {
   )
 
   // Block commands
-  def block[_: P]: P[Command] = P(braces(cmd))
+  def block[_: P]: P[Command] = positioned(P(braces(cmd)).map(c => CBlock(c)))
   def blockCmd[_: P]: P[Command] = P(cfor | ifElse | whLoop | block | decor)
 
   def parCmd[_: P]: P[Command] =
     positioned(
       P(
         (blockCmd | (simpleCmd ~/ ";")).rep
-      ).map(cmds => CPar(cmds))
+      ).map(cmds => CPar.smart(cmds))
     )
 
   def cmd[_: P]: P[Command] =
     positioned(P(parCmd ~ ("---" ~/ parCmd).rep).map({
-      case (init, rest) => CSeq(init +: rest)
+      case (init, rest) => CSeq.smart(init +: rest)
     }))
 
   // Functions
@@ -373,8 +381,9 @@ case class Parser(input: String) {
     positioned(
       P(kw("def") ~/ iden ~ parens(args.rep(sep = ",")) ~ retTyp ~ "=" ~ block)
         .map({
-          case (fn, args, ret, body) =>
+          case (fn, args, ret, CBlock(body)) =>
             FuncDef(fn, args.toList, ret, Some(body))
+        case _ => throw CompilerError.Impossible("Result of parsing a block command was not CBlock")
         })
     )
 
@@ -407,8 +416,7 @@ case class Parser(input: String) {
   def prog[_: P]: P[Prog] =
     positioned(
       P(
-        Start ~
-          include.rep.opaque("include statements") ~/
+        include.rep.opaque("include statements") ~/
           (funcDef | recordDef).rep ~/
           decor.rep.opaque("top-level decors") ~/
           decl.rep.opaque("declarations") ~/
