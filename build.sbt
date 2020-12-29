@@ -6,6 +6,7 @@ scalaVersion := "2.13.2"
 libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.0.8" % "test",
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2",
+  "com.lihaoyi" %% "fastparse" % "2.2.2",
   "com.github.scopt" %% "scopt" % "3.7.1",
   "com.outr" %% "scribe" % "2.7.9",
   "com.lihaoyi" %% "sourcecode" % "0.1.7"

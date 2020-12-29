@@ -1,305 +1,448 @@
 package fuselang
 
-import scala.util.parsing.combinator._
+import scala.util.parsing.input.{Positional, OffsetPosition}
+
+import fastparse._
+import fastparse.JavaWhitespace._
 
 import fuselang.common._
 import Syntax._
 
-private class FuseParser extends RegexParsers with PackratParsers {
-  type P[T] = PackratParser[T]
+case class Parser(input: String) {
 
-  override protected val whiteSpace =
-    """(\s|\/\/.*|(/\*((\*[^/])|[^*])*\*/))+""".r
+  // Common surround expressions
+  def braces[_: P, T](p: => P[T]): P[T] = P("{" ~/ p ~ "}")
+  def brackets[_: P, T](p: => P[T]): P[T] = P("[" ~ p ~ "]")
+  def angular[_: P, T](p: => P[T]): P[T] = P("<" ~/ p ~ ">")
+  def parens[_: P, T](p: => P[T]): P[T] = P("(" ~/ p ~ ")")
 
-  // General parser combinators
-  def braces[T](parser: P[T]): P[T] = "{" ~> parser <~ "}"
-  def brackets[T](parser: P[T]): P[T] = "[" ~> parser <~ "]"
-  def parens[T](parser: P[T]): P[T] = "(" ~> parser <~ ")"
-  def angular[T](parser: P[T]): P[T] = "<" ~> parser <~ ">"
-
-  // General syntax components
-  lazy val iden: P[Id] = positioned {
-    "" ~> "[a-zA-Z_][a-zA-Z0-9_]*".r ^^ { v => Id(v) }
-  }
-  lazy val number = "[0-9]+".r ^^ { n =>
-    n.toInt
-  } | err("Expected positive number")
-
-  lazy val stringVal: P[String] =
-    "\"" ~> "[^\"]*".r <~ "\""
-
-  // Atoms
-  lazy val uInt: P[Expr] = "(-)?[0-9]+".r ^^ { n => EInt(n.toInt) }
-  lazy val hex = "0x[0-9a-fA-F]+".r ^^ { n =>
-    Integer.parseInt(n.substring(2), 16)
-  }
-  lazy val octal = "0[0-7]+".r ^^ { n => Integer.parseInt(n.substring(1), 8) }
-  lazy val rational = "(-)?[0-9]+\\.[0-9]+".r ^^ { r => ERational(r) }
-  lazy val boolean = "true" ^^ { _ =>
-    true
-  } | "false" ^^ { _ => false }
-
-  lazy val arrLiteral: P[Expr] = positioned {
-    braces(repsep(expr, ",")) ^^ { case es => EArrLiteral(es) }
-  }
-  lazy val eaa: P[Expr] = positioned {
-    iden ~ rep1(brackets(expr)) ^^ { case id ~ idxs => EArrAccess(id, idxs) }
+  def positioned[_: P, T <: Positional](p: => P[T]): P[T] = {
+    P(Index ~ p).map({
+      case (index, t) => t.setPos(OffsetPosition(input, index))
+    })
   }
 
-  lazy val recLiteralField: P[(Id, Expr)] = iden ~ ("=" ~> expr) ^^ {
-    case i ~ e => (i, e)
-  }
-  lazy val recLiteral: P[Expr] = positioned {
-    braces(repsep(recLiteralField, ";")) ^^ { case fs => ERecLiteral(fs.toMap) }
+  /*def notKws[_: P] = {
+    import fastparse.NoWhitespace._
+    P(!(StringIn(
+      "float", "double", "bool", "bit", "ubit", "fix", "ufix", "let", "for",
+      "bank", "unroll", "decl", "true", "false", "as", "pipeline", "combine",
+      "if", "else", "import", "decor", "def", "record", "split", "view",
+      "return", "while"
+    ) ~ &(" "))).opaque("non reserved keywords")
+  }*/
+
+  def kw[_: P](word: String): P[Unit] = {
+    import fastparse.NoWhitespace._
+    P(word ~ !CharsWhileIn("a-zA-Z0-9_"))
   }
 
-  lazy val exprCast: P[Expr] = parens(expr ~ "as" ~ atyp) ^^ {
-    case e ~ _ ~ t => ECast(e, t)
+  // Basic atoms
+  def iden[_: P]: P[Id] = {
+    import fastparse.NoWhitespace._
+    positioned(P(CharIn("a-zA-Z_") ~ CharsWhileIn("a-zA-Z0-9_").?).!.map({
+      case rest => Id(rest)
+    }).opaque("Expected valid identifier"))
   }
 
-  lazy val simpleAtom: P[Expr] = positioned {
-    arrLiteral |
-      eaa |
-      recLiteral |
-      rational |
-      hex ^^ { case h => EInt(h, 16) } |
-      octal ^^ { case o => EInt(o, 8) } |
-      uInt |
-      boolean ^^ { case b => EBool(b) } |
-      iden ~ parens(repsep(expr, ",")) ^^ { case f ~ args => EApp(f, args) } |
-      iden ^^ { case id => EVar(id) } |
-      exprCast |
-      parens(expr)
-  }
+  def number[_: P]: P[Int] =
+    P(CharIn("0-9").rep(1).!.map(_.toInt)).opaque("Expected positive number")
 
-  lazy val recAccess: P[Expr] = positioned {
-    recAccess ~ "." ~ iden ^^ { case rec ~ _ ~ f => ERecAccess(rec, f) } |
-      simpleAtom
-  }
-
-  // Binops. Need to parse them seperately from EBinop to get positions.
-  import Syntax.{OpConstructor => OC}
-  lazy val mulOps: P[BOp] = positioned {
-    "/" ^^ { _ =>
-      NumOp("/", OC.div)
-    } |
-      "*" ^^ { _ => NumOp("*", OC.mul) } |
-      "%" ^^ { _ => NumOp("%", OC.mod) }
-  }
-  lazy val addOps: P[BOp] = positioned {
-    "+" ^^ { _ =>
-      NumOp("+", OC.add)
-    } |
-      "-" ^^ { _ => NumOp("-", OC.sub) }
-  }
-  lazy val eqOps: P[BOp] = positioned {
-    ("==" | "!=") ^^ { op =>
-      EqOp(op)
-    } |
-      (">=" | "<=" | ">" | "<") ^^ { op => CmpOp(op) }
-  }
-  lazy val shOps: P[BOp] = positioned {
-    (">>" | "<<") ^^ { op => BitOp(op) }
-  }
-  lazy val bAnd: P[BOp] = positioned("&" ^^ { op => BitOp(op) })
-  lazy val bOr: P[BOp] = positioned("|" ^^ { op => BitOp(op) })
-  lazy val bXor: P[BOp] = positioned("^" ^^ { op => BitOp(op) })
-
-  lazy val and: P[BOp] = positioned("&&" ^^ { op => BoolOp(op) })
-  lazy val or: P[BOp] = positioned("||" ^^ { op => BoolOp(op) })
-
-  /** Expressions
-    * The bin* parsers implement the precedence order of operators described
-    * for C/C++: https://en.cppreference.com/w/c/language/operator_precedence
-    * The tower-like structure is required to implement precedence correctly.
-    */
-  def parseOp(base: P[Expr], op: P[BOp]): P[Expr] = positioned {
-    chainl1(base, op ^^ { case op => EBinop(op, _, _) })
-  }
-  lazy val binMul = parseOp(recAccess, mulOps)
-  lazy val binAdd = parseOp(binMul, addOps)
-  lazy val binEq = parseOp(binAdd, eqOps)
-  lazy val binSh = parseOp(binEq, shOps)
-  lazy val binBAnd = parseOp(binSh, bAnd)
-  lazy val binBXor = parseOp(binBAnd, bXor)
-  lazy val binBOr = parseOp(binBXor, bOr)
-  lazy val binAnd = parseOp(binBOr, and)
-  lazy val binOr = parseOp(binAnd, or)
-  lazy val expr = positioned(binOr)
+  def stringVal[_: P]: P[String] =
+    P("\"" ~/ CharPred(_ != '"').rep.! ~ "\"")
 
   // Types
-  lazy val typIdx: P[DimSpec] =
-    brackets(number ~ ("bank" ~> number).?) ^^ {
-      case n ~ b => (n, b.getOrElse(1))
-    }
+  def typAtom[_: P]: P[Type] =
+    positioned(
+      P(
+        kw("float").!.map(_ => TFloat()) |
+          kw("double").!.map(_ => TDouble()) |
+          kw("bool").!.map(_ => TBool()) |
+          (kw("bit") ~/ angular(number)).map(s => TSizedInt(s, false)) |
+          (kw("ubit") ~/ angular(number)).map(s => TSizedInt(s, true)) |
+          (kw("fix") ~/ angular(number ~ "," ~ number)).map({
+            case (s1, s2) => TFixed(s1, s2, false)
+          }) |
+          (kw("ufix") ~/ angular(number ~ "," ~ number)).map({
+            case (s1, s2) => TFixed(s1, s2, true)
+          }) |
+          iden.map(TAlias(_))
+      )
+    )
 
-  lazy val atyp: P[Type] =
-    "float" ^^ { _ =>
-      TFloat()
-    } |
-      "double" ^^ { _ => TDouble() } |
-      "bool" ^^ { _ => TBool() } |
-      "bit" ~> angular(number) ^^ { case s => TSizedInt(s, false) } |
-      "ubit" ~> angular(number) ^^ { case s => TSizedInt(s, true) } |
-      "fix" ~> angular(number ~ "," ~ number) ^^ {
-        case s1 ~ _ ~ s2 => TFixed(s1, s2, false)
-      } |
-      "ufix" ~> angular(number ~ "," ~ number) ^^ {
-        case s1 ~ _ ~ s2 => TFixed(s1, s2, true)
-      } |
-      iden ^^ { case id => TAlias(id) }
-  lazy val typ: P[Type] =
-    atyp ~ braces(number).? ~ rep1(typIdx) ^^ {
-      case t ~ p ~ dims =>
-        TArray(t, dims, p.getOrElse(1))
-    } |
-      atyp
+  def typIdx[_: P]: P[DimSpec] =
+    P(brackets(number ~ (kw("bank") ~ number).?)).map({
+      case (n, b) => (n, b.getOrElse(1))
+    })
+
+  def typ[_: P]: P[Type] =
+    positioned(P(typAtom ~ (braces(number).? ~ typIdx.rep(1)).?).map({
+      case (typ, Some((ports, dims))) =>
+        TArray(typ, dims.toList, ports.getOrElse(1))
+      case (typ, None) => typ
+    }))
+
+  // Literals
+  def uInt[_: P]: P[Expr] =
+    positioned(
+      P(
+        "0" | "-".? ~ (CharIn("1-9") ~ CharsWhileIn("0-9").?)
+      ).!.map((n: String) => EInt(n.toInt)).opaque("integer")
+    )
+  def hex[_: P]: P[Expr] =
+    positioned(
+      P("0x" ~/ CharIn("0-9a-fA-F").rep(1)).!.map((n: String) =>
+        EInt(Integer.parseInt(n.substring(2), 16), 16)
+      ).opaque("hexademical")
+    )
+  def octal[_: P]: P[Expr] =
+    positioned(
+      P("0" ~ CharsWhileIn("0-7")).!.map((n: String) =>
+        EInt(Integer.parseInt(n.substring(1), 8), 8)
+      ).opaque("ocatal")
+    )
+  def rational[_: P]: P[Expr] =
+    positioned(
+      P(
+        "-".? ~ ("0" | (CharIn("1-9") ~ CharsWhileIn("0-9").?)) ~
+          "." ~/ CharsWhileIn("0-9")
+      ).!.map(ERational(_)).opaque("rational")
+    )
+  def boolean[_: P]: P[Expr] =
+    positioned(P(StringIn("true", "false")).!.map({
+      case "true" => EBool(true)
+      case "false" => EBool(false)
+    }).opaque("boolean"))
+
+  // Compound literals
+
+  def recLitField[_: P]: P[(Id, Expr)] =
+    P(iden ~ "=" ~/ expr)
+      .map({
+        case (id, e) => (id, e)
+      })
+      .opaque("<iden> = <expr>")
+  def arrIn[_: P]: P[Expr] =
+    positioned(P(expr.rep(1, sep = ",").map(es => EArrLiteral(es.toList))))
+  def recIn[_: P]: P[Expr] =
+    positioned(
+      P(recLitField.rep(1, sep = ";").map(fs => ERecLiteral(fs.toMap)))
+    )
+  def compoundLiteral[_: P]: P[Expr] =
+    positioned(P(braces(recIn | arrIn)).opaque("array or record literal"))
+
+  // Access expressions
+  def arrayAccess[_: P]: P[Expr] =
+    positioned(P(iden ~ brackets(expr).rep(1)).map({
+      case (id, idxs) => EArrAccess(id, idxs.toList)
+    }))
+
+  // Cast expressions or parenthesized expressions
+  def exprCast[_: P]: P[Expr] =
+    positioned(P(parens(expr ~ ("as" ~/ typAtom.opaque("type")).?)).map({
+      case (e, Some(t)) => ECast(e, t)
+      case (e, None) => e
+    }))
+
+  // Atoms that start with identifiers
+  def appOrVar[_: P]: P[Expr] =
+    positioned(P(iden ~/ parens(expr.rep(sep = ",")).?).map({
+      case (f, Some(args)) => EApp(f, args.toList)
+      case (id, None) => EVar(id)
+    }))
+
+  def simpleAtom[_: P]: P[Expr] = P(
+    exprCast |
+      compoundLiteral |
+      arrayAccess |
+      rational |
+      hex |
+      octal |
+      uInt |
+      boolean |
+      appOrVar
+  )
+
+  // Record access syntax
+  def recAccess[_: P]: P[Expr] =
+    P((simpleAtom ~ ("." ~ iden).rep).map({
+      case (rec, fields) =>
+        fields.foldLeft[Expr](rec)({
+          case (expr, field) => ERecAccess(expr, field)
+        })
+    }))
+
+  // Binary operators
+  import Syntax.{OpConstructor => OC}
+  def mulOps[_: P]: P[BOp] =
+    positioned(
+      P(
+        StringIn("/", "*", "%").!
+      ).map({
+        case "/" => NumOp("/", OC.div)
+        case "*" => NumOp("*", OC.mul)
+        case "%" => NumOp("%", OC.mod)
+      })
+    )
+  def addOps[_: P]: P[BOp] =
+    positioned(
+      P(
+        StringIn("+", "-").!
+      ).map({
+        case "+" => NumOp("+", OC.add)
+        case "-" => NumOp("-", OC.sub)
+      })
+    )
+  def eqOps[_: P]: P[BOp] =
+    positioned(
+      P(
+        StringIn("==", "!=", ">=", "<=", ">", "<").!
+      ).map({
+        case op @ ("==" | "!=") => EqOp(op)
+        case op @ (">=" | "<=" | ">" | "<") => CmpOp(op)
+      })
+    )
+  def shOps[_: P]: P[BOp] =
+    positioned(
+      P(
+        StringIn(">>", "<<").!
+      ).map(op => BitOp(op))
+    )
+  def bAnd[_: P]: P[BOp] = positioned(P("&".!.map(op => BitOp(op))))
+  def bOr[_: P]: P[BOp] = positioned(P("|".!.map(op => BitOp(op))))
+  def bXor[_: P]: P[BOp] = positioned(P("^".!.map(op => BitOp(op))))
+  def and[_: P]: P[BOp] = positioned(P("&&".!.map(op => BoolOp(op))))
+  def or[_: P]: P[BOp] = positioned(P("||".!.map(op => BoolOp(op))))
+
+  // Helper to generate binary op parsers
+  def parseOp[_: P](atom: => P[Expr], op: => P[BOp]): P[Expr] =
+    positioned({
+      (atom ~ (op ~ atom).rep).map({
+        case (left, rights) =>
+          rights.foldLeft[Expr](left)({
+            case (left, (op, right)) => EBinop(op, left, right)
+          })
+      })
+    })
+
+  def binMul[_: P]: P[Expr] = P(parseOp(recAccess, mulOps))
+  def binAdd[_: P]: P[Expr] = P(parseOp(binMul, addOps))
+  def binEq[_: P]: P[Expr] = P(parseOp(binAdd, eqOps))
+  def binSh[_: P]: P[Expr] = P(parseOp(binEq, shOps))
+  def binBAnd[_: P]: P[Expr] = P(parseOp(binSh, bAnd))
+  def binBXor[_: P]: P[Expr] = P(parseOp(binBAnd, bXor))
+  def binBOr[_: P]: P[Expr] = P(parseOp(binBXor, bOr))
+  def binAnd[_: P]: P[Expr] = P(parseOp(binBOr, and))
+  def binOr[_: P]: P[Expr] = P(parseOp(binAnd, or))
+
+  def expr[_: P]: P[Expr] = binOr
 
   // For loops
-  lazy val block: P[Command] =
-    braces(cmd.?) ^^ { case c => c.getOrElse(CEmpty) }
+  def range[_: P]: P[CRange] =
+    positioned(
+      P(
+        parens(
+          kw("let") ~/ iden ~ (":" ~ typ).? ~ "=" ~/ number ~/ ".." ~/ number
+        )
+          ~/ (kw("unroll") ~/ number).?
+      ).map({
+        case (id, typ, s, e, u) => CRange(id, typ, s, e, u.getOrElse(1))
+      })
+    )
+  def cfor[_: P]: P[Command] =
+    positioned(
+      P(
+        kw("for") ~/ range ~/ (kw("pipeline").!).? ~ block ~ (kw("combine") ~/ block).?
+      ).map({
+        case (range, pl, CBlock(par), Some(CBlock(c))) =>
+          CFor(range, pl.isDefined, par, c)
+        case (range, pl, CBlock(par), None) =>
+          CFor(range, pl.isDefined, par, CEmpty)
+        case _ => throw CompilerError.Impossible("Result of parsing a block command was not CBlock")
+      })
+    )
 
-  lazy val crange: P[CRange] = positioned {
-    parens("let" ~> iden ~ (":" ~> typ).? ~ "=" ~ number ~ ".." ~ number) ~ ("unroll" ~> number).? ^^ {
-      case id ~ t ~ _ ~ s ~ _ ~ e ~ u => CRange(id, t, s, e, u.getOrElse(1))
-    }
-  }
-  lazy val cfor: P[Command] = positioned {
-    "for" ~> crange ~ "pipeline".? ~ block ~ ("combine" ~> block).? ^^ {
-      case range ~ pl ~ par ~ c =>
-        CFor(range, pl.isDefined, par, c.getOrElse(CEmpty))
-    }
-  }
+  // While loops
+  def whLoop[_: P]: P[Command] =
+    positioned(
+      P(kw("while") ~/ parens(expr) ~ kw("pipeline").!.? ~/ block).map({
+        case (cond, pl, CBlock(body)) => CWhile(cond, pl.isDefined, body)
+        case _ => throw CompilerError.Impossible("Result of parsing a block command was not CBlock")
+      })
+    )
 
-  lazy val rop: P[ROp] = positioned {
-    ("+=" | "*=" | "-=" | "/=") ^^ { op => ROp(op) }
-  }
+  // Conditionals
+  def ifElse[_: P]: P[Command] =
+    positioned(
+      P(kw("if") ~/ parens(expr) ~ block ~ (kw("else") ~/ block).?).map({
+        case (cond, CBlock(cons), Some(CBlock(alt))) =>
+          CIf(cond, cons, alt)
+        case (cond, CBlock(cons), None) =>
+          CIf(cond, cons, CEmpty)
+        case _ => throw CompilerError.Impossible("Result of parsing a block command was not CBlock")
+      })
+    )
 
-  // Simple views
-  lazy val viewSuffix: P[Suffix] = positioned {
-    expr <~ "!" ^^ { case e => Rotation(e) } |
-      number ~ "*" ~ expr ^^ { case fac ~ _ ~ e => Aligned(fac, e) } |
-      "_" ^^ { case _ => Rotation(EInt(0)) }
-  }
+  // let
+  def bind[_: P]: P[Command] =
+    positioned((kw("let") ~/ iden ~ (":" ~ typ).? ~/ ("=" ~ expr).?).map({
+      case (id, t, exp) => CLet(id, t, exp)
+    }))
 
-  lazy val viewParam: P[View] = positioned {
-    viewSuffix ~ ":" ~ ("+" ~> number).? ~ ("bank" ~> number).? ^^ {
-      case suf ~ _ ~ prefixOpt ~ shrinkOpt => View(suf, prefixOpt, shrinkOpt)
-    }
-  }
+  // Update expressions
+  def upd[_: P]: P[Command] =
+    positioned(
+      P(
+        expr ~/ (
+          ("=" ~/ Fail).opaque(
+            "update statement. You probably meant to use `:=` instead of `=`."
+          ) |
+            StringIn(":=", "+=", "*=", "-=", "/=").! ~/ expr
+        ).?
+      ).map({
+        case (l, Some((":=", r))) => CUpdate(l, r)
+        case (l, Some((op, r))) => CReduce(ROp(op), l, r)
+        case (l, None) => CExpr(l)
+      })
+    )
 
-  lazy val view: P[Command] = positioned {
-    "view" ~> iden ~ "=" ~ iden ~ rep1(brackets(viewParam)) ^^ {
-      case id ~ _ ~ arrId ~ params => CView(id, arrId, params)
-    }
-  }
+  // Views
+  def viewSuffix[_: P]: P[Suffix] =
+    positioned(
+      P(
+        "_".!.map(_ => Rotation(EInt(0))) |
+          (number ~ "*" ~/ expr).map({ case (fac, e) => Aligned(fac, e) }) |
+          (expr ~ "!").map(e => Rotation(e))
+      ).opaque("<view-suffix>: _ | <number> * <expr> | <expr> !")
+    )
+  def viewParam[_: P]: P[View] =
+    positioned(
+      P(viewSuffix ~/ ":" ~ ("+" ~ number).? ~ (kw("bank") ~/ number).?).map({
+        case (suf, prefixOpt, shrinkOpt) => View(suf, prefixOpt, shrinkOpt)
+      })
+    )
+  def view[_: P]: P[Command] =
+    positioned(
+      P(kw("view") ~/ iden ~ "=" ~ iden ~ brackets(viewParam).rep(1)).map({
+        case (id, arrId, params) => CView(id, arrId, params.toList)
+      })
+    )
+  def split[_: P]: P[Command] =
+    positioned(
+      P(kw("split") ~/ iden ~ "=" ~ iden ~ brackets(kw("by") ~/ number).rep(1))
+        .map({
+          case (id, arrId, factors) => CSplit(id, arrId, factors.toList)
+        })
+    )
 
-  // split views
-  lazy val splitView: P[Command] = positioned {
-    "split" ~> iden ~ "=" ~ iden ~ rep1(brackets("by" ~> number)) ^^ {
-      case id ~ _ ~ arrId ~ factors => CSplit(id, arrId, factors)
-    }
-  }
+  def simpleCmd[_: P]: P[Command] = P(
+    bind |
+      view |
+      split |
+      positioned(kw("return") ~/ expr).map(e => CReturn(e)) |
+      upd
+  )
 
-  // If
-  lazy val conditional: P[Command] = positioned {
-    "if" ~> parens(expr) ~ block ~ ("else" ~> (block | cmd)).? ^^ {
-      case cond ~ cons ~ alt =>
-        CIf(cond, cons, if (alt.isDefined) alt.get else CEmpty)
-    }
-  }
+  // Block commands
+  def block[_: P]: P[Command] = positioned(P(braces(cmd)).map(c => CBlock(c)))
+  def blockCmd[_: P]: P[Command] = P(cfor | ifElse | whLoop | block | decor)
 
-  lazy val simpleCmd: P[Command] = positioned {
-    "let" ~> iden ~ (":" ~> typ).? ~ ("=" ~> expr).? ^^ {
-      case id ~ t ~ exp => CLet(id, t, exp)
-    } |
-      "return" ~> expr ^^ { case e => CReturn(e) } |
-      view | splitView |
-      expr ~ ":=" ~ expr ^^ { case l ~ _ ~ r => CUpdate(l, r) } |
-      expr ~ rop ~ expr ^^ { case l ~ rop ~ r => CReduce(rop, l, r) } |
-      expr ^^ { case e => CExpr(e) }
-  }
+  def parCmd[_: P]: P[Command] =
+    positioned(
+      P(
+        (blockCmd | (simpleCmd ~/ ";")).rep
+      ).map(cmds => CPar.smart(cmds))
+    )
 
-  lazy val blockCmd: P[Command] = positioned {
-    braces(cmd.?) ^^ { case cmd => cmd.map(CBlock(_)).getOrElse(CEmpty) } |
-      cfor |
-      conditional |
-      "while" ~> parens(expr) ~ "pipeline".? ~ block ^^ {
-        case cond ~ pl ~ body => CWhile(cond, pl.isDefined, body)
-      } |
-      decor
-  }
+  def cmd[_: P]: P[Command] =
+    positioned(P(parCmd ~ ("---" ~/ parCmd).rep).map({
+      case (init, rest) => CSeq.smart(init +: rest)
+    }))
 
-  lazy val parCmd: P[Command] = positioned {
-    simpleCmd ~ ";" ~ parCmd ^^ { case c1 ~ _ ~ c2 => CPar.smart(c1, c2) } |
-      blockCmd ~ parCmd ^^ { case c1 ~ c2 => CPar.smart(c1, c2) } |
-      simpleCmd <~ ";" | blockCmd | simpleCmd
-  }
-
-  lazy val cmd: P[Command] = positioned {
-    parCmd ~ "---" ~ cmd ^^ { case c1 ~ _ ~ c2 => CSeq.smart(c1, c2) } |
-      parCmd
-  }
-
-  lazy val args: P[Decl] = iden ~ (":" ~> typ) ^^ { case i ~ t => Decl(i, t) }
-
-  // Declarations
-  lazy val decl: P[Decl] = positioned {
-    "decl" ~> args <~ ";"
-  }
-
-  // Definitions
-  lazy val recordDef: P[RecordDef] = positioned {
-    "record" ~> iden ~ braces(repsep(args, ";")) ^^ {
-      case n ~ fs => RecordDef(n, fs.map(decl => decl.id -> decl.typ).toMap)
-    }
-  }
-  lazy val retTyp: P[Type] = {
-    (":" ~> typ).? ^^ {
+  // Functions
+  def args[_: P]: P[Decl] =
+    positioned(
+      P(iden ~ ":" ~ typ)
+        .map({ case (i, t) => Decl(i, t) })
+        .opaque("<iden> : <typ>")
+    )
+  def retTyp[_: P]: P[Type] =
+    positioned(P(":" ~ typ).?.map({
       case Some(t) => t
       case None => TVoid()
+    }))
+  def funcSignature[_: P]: P[FuncDef] =
+    positioned(
+      P(kw("def") ~/ iden ~ parens(args.rep(sep = ",")) ~ retTyp ~ ";").map({
+        case (fn, args, ret) => FuncDef(fn, args.toList, ret, None)
+      })
+    )
+  def funcDef[_: P]: P[FuncDef] =
+    positioned(
+      P(kw("def") ~/ iden ~ parens(args.rep(sep = ",")) ~ retTyp ~ "=" ~ block)
+        .map({
+          case (fn, args, ret, CBlock(body)) =>
+            FuncDef(fn, args.toList, ret, Some(body))
+        case _ => throw CompilerError.Impossible("Result of parsing a block command was not CBlock")
+        })
+    )
+
+  // Record definitions
+  def recordDef[_: P]: P[RecordDef] =
+    positioned(P(kw("record") ~/ iden ~ braces(args.rep(sep = ";"))).map({
+      case (n, fs) => RecordDef(n, fs.map(d => d.id -> d.typ).toMap)
+    }))
+
+  // Declarations
+  def decl[_: P]: P[Decl] =
+    positioned(P(kw("decl") ~/ args ~ ";"))
+
+  // include statements
+  def include[_: P]: P[Include] =
+    positioned(
+      P(kw("import") ~/ stringVal ~ braces(funcSignature.rep))
+        .map({
+          case (name, funcs) => Include(name, funcs.toList)
+        })
+        .opaque("import <string> { <function signatures> }")
+    )
+
+  // Top-level decorations
+  def decor[_: P]: P[CDecorate] =
+    positioned(
+      P(kw("decor") ~/ stringVal).map(CDecorate(_)).opaque("decor <string>")
+    )
+
+  def prog[_: P]: P[Prog] =
+    positioned(
+      P(
+        include.rep.opaque("include statements") ~/
+          (funcDef | recordDef).rep ~/
+          decor.rep.opaque("top-level decors") ~/
+          decl.rep.opaque("declarations") ~/
+          cmd.? ~
+          End
+      ).map({
+        case (incls, fns, decors, decls, cmd) =>
+          Prog(
+            incls.toList,
+            fns.toList,
+            decors.toList,
+            decls.toList,
+            cmd.getOrElse(CEmpty)
+          )
+      })
+    )
+
+  def parse(): Prog = {
+    fastparse.parse[Prog](input, prog(_)) match {
+      case Parsed.Success(e, _) => e
+      case Parsed.Failure(_, index, extra) =>
+        val traced = extra.trace()
+        val loc = OffsetPosition(input, index)
+        val msg = Errors.withPos(s"Expected ${traced.failure.label}", loc)
+
+        throw Errors.ParserError(msg)
     }
-  }
-  lazy val funcDef: P[FuncDef] = positioned {
-    "def" ~> iden ~ parens(repsep(args, ",")) ~ retTyp ~ block ^^ {
-      case fn ~ args ~ ret ~ body => FuncDef(fn, args, ret, Some(body))
-    }
-  }
-  lazy val defs = funcDef | recordDef
-
-  // Include
-  lazy val externFuncDef: P[FuncDef] = positioned {
-    "def" ~> iden ~ parens(repsep(args, ",")) ~ retTyp <~ ";" ^^ {
-      case fn ~ args ~ ret => FuncDef(fn, args, ret, None)
-    }
-  }
-  lazy val include: P[Include] = positioned {
-    "import" ~> stringVal ~ braces(externFuncDef.*) ^^ {
-      case name ~ funcs => Include(name, funcs)
-    }
-  }
-
-  // Top-level decorations (for the kernel function).
-  lazy val decor: P[CDecorate] = {
-    "decor" ~> stringVal ^^ { case value => CDecorate(value) }
-  }
-
-  // Prog
-  lazy val prog: P[Prog] = positioned {
-    include.* ~ defs.* ~ decor.* ~ decl.* ~ cmd.? ^^ {
-      case incls ~ fns ~ decors ~ decls ~ cmd =>
-        Prog(incls, fns, decors, decls, cmd.getOrElse(CEmpty))
-    }
-  }
-
-}
-
-object FuseParser {
-  private val parser = new FuseParser()
-  import parser._
-
-  def parse(str: String): Prog = parseAll(prog, str) match {
-    case Success(res, _) => res
-    case res => throw Errors.ParserError(s"$res")
   }
 }

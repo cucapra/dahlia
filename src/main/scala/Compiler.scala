@@ -44,7 +44,7 @@ object Compiler {
   }
 
   def checkStringWithError(prog: String, c: Config = emptyConf) = {
-    val preAst = FuseParser.parse(prog)
+    val preAst = Parser(prog).parse()
 
     // Run pre transformers if lowering is enabled
     val ast = if (c.enableLowering) {
@@ -55,7 +55,7 @@ object Compiler {
           if (c.passDebug) {
             try {
               // Print and re-parse program with pass debug
-              FuseParser.parse(Pretty.emitProg(newAst)(false))
+              Parser(Pretty.emitProg(newAst)(false)).parse()
             } catch {
               case _: Errors.ParserError =>
                 throw CompilerError.Impossible(
@@ -115,7 +115,7 @@ object Compiler {
           case _: Errors.ParserError =>
             s"[${red("Parsing error")}] ${err.getMessage}"
           case _: CompilerError.Impossible =>
-            s"[${red("Impossible")}] ${err.getMessage}\n" +
+            s"[${red("Impossible")}] ${err.getMessage}. " +
               "This should never trigger. Please report this as a bug."
           case _ => s"[${red("Error")}] ${err.getMessage}"
         }
