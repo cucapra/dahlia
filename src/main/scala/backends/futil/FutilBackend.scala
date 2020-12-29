@@ -594,23 +594,6 @@ private class FutilBackendHelper {
           Stdlib.staticTimingMap("exp")
         )
       }
-      // TODOs: (1) How to get list of the function's PortDefs?
-      //        (2) Output(s)?
-      case EApp(Id(name), inputs) => {
-               val inputPorts = inputs.map(input => emitExpr(input).port)
-               val declName = genName(name)
-               val decl = CompDecl(declName, CompVar(name))
-
-               val hardCodedParameter = PortDef(CompVar("input"), 32)
-               val invokee = Invoke(declName, List(InvokeConnect(inputPorts(0), hardCodedParameter)))
-
-              EmitOutput(
-                decl.id.port("out"),
-                decl.id.port("done"),
-                List(decl, invokee),
-                None
-              )
-            }
       case x =>
         throw NotImplemented(s"Futil backend does not support $x yet.", x.pos)
     }
@@ -770,11 +753,14 @@ private class FutilBackendHelper {
             )
         }
       }
+      case CExpr(EApp(Id(name), inputs)) => {
+        val inputPorts = inputs.map(inp => emitExpr(inp).port)
+        val declName = genName(name)
+        val control = Invoke(declName, inputPorts.toList)
+        val decl = CompDecl(declName, CompVar(name))
+        (List(decl), control, store)
+      }
       case _: CDecorate => (List(), Empty, store)
-      case CExpr(e) =>
-        throw BackendError(
-          s"Compiling a pure expression to FuTIL is not meaningful since it cannot be observed. Consider replacing it with a let-bound expression:\n\nlet _x = ${Pretty.emitExpr(e)(false).pretty};"
-        )
       case x =>
         throw NotImplemented(s"Futil backend does not support $x yet", x.pos)
     }
