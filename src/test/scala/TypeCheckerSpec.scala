@@ -1002,11 +1002,13 @@ class TypeCheckerSpec extends FunSpec {
       }
     }
 
-    it("do not return values") {
-      assertThrows[NoJoin] {
+    it("consume array accesses") {
+      assertThrows[AlreadyConsumed] {
         typeCheck("""
-          def bar(a: bit<10>) = { a; }
-          1 + bar(10);
+          def bar(a: bit<10>) = { }
+          decl x: bit<10>[10];
+          bar(x[0]);
+          x[0] := 1;
           """)
       }
     }

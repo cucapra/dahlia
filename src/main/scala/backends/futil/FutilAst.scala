@@ -350,6 +350,9 @@ object Stdlib {
 
   def sqrt(): Futil.CompInst =
     Futil.CompInst("std_sqrt", List())
+
+  def exp(): Futil.CompInst =
+    Futil.CompInst("std_exp", List())
   
   // Extended AST to support fixed point constant and operations
   def fixed_point(
@@ -369,19 +372,43 @@ object Stdlib {
     Futil.CompInst(s"fixed_p_std_$op", List(width, int_bit, frac_bit))
 
   def diff_width_add (
-      width: Int,
+      width1: Int,
+      width2: Int,
       int_width1: Int, 
       fract_width1: Int,
       int_width2: Int,
       fract_width2: Int,
       out_width: Int
   ): Futil.CompInst = 
-    Futil.CompInst("fixed_p_std_add_dbit", List(width, int_width1, fract_width1,
+    Futil.CompInst("fixed_p_std_add_dbit", List(width1, width2, int_width1, fract_width1,
                       int_width2, fract_width2, out_width))
+
+    def sdiff_width_add (
+      width1: Int,
+      width2: Int,
+      int_width1: Int, 
+      fract_width1: Int,
+      int_width2: Int,
+      fract_width2: Int,
+      out_width: Int
+  ): Futil.CompInst = 
+    Futil.CompInst("sfixed_p_std_add_dbit", List(width1, width2, int_width1, fract_width1,
+                      int_width2, fract_width2, out_width))
+
+  def s_op(op: String, bitwidth: Int): Futil.CompInst =
+    Futil.CompInst(s"std_s$op", List(bitwidth))
+
+  def fxd_p_sop(op: String,
+      width: Int,
+      int_bit: Int,
+      frac_bit: Int
+  ): Futil.CompInst =
+    Futil.CompInst(s"fixed_p_std_s$op", List(width, int_bit, frac_bit))
 
   val staticTimingMap: Map[String, Option[Int]] = Map(
     "sqrt" -> Some(17),
     "mult" -> Some(3),
+    "exp" -> None,
     "div" -> None,
     "mod" -> None
   )
