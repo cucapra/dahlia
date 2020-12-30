@@ -219,10 +219,6 @@ object Futil {
           else
             space <> text("else") <+> scope(falseBr.doc)
         )
-      case Invoke(id, ports) => {
-        val portsDoc = ports.map(p => p.doc)
-        text("invoke") <+> id.doc <> parens(hsep(portsDoc, comma)) <> text("()")
-      }
       case While(port, cond, body) =>
         text("while") <+> port.doc <+> text("with") <+>
           cond.doc <+>
@@ -230,6 +226,12 @@ object Futil {
       case Print(_) =>
         throw Impossible("Futil does not support print")
       case Enable(id) => id.doc <> semi
+      case Invoke(id, inputs, declarations) => {
+        val inputsDoc = inputs.map(p => p.doc)
+        val declarationsDoc = declarations.map(decl => decl.doc)
+        val definitions = (declarationsDoc zip inputsDoc).map({case (input, decl) => input <> equal <> decl})
+        text("invoke") <+> id.doc <> parens(hsep(definitions, comma)) <> text("()")
+      }
       case Empty => text("empty")
     }
   }
@@ -240,7 +242,7 @@ object Futil {
   case class While(port: Port, cond: CompVar, body: Control) extends Control
   case class Print(id: CompVar) extends Control
   case class Enable(id: CompVar) extends Control
-  case class Invoke(id: CompVar, parameters: List[Port]) extends Control
+  case class Invoke(id: CompVar, inputs: List[Port], declarations: List[CompVar]) extends Control
   case object Empty extends Control
 }
 

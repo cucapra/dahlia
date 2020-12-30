@@ -72,6 +72,11 @@ private class FutilBackendHelper {
     */
   type Store = Map[CompVar, CompVar]
 
+  /** Mappings from function Id to function Definition.
+    */
+  type FunctionMapping = scala.collection.mutable.Map[Id, Seq[Decl]]
+  type FunctionBodyMapping = scala.collection.mutable.Map[Id, Command]
+
   /** `external` is a flag that differentiates between generating
     *  external memories and internal memories. This is so that
     *  we can generate external memories for `decl`s and internal
@@ -600,7 +605,7 @@ private class FutilBackendHelper {
 
   def emitCmd(
       c: Command
-  )(implicit store: Store): (List[Structure], Control, Store) = {
+  )(implicit store: Store, id2Definition: FunctionMapping): (List[Structure], Control, Store) = {
     c match {
       case CBlock(cmd) => emitCmd(cmd)
       case CPar(cmds) => {
@@ -608,7 +613,7 @@ private class FutilBackendHelper {
           (List[Structure](), Empty, store)
         )({
           case ((struct, con, st), cmd) => {
-            val (s1, c1, st1) = emitCmd(cmd)(st)
+            val (s1, c1, st1) = emitCmd(cmd)(st, id2Definition)
             (struct ++ s1, con.par(c1), st1)
           }
         })
@@ -618,7 +623,7 @@ private class FutilBackendHelper {
           (List[Structure](), Empty, store)
         )({
           case ((struct, con, st), cmd) => {
-            val (s1, c1, st1) = emitCmd(cmd)(st)
+            val (s1, c1, st1) = emitCmd(cmd)(st, id2Definition)
             (struct ++ s1, con.seq(c1), st1)
           }
         })
@@ -753,11 +758,16 @@ private class FutilBackendHelper {
             )
         }
       }
-      case CExpr(EApp(Id(name), inputs)) => {
+      case CExpr(EApp(id, inputs)) => {
+        val function_name = id.toString()
+        if (!id2Definition.keys.toSeq.contains(id)) {
+          throw Impossible("This function has not been defined: " + function_name)
+        }
         val inputPorts = inputs.map(inp => emitExpr(inp).port)
-        val declName = genName(name)
-        val control = Invoke(declName, inputPorts.toList)
-        val decl = CompDecl(declName, CompVar(name))
+        val definitions = id2Definition(id).map(decl => CompVar(decl.id.toString()))
+        val declName = genName(function_name)
+        val control = Invoke(declName, inputPorts.toList, definitions.toList)
+        val decl = CompDecl(declName, CompVar(function_name))
         (List(decl), control, store)
       }
       case _: CDecorate => (List(), Empty, store)
@@ -766,8 +776,23 @@ private class FutilBackendHelper {
     }
   }
 
+  def emitDefinition(definition: Definition, idToDef: FunctionMapping, idToBody: FunctionBodyMapping): Unit = {
+    definition match {
+      case FuncDef(id, args, /*retTy=*/_, Some(bodyOpt)) => {
+        idToBody(id) = bodyOpt;
+        idToDef(id) = args;
+      }
+      // case FuncDef(id, args, /*retTy=*/_, /*bodyOpt=*/_) => mapping(id) = args;
+      case x => throw NotImplemented(s"Futil backend does not support $x yet", x.pos)
+    }
+  }
+
   def emitProg(p: Prog, c: Config): String = {
     val _ = c
+    val id2Definition: FunctionMapping = collection.mutable.Map()
+    val id2Body: FunctionBodyMapping = collection.mutable.Map()
+    p.defs.map(definition => emitDefinition(definition, id2Definition, id2Body))
+
     val declStruct =
       p.decls.map(x => emitDecl(x)).foldLeft(List[Structure]())(_ ++ _)
     val store = declStruct.foldLeft(Map[CompVar, CompVar]())((store, struct) =>
@@ -777,14 +802,20 @@ private class FutilBackendHelper {
         case _ => store
       }
     )
-    val (cmdStruct, control, _) = emitCmd(p.cmd)(store)
+    val (cmdStruct, control, _) = emitCmd(p.cmd)(store, id2Definition)
+
+
+    val functionBodies: List[Component] = for ((id, body) <- id2Body.toList) yield {
+      val (cmdStructure, controls, _) = emitCmd(body)(store, id2Definition)
+      Component(id.toString(), List(), List(), cmdStructure.sorted, controls)
+    }
     val struct = declStruct ++ cmdStruct
     Namespace(
       "prog",
       List(
         Import("primitives/std.lib"),
         Component(if (c.kernelName == "kernel") "main" else c.kernelName, List(), List(), struct.sorted, control)
-      )
+      ) ++ functionBodies
     ).emit
   }
 }
