@@ -258,6 +258,9 @@ object Stdlib {
   def slice(in: Int, out: Int): Futil.CompInst =
     Futil.CompInst(s"std_slice", List(in, out))
 
+  def pad(in: Int, out: Int): Futil.CompInst =
+    Futil.CompInst(s"std_pad", List(in, out))
+
   def identity(bitwidth: Int): Futil.CompInst =
     Futil.CompInst(s"std_id", List(bitwidth))
 
