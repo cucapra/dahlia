@@ -2,6 +2,7 @@ package fuselang
 
 import java.nio.file.{Files, Path}
 import java.io.File
+import scala.io.Source
 
 import Compiler._
 import common.Logger
@@ -21,9 +22,22 @@ object Main {
     "axi" -> Axi
   )
 
+  val version = getClass.getResourceAsStream("/version.properties")
+  val meta = Source
+    .fromInputStream(version)
+    .getLines()
+    .filter(l => l.trim != "")
+    .map(d => {
+      val Array(key, v) = d.split("=")
+      (key.trim, v.trim)
+     })
+    .toMap
+
   val parser = new scopt.OptionParser[Config]("fuse") {
 
-    head("dahlia", "0.0.1")
+    head(s"Dahlia (sha = ${meta("git.hash")}, status = ${meta("git.status")})")
+
+    version('V', "version")
 
     arg[File]("<srcfile>")
       .required()
