@@ -72,10 +72,8 @@ private class FutilBackendHelper {
     */
   type Store = Map[CompVar, CompVar]
 
-  /** Mappings from function Id to function Definition.
-    */
-  type FunctionMapping = scala.collection.mutable.Map[Id, Seq[Decl]]
-  type FunctionBodyMapping = scala.collection.mutable.Map[Id, Command]
+  /** Mappings from function Id to Function Definition. */
+  type FunctionMapping = scala.collection.mutable.Map[Id, FuncDef]
 
   /** `external` is a flag that differentiates between generating
     *  external memories and internal memories. This is so that
@@ -599,13 +597,18 @@ private class FutilBackendHelper {
           Stdlib.staticTimingMap("exp")
         )
       }
+      case EApp(id, inputs@_) => {
+        val function_name = id.toString()
+        val decl = CompDecl(genName(function_name), CompVar(function_name))
+        EmitOutput(decl.id.port("out"), decl.id.port("done"), List(decl), None)
+      }
       case x =>
         throw NotImplemented(s"Futil backend does not support $x yet.", x.pos)
     }
 
   def emitCmd(
       c: Command
-  )(implicit store: Store, id2Definition: FunctionMapping): (List[Structure], Control, Store) = {
+  )(implicit store: Store, id2FuncDef: FunctionMapping): (List[Structure], Control, Store) = {
     c match {
       case CBlock(cmd) => emitCmd(cmd)
       case CPar(cmds) => {
@@ -613,7 +616,7 @@ private class FutilBackendHelper {
           (List[Structure](), Empty, store)
         )({
           case ((struct, con, st), cmd) => {
-            val (s1, c1, st1) = emitCmd(cmd)(st, id2Definition)
+            val (s1, c1, st1) = emitCmd(cmd)(st, id2FuncDef)
             (struct ++ s1, con.par(c1), st1)
           }
         })
@@ -623,7 +626,7 @@ private class FutilBackendHelper {
           (List[Structure](), Empty, store)
         )({
           case ((struct, con, st), cmd) => {
-            val (s1, c1, st1) = emitCmd(cmd)(st, id2Definition)
+            val (s1, c1, st1) = emitCmd(cmd)(st, id2FuncDef)
             (struct ++ s1, con.seq(c1), st1)
           }
         })
@@ -759,12 +762,13 @@ private class FutilBackendHelper {
         }
       }
       case CExpr(EApp(id, inputs)) => {
+        // EApp of a function with void return type.
         val function_name = id.toString()
-        if (!id2Definition.keys.toSeq.contains(id)) {
+        if (!id2FuncDef.keys.toSeq.contains(id)) {
           throw Impossible("This function has not been defined: " + function_name)
         }
         val inputPorts = inputs.map(inp => emitExpr(inp).port)
-        val definitions = id2Definition(id).map(decl => CompVar(decl.id.toString()))
+        val definitions = id2FuncDef(id).args.map(decl => CompVar(decl.id.toString()))
         val declName = genName(function_name)
         val control = Invoke(declName, inputPorts.toList, definitions.toList)
         val decl = CompDecl(declName, CompVar(function_name))
@@ -776,22 +780,28 @@ private class FutilBackendHelper {
     }
   }
 
-  def emitDefinition(definition: Definition, idToDef: FunctionMapping, idToBody: FunctionBodyMapping): Unit = {
+  def emitDefinition(definition: Definition, idToFuncDef: FunctionMapping): Unit = {
     definition match {
-      case FuncDef(id, args, /*retTy=*/_, Some(bodyOpt)) => {
-        idToBody(id) = bodyOpt;
-        idToDef(id) = args;
+      case FuncDef(id, args, retTy, Some(bodyOpt)) => {
+        idToFuncDef(id) = FuncDef(id, args, retTy, Some(bodyOpt))
       }
-      // case FuncDef(id, args, /*retTy=*/_, /*bodyOpt=*/_) => mapping(id) = args;
       case x => throw NotImplemented(s"Futil backend does not support $x yet", x.pos)
+    }
+  }
+
+  def getBitwidth(typ: Type): Int = {
+    typ match {
+      case _: TVoid => 0
+      case _: TBool => 1
+      case TSizedInt(width, _) => width
+      case x => throw NotImplemented("Get bitwidth not supported for $x", x.pos)
     }
   }
 
   def emitProg(p: Prog, c: Config): String = {
     val _ = c
-    val id2Definition: FunctionMapping = collection.mutable.Map()
-    val id2Body: FunctionBodyMapping = collection.mutable.Map()
-    p.defs.map(definition => emitDefinition(definition, id2Definition, id2Body))
+    val id2FuncDef: FunctionMapping = collection.mutable.Map()
+    p.defs.map(definition => emitDefinition(definition, id2FuncDef))
 
     val declStruct =
       p.decls.map(x => emitDecl(x)).foldLeft(List[Structure]())(_ ++ _)
@@ -802,12 +812,18 @@ private class FutilBackendHelper {
         case _ => store
       }
     )
-    val (cmdStruct, control, _) = emitCmd(p.cmd)(store, id2Definition)
+    val (cmdStruct, control, _) = emitCmd(p.cmd)(store, id2FuncDef)
 
 
-    val functionBodies: List[Component] = for ((id, body) <- id2Body.toList) yield {
-      val (cmdStructure, controls, _) = emitCmd(body)(store, id2Definition)
-      Component(id.toString(), List(), List(), cmdStructure.sorted, controls)
+    val functionDefinitions: List[Component] =
+      for ((id, FuncDef(_, args, retType, Some(bodyOpt))) <- id2FuncDef.toList) yield {
+        val (cmdStructure, controls, _) = emitCmd(bodyOpt)(store, id2FuncDef)
+        val inputs = args.map(arg => PortDef(CompVar(arg.id.toString()), getBitwidth(arg.typ)))
+
+        val outputBitwidth = getBitwidth(retType)
+        val output = if (outputBitwidth == 0) List() else List(PortDef(CompVar("out"), outputBitwidth))
+
+        Component(id.toString(), inputs.toList, output, cmdStructure.sorted, controls)
     }
     val struct = declStruct ++ cmdStruct
     Namespace(
@@ -815,7 +831,7 @@ private class FutilBackendHelper {
       List(
         Import("primitives/std.lib"),
         Component(if (c.kernelName == "kernel") "main" else c.kernelName, List(), List(), struct.sorted, control)
-      ) ++ functionBodies
+      ) ++ functionDefinitions
     ).emit
   }
 }

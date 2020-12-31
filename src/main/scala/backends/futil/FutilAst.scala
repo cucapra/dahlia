@@ -31,7 +31,7 @@ object Futil {
     }
   }
   case class PortDef(id: CompVar, width: Int) extends Emitable {
-    override def doc(): Doc = parens(text("port") <+> id.doc <+> value(width))
+    override def doc(): Doc = id.doc <> colon <+> value(width)
   }
 
   /**** definition statements *****/
@@ -48,9 +48,9 @@ object Futil {
       case Component(name, inputs, outputs, structure, control) => {
         text("component") <+>
           text(name) <>
-          parens(hsep(inputs.map(_.doc))) <+>
+          parens(commaSep(inputs.map(_.doc))) <+>
           text("->") <+>
-          parens(hsep(outputs.map(_.doc))) <+>
+          parens(commaSep(outputs.map(_.doc))) <+>
           scope(
             emitCompStructure(structure) <@>
               text("control") <+> scope(control.doc)
@@ -230,7 +230,7 @@ object Futil {
         val inputsDoc = inputs.map(p => p.doc)
         val declarationsDoc = declarations.map(decl => decl.doc)
         val definitions = (declarationsDoc zip inputsDoc).map({case (input, decl) => input <> equal <> decl})
-        text("invoke") <+> id.doc <> parens(hsep(definitions, comma)) <> text("()")
+        text("invoke") <+> id.doc <> parens(commaSep(definitions)) <> text("()")
       }
       case Empty => text("empty")
     }
