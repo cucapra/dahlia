@@ -559,6 +559,7 @@ private class FutilBackendHelper {
           delay
         )
       }
+      // TODO(cgyurgyik): Remove.
       case EApp(Id("sqrt"), List(arg)) => {
         val argOut = emitExpr(arg)
         val sqrt = LibDecl(genName("sqrt"), Stdlib.sqrt())

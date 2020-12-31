@@ -353,7 +353,7 @@ object Stdlib {
         "std_mem_d4_ext",
         List(width, size0, size1, size2, size3, idxSize0, idxSize1, idxSize2, idxSize3)
       )
-
+  // TODO(cgyurgyik): Remove.
   def sqrt(): Futil.CompInst =
     Futil.CompInst("std_sqrt", List())
 
