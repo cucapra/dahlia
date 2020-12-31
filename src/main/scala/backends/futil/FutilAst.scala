@@ -226,11 +226,11 @@ object Futil {
       case Print(_) =>
         throw Impossible("Futil does not support print")
       case Enable(id) => id.doc <> semi
-      case Invoke(id, inputs, declarations) => {
+      case Invoke(id, inputs, declarations, enabled) => {
         val inputsDoc = inputs.map(p => p.doc)
         val declarationsDoc = declarations.map(decl => decl.doc)
         val definitions = (declarationsDoc zip inputsDoc).map({case (input, decl) => input <> equal <> decl})
-        text("invoke") <+> id.doc <> parens(commaSep(definitions)) <> text("()")
+        text("invoke") <+> id.doc <> parens(commaSep(definitions)) <> text("()") <> semi <> line <> enabled.doc
       }
       case Empty => text("empty")
     }
@@ -242,7 +242,7 @@ object Futil {
   case class While(port: Port, cond: CompVar, body: Control) extends Control
   case class Print(id: CompVar) extends Control
   case class Enable(id: CompVar) extends Control
-  case class Invoke(id: CompVar, inputs: List[Port], declarations: List[CompVar]) extends Control
+  case class Invoke(id: CompVar, inputs: List[Port], declarations: List[CompVar], enabled: Enable) extends Control
   case object Empty extends Control
 }
 
@@ -353,12 +353,6 @@ object Stdlib {
         "std_mem_d4_ext",
         List(width, size0, size1, size2, size3, idxSize0, idxSize1, idxSize2, idxSize3)
       )
-  // TODO(cgyurgyik): Remove.
-  def sqrt(): Futil.CompInst =
-    Futil.CompInst("std_sqrt", List())
-
-  def exp(): Futil.CompInst =
-    Futil.CompInst("std_exp", List())
   
   // Extended AST to support fixed point constant and operations
   def fixed_point(

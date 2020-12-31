@@ -559,50 +559,6 @@ private class FutilBackendHelper {
           delay
         )
       }
-      // TODO(cgyurgyik): Remove.
-      case EApp(Id("sqrt"), List(arg)) => {
-        val argOut = emitExpr(arg)
-        val sqrt = LibDecl(genName("sqrt"), Stdlib.sqrt())
-        val struct = List(
-          sqrt,
-          Connect(argOut.port, sqrt.id.port("in")),
-          Connect(
-            ConstantPort(1, 1),
-            sqrt.id.port("go"),
-            Some(Not(Atom(sqrt.id.port("done"))))
-          )
-        )
-        EmitOutput(
-          sqrt.id.port("out"),
-          sqrt.id.port("done"),
-          argOut.structure ++ struct,
-          Stdlib.staticTimingMap("sqrt")
-        )
-      }
-      case EApp(Id("exp"), List(exponent_)) => {
-         val exponentOut = emitExpr(exponent_)
-         val exp = LibDecl(genName("exp"), Stdlib.exp())
-         val struct = List(
-           exp,
-           Connect(exponentOut.port, exp.id.port("exponent")),
-           Connect(
-             ConstantPort(1, 1),
-             exp.id.port("go"),
-             Some(Not(Atom(exp.id.port("done"))))
-           )
-        )
-        EmitOutput(
-          exp.id.port("out"),
-          exp.id.port("done"),
-          exponentOut.structure ++ struct,
-          Stdlib.staticTimingMap("exp")
-        )
-      }
-      case EApp(id, inputs@_) => {
-        val function_name = id.toString()
-        val decl = CompDecl(genName(function_name), CompVar(function_name))
-        EmitOutput(decl.id.port("out"), decl.id.port("done"), List(decl), None)
-      }
       case x =>
         throw NotImplemented(s"Futil backend does not support $x yet.", x.pos)
     }
@@ -658,6 +614,36 @@ private class FutilBackendHelper {
         (
           reg :: group :: st,
           Enable(group.id),
+          store + (CompVar(s"$id") -> reg.id)
+        )
+      }
+      case CLet(id, typ, Some(EApp(invokeId, inputs))) => {
+        val function_name = invokeId.toString()
+        if (!id2FuncDef.keys.toSeq.contains(invokeId)) {
+          throw Impossible("This function has not been defined: " + function_name)
+        }
+        val inputPorts = inputs.map(inp => emitExpr(inp).port)
+        val definitions = id2FuncDef(invokeId).args.map(decl => CompVar(decl.id.toString()))
+        val declName = genName(function_name)
+        val decl = CompDecl(declName, CompVar(function_name))
+
+        val (typ_b, _) = bitsForType(typ, c.pos)
+        val reg = LibDecl(genName(s"$id"), Stdlib.register(typ_b))
+
+        val groupName = genName("let")
+        val doneHole = Connect(reg.id.port("done"), HolePort(groupName, "done"))
+
+        val struct =
+          List(Connect(declName.port("out"), reg.id.port("in")),
+               Connect(ConstantPort(1, 1), reg.id.port("write_en")),
+               doneHole)
+
+        val (group, st) = Group.fromStructure(groupName, struct, None)
+        val control = Invoke(declName, inputPorts.toList, definitions.toList, Enable(group.id))
+
+        (
+          decl :: reg :: group :: st,
+          control,
           store + (CompVar(s"$id") -> reg.id)
         )
       }
@@ -762,18 +748,15 @@ private class FutilBackendHelper {
             )
         }
       }
-      case CExpr(EApp(id, inputs)) => {
-        // EApp of a function with void return type.
-        val function_name = id.toString()
-        if (!id2FuncDef.keys.toSeq.contains(id)) {
-          throw Impossible("This function has not been defined: " + function_name)
-        }
-        val inputPorts = inputs.map(inp => emitExpr(inp).port)
-        val definitions = id2FuncDef(id).args.map(decl => CompVar(decl.id.toString()))
-        val declName = genName(function_name)
-        val control = Invoke(declName, inputPorts.toList, definitions.toList)
-        val decl = CompDecl(declName, CompVar(function_name))
-        (List(decl), control, store)
+      case CReturn(expr) => {
+        val condOut = emitExpr(expr)
+        val returnConnect = Connect(condOut.port, ThisPort(CompVar("out")))
+        (
+          List(returnConnect),
+          Empty,
+          store
+        )
+
       }
       case _: CDecorate => (List(), Empty, store)
       case x =>
@@ -794,7 +777,8 @@ private class FutilBackendHelper {
     typ match {
       case _: TVoid => 0
       case _: TBool => 1
-      case TSizedInt(width, _) => width
+      case TSizedInt(bitwidth, _) => bitwidth
+      case TFixed(bitwidth, _, _) => bitwidth
       case x => throw NotImplemented("Get bitwidth not supported for $x", x.pos)
     }
   }
@@ -818,8 +802,15 @@ private class FutilBackendHelper {
 
     val functionDefinitions: List[Component] =
       for ((id, FuncDef(_, args, retType, Some(bodyOpt))) <- id2FuncDef.toList) yield {
-        val (cmdStructure, controls, _) = emitCmd(bodyOpt)(store, id2FuncDef)
         val inputs = args.map(arg => PortDef(CompVar(arg.id.toString()), getBitwidth(arg.typ)))
+
+        val functionStore = inputs.foldLeft(Map[CompVar, CompVar]())((functionStore, inputs) =>
+          inputs match {
+            case PortDef(id, _) => functionStore + (id -> id)
+            case _ => functionStore
+          }
+        )
+        val (cmdStructure, controls, _) = emitCmd(bodyOpt)(functionStore, id2FuncDef)
 
         val outputBitwidth = getBitwidth(retType)
         val output = if (outputBitwidth == 0) List() else List(PortDef(CompVar("out"), outputBitwidth))
@@ -827,12 +818,12 @@ private class FutilBackendHelper {
         Component(id.toString(), inputs.toList, output, cmdStructure.sorted, controls)
     }
     val struct = declStruct ++ cmdStruct
+    val mainComponentName = if (c.kernelName == "kernel") "main" else c.kernelName
     Namespace(
       "prog",
-      List(
-        Import("primitives/std.lib"),
-        Component(if (c.kernelName == "kernel") "main" else c.kernelName, List(), List(), struct.sorted, control)
-      ) ++ functionDefinitions
+      List(Import("primitives/std.lib"))
+       ++ functionDefinitions
+       ++ List(Component(mainComponentName, List(), List(), struct.sorted, control))
     ).emit
   }
 }
