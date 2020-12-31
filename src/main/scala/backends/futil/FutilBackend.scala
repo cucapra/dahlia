@@ -805,6 +805,14 @@ private class FutilBackendHelper {
         val inputs = args.map(arg => PortDef(CompVar(arg.id.toString()), getBitwidth(arg.typ)))
 
         val functionStore = inputs.foldLeft(Map[CompVar, CompVar]())((functionStore, inputs) =>
+          // TODO(cgyurgyik):
+          // Currently, we store the parameters in functionStore as CompVars.
+          // However, when reading their values, we are using an out port, which shouldn't be necessary.
+          // e.g.,
+          //
+          // foo(x: 32) -> () {
+          //   someRegister.in = x.out // We simply want `x` here.
+          // }
           inputs match {
             case PortDef(id, _) => functionStore + (id -> id)
             case _ => functionStore
