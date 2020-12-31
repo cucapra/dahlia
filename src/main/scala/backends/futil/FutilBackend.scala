@@ -72,7 +72,7 @@ private class FutilBackendHelper {
     */
   type Store = Map[CompVar, CompVar]
 
-  /** Mappings from function Id to Function Definition. */
+  /** Mappings from Function Id to Function Definition. */
   type FunctionMapping = scala.collection.mutable.Map[Id, FuncDef]
 
   /** `external` is a flag that differentiates between generating
