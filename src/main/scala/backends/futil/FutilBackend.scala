@@ -625,14 +625,14 @@ private class FutilBackendHelper {
         )
       }
       case CLet(id, typ, Some(EApp(invokeId, inputs))) => {
-        val function_name = invokeId.toString()
+        val functionName = invokeId.toString()
         if (!id2FuncDef.keys.toSeq.contains(invokeId)) {
-          throw Impossible("This function has not been defined: " + function_name)
+          throw Impossible("This function has not been defined: " + functionName)
         }
         val argumentPorts = inputs.map(inp => emitExpr(inp).port)
         val parameters = id2FuncDef(invokeId).args.map(decl => CompVar(decl.id.toString()))
-        val declName = genName(function_name)
-        val decl = CompDecl(declName, CompVar(function_name))
+        val declName = genName(functionName)
+        val decl = CompDecl(declName, CompVar(functionName))
 
         val (typ_b, _) = bitsForType(typ, c.pos)
         val reg = LibDecl(genName(s"$id"), Stdlib.register(typ_b))
