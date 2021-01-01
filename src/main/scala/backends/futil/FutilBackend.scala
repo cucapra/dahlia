@@ -523,7 +523,7 @@ private class FutilBackendHelper {
         )
       }
       case EArrAccess(id, accessors) => {
-        val (arr, futilVarType@_) = store
+        val (arr, _) = store
           .get(CompVar(s"$id"))
           .getOrThrow(
             BackendError(
@@ -761,6 +761,8 @@ private class FutilBackendHelper {
     }
   }
 
+  /** Updates `idToFuncDef` to include a mapping (FuncDef.Id -> FuncDef) for the
+      given definiton. */
   def emitDefinition(definition: Definition, idToFuncDef: FunctionMapping): Unit = {
     definition match {
       case FuncDef(id, args, retTy, Some(bodyOpt)) => {
@@ -770,7 +772,7 @@ private class FutilBackendHelper {
     }
   }
 
-  def getBitwidth(typ: Type): Int = {
+  def getBitWidth(typ: Type): Int = {
     typ match {
       case _: TVoid => 0
       case _: TBool => 1
@@ -799,7 +801,7 @@ private class FutilBackendHelper {
 
     val functionDefinitions: List[Component] =
       for ((id, FuncDef(_, args, retType, Some(bodyOpt))) <- id2FuncDef.toList) yield {
-        val inputs = args.map(arg => PortDef(CompVar(arg.id.toString()), getBitwidth(arg.typ)))
+        val inputs = args.map(arg => PortDef(CompVar(arg.id.toString()), getBitWidth(arg.typ)))
 
         val functionStore = inputs.foldLeft(Map[CompVar, (CompVar, VType)]())((functionStore, inputs) =>
           inputs match {
@@ -809,8 +811,8 @@ private class FutilBackendHelper {
         )
         val (cmdStructure, controls, _) = emitCmd(bodyOpt)(functionStore, id2FuncDef)
 
-        val outputBitwidth = getBitwidth(retType)
-        val output = if (outputBitwidth == 0) List() else List(PortDef(CompVar("out"), outputBitwidth))
+        val outputBitWidth = getBitWidth(retType)
+        val output = if (outputBitWidth == 0) List() else List(PortDef(CompVar("out"), outputBitWidth))
 
         Component(id.toString(), inputs.toList, output, cmdStructure.sorted, controls)
     }
