@@ -68,7 +68,9 @@ private class FutilBackendHelper {
   }
 
   /** Store mappings from Dahlia variables to
-    * generated Futil variables.
+    * generated Futil variables. A Futil variable
+    * will either be a local variable (LocalVar) or
+    * a function parameter (ParameterVar).
     */
   sealed trait VType
   case object LocalVar extends VType
