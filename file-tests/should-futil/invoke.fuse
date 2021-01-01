@@ -1,0 +1,7 @@
+def foo(a: ubit<32>) {
+  let temp: ubit<32> = a;
+}
+
+let b: ubit<32> = (1 as ubit<32>);
+---
+foo(b);

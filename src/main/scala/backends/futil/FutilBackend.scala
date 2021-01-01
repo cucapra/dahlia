@@ -646,7 +646,6 @@ private class FutilBackendHelper {
 
         val (group, st) = Group.fromStructure(groupName, struct, None)
         val control = Invoke(declName, inputPorts.toList, definitions.toList, Enable(group.id))
-
         (
           decl :: reg :: group :: st,
           control,
@@ -755,14 +754,10 @@ private class FutilBackendHelper {
         }
       }
       case CReturn(expr) => {
+        // Hooks the output port of the emitted `expr` to PortDef `out` of the component.
         val condOut = emitExpr(expr)
         val returnConnect = Connect(condOut.port, ThisPort(CompVar("out")))
-        (
-          List(returnConnect),
-          Empty,
-          store
-        )
-
+        (List(returnConnect), Empty, store)
       }
       case _: CDecorate => (List(), Empty, store)
       case x =>
