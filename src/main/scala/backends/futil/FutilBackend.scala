@@ -561,6 +561,11 @@ private class FutilBackendHelper {
           delay
         )
       }
+      case EApp(function_name, _) =>
+        throw NotImplemented(
+            s"`$function_name` should be assigned to its own `let` statement. "
+          + s"`let temp = $function_name(...);`", function_name.pos
+        )
       case x =>
         throw NotImplemented(s"Futil backend does not support $x yet.", x.pos)
     }
