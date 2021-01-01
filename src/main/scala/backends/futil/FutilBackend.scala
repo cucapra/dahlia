@@ -624,8 +624,8 @@ private class FutilBackendHelper {
         if (!id2FuncDef.keys.toSeq.contains(invokeId)) {
           throw Impossible("This function has not been defined: " + function_name)
         }
-        val inputPorts = inputs.map(inp => emitExpr(inp).port)
-        val definitions = id2FuncDef(invokeId).args.map(decl => CompVar(decl.id.toString()))
+        val argumentPorts = inputs.map(inp => emitExpr(inp).port)
+        val parameters = id2FuncDef(invokeId).args.map(decl => CompVar(decl.id.toString()))
         val declName = genName(function_name)
         val decl = CompDecl(declName, CompVar(function_name))
 
@@ -641,7 +641,7 @@ private class FutilBackendHelper {
                doneHole)
 
         val (group, st) = Group.fromStructure(groupName, struct, None)
-        val control = Invoke(declName, inputPorts.toList, definitions.toList, Enable(group.id))
+        val control = Invoke(declName, argumentPorts.toList, parameters.toList, Enable(group.id))
         (
           decl :: reg :: group :: st,
           control,
@@ -763,10 +763,11 @@ private class FutilBackendHelper {
 
   /** Updates `idToFuncDef` to include a mapping (FuncDef.Id -> FuncDef) for the
       given definiton. */
+  // TODO(cgyurgyik): Probably a cleaner way to do this.
   def emitDefinition(definition: Definition, idToFuncDef: FunctionMapping): Unit = {
     definition match {
-      case FuncDef(id, args, retTy, Some(bodyOpt)) => {
-        idToFuncDef(id) = FuncDef(id, args, retTy, Some(bodyOpt))
+      case FuncDef(id, params, retTy, Some(bodyOpt)) => {
+        idToFuncDef(id) = FuncDef(id, params, retTy, Some(bodyOpt))
       }
       case x => throw NotImplemented(s"Futil backend does not support $x yet", x.pos)
     }
@@ -800,8 +801,8 @@ private class FutilBackendHelper {
 
 
     val functionDefinitions: List[Component] =
-      for ((id, FuncDef(_, args, retType, Some(bodyOpt))) <- id2FuncDef.toList) yield {
-        val inputs = args.map(arg => PortDef(CompVar(arg.id.toString()), getBitWidth(arg.typ)))
+      for ((id, FuncDef(_, params, retType, Some(bodyOpt))) <- id2FuncDef.toList) yield {
+        val inputs = params.map(param => PortDef(CompVar(param.id.toString()), getBitWidth(param.typ)))
 
         val functionStore = inputs.foldLeft(Map[CompVar, (CompVar, VType)]())((functionStore, inputs) =>
           inputs match {
