@@ -752,8 +752,9 @@ private class FutilBackendHelper {
       case CReturn(expr) => {
         // Hooks the output port of the emitted `expr` to PortDef `out` of the component.
         val condOut = emitExpr(expr)
-        val returnConnect = Connect(condOut.port, ThisPort(CompVar("out")))
-        (List(returnConnect), Empty, store)
+        val outPort = ThisPort(CompVar("out"))
+        val returnConnect = Connect(condOut.port, outPort)
+        (returnConnect :: condOut.structure, Empty, store)
       }
       case _: CDecorate => (List(), Empty, store)
       case x =>
