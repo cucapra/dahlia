@@ -31,7 +31,7 @@ object Futil {
     }
   }
   case class PortDef(id: CompVar, width: Int) extends Emitable {
-    override def doc(): Doc = id.doc <> colon <+> value(width)
+    override def doc(): Doc = id.doc() <> colon <+> value(width)
   }
 
   /**** definition statements *****/
@@ -48,9 +48,9 @@ object Futil {
       case Component(name, inputs, outputs, structure, control) => {
         text("component") <+>
           text(name) <>
-          parens(commaSep(inputs.map(_.doc))) <+>
+          parens(commaSep(inputs.map(_.doc()))) <+>
           text("->") <+>
-          parens(commaSep(outputs.map(_.doc))) <+>
+          parens(commaSep(outputs.map(_.doc()))) <+>
           scope(
             emitCompStructure(structure) <@>
               text("control") <+> scope(control.doc())
@@ -225,12 +225,12 @@ object Futil {
           scope(body.doc())
       case Print(_) =>
         throw Impossible("Futil does not support print")
-      case Enable(id) => id.doc <> semi
+      case Enable(id) => id.doc() <> semi
       case Invoke(id, inputs, declarations, enabled) => {
-        val inputsDoc = inputs.map(p => p.doc)
-        val declarationsDoc = declarations.map(decl => decl.doc)
+        val inputsDoc = inputs.map(p => p.doc())
+        val declarationsDoc = declarations.map(decl => decl.doc())
         val definitions = (declarationsDoc zip inputsDoc).map({case (input, decl) => input <> equal <> decl})
-        text("invoke") <+> id.doc <> parens(commaSep(definitions)) <> text("()") <> semi <> line <> enabled.doc
+        text("invoke") <+> id.doc() <> parens(commaSep(definitions)) <> text("()") <> semi <> line <> enabled.doc()
       }
       case Empty => text("empty")
     }

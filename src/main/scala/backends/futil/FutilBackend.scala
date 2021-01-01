@@ -821,7 +821,7 @@ private class FutilBackendHelper {
       List(Import("primitives/std.lib"))
        ++ functionDefinitions
        ++ List(Component(mainComponentName, List(), List(), struct.sorted, control))
-    ).emit
+    ).emit()
   }
 }
 

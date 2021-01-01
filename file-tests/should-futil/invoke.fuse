@@ -1,7 +1,8 @@
-def foo(a: ubit<32>) {
+def foo(a: ubit<32>): ubit<32> = {
   let temp: ubit<32> = a;
+  return temp;
 }
 
 let b: ubit<32> = (1 as ubit<32>);
 ---
-foo(b);
+let c: ubit<32> = foo(b);
