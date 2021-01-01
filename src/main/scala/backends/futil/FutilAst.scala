@@ -227,9 +227,9 @@ object Futil {
         throw Impossible("Futil does not support print")
       case Enable(id) => id.doc() <> semi
       case Invoke(id, arguments, parameters, enabled) => {
-        val argumentsDoc = arguments.map(p => p.doc())
-        val parametersDoc = parameters.map(decl => decl.doc())
-        val definitions = (parametersDoc zip argumentsDoc).map({case (param, arg) => param <> equal <> arg})
+        val argsDoc = arguments.map(p => p.doc())
+        val paramsDoc = parameters.map(decl => decl.doc())
+        val definitions = (paramsDoc zip argsDoc).map({case (param, arg) => param <> equal <> arg})
         text("invoke") <+> id.doc() <> parens(commaSep(definitions)) <> text("()") <> semi <> line <> enabled.doc()
       }
       case Empty => text("empty")
