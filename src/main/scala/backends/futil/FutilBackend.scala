@@ -564,7 +564,7 @@ private class FutilBackendHelper {
       case EApp(functionId, _) =>
         throw NotImplemented(
             s"`$functionId` should be assigned to its own `let` statement. "
-          + s"`let temp = $functionId(...);`", function_name.pos
+          + s"`let temp = $functionId(...);`", functionId.pos
         )
       case x =>
         throw NotImplemented(s"Futil backend does not support $x yet.", x.pos)
