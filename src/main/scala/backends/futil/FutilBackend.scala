@@ -504,16 +504,12 @@ private class FutilBackendHelper {
       case ECast(e, t) => {
         val (vBits, _) = bitsForType(e.typ, e.pos)
         val (cBits, _) = bitsForType(Some(t), e.pos)
-        if (cBits > vBits) {
-          throw NotImplemented(
-            s"Cast implies zero-padding from $vBits to $cBits bits",
-            expr.pos
-          )
+        val comp = if (cBits > vBits) {
+          LibDecl(genName("pad"), Stdlib.pad(vBits, cBits))
+        } else {
+          LibDecl(genName("slice"), Stdlib.slice(vBits, cBits))
         }
         val res = emitExpr(e)
-        val sliceOp =
-          Stdlib.slice(vBits, cBits)
-        val comp = LibDecl(genName("slice"), sliceOp)
         val struct = List(
           comp,
           Connect(res.port, comp.id.port("in"))

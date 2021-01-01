@@ -4,16 +4,16 @@ import TestUtils._
 
 class ParsingTests extends org.scalatest.FunSuite {
   test("numbers") {
-    parseAst("1")
-    parseAst("1.25")
-    parseAst("0.25")
-    parseAst("0x19")
-    parseAst("014")
+    parseAst("1;")
+    parseAst("1.25;")
+    parseAst("0.25;")
+    parseAst("0x19;")
+    parseAst("014;")
   }
 
   test("atoms") {
-    parseAst("true")
-    parseAst("false")
+    parseAst("true;")
+    parseAst("false;")
     parseAst("true;")
   }
 
@@ -24,34 +24,34 @@ class ParsingTests extends org.scalatest.FunSuite {
        * muliple lines
        */
       // this is comment
-      x + 1;
+      x;
       """)
   }
 
   test("binops") {
-    parseAst("1 + 2")
+    parseAst("1 + 2;")
     parseAst("1 + 2;")
     parseAst("1 + 2.5;")
     parseAst("1 + 2 * 3;")
-    parseAst("true == false")
-    parseAst("1 << 2")
-    parseAst("1 >> 2")
-    parseAst("1 % 2")
-    parseAst("true || false")
-    parseAst("true && false")
+    parseAst("true == false;")
+    parseAst("1 << 2;")
+    parseAst("1 >> 2;")
+    parseAst("1 % 2;")
+    parseAst("true || false;")
+    parseAst("true && false;")
   }
 
   test("binop precedence order") {
     parseAst("(1 + 2) * 3;")
     parseAst("1 + 2 * 3 >= 10 - 5 / 7;")
-    parseAst("1 >> 2 | 3 ^ 4 & 5")
-    parseAst("1 >= 2 || 4 < 5")
+    parseAst("1 >> 2 | 3 ^ 4 & 5;")
+    parseAst("1 >= 2 || 4 < 5;")
   }
 
   test("if") {
     parseAst("if (true) {}")
-    parseAst("if (false) { 1 + 2 }")
-    parseAst("if (false) { 1 + 2 }")
+    parseAst("if (false) { 1 + 2; }")
+    parseAst("if (false) { 1 + 2; }")
   }
 
   test("decl") {
@@ -62,6 +62,7 @@ class ParsingTests extends org.scalatest.FunSuite {
 
   test("let") {
     parseAst("let x = 1; x + 2;")
+    parseAst("let force = 1; x + 2;")
     parseAst("let x: bit<32>; x + 2;")
   }
 
@@ -110,21 +111,21 @@ class ParsingTests extends org.scalatest.FunSuite {
   }
 
   test("commands") {
-    parseAst("""
-    {
-      x + 1;
-    }
-      """)
+    parseAst("""{ x+1; }""")
   }
 
   test("functions") {
     parseAst("""
-      def foo(a: bit<32>) {}
+      def foo(a: bit<32>) = {}
       """)
 
     parseAst("""
-      def foo(a: bit<32>[10 bank 5], b: bool) {
-        bar(1, 2, 3)
+      def foo(a: bit<32>): bit<32> = {}
+      """)
+
+    parseAst("""
+      def foo(a: bit<32>[10 bank 5], b: bool) = {
+        bar(1, 2, 3);
       }
       """)
   }
@@ -233,10 +234,10 @@ class ParsingTests extends org.scalatest.FunSuite {
 
   test("casting") {
     parseAst("""
-      let x = (y as bit<32>)
+      let x = (y as bit<32>);
       """)
     parseAst("""
-      let x = (y as float)
+      let x = (y as float);
       """)
   }
 }

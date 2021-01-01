@@ -11,6 +11,6 @@ for (let i: bit<4> = 0..8) unroll 2 {
       B[i][j] := tmp + A[i];
     }
   } combine {
-    R[i] += tmp
+    R[i] += tmp;
   }
 }

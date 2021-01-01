@@ -107,7 +107,7 @@ object RewriteView extends TypedPartialTransformer {
         // For each dimension, if it was split by more than 1, group the next
         // two accessors.
         val groups = factors.map({
-          case factor => Seq(it.next, it.next) -> factor
+          case factor => Seq(it.next(), it.next()) -> factor
         })
         val idxs = groups
           .zip(arrBanks)
