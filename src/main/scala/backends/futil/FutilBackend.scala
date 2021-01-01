@@ -562,6 +562,7 @@ private class FutilBackendHelper {
         )
       }
       case EApp(functionId, _) =>
+        // TODO(cgyurgyik): We should be able to do this directly.
         throw NotImplemented(
             s"`$functionId` should be assigned to its own `let` statement. "
           + s"`let temp = $functionId(...);`", functionId.pos
