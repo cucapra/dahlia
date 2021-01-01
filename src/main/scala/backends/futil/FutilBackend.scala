@@ -70,12 +70,10 @@ private class FutilBackendHelper {
   /** Store mappings from Dahlia variables to
     * generated Futil variables.
     */
-  object FutilVariableType extends Enumeration {
-    type FutilVariableType = Value
-    val PortDefinition, ComponentVariable = Value
-  }
-  import FutilVariableType._
-  type Store = Map[CompVar, (CompVar, FutilVariableType)]
+  sealed trait VType
+  case object LocalVar extends VType
+  case object ParameterVar extends VType
+  type Store = Map[CompVar, (CompVar, VType)]
 
   /** Mappings from Function Id to Function Definition. */
   type FunctionMapping = scala.collection.mutable.Map[Id, FuncDef]
@@ -459,7 +457,7 @@ private class FutilBackendHelper {
             case None => Some(0)
           }
         EmitOutput(
-          if (futilVarType == ComponentVariable) varName.port(portName) else ThisPort(varName),
+          if (futilVarType == LocalVar) varName.port(portName) else ThisPort(varName),
           if (rhsInfo.isDefined) varName.port("done") else ConstantPort(1, 1),
           struct,
           delay
@@ -595,7 +593,7 @@ private class FutilBackendHelper {
       }
       case CLet(id, Some(tarr: TArray), None) => {
         val arr = CompVar(s"$id")
-        (emitArrayDecl(tarr, id, false), Empty, store + (arr -> (arr, ComponentVariable)))
+        (emitArrayDecl(tarr, id, false), Empty, store + (arr -> (arr, LocalVar)))
       }
       case CLet(_, Some(_: TArray), Some(_)) =>
         throw NotImplemented(s"Futil backend cannot initialize memories", c.pos)
@@ -619,7 +617,7 @@ private class FutilBackendHelper {
         (
           reg :: group :: st,
           Enable(group.id),
-          store + (CompVar(s"$id") -> (reg.id, ComponentVariable))
+          store + (CompVar(s"$id") -> (reg.id, LocalVar))
         )
       }
       case CLet(id, typ, Some(EApp(invokeId, inputs))) => {
@@ -649,7 +647,7 @@ private class FutilBackendHelper {
         (
           decl :: reg :: group :: st,
           control,
-          store + (CompVar(s"$id") -> (reg.id, ComponentVariable))
+          store + (CompVar(s"$id") -> (reg.id, LocalVar))
         )
       }
       case CLet(id, typ, Some(e)) => {
@@ -672,7 +670,7 @@ private class FutilBackendHelper {
         (
           reg :: group :: st,
           Enable(group.id),
-          store + (CompVar(s"$id") -> (reg.id, ComponentVariable))
+          store + (CompVar(s"$id") -> (reg.id, LocalVar))
         )
       }
       case CLet(id, typ, None) => {
@@ -680,7 +678,7 @@ private class FutilBackendHelper {
         val reg =
           LibDecl(genName(s"$id"), Stdlib.register(typ_b))
         val struct = List(reg)
-        (struct, Empty, store + (CompVar(s"$id") -> (reg.id, ComponentVariable)))
+        (struct, Empty, store + (CompVar(s"$id") -> (reg.id, LocalVar)))
       }
       case CUpdate(lhs, rhs) => {
         val rOut = emitExpr(rhs)(store)
@@ -795,10 +793,10 @@ private class FutilBackendHelper {
 
     val declStruct =
       p.decls.map(x => emitDecl(x)).foldLeft(List[Structure]())(_ ++ _)
-    val store = declStruct.foldLeft(Map[CompVar, (CompVar, FutilVariableType)]())((store, struct) =>
+    val store = declStruct.foldLeft(Map[CompVar, (CompVar, VType)]())((store, struct) =>
       struct match {
-        case CompDecl(id, _) => store + (id -> (id, FutilVariableType.ComponentVariable))
-        case LibDecl(id, _) => store + (id -> (id, FutilVariableType.ComponentVariable))
+        case CompDecl(id, _) => store + (id -> (id, LocalVar))
+        case LibDecl(id, _) => store + (id -> (id, LocalVar))
         case _ => store
       }
     )
@@ -809,9 +807,9 @@ private class FutilBackendHelper {
       for ((id, FuncDef(_, args, retType, Some(bodyOpt))) <- id2FuncDef.toList) yield {
         val inputs = args.map(arg => PortDef(CompVar(arg.id.toString()), getBitwidth(arg.typ)))
 
-        val functionStore = inputs.foldLeft(Map[CompVar, (CompVar, FutilVariableType)]())((functionStore, inputs) =>
+        val functionStore = inputs.foldLeft(Map[CompVar, (CompVar, VType)]())((functionStore, inputs) =>
           inputs match {
-            case PortDef(id, _) => functionStore + (id -> (id, FutilVariableType.PortDefinition))
+            case PortDef(id, _) => functionStore + (id -> (id, ParameterVar))
             case _ => functionStore
           }
         )
