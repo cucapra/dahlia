@@ -79,7 +79,7 @@ private class FutilBackendHelper {
   type Store = Map[CompVar, (CompVar, VType)]
 
   /** Mappings from Function Id to Function Definition. */
-  type FunctionMapping = scala.collection.mutable.Map[Id, FuncDef]
+  type FunctionMapping = Map[Id, FuncDef]
 
   /** `external` is a flag that differentiates between generating
     *  external memories and internal memories. This is so that
@@ -761,13 +761,11 @@ private class FutilBackendHelper {
     }
   }
 
-  /** Updates `idToFuncDef` to include a mapping (FuncDef.Id -> FuncDef) for the
-      given definiton. */
-  // TODO(cgyurgyik): Probably a cleaner way to do this.
-  def emitDefinition(definition: Definition, idToFuncDef: FunctionMapping): Unit = {
+  /** Emits the function definition if a body exists. */
+  def emitDefinition(definition: Definition): FuncDef = {
     definition match {
       case FuncDef(id, params, retTy, Some(bodyOpt)) => {
-        idToFuncDef(id) = FuncDef(id, params, retTy, Some(bodyOpt))
+        FuncDef(id, params, retTy, Some(bodyOpt))
       }
       case x => throw NotImplemented(s"Futil backend does not support $x yet", x.pos)
     }
@@ -785,8 +783,16 @@ private class FutilBackendHelper {
 
   def emitProg(p: Prog, c: Config): String = {
     val _ = c
-    val id2FuncDef: FunctionMapping = collection.mutable.Map()
-    p.defs.map(definition => emitDefinition(definition, id2FuncDef))
+
+    val definitions = p.defs.map(definition => emitDefinition(definition))
+    val id2FuncDef = definitions.foldLeft(Map[Id, FuncDef]())((definitions, defn) =>
+      defn match {
+        case FuncDef(id, params, retTy, Some(bodyOpt)) => {
+          definitions + (id -> FuncDef(id, params, retTy, Some(bodyOpt)))
+        }
+        case _ => definitions
+      }
+    )
 
     val declStruct =
       p.decls.map(x => emitDecl(x)).foldLeft(List[Structure]())(_ ++ _)
