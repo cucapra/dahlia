@@ -70,7 +70,12 @@ private class FutilBackendHelper {
   /** Store mappings from Dahlia variables to
     * generated Futil variables.
     */
-  type Store = Map[CompVar, CompVar]
+  object FutilVariableType extends Enumeration {
+    type FutilVariableType = Value
+    val PortDefinition, ComponentVariable = Value
+  }
+  import FutilVariableType._
+  type Store = Map[CompVar, (CompVar, FutilVariableType)]
 
   /** Mappings from Function Id to Function Definition. */
   type FunctionMapping = scala.collection.mutable.Map[Id, FuncDef]
@@ -438,7 +443,7 @@ private class FutilBackendHelper {
       }
       case EVar(id) =>
         val portName = if (rhsInfo.isDefined) "in" else "out"
-        val varName = store
+        val (varName, futilVarType) = store
           .get(CompVar(s"$id"))
           .getOrThrow(BackendError(s"`$id' was not in store", expr.pos))
         val struct =
@@ -454,7 +459,7 @@ private class FutilBackendHelper {
             case None => Some(0)
           }
         EmitOutput(
-          varName.port(portName),
+          if (futilVarType == ComponentVariable) varName.port(portName) else ThisPort(varName),
           if (rhsInfo.isDefined) varName.port("done") else ConstantPort(1, 1),
           struct,
           delay
@@ -521,7 +526,7 @@ private class FutilBackendHelper {
         )
       }
       case EArrAccess(id, accessors) => {
-        val arr = store
+        val (arr, futilVarType@_) = store
           .get(CompVar(s"$id"))
           .getOrThrow(
             BackendError(
@@ -590,7 +595,7 @@ private class FutilBackendHelper {
       }
       case CLet(id, Some(tarr: TArray), None) => {
         val arr = CompVar(s"$id")
-        (emitArrayDecl(tarr, id, false), Empty, store + (arr -> arr))
+        (emitArrayDecl(tarr, id, false), Empty, store + (arr -> (arr, ComponentVariable)))
       }
       case CLet(_, Some(_: TArray), Some(_)) =>
         throw NotImplemented(s"Futil backend cannot initialize memories", c.pos)
@@ -614,7 +619,7 @@ private class FutilBackendHelper {
         (
           reg :: group :: st,
           Enable(group.id),
-          store + (CompVar(s"$id") -> reg.id)
+          store + (CompVar(s"$id") -> (reg.id, ComponentVariable))
         )
       }
       case CLet(id, typ, Some(EApp(invokeId, inputs))) => {
@@ -644,7 +649,7 @@ private class FutilBackendHelper {
         (
           decl :: reg :: group :: st,
           control,
-          store + (CompVar(s"$id") -> reg.id)
+          store + (CompVar(s"$id") -> (reg.id, ComponentVariable))
         )
       }
       case CLet(id, typ, Some(e)) => {
@@ -667,7 +672,7 @@ private class FutilBackendHelper {
         (
           reg :: group :: st,
           Enable(group.id),
-          store + (CompVar(s"$id") -> reg.id)
+          store + (CompVar(s"$id") -> (reg.id, ComponentVariable))
         )
       }
       case CLet(id, typ, None) => {
@@ -675,7 +680,7 @@ private class FutilBackendHelper {
         val reg =
           LibDecl(genName(s"$id"), Stdlib.register(typ_b))
         val struct = List(reg)
-        (struct, Empty, store + (CompVar(s"$id") -> reg.id))
+        (struct, Empty, store + (CompVar(s"$id") -> (reg.id, ComponentVariable)))
       }
       case CUpdate(lhs, rhs) => {
         val rOut = emitExpr(rhs)(store)
@@ -790,10 +795,10 @@ private class FutilBackendHelper {
 
     val declStruct =
       p.decls.map(x => emitDecl(x)).foldLeft(List[Structure]())(_ ++ _)
-    val store = declStruct.foldLeft(Map[CompVar, CompVar]())((store, struct) =>
+    val store = declStruct.foldLeft(Map[CompVar, (CompVar, FutilVariableType)]())((store, struct) =>
       struct match {
-        case CompDecl(id, _) => store + (id -> id)
-        case LibDecl(id, _) => store + (id -> id)
+        case CompDecl(id, _) => store + (id -> (id, FutilVariableType.ComponentVariable))
+        case LibDecl(id, _) => store + (id -> (id, FutilVariableType.ComponentVariable))
         case _ => store
       }
     )
@@ -804,17 +809,9 @@ private class FutilBackendHelper {
       for ((id, FuncDef(_, args, retType, Some(bodyOpt))) <- id2FuncDef.toList) yield {
         val inputs = args.map(arg => PortDef(CompVar(arg.id.toString()), getBitwidth(arg.typ)))
 
-        val functionStore = inputs.foldLeft(Map[CompVar, CompVar]())((functionStore, inputs) =>
-          // TODO(cgyurgyik):
-          // Currently, we store the parameters in functionStore as CompVars.
-          // However, when reading their values, we are using an out port, which shouldn't be necessary.
-          // e.g.,
-          //
-          // foo(x: 32) -> () {
-          //   someRegister.in = x.out // We simply want `x` here.
-          // }
+        val functionStore = inputs.foldLeft(Map[CompVar, (CompVar, FutilVariableType)]())((functionStore, inputs) =>
           inputs match {
-            case PortDef(id, _) => functionStore + (id -> id)
+            case PortDef(id, _) => functionStore + (id -> (id, FutilVariableType.PortDefinition))
             case _ => functionStore
           }
         )
