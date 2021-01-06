@@ -814,7 +814,12 @@ private class FutilBackendHelper {
 
     val functionDefinitions: List[Component] =
       for ((id, FuncDef(_, params, retType, Some(bodyOpt))) <- id2FuncDef.toList) yield {
-        val inputs = params.map(param => PortDef(CompVar(param.id.toString()), getBitWidth(param.typ)))
+        val inputs = params.map(param =>
+          param.typ match {
+            case TArray(_, _, _) => throw NotImplemented("Memory as a parameter is not supported yet.", param.pos)
+            case _ => PortDef(CompVar(param.id.toString()), getBitWidth(param.typ))
+          }
+        )
 
         val functionStore = inputs.foldLeft(Map[CompVar, (CompVar, VType)]())((functionStore, inputs) =>
           inputs match {
