@@ -78,9 +78,19 @@ object LowerUnroll extends PartialTransformer {
               bank.map(Seq(_)).getOrElse(0 until arrBank)
             }
           })
+
         cartesianProduct(allBanks)
           .map(banks => {
-            (banks, EArrAccess(Id(id.v + banks.mkString("_")), idxs.map(_._1)))
+            (
+              banks,
+              EArrAccess(
+                Id(id.v + banks.mkString("_")),
+                idxs
+                  .map(_._1)
+                  .zip(ta.dims.map(_._2))
+                  .map({ case (i, b) => { println(s"$i, $b"); (i / EInt(b, 10)) }})
+              )
+            )
           })
           .toMap
       }
@@ -570,7 +580,7 @@ object LowerUnroll extends PartialTransformer {
     case (e @ EVar(id), env) => {
       env.rewriteGet(id).map(nId => EVar(nId)).getOrElse(e) -> env
     }
-    // Since physical access expression imply exactly on expression, we can
+    // Since physical access expression imply exactly one expression, we can
     // rewrite them.
     case (EPhysAccess(id, physIdxs), env) => {
       val transformer = env
