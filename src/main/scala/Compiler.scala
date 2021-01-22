@@ -110,8 +110,12 @@ object Compiler {
       .map(err => {
         scribe.debug(err.getStackTrace().take(10).mkString("\n"))
         err match {
-          case _: Errors.TypeError =>
-            s"[${red("Type error")}] ${err.getMessage}"
+          case _: Errors.TypeError => {
+            s"[${red("Type error")}] ${err.getMessage}" +
+              (if (c.enableLowering)
+                 "\nDoes this program type check without the `--lower` flag? If not, please report this as an error."
+               else "")
+          }
           case _: Errors.ParserError =>
             s"[${red("Parsing error")}] ${err.getMessage}"
           case _: CompilerError.Impossible =>
