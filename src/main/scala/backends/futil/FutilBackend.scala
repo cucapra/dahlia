@@ -105,25 +105,18 @@ private class FutilBackendHelper {
       case 1 => {
         val size = typ.dims(0)._1
         val idxSize = bitsNeeded(size)
-        if (external) {
-          LibDecl(name, Stdlib.mem_d1_ext(width, size, idxSize))
-        } else {
-          LibDecl(name, Stdlib.mem_d1(width, size, idxSize))
-        }
+        LibDecl(name, Stdlib.mem_d1(width, size, idxSize), external)
       }
       case 2 => {
         val size0 = typ.dims(0)._1
         val size1 = typ.dims(1)._1
         val idxSize0 = bitsNeeded(size0)
         val idxSize1 = bitsNeeded(size1)
-        if (external) {
-          LibDecl(
-            name,
-            Stdlib.mem_d2_ext(width, size0, size1, idxSize0, idxSize1)
-          )
-        } else {
-          LibDecl(name, Stdlib.mem_d2(width, size0, size1, idxSize0, idxSize1))
-        }
+        LibDecl(
+          name,
+          Stdlib.mem_d2(width, size0, size1, idxSize0, idxSize1),
+          external
+        )
       }
       case 3 => {
         val size0 = typ.dims(0)._1
@@ -132,61 +125,39 @@ private class FutilBackendHelper {
         val idxSize0 = bitsNeeded(size0)
         val idxSize1 = bitsNeeded(size1)
         val idxSize2 = bitsNeeded(size2)
-        if (external) {
-          LibDecl(
-            name,
-            Stdlib
-              .mem_d3_ext(
-                width,
-                size0,
-                size1,
-                size2,
-                idxSize0,
-                idxSize1,
-                idxSize2
-              )
-          )
-        } else {
-          LibDecl(
-            name,
-            Stdlib
-              .mem_d3(width, size0, size1, size2, idxSize0, idxSize1, idxSize2)
-          )
-        }
+        LibDecl(
+          name,
+          Stdlib
+            .mem_d3(width, size0, size1, size2, idxSize0, idxSize1, idxSize2),
+          external
+        )
       }
       case 4 => {
-              val size0 = typ.dims(0)._1
-              val size1 = typ.dims(1)._1
-              val size2 = typ.dims(2)._1
-              val size3 = typ.dims(3)._1
-              val idxSize0 = bitsNeeded(size0)
-              val idxSize1 = bitsNeeded(size1)
-              val idxSize2 = bitsNeeded(size2)
-              val idxSize3 = bitsNeeded(size3)
-              if (external) {
-                LibDecl(
-                  name,
-                  Stdlib
-                    .mem_d4_ext(
-                      width,
-                      size0,
-                      size1,
-                      size2,
-                      size3,
-                      idxSize0,
-                      idxSize1,
-                      idxSize2,
-                      idxSize3
-                    )
-                )
-              } else {
-                LibDecl(
-                  name,
-                  Stdlib
-                    .mem_d4(width, size0, size1, size2, size3, idxSize0, idxSize1, idxSize2, idxSize3)
-                )
-              }
-            }
+        val size0 = typ.dims(0)._1
+        val size1 = typ.dims(1)._1
+        val size2 = typ.dims(2)._1
+        val size3 = typ.dims(3)._1
+        val idxSize0 = bitsNeeded(size0)
+        val idxSize1 = bitsNeeded(size1)
+        val idxSize2 = bitsNeeded(size2)
+        val idxSize3 = bitsNeeded(size3)
+        LibDecl(
+          name,
+          Stdlib
+            .mem_d4(
+              width,
+              size0,
+              size1,
+              size2,
+              size3,
+              idxSize0,
+              idxSize1,
+              idxSize2,
+              idxSize3
+            ),
+          external
+        )
+      }
       case n => throw NotImplemented(s"Arrays of size $n")
     }
     List(mem)
@@ -198,15 +169,15 @@ private class FutilBackendHelper {
   def emitDecl(d: Decl): List[Structure] = d.typ match {
     case tarr: TArray => emitArrayDecl(tarr, d.id, true)
     case _: TBool => {
-      val reg = LibDecl(CompVar(s"${d.id}"), Stdlib.register(1))
+      val reg = LibDecl(CompVar(s"${d.id}"), Stdlib.register(1), false)
       List(reg)
     }
     case TSizedInt(size, _) => {
-      val reg = LibDecl(CompVar(s"${d.id}"), Stdlib.register(size))
+      val reg = LibDecl(CompVar(s"${d.id}"), Stdlib.register(size), false)
       List(reg)
     }
     case TFixed(ltotal, _, _) => {
-      val reg = LibDecl(CompVar(s"${d.id}"), Stdlib.register(ltotal))
+      val reg = LibDecl(CompVar(s"${d.id}"), Stdlib.register(ltotal), false)
       List(reg)
     }
     case x => throw NotImplemented(s"Type $x not implemented for decls.", x.pos)
@@ -249,7 +220,7 @@ private class FutilBackendHelper {
         val binop =
           if (signed(e1.typ)) Stdlib.s_op(s"$compName", e1Bits)
           else Stdlib.op(s"$compName", e1Bits)
-        val comp = LibDecl(genName(compName), binop)
+        val comp = LibDecl(genName(compName), binop, false)
         val struct = List(
           comp,
           Connect(e1Out.port, comp.id.port("left")),
@@ -295,7 +266,7 @@ private class FutilBackendHelper {
           } else {
             Stdlib.fxd_p_op(s"$compName", e1Bits, intBit1, fracBit1);
           }
-        val comp = LibDecl(genName(compName), binop)
+        val comp = LibDecl(genName(compName), binop, false)
         val struct = List(
           comp,
           Connect(e1Out.port, comp.id.port("left")),
@@ -356,7 +327,7 @@ private class FutilBackendHelper {
       if (signed(e1.typ)) Stdlib.s_op(s"$compName", typ_b)
       else Stdlib.op(s"$compName", typ_b);
 
-    val comp = LibDecl(genName(compName), binop)
+    val comp = LibDecl(genName(compName), binop, false)
     val struct = List(
       comp,
       Connect(e1Out.port, comp.id.port("left")),
@@ -463,7 +434,8 @@ private class FutilBackendHelper {
         val const =
           LibDecl(
             genName("const"),
-            Stdlib.constant(typ_b, v)
+            Stdlib.constant(typ_b, v),
+            false
           )
         EmitOutput(
           const.id.port("out"),
@@ -483,7 +455,8 @@ private class FutilBackendHelper {
         val fpconst =
           LibDecl(
             genName("fpconst"),
-            Stdlib.fixed_point(width, int_bit, frac_bit, v_1, v_2)
+            Stdlib.fixed_point(width, int_bit, frac_bit, v_1, v_2),
+            false
           )
         EmitOutput(
           fpconst.id.port("out"),
@@ -496,9 +469,9 @@ private class FutilBackendHelper {
         val (vBits, _) = bitsForType(e.typ, e.pos)
         val (cBits, _) = bitsForType(Some(t), e.pos)
         val comp = if (cBits > vBits) {
-          LibDecl(genName("pad"), Stdlib.pad(vBits, cBits))
+          LibDecl(genName("pad"), Stdlib.pad(vBits, cBits), false)
         } else {
-          LibDecl(genName("slice"), Stdlib.slice(vBits, cBits))
+          LibDecl(genName("slice"), Stdlib.slice(vBits, cBits), false)
         }
         val res = emitExpr(e)
         val struct = List(
@@ -554,7 +527,7 @@ private class FutilBackendHelper {
       }
       case EApp(Id("sqrt"), List(arg)) => {
         val argOut = emitExpr(arg)
-        val sqrt = LibDecl(genName("sqrt"), Stdlib.sqrt())
+        val sqrt = LibDecl(genName("sqrt"), Stdlib.sqrt(), false)
         val struct = List(
           sqrt,
           Connect(argOut.port, sqrt.id.port("in")),
@@ -572,16 +545,16 @@ private class FutilBackendHelper {
         )
       }
       case EApp(Id("exp"), List(exponent_)) => {
-         val exponentOut = emitExpr(exponent_)
-         val exp = LibDecl(genName("exp"), Stdlib.exp())
-         val struct = List(
-           exp,
-           Connect(exponentOut.port, exp.id.port("exponent")),
-           Connect(
-             ConstantPort(1, 1),
-             exp.id.port("go"),
-             Some(Not(Atom(exp.id.port("done"))))
-           )
+        val exponentOut = emitExpr(exponent_)
+        val exp = LibDecl(genName("exp"), Stdlib.exp(), false)
+        val struct = List(
+          exp,
+          Connect(exponentOut.port, exp.id.port("exponent")),
+          Connect(
+            ConstantPort(1, 1),
+            exp.id.port("go"),
+            Some(Not(Atom(exp.id.port("done"))))
+          )
         )
         EmitOutput(
           exp.id.port("out"),
@@ -628,7 +601,7 @@ private class FutilBackendHelper {
       // if not clearly specified, Cast the TRational to TFixed
       case CLet(id, Some(TFixed(t, i, un)), Some(e)) => {
         val reg =
-          LibDecl(genName(s"$id"), Stdlib.register(t))
+          LibDecl(genName(s"$id"), Stdlib.register(t), false)
         val out = emitExpr(ECast(e, TFixed(t, i, un)))(store)
         val groupName = genName("let")
         val doneHole = Connect(
@@ -651,7 +624,7 @@ private class FutilBackendHelper {
       case CLet(id, typ, Some(e)) => {
         val (typ_b, _) = bitsForType(typ, c.pos)
         val reg =
-          LibDecl(genName(s"$id"), Stdlib.register(typ_b))
+          LibDecl(genName(s"$id"), Stdlib.register(typ_b), false)
         val out = emitExpr(e)(store)
         val groupName = genName("let")
         val doneHole = Connect(
@@ -674,7 +647,7 @@ private class FutilBackendHelper {
       case CLet(id, typ, None) => {
         val (typ_b, _) = bitsForType(typ, c.pos)
         val reg =
-          LibDecl(genName(s"$id"), Stdlib.register(typ_b))
+          LibDecl(genName(s"$id"), Stdlib.register(typ_b), false)
         val struct = List(reg)
         (struct, Empty, store + (CompVar(s"$id") -> reg.id))
       }
@@ -766,7 +739,7 @@ private class FutilBackendHelper {
     val store = declStruct.foldLeft(Map[CompVar, CompVar]())((store, struct) =>
       struct match {
         case CompDecl(id, _) => store + (id -> id)
-        case LibDecl(id, _) => store + (id -> id)
+        case LibDecl(id, _, _) => store + (id -> id)
         case _ => store
       }
     )
@@ -776,7 +749,13 @@ private class FutilBackendHelper {
       "prog",
       List(
         Import("primitives/std.lib"),
-        Component(if (c.kernelName == "kernel") "main" else c.kernelName, List(), List(), struct.sorted, control)
+        Component(
+          if (c.kernelName == "kernel") "main" else c.kernelName,
+          List(),
+          List(),
+          struct.sorted,
+          control
+        )
       )
     ).emit()
   }

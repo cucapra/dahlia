@@ -104,7 +104,10 @@ object Futil {
     override def doc(): Doc = this match {
       case CompDecl(id, comp) =>
         id.doc() <+> equal <+> comp.doc() <> semi
-      case LibDecl(id, comp) =>
+      case LibDecl(id, comp, true) =>
+        text("@external(1)") <+> id.doc() <+> equal <+> text("prim") <+> comp
+          .doc() <> semi
+      case LibDecl(id, comp, false) =>
         id.doc() <+> equal <+> text("prim") <+> comp.doc() <> semi
       case Connect(src, dest, Some(guard)) =>
         dest.doc() <+> equal <+> guard.doc() <+> text("?") <+> src.doc() <> semi
@@ -121,7 +124,8 @@ object Futil {
 
     def compare(that: Structure): Int = {
       (this, that) match {
-        case (LibDecl(thisId, _), LibDecl(thatId, _)) => thisId.compare(thatId)
+        case (LibDecl(thisId, _, _), LibDecl(thatId, _, _)) =>
+          thisId.compare(thatId)
         case (CompDecl(thisId, _), CompDecl(thatId, _)) =>
           thisId.compare(thatId)
         case (Group(thisId, _, _), Group(thatId, _, _)) =>
@@ -133,8 +137,8 @@ object Futil {
             thisSrc.compare(thatSrc)
           }
         }
-        case (LibDecl(_, _), _) => -1
-        case (_, LibDecl(_, _)) => 1
+        case (LibDecl(_, _, _), _) => -1
+        case (_, LibDecl(_, _, _)) => 1
         case (CompDecl(_, _), _) => -1
         case (_, CompDecl(_, _)) => 1
         case (Group(_, _, _), _) => -1
@@ -142,7 +146,8 @@ object Futil {
       }
     }
   }
-  case class LibDecl(id: CompVar, ci: CompInst) extends Structure
+  case class LibDecl(id: CompVar, ci: CompInst, external: Boolean)
+      extends Structure
   case class CompDecl(id: CompVar, comp: CompVar) extends Structure
   case class Group(
       id: CompVar,
@@ -267,9 +272,6 @@ object Stdlib {
   def mem_d1(width: Int, size: Int, idxSize: Int): Futil.CompInst =
     Futil.CompInst("std_mem_d1", List(width, size, idxSize))
 
-  def mem_d1_ext(width: Int, size: Int, idxSize: Int): Futil.CompInst =
-    Futil.CompInst("std_mem_d1_ext", List(width, size, idxSize))
-
   def mem_d2(
       width: Int,
       size0: Int,
@@ -278,18 +280,6 @@ object Stdlib {
       idxSize1: Int
   ): Futil.CompInst =
     Futil.CompInst("std_mem_d2", List(width, size0, size1, idxSize0, idxSize1))
-
-  def mem_d2_ext(
-      width: Int,
-      size0: Int,
-      size1: Int,
-      idxSize0: Int,
-      idxSize1: Int
-  ): Futil.CompInst =
-    Futil.CompInst(
-      "std_mem_d2_ext",
-      List(width, size0, size1, idxSize0, idxSize1)
-    )
 
   def mem_d3(
       width: Int,
@@ -305,51 +295,31 @@ object Stdlib {
       List(width, size0, size1, size2, idxSize0, idxSize1, idxSize2)
     )
 
-  def mem_d3_ext(
+  def mem_d4(
       width: Int,
       size0: Int,
       size1: Int,
       size2: Int,
+      size3: Int,
       idxSize0: Int,
       idxSize1: Int,
-      idxSize2: Int
+      idxSize2: Int,
+      idxSize3: Int
   ): Futil.CompInst =
     Futil.CompInst(
-      "std_mem_d3_ext",
-      List(width, size0, size1, size2, idxSize0, idxSize1, idxSize2)
+      "std_mem_d4",
+      List(
+        width,
+        size0,
+        size1,
+        size2,
+        size3,
+        idxSize0,
+        idxSize1,
+        idxSize2,
+        idxSize3
+      )
     )
-
-    def mem_d4(
-        width: Int,
-        size0: Int,
-        size1: Int,
-        size2: Int,
-        size3: Int,
-        idxSize0: Int,
-        idxSize1: Int,
-        idxSize2: Int,
-        idxSize3: Int
-    ): Futil.CompInst =
-      Futil.CompInst(
-        "std_mem_d4",
-        List(width, size0, size1, size2, size3, idxSize0, idxSize1, idxSize2, idxSize3)
-      )
-
-    def mem_d4_ext(
-        width: Int,
-        size0: Int,
-        size1: Int,
-        size2: Int,
-        size3: Int,
-        idxSize0: Int,
-        idxSize1: Int,
-        idxSize2: Int,
-        idxSize3: Int
-    ): Futil.CompInst =
-      Futil.CompInst(
-        "std_mem_d4_ext",
-        List(width, size0, size1, size2, size3, idxSize0, idxSize1, idxSize2, idxSize3)
-      )
 
   def sqrt(): Futil.CompInst =
     Futil.CompInst("std_sqrt", List())
@@ -365,16 +335,20 @@ object Stdlib {
       value1: Int,
       value2: Int
   ): Futil.CompInst =
-    Futil.CompInst("fixed_p_std_const", List(width, int_bit, frac_bit, value1, value2))
+    Futil.CompInst(
+      "fixed_p_std_const",
+      List(width, int_bit, frac_bit, value1, value2)
+    )
 
-  def fxd_p_op(op: String,
+  def fxd_p_op(
+      op: String,
       width: Int,
       int_bit: Int,
       frac_bit: Int
   ): Futil.CompInst =
     Futil.CompInst(s"fixed_p_std_$op", List(width, int_bit, frac_bit))
 
-  def diff_width_add (
+  def diff_width_add(
       width1: Int,
       width2: Int,
       int_width1: Int,
@@ -383,10 +357,20 @@ object Stdlib {
       fract_width2: Int,
       out_width: Int
   ): Futil.CompInst =
-    Futil.CompInst("fixed_p_std_add_dbit", List(width1, width2, int_width1, fract_width1,
-                      int_width2, fract_width2, out_width))
+    Futil.CompInst(
+      "fixed_p_std_add_dbit",
+      List(
+        width1,
+        width2,
+        int_width1,
+        fract_width1,
+        int_width2,
+        fract_width2,
+        out_width
+      )
+    )
 
-    def sdiff_width_add (
+  def sdiff_width_add(
       width1: Int,
       width2: Int,
       int_width1: Int,
@@ -395,13 +379,24 @@ object Stdlib {
       fract_width2: Int,
       out_width: Int
   ): Futil.CompInst =
-    Futil.CompInst("sfixed_p_std_add_dbit", List(width1, width2, int_width1, fract_width1,
-                      int_width2, fract_width2, out_width))
+    Futil.CompInst(
+      "sfixed_p_std_add_dbit",
+      List(
+        width1,
+        width2,
+        int_width1,
+        fract_width1,
+        int_width2,
+        fract_width2,
+        out_width
+      )
+    )
 
   def s_op(op: String, bitwidth: Int): Futil.CompInst =
     Futil.CompInst(s"std_s$op", List(bitwidth))
 
-  def fxd_p_sop(op: String,
+  def fxd_p_sop(
+      op: String,
       width: Int,
       int_bit: Int,
       frac_bit: Int
