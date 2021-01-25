@@ -1,0 +1,22 @@
+#include "parser.cpp"
+/***************** Parse helpers  ******************/
+/***************************************************/
+void kernel(vector<float> A0, vector<float> A1) {
+  
+  float x_;
+  x_ = A0[(unsigned int)1];
+  float y_;
+  y_ = A1[(unsigned int)1];
+  json_t __;
+  __["A0"] = A0;
+  __["A1"] = A1;
+  std::cout << __.dump(2) << std::endl;
+}
+int main(int argc, char** argv) {
+  using namespace flattening;
+  auto v = parse_data(argc, argv);;
+  auto A0 = get_arg<n_dim_vec_t<float, 1>>("A0", "float[]", v);
+  auto A1 = get_arg<n_dim_vec_t<float, 1>>("A1", "float[]", v);
+  kernel(A0, A1);
+  return 0;
+}

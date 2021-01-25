@@ -17,6 +17,28 @@ object Utils {
     case n if n < 0 => bitsNeeded(abs(n)) + 1
   }
 
+  def cartesianProduct[T](llst: Seq[Seq[T]]): Seq[Seq[T]] = {
+    def pel(e: T, ll: Seq[Seq[T]], a: Seq[Seq[T]] = Nil): Seq[Seq[T]] =
+      ll match {
+        case Nil => a.reverse
+        case x +: xs => pel(e, xs, (e +: x) +: a)
+      }
+
+    llst match {
+      case Nil => Nil
+      case x +: Nil => x.map(Seq(_))
+      case x +: _ =>
+        x match {
+          case Nil => Nil
+          case _ =>
+            llst
+              .foldRight(Seq(x))((l, a) => l.flatMap(x => pel(x, a)))
+              .map(_.dropRight(x.size))
+        }
+    }
+  }
+
+
   @inline def asPartial[A, B, C](f: (A, B) => C): PF[(A, B), C] = {
     case (a, b) => f(a, b)
   }
