@@ -21,7 +21,7 @@ object Compiler {
   )
 
   // Transformers to execute *after* type checking. Boolean indicates if the
-  // pass should only run during lowering.
+  // pass should only run when passed the `--lower` flag.
   val postTransformers: List[(String, (TypedPartialTransformer, Boolean))] =
     List(
       "Rewrite views" -> (passes.RewriteView, false),
