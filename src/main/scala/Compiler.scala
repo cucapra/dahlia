@@ -21,7 +21,7 @@ object Compiler {
   )
 
   // Transformers to execute *after* type checking. Boolean indicates if the
-  // pass should only run during lowering.
+  // pass should only run when passed the `--lower` flag.
   val postTransformers: List[(String, (TypedPartialTransformer, Boolean))] =
     List(
       "Rewrite views" -> (passes.RewriteView, false),
@@ -110,8 +110,12 @@ object Compiler {
       .map(err => {
         scribe.debug(err.getStackTrace().take(10).mkString("\n"))
         err match {
-          case _: Errors.TypeError =>
-            s"[${red("Type error")}] ${err.getMessage}"
+          case _: Errors.TypeError => {
+            s"[${red("Type error")}] ${err.getMessage}" +
+              (if (c.enableLowering)
+                 "\nDoes this program type check without the `--lower` flag? If not, please report this as an error."
+               else "")
+          }
           case _: Errors.ParserError =>
             s"[${red("Parsing error")}] ${err.getMessage}"
           case _: CompilerError.Impossible =>
