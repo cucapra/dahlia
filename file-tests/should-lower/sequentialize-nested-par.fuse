@@ -1,0 +1,11 @@
+let n: ubit<6> = 4;
+let m: ubit<6> = 0;
+let i: ubit<6> = 0;
+
+while (m < n) {
+  while (i < m) {
+    let j: ubit<6> = 0;
+    let k: ubit<6> = 0;
+  }
+  m := m + 1;
+}

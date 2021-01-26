@@ -1,6 +1,7 @@
 package fuselang.passes
 
 import scala.{PartialFunction => PF}
+import scala.collection.mutable.{Set => SetM, Buffer}
 import fuselang.common._
 import Transformer._
 import EnvHelpers._
@@ -61,8 +62,7 @@ object Sequentialize extends PartialTransformer {
       val (nInit, e1) = rewriteE(init)(env)
       c.copy(e = Some(nInit)) -> e1.addDefine(id)
     }
-    case (CPar(cmds), _) => {
-      import scala.collection.mutable.{Set => SetM, Buffer}
+    case (CPar(cmds), env) => {
       val allDefines: SetM[Id] = SetM()
       val allUses: SetM[Id] = SetM()
       var curDefines: SetM[Id] = SetM()
@@ -71,15 +71,17 @@ object Sequentialize extends PartialTransformer {
 
       for (cmd <- cmds) {
         val (nCmd, e1) = rewriteC(cmd)(SeqEnv(Set(), Set()))
-        /*println(Pretty.emitCmd(cmd)(false).pretty)
-        println(s"""
-          uses: ${e1.uses}
-          defines: ${e1.defines}
-          curDefines: ${curDefines}
-          curUses: ${curUses}
-          conflicts: ${curDefines.intersect(e1.uses).size == 0 && curUses.intersect(e1.defines).size == 0}
-          =====================
-          """)*/
+        /*System.err.println(Pretty.emitCmd(cmd)(false).pretty)
+        System.err.println(s"""
+        uses: ${e1.uses}
+        defines: ${e1.defines}
+        curDefines: ${curDefines}
+        curUses: ${curUses}
+        conflicts: ${curDefines.intersect(e1.uses) union curUses.intersect(e1.defines)}
+        =====================
+        """)*/
+        // If there are no conflicts, add this to the current parallel
+        // block.
         if (curDefines.intersect(e1.uses).isEmpty &&
             curUses.intersect(e1.defines).isEmpty) {
           newSeq.last += nCmd
@@ -93,10 +95,11 @@ object Sequentialize extends PartialTransformer {
         allDefines ++= e1.defines
         allUses ++= e1.uses
       }
-      CSeq.smart(newSeq.map(ps => CPar.smart(ps.toSeq)).toSeq) -> SeqEnv(
-        allUses.toSet,
-        allDefines.toSet
-      )
+
+      // Add all the uses and defines from this loop into the summary.
+      val allEnv = SeqEnv(allUses.toSet, allDefines.toSet).merge(env)
+
+      CSeq.smart(newSeq.map(ps => CPar.smart(ps.toSeq)).toSeq) -> allEnv
     }
   }
 

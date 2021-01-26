@@ -1,0 +1,26 @@
+#include "parser.cpp"
+/***************** Parse helpers  ******************/
+/***************************************************/
+void kernel() {
+  
+  unsigned int n_ = (unsigned int)4;
+  unsigned int m_ = (unsigned int)0;
+  unsigned int i_ = (unsigned int)0;
+  //---
+  while((m_ < n_)) {
+    while((i_ < m_)) {
+      unsigned int j_ = (unsigned int)0;
+      unsigned int k_ = (unsigned int)0;
+    }
+    //---
+    m_ = (m_ + (unsigned int)1);
+  }
+  json_t __;
+  std::cout << __.dump(2) << std::endl;
+}
+int main(int argc, char** argv) {
+  using namespace flattening;
+  auto v = parse_data(argc, argv);;
+  kernel();
+  return 0;
+}
