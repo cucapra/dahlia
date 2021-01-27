@@ -6,10 +6,10 @@ scalaVersion := "2.13.4"
 libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.0.8" % "test",
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2",
-  "com.lihaoyi" %% "fastparse" % "2.2.2",
+  "com.lihaoyi" %% "fastparse" % "2.3.0",
   "com.github.scopt" %% "scopt" % "4.0.0",
-  "com.outr" %% "scribe" % "2.7.9",
-  "com.lihaoyi" %% "sourcecode" % "0.1.7"
+  "com.outr" %% "scribe" % "3.2.4",
+  "com.lihaoyi" %% "sourcecode" % "0.2.1"
 )
 
 scalacOptions ++= Seq(
