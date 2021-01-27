@@ -7,6 +7,9 @@ import fastparse.JavaWhitespace._
 
 import fuselang.common._
 import Syntax._
+import Configuration.stringToBackend
+import Utils.RichOption
+import CompilerError.BackendError
 
 case class Parser(input: String) {
 
@@ -409,14 +412,25 @@ case class Parser(input: String) {
   def decl[_: P]: P[Decl] =
     positioned(P(kw("decl") ~/ args ~ ";"))
 
+  def backend[_: P]: P[String] =
+    P(("c++" | "vivado" | "futil").!)
+      .map(s => s)
+      .opaque("known backend: `vivado(\"...\")`")
+
   // include statements
   def include[_: P]: P[Include] =
     positioned(
-      P(kw("import") ~/ stringVal ~ braces(funcSignature.rep))
-        .map({
-          case (name, funcs) => Include(name, funcs.toList)
+      P(kw("import") ~/
+        (backend ~/ parens(stringVal)).rep(1) ~/
+        braces(funcSignature.rep)
+      ).map({
+        case (backends, funcs) => {
+          val bs = backends.map({ case (b, imp) =>
+            stringToBackend(b).getOrThrow(BackendError(s"Unknown backend: $b")) -> imp
+          }).toMap
+          Include(bs, funcs.toList)
+        }
         })
-        .opaque("import <string> { <function signatures> }")
     )
 
   // Top-level decorations
@@ -428,7 +442,7 @@ case class Parser(input: String) {
   def prog[_: P]: P[Prog] =
     positioned(
       P(
-        include.rep.opaque("include statements") ~/
+        include.rep ~/
           (funcDef | recordDef).rep ~/
           decor.rep.opaque("top-level decors") ~/
           decl.rep.opaque("declarations") ~/
