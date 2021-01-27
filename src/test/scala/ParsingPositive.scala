@@ -171,10 +171,10 @@ class ParsingTests extends org.scalatest.FunSuite {
 
   test("imports") {
     parseAst("""
-      import "print.h" {}
+      import vivado("print.h") {}
       """)
     parseAst("""
-      import "print.h" {
+      import c++("print.h") {
         def foo(a: bit<32>);
       }
       """)

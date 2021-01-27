@@ -8,8 +8,21 @@ object Configuration {
   final case object Compile extends Mode
   final case object Run extends Mode
 
+  def stringToBackend(name: String): Option[BackendOption] = name match {
+    case "vivado" => Some(Vivado)
+    case "c++" => Some(Cpp)
+    case "futil" => Some(Futil)
+    case _ => None
+  }
+
   // What kind of code to generate.
-  sealed trait BackendOption
+  sealed trait BackendOption {
+    override def toString() = this match {
+      case Vivado => "vivado"
+      case Cpp => "c++"
+      case Futil => "futil"
+    }
+  }
   final case object Vivado extends BackendOption
   final case object Cpp extends BackendOption
   final case object Futil extends BackendOption

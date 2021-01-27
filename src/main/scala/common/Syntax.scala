@@ -3,6 +3,7 @@ package fuselang.common
 import scala.util.parsing.input.{Positional, Position}
 
 import Errors._
+import Configuration.BackendOption
 
 object Syntax {
 
@@ -272,7 +273,10 @@ object Syntax {
   /**
     * An include with the name of the module and function definitions.
     */
-  case class Include(name: String, defs: Seq[FuncDef]) extends Positional
+  case class Include(
+    backends: Map[BackendOption, String],
+    defs: Seq[FuncDef]
+  ) extends Positional
 
   case class Decl(id: Id, typ: Type) extends Positional
   case class Prog(
