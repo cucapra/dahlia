@@ -1731,7 +1731,7 @@ class TypeCheckerSpec extends FunSpec {
   describe("Imports") {
     it("adds imported functions into type checking scope") {
       typeCheck("""
-        import "print.cpp" {
+        import vivado("print.cpp") {
           def print_vect(f: float[4]);
         }
         decl a: float[4];

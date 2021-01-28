@@ -174,8 +174,8 @@ object Cpp {
         } <+> name <> semi
     }
 
-    def emitInclude(incl: Include): Doc =
-      text("#include") <+> quote(text(incl.name))
+    def emitInclude(incl: String): Doc =
+      text("#include") <+> quote(text(incl))
 
   }
 

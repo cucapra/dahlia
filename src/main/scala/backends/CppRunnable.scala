@@ -8,6 +8,7 @@ import Configuration._
 import CompilerError._
 import PrettyPrint.Doc
 import PrettyPrint.Doc._
+import fuselang.common.{Configuration => C}
 
 /**
   * Same as [[fuselang.backend.VivadoBackend]] except this creates a main
@@ -178,7 +179,7 @@ private class CppRunnable extends CppLike {
     )
 
     // Add parsing library to the list of includes.
-    val includes = Include("parser.cpp", List()) +: p.includes
+    val includes = "parser.cpp" +: p.includes.flatMap(_.backends.get(C.Cpp))
 
     // Generate parsing helpers for all record defintions.
     val parseHelpers =
@@ -229,7 +230,8 @@ private class CppRunnableHeader extends CppRunnable {
   }
 
   override def emitProg(p: Prog, c: Config) = {
-    val includes = Include("parser.cpp", List()) +: p.includes
+    val includes: Seq[String] =
+      p.includes.flatMap(_.backends.get(C.Cpp)) :+ "parser.cpp"
 
     val declarations =
       vsep(includes.map(emitInclude)) <@>

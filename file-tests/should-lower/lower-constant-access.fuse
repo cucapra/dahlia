@@ -1,0 +1,3 @@
+decl A: float[4 bank 2];
+let x = A[2];
+let y = A[3];

@@ -8,6 +8,7 @@ import Configuration._
 import CompilerError._
 import PrettyPrint.Doc
 import PrettyPrint.Doc._
+import fuselang.common.{Configuration => C}
 
 private class VivadoBackend(config: Config) extends CppLike {
   val CppPreamble: Doc = text("""
@@ -162,7 +163,7 @@ private class VivadoBackend(config: Config) extends CppLike {
   def emitProg(p: Prog, c: Config): String = {
     val layout =
       CppPreamble <@>
-        vsep(p.includes.map(emitInclude)) <@>
+        vsep(p.includes.flatMap(_.backends.get(C.Vivado).map(emitInclude))) <@>
         vsep(p.defs.map(emitDef)) <@>
         vsep(p.decors.map(d => text(d.value))) <@>
         emitFunc(FuncDef(Id(c.kernelName), p.decls, TVoid(), Some(p.cmd)), true)
@@ -183,7 +184,8 @@ private class VivadoBackendHeader(c: Config) extends VivadoBackend(c) {
 
   override def emitProg(p: Prog, c: Config) = {
     val declarations =
-      vsep(p.includes.map(emitInclude) ++ p.defs.map(emitDef)) <@>
+      vsep(p.includes.flatMap(_.backends.get(C.Vivado).map(emitInclude))) <@>
+      vsep(p.defs.map(emitDef)) <@>
         emitFunc(FuncDef(Id(c.kernelName), p.decls, TVoid(), None))
 
     declarations.pretty

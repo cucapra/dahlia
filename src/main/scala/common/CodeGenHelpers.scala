@@ -40,19 +40,21 @@ object CodeGenHelpers {
 
   def log2(n: Int) = log10(n) / log10(2)
 
-  def fastDiv(l: Expr, r: Expr) = r match {
-    case EInt(n, _) if (isPowerOfTwo(n)) => l >> EInt(log2(n).toInt, 10)
-    case e => {
-      scribe.warn(s"Cannot generate fast division for dynamic expression $e")
+  def fastDiv(l: Expr, r: Expr) = (l, r) match {
+    case (EInt(n, b), EInt(m, _)) => EInt(n / m, b)
+    case (_, EInt(n, _)) if (isPowerOfTwo(n)) => l >> EInt(log2(n).toInt, 10)
+    case _ => {
+      scribe.warn(s"Cannot generate fast division for denominator $r")
       l div r
     }
   }
 
   // Using the trick defined here: http://mziccard.me/2015/05/08/modulo-and-division-vs-bitwise-operations/
-  def fastMod(l: Expr, r: Expr) = r match {
-    case EInt(n, _) if (isPowerOfTwo(n)) => l & EInt(n - 1, 10)
-    case e => {
-      scribe.warn(s"Cannot generate fast modulus for dynamic expression $e")
+  def fastMod(l: Expr, r: Expr) = (l, r) match {
+    case (EInt(n, b), EInt(m, _)) => EInt(n % m, b)
+    case (_, EInt(n, _)) if (isPowerOfTwo(n)) => l & EInt(n - 1, 10)
+    case _ => {
+      scribe.warn(s"Cannot generate fast division for denominator $r")
       l mod r
     }
   }

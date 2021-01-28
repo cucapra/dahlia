@@ -19,7 +19,10 @@ object Pretty {
   }
 
   def emitInclude(incl: Include)(implicit debug: Boolean): Doc = {
-    text("import") <+> quote(text(incl.name)) <+> scope(
+    text("import") <+>
+    vsep(incl.backends.map({
+      case (b, incl) => text(b.toString) <> parens(quote(text(incl)))
+    })) <+> scope(
       vsep(incl.defs.map(emitDef))
     )
   }
