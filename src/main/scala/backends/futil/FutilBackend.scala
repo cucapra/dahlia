@@ -9,6 +9,7 @@ import fuselang.common._
 import Syntax._
 import Configuration._
 import CompilerError._
+import fuselang.common.{Configuration => C}
 
 /**
   *  Helper class that gives names to the fields of the output of `emitExpr` and
@@ -605,7 +606,15 @@ private class FutilBackendHelper {
         val argumentPorts = inputs.map(inp => emitExpr(inp).port)
         val parameters = id2FuncDef(invokeId).args.map(decl => CompVar(decl.id.toString()))
         val declName = genName(functionName)
-        val decl = CompDecl(declName, CompVar(functionName))
+
+        val decl = if (id2FuncDef(invokeId).bodyOpt == None) {
+          // If the function definition does not have a body, it is imported.
+          // Also assume that for all Futil imports, they are
+          // (1) `invoke`-able, and (2) primitive
+          LibDecl(declName, CompInst(functionName, List()), false)
+        } else {
+          CompDecl(declName, CompVar(functionName))
+        }
 
         val (typ_b, _) = bitsForType(typ, c.pos)
         val reg = LibDecl(genName(s"$id"), Stdlib.register(typ_b), false)
@@ -763,11 +772,14 @@ private class FutilBackendHelper {
   def emitProg(p: Prog, c: Config): String = {
     val _ = c
 
-    val definitions = p.defs.map(definition => emitDefinition(definition))
+    val imports = p.includes.flatMap(_.backends.get(C.Futil)).map(i => Import(i)).toList
+    val importDefinitions = p.includes.flatMap(_.defs).toList
+
+    val definitions = p.defs.map(definition => emitDefinition(definition)) ++ importDefinitions
     val id2FuncDef = definitions.foldLeft(Map[Id, FuncDef]())((definitions, defn) =>
       defn match {
-        case FuncDef(id, params, retTy, Some(bodyOpt)) => {
-          definitions + (id -> FuncDef(id, params, retTy, Some(bodyOpt)))
+        case FuncDef(id, params, retTy, bodyOpt) => {
+          definitions + (id -> FuncDef(id, params, retTy, bodyOpt))
         }
         case _ => definitions
       }
@@ -811,7 +823,7 @@ private class FutilBackendHelper {
     val mainComponentName = if (c.kernelName == "kernel") "main" else c.kernelName
     Namespace(
       "prog",
-      List(Import("primitives/std.lib"))
+      imports
        ++ functionDefinitions
        ++ List(Component(mainComponentName, List(), List(), struct.sorted, control))
     ).emit()
