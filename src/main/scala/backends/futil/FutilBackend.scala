@@ -608,7 +608,7 @@ private class FutilBackendHelper {
         val decl = CompDecl(declName, CompVar(functionName))
 
         val (typ_b, _) = bitsForType(typ, c.pos)
-        val reg = LibDecl(genName(s"$id"), Stdlib.register(typ_b))
+        val reg = LibDecl(genName(s"$id"), Stdlib.register(typ_b), false)
 
         val groupName = genName("let")
         val doneHole = Connect(reg.id.port("done"), HolePort(groupName, "done"))
@@ -778,7 +778,7 @@ private class FutilBackendHelper {
     val store = declStruct.foldLeft(Map[CompVar, (CompVar, VType)]())((store, struct) =>
       struct match {
         case CompDecl(id, _) => store + (id -> (id, LocalVar))
-        case LibDecl(id, _) => store + (id -> (id, LocalVar))
+        case LibDecl(id, _, _) => store + (id -> (id, LocalVar))
         case _ => store
       }
     )
