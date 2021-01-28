@@ -4,15 +4,15 @@ component foo(a: 32) -> (out: 32) {
     temp_0 = prim std_reg(32);
   }
   wires {
-    group let2<"static"=1> {
+    group let3<"static"=1> {
       temp_0.in = a;
       temp_0.write_en = 1'd1;
-      let2[done] = temp_0.done;
+      let3[done] = temp_0.done;
     }
     out = temp_0.out;
   }
   control {
-    let2;
+    let3;
   }
 }
 component main() -> () {
@@ -20,6 +20,8 @@ component main() -> () {
     b_0 = prim std_reg(32);
     c_0 = prim std_reg(32);
     const0 = prim std_const(32,1);
+    d_0 = prim std_reg(32);
+    std_sqrt0 = prim std_sqrt();
     foo0 = foo;
   }
   wires {
@@ -33,12 +35,19 @@ component main() -> () {
       c_0.write_en = 1'd1;
       let1[done] = c_0.done;
     }
+    group let2 {
+      d_0.in = std_sqrt0.out;
+      d_0.write_en = 1'd1;
+      let2[done] = d_0.done;
+    }
   }
   control {
     seq {
       let0;
       invoke foo0(a=b_0.out)();
       let1;
+      invoke std_sqrt0(in=c_0.out)();
+      let2;
     }
   }
 }
