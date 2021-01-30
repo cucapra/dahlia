@@ -79,16 +79,6 @@ private class FutilBackendHelper {
     }
   }
 
-  def getBitWidth(typ: Type): Int = {
-    typ match {
-      case _: TVoid => 0
-      case _: TBool => 1
-      case TSizedInt(bitwidth, _) => bitwidth
-      case TFixed(bitwidth, _, _) => bitwidth
-      case x => throw NotImplemented("Get bitwidth not supported for $x", x.pos)
-    }
-  }
-
   /** Returns true if the given int or fixed point is signed
     */
   def signed(typ: Option[Type]) = {
@@ -843,8 +833,10 @@ private class FutilBackendHelper {
                   "Memory as a parameter is not supported yet.",
                   param.pos
                 )
-              case _ =>
-                PortDef(CompVar(param.id.toString()), getBitWidth(param.typ))
+              case _ => {
+                val (bits, _) = bitsForType(Some(param.typ), param.typ.pos)
+                PortDef(CompVar(param.id.toString()), bits)
+              }
             }
           )
 
@@ -859,7 +851,7 @@ private class FutilBackendHelper {
           val (cmdStructure, controls, _) =
             emitCmd(bodyOpt)(functionStore, id2FuncDef)
 
-          val outputBitWidth = getBitWidth(retType)
+          val (outputBitWidth, _) = bitsForType(Some(retType), retType.pos)
           val output =
             if (outputBitWidth == 0) List()
             else List(PortDef(CompVar("out"), outputBitWidth))
