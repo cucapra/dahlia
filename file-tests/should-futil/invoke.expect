@@ -1,7 +1,8 @@
 import "primitives/std.lib";
+import "primitives/std.lib";
 component foo(a: 32) -> (out: 32) {
   cells {
-    temp_0 = prim std_reg(32);
+    temp_0 = std_reg(32);
   }
   wires {
     group let3<"static"=1> {
@@ -17,12 +18,12 @@ component foo(a: 32) -> (out: 32) {
 }
 component main() -> () {
   cells {
-    b_0 = prim std_reg(32);
-    c_0 = prim std_reg(32);
-    const0 = prim std_const(32,1);
-    d_0 = prim std_reg(32);
-    std_sqrt0 = prim std_sqrt();
-    foo0 = foo;
+    b_0 = std_reg(32);
+    c_0 = std_reg(32);
+    const0 = std_const(32,1);
+    d_0 = std_reg(32);
+    foo0 = foo();
+    std_sqrt0 = std_sqrt();
   }
   wires {
     group let0<"static"=1> {
