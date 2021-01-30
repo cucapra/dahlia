@@ -9,7 +9,7 @@ object Futil {
   def emitCompStructure(structs: List[Structure]): Doc = {
     val (cells, connections) = structs.partition(st =>
       st match {
-        case _: LibDecl | _: CompDecl => true
+        case _: Cell => true
         case _ => false
       }
     )
@@ -102,11 +102,9 @@ object Futil {
 
   sealed trait Structure extends Emitable with Ordered[Structure] {
     override def doc(): Doc = this match {
-      case CompDecl(id, comp) =>
-        id.doc() <+> equal <+> comp.doc() <> text("()") <> semi
-      case LibDecl(id, comp, true) =>
+      case Cell(id, comp, true) =>
         text("@external(1)") <+> id.doc() <+> equal <+> comp.doc() <> semi
-      case LibDecl(id, comp, false) =>
+      case Cell(id, comp, false) =>
         id.doc() <+> equal <+> comp.doc() <> semi
       case Connect(src, dest, Some(guard)) =>
         dest.doc() <+> equal <+> guard.doc() <+> text("?") <+> src.doc() <> semi
@@ -123,9 +121,7 @@ object Futil {
 
     def compare(that: Structure): Int = {
       (this, that) match {
-        case (LibDecl(thisId, _, _), LibDecl(thatId, _, _)) =>
-          thisId.compare(thatId)
-        case (CompDecl(thisId, _), CompDecl(thatId, _)) =>
+        case (Cell(thisId, _, _), Cell(thatId, _, _)) =>
           thisId.compare(thatId)
         case (Group(thisId, _, _), Group(thatId, _, _)) =>
           thisId.compare(thatId)
@@ -136,18 +132,15 @@ object Futil {
             thisSrc.compare(thatSrc)
           }
         }
-        case (LibDecl(_, _, _), _) => -1
-        case (_, LibDecl(_, _, _)) => 1
-        case (CompDecl(_, _), _) => -1
-        case (_, CompDecl(_, _)) => 1
+        case (Cell(_, _, _), _) => -1
+        case (_, Cell(_, _, _)) => 1
         case (Group(_, _, _), _) => -1
         case (_, Group(_, _, _)) => 1
       }
     }
   }
-  case class LibDecl(id: CompVar, ci: CompInst, external: Boolean)
+  case class Cell(id: CompVar, ci: CompInst, external: Boolean)
       extends Structure
-  case class CompDecl(id: CompVar, comp: CompVar) extends Structure
   case class Group(
       id: CompVar,
       connections: List[Connect],

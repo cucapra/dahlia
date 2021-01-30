@@ -136,14 +136,14 @@ private class FutilBackendHelper {
       case 1 => {
         val size = typ.dims(0)._1
         val idxSize = bitsNeeded(size)
-        LibDecl(name, Stdlib.mem_d1(width, size, idxSize), external)
+        Cell(name, Stdlib.mem_d1(width, size, idxSize), external)
       }
       case 2 => {
         val size0 = typ.dims(0)._1
         val size1 = typ.dims(1)._1
         val idxSize0 = bitsNeeded(size0)
         val idxSize1 = bitsNeeded(size1)
-        LibDecl(
+        Cell(
           name,
           Stdlib.mem_d2(width, size0, size1, idxSize0, idxSize1),
           external
@@ -156,7 +156,7 @@ private class FutilBackendHelper {
         val idxSize0 = bitsNeeded(size0)
         val idxSize1 = bitsNeeded(size1)
         val idxSize2 = bitsNeeded(size2)
-        LibDecl(
+        Cell(
           name,
           Stdlib
             .mem_d3(width, size0, size1, size2, idxSize0, idxSize1, idxSize2),
@@ -172,7 +172,7 @@ private class FutilBackendHelper {
         val idxSize1 = bitsNeeded(size1)
         val idxSize2 = bitsNeeded(size2)
         val idxSize3 = bitsNeeded(size3)
-        LibDecl(
+        Cell(
           name,
           Stdlib
             .mem_d4(
@@ -200,15 +200,15 @@ private class FutilBackendHelper {
   def emitDecl(d: Decl): List[Structure] = d.typ match {
     case tarr: TArray => emitArrayDecl(tarr, d.id, true)
     case _: TBool => {
-      val reg = LibDecl(CompVar(s"${d.id}"), Stdlib.register(1), false)
+      val reg = Cell(CompVar(s"${d.id}"), Stdlib.register(1), false)
       List(reg)
     }
     case TSizedInt(size, _) => {
-      val reg = LibDecl(CompVar(s"${d.id}"), Stdlib.register(size), false)
+      val reg = Cell(CompVar(s"${d.id}"), Stdlib.register(size), false)
       List(reg)
     }
     case TFixed(ltotal, _, _) => {
-      val reg = LibDecl(CompVar(s"${d.id}"), Stdlib.register(ltotal), false)
+      val reg = Cell(CompVar(s"${d.id}"), Stdlib.register(ltotal), false)
       List(reg)
     }
     case x => throw NotImplemented(s"Type $x not implemented for decls.", x.pos)
@@ -251,7 +251,7 @@ private class FutilBackendHelper {
         val binop =
           if (signed(e1.typ)) Stdlib.s_op(s"$compName", e1Bits)
           else Stdlib.op(s"$compName", e1Bits)
-        val comp = LibDecl(genName(compName), binop, false)
+        val comp = Cell(genName(compName), binop, false)
         val struct = List(
           comp,
           Connect(e1Out.port, comp.id.port("left")),
@@ -297,7 +297,7 @@ private class FutilBackendHelper {
           } else {
             Stdlib.fxd_p_op(s"$compName", e1Bits, intBit1, fracBit1);
           }
-        val comp = LibDecl(genName(compName), binop, false)
+        val comp = Cell(genName(compName), binop, false)
         val struct = List(
           comp,
           Connect(e1Out.port, comp.id.port("left")),
@@ -358,7 +358,7 @@ private class FutilBackendHelper {
       if (signed(e1.typ)) Stdlib.s_op(s"$compName", typ_b)
       else Stdlib.op(s"$compName", typ_b);
 
-    val comp = LibDecl(genName(compName), binop, false)
+    val comp = Cell(genName(compName), binop, false)
     val struct = List(
       comp,
       Connect(e1Out.port, comp.id.port("left")),
@@ -464,7 +464,7 @@ private class FutilBackendHelper {
         val _ = rhsInfo
         val (typ_b, _) = bitsForType(Some(typ), expr.pos)
         val const =
-          LibDecl(
+          Cell(
             genName("const"),
             Stdlib.constant(typ_b, v),
             false
@@ -485,7 +485,7 @@ private class FutilBackendHelper {
         val v_1 = lst(0).toInt
         val v_2 = lst(1).toInt
         val fpconst =
-          LibDecl(
+          Cell(
             genName("fpconst"),
             Stdlib.fixed_point(width, int_bit, frac_bit, v_1, v_2),
             false
@@ -501,9 +501,9 @@ private class FutilBackendHelper {
         val (vBits, _) = bitsForType(e.typ, e.pos)
         val (cBits, _) = bitsForType(Some(t), e.pos)
         val comp = if (cBits > vBits) {
-          LibDecl(genName("pad"), Stdlib.pad(vBits, cBits), false)
+          Cell(genName("pad"), Stdlib.pad(vBits, cBits), false)
         } else {
-          LibDecl(genName("slice"), Stdlib.slice(vBits, cBits), false)
+          Cell(genName("slice"), Stdlib.slice(vBits, cBits), false)
         }
         val res = emitExpr(e)
         val struct = List(
@@ -608,7 +608,7 @@ private class FutilBackendHelper {
       // if not clearly specified, Cast the TRational to TFixed
       case CLet(id, Some(TFixed(t, i, un)), Some(e)) => {
         val reg =
-          LibDecl(genName(s"$id"), Stdlib.register(t), false)
+          Cell(genName(s"$id"), Stdlib.register(t), false)
         val out = emitExpr(ECast(e, TFixed(t, i, un)))(store)
         val groupName = genName("let")
         val doneHole = Connect(
@@ -630,25 +630,21 @@ private class FutilBackendHelper {
       }
       case CLet(id, typ, Some(EApp(invokeId, inputs))) => {
         val functionName = invokeId.toString()
-        val (argPorts, argSt) = inputs.map(inp => {
-          val out = emitExpr(inp)
-          (out.port, out.structure)
-        }).unzip
+        val (argPorts, argSt) = inputs
+          .map(inp => {
+            val out = emitExpr(inp)
+            (out.port, out.structure)
+          })
+          .unzip
         val parameters =
           id2FuncDef(invokeId).args.map(decl => CompVar(decl.id.toString()))
         val declName = genName(functionName)
 
-        val decl = if (id2FuncDef(invokeId).bodyOpt == None) {
-          // If the function definition does not have a body, it is imported.
-          // Also assume that for all Futil imports, they are
-          // (1) `invoke`-able, and (2) primitive
-          LibDecl(declName, CompInst(functionName, List()), false)
-        } else {
-          CompDecl(declName, CompVar(functionName))
-        }
+        val decl =
+          Cell(declName, CompInst(functionName, List()), false)
 
         val (typ_b, _) = bitsForType(typ, c.pos)
-        val reg = LibDecl(genName(s"$id"), Stdlib.register(typ_b), false)
+        val reg = Cell(genName(s"$id"), Stdlib.register(typ_b), false)
 
         val groupName = genName("let")
         val doneHole = Connect(reg.id.port("done"), HolePort(groupName, "done"))
@@ -661,14 +657,16 @@ private class FutilBackendHelper {
           )
 
         val (group, st) = Group.fromStructure(groupName, struct, None)
-        val control = SeqComp(List(
-          Invoke(
-            declName,
-            argPorts.toList,
-            parameters.toList
-          ),
-          Enable(group.id)
-        ))
+        val control = SeqComp(
+          List(
+            Invoke(
+              declName,
+              argPorts.toList,
+              parameters.toList
+            ),
+            Enable(group.id)
+          )
+        )
         (
           argSt.flatten.toList ++ (decl :: reg :: group :: st),
           control,
@@ -678,7 +676,7 @@ private class FutilBackendHelper {
       case CLet(id, typ, Some(e)) => {
         val (typ_b, _) = bitsForType(typ, c.pos)
         val reg =
-          LibDecl(genName(s"$id"), Stdlib.register(typ_b), false)
+          Cell(genName(s"$id"), Stdlib.register(typ_b), false)
         val out = emitExpr(e)(store)
         val groupName = genName("let")
         val doneHole = Connect(
@@ -701,7 +699,7 @@ private class FutilBackendHelper {
       case CLet(id, typ, None) => {
         val (typ_b, _) = bitsForType(typ, c.pos)
         val reg =
-          LibDecl(genName(s"$id"), Stdlib.register(typ_b), false)
+          Cell(genName(s"$id"), Stdlib.register(typ_b), false)
         val struct = List(reg)
         (struct, Empty, store + (CompVar(s"$id") -> (reg.id, LocalVar)))
       }
@@ -819,8 +817,7 @@ private class FutilBackendHelper {
     val store =
       declStruct.foldLeft(Map[CompVar, (CompVar, VType)]())((store, struct) =>
         struct match {
-          case CompDecl(id, _) => store + (id -> (id, LocalVar))
-          case LibDecl(id, _, _) => store + (id -> (id, LocalVar))
+          case Cell(id, _, _) => store + (id -> (id, LocalVar))
           case _ => store
         }
       )
@@ -868,7 +865,9 @@ private class FutilBackendHelper {
           )
         }
     val imports =
-      p.includes.flatMap(_.backends.get(C.Futil)).map(i => Import(i)).toList
+      Import("primitives/std.lib") ::
+        p.includes.flatMap(_.backends.get(C.Futil)).map(i => Import(i)).toList
+
     val struct = declStruct ++ cmdStruct
     val mainComponentName =
       if (c.kernelName == "kernel") "main" else c.kernelName
