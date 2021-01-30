@@ -28,6 +28,27 @@ private case class EmitOutput(
     val delay: Option[Int]
 )
 
+/**
+  * CALLING CONVENTION:
+  * The backen supports functions using Calyx's component definitions.
+  * For a function:
+  * ```
+  * def id(x: ubit<32>): ubit<32> = {
+  *   let out: ubit<32> = x;
+  *   return out;
+  * }
+  * ```
+  * The function generates a port named unique (`out`).
+  * Values returned by the method are carried on this port.
+  *
+  * Calls are transformed into `invoke` statements in Calyx. Uses of the
+  * returned value from the function are assumed to available after the
+  * `invoke` statement.
+  *
+  * The `out` port is marked using the "stable" attributed which is verified
+  * by the Calyx compiler to enable such uses:
+  * https://github.com/cucapra/futil/issues/304
+  */
 private class FutilBackendHelper {
 
   /** Helper for generating unique names. */
@@ -55,6 +76,16 @@ private class FutilBackendHelper {
           s"Futil cannot infer bitwidth for type $x. Please manually annotate it using a cast expression.",
           pos
         )
+    }
+  }
+
+  def getBitWidth(typ: Type): Int = {
+    typ match {
+      case _: TVoid => 0
+      case _: TBool => 1
+      case TSizedInt(bitwidth, _) => bitwidth
+      case TFixed(bitwidth, _, _) => bitwidth
+      case x => throw NotImplemented("Get bitwidth not supported for $x", x.pos)
     }
   }
 
@@ -637,12 +668,14 @@ private class FutilBackendHelper {
           )
 
         val (group, st) = Group.fromStructure(groupName, struct, None)
-        val control = Invoke(
-          declName,
-          argumentPorts.toList,
-          parameters.toList,
+        val control = SeqComp(List(
+          Invoke(
+            declName,
+            argumentPorts.toList,
+            parameters.toList
+          ),
           Enable(group.id)
-        )
+        ))
         (
           decl :: reg :: group :: st,
           control,
@@ -766,33 +799,18 @@ private class FutilBackendHelper {
   /** Emits the function definition if a body exists. */
   def emitDefinition(definition: Definition): FuncDef = {
     definition match {
-      case FuncDef(id, params, retTy, Some(bodyOpt)) => {
-        FuncDef(id, params, retTy, Some(bodyOpt))
-      }
+      case fd: FuncDef => fd
       case x =>
         throw NotImplemented(s"Futil backend does not support $x yet", x.pos)
     }
   }
 
-  def getBitWidth(typ: Type): Int = {
-    typ match {
-      case _: TVoid => 0
-      case _: TBool => 1
-      case TSizedInt(bitwidth, _) => bitwidth
-      case TFixed(bitwidth, _, _) => bitwidth
-      case x => throw NotImplemented("Get bitwidth not supported for $x", x.pos)
-    }
-  }
-
   def emitProg(p: Prog, c: Config): String = {
-    val _ = c
 
-    val imports =
-      p.includes.flatMap(_.backends.get(C.Futil)).map(i => Import(i)).toList
     val importDefinitions = p.includes.flatMap(_.defs).toList
-
     val definitions =
       p.defs.map(definition => emitDefinition(definition)) ++ importDefinitions
+
     val id2FuncDef =
       definitions.foldLeft(Map[Id, FuncDef]())((definitions, defn) =>
         defn match {
@@ -854,6 +872,8 @@ private class FutilBackendHelper {
             controls
           )
         }
+    val imports =
+      p.includes.flatMap(_.backends.get(C.Futil)).map(i => Import(i)).toList
     val struct = declStruct ++ cmdStruct
     val mainComponentName =
       if (c.kernelName == "kernel") "main" else c.kernelName
