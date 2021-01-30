@@ -432,7 +432,8 @@ private class FutilBackendHelper {
             case None => Some(0)
           }
         EmitOutput(
-          if (futilVarType == LocalVar) varName.port(portName) else ThisPort(varName),
+          if (futilVarType == LocalVar) varName.port(portName)
+          else ThisPort(varName),
           if (rhsInfo.isDefined) varName.port("done") else ConstantPort(1, 1),
           struct,
           delay
@@ -537,8 +538,9 @@ private class FutilBackendHelper {
       }
       case EApp(functionId, _) =>
         throw NotImplemented(
-            s"`$functionId` should be assigned to its own `let` statement, "
-          + s"e.g. `let _temp = $functionId(...);`", functionId.pos
+          s"`$functionId` should be assigned to its own `let` statement, "
+            + s"e.g. `let _temp = $functionId(...);`",
+          functionId.pos
         )
       case x =>
         throw NotImplemented(s"Futil backend does not support $x yet.", x.pos)
@@ -546,7 +548,10 @@ private class FutilBackendHelper {
 
   def emitCmd(
       c: Command
-  )(implicit store: Store, id2FuncDef: FunctionMapping): (List[Structure], Control, Store) = {
+  )(
+      implicit store: Store,
+      id2FuncDef: FunctionMapping
+  ): (List[Structure], Control, Store) = {
     c match {
       case CBlock(cmd) => emitCmd(cmd)
       case CPar(cmds) => {
@@ -571,7 +576,11 @@ private class FutilBackendHelper {
       }
       case CLet(id, Some(tarr: TArray), None) => {
         val arr = CompVar(s"$id")
-        (emitArrayDecl(tarr, id, false), Empty, store + (arr -> (arr, LocalVar)))
+        (
+          emitArrayDecl(tarr, id, false),
+          Empty,
+          store + (arr -> (arr, LocalVar))
+        )
       }
       case CLet(_, Some(_: TArray), Some(_)) =>
         throw NotImplemented(s"Futil backend cannot initialize memories", c.pos)
@@ -601,10 +610,13 @@ private class FutilBackendHelper {
       case CLet(id, typ, Some(EApp(invokeId, inputs))) => {
         val functionName = invokeId.toString()
         if (!id2FuncDef.keys.toSeq.contains(invokeId)) {
-          throw Impossible("This function has not been defined: " + functionName)
+          throw Impossible(
+            "This function has not been defined: " + functionName
+          )
         }
         val argumentPorts = inputs.map(inp => emitExpr(inp).port)
-        val parameters = id2FuncDef(invokeId).args.map(decl => CompVar(decl.id.toString()))
+        val parameters =
+          id2FuncDef(invokeId).args.map(decl => CompVar(decl.id.toString()))
         val declName = genName(functionName)
 
         val decl = if (id2FuncDef(invokeId).bodyOpt == None) {
@@ -623,12 +635,19 @@ private class FutilBackendHelper {
         val doneHole = Connect(reg.id.port("done"), HolePort(groupName, "done"))
 
         val struct =
-          List(Connect(declName.port("out"), reg.id.port("in")),
-               Connect(ConstantPort(1, 1), reg.id.port("write_en")),
-               doneHole)
+          List(
+            Connect(declName.port("out"), reg.id.port("in")),
+            Connect(ConstantPort(1, 1), reg.id.port("write_en")),
+            doneHole
+          )
 
         val (group, st) = Group.fromStructure(groupName, struct, None)
-        val control = Invoke(declName, argumentPorts.toList, parameters.toList, Enable(group.id))
+        val control = Invoke(
+          declName,
+          argumentPorts.toList,
+          parameters.toList,
+          Enable(group.id)
+        )
         (
           decl :: reg :: group :: st,
           control,
@@ -755,7 +774,8 @@ private class FutilBackendHelper {
       case FuncDef(id, params, retTy, Some(bodyOpt)) => {
         FuncDef(id, params, retTy, Some(bodyOpt))
       }
-      case x => throw NotImplemented(s"Futil backend does not support $x yet", x.pos)
+      case x =>
+        throw NotImplemented(s"Futil backend does not support $x yet", x.pos)
     }
   }
 
@@ -772,60 +792,83 @@ private class FutilBackendHelper {
   def emitProg(p: Prog, c: Config): String = {
     val _ = c
 
-    val imports = p.includes.flatMap(_.backends.get(C.Futil)).map(i => Import(i)).toList
+    val imports =
+      p.includes.flatMap(_.backends.get(C.Futil)).map(i => Import(i)).toList
     val importDefinitions = p.includes.flatMap(_.defs).toList
 
-    val definitions = p.defs.map(definition => emitDefinition(definition)) ++ importDefinitions
-    val id2FuncDef = definitions.foldLeft(Map[Id, FuncDef]())((definitions, defn) =>
-      defn match {
-        case FuncDef(id, params, retTy, bodyOpt) => {
-          definitions + (id -> FuncDef(id, params, retTy, bodyOpt))
+    val definitions =
+      p.defs.map(definition => emitDefinition(definition)) ++ importDefinitions
+    val id2FuncDef =
+      definitions.foldLeft(Map[Id, FuncDef]())((definitions, defn) =>
+        defn match {
+          case FuncDef(id, params, retTy, bodyOpt) => {
+            definitions + (id -> FuncDef(id, params, retTy, bodyOpt))
+          }
+          case _ => definitions
         }
-        case _ => definitions
-      }
-    )
+      )
 
     val declStruct =
       p.decls.map(x => emitDecl(x)).foldLeft(List[Structure]())(_ ++ _)
-    val store = declStruct.foldLeft(Map[CompVar, (CompVar, VType)]())((store, struct) =>
-      struct match {
-        case CompDecl(id, _) => store + (id -> (id, LocalVar))
-        case LibDecl(id, _, _) => store + (id -> (id, LocalVar))
-        case _ => store
-      }
-    )
+    val store =
+      declStruct.foldLeft(Map[CompVar, (CompVar, VType)]())((store, struct) =>
+        struct match {
+          case CompDecl(id, _) => store + (id -> (id, LocalVar))
+          case LibDecl(id, _, _) => store + (id -> (id, LocalVar))
+          case _ => store
+        }
+      )
     val (cmdStruct, control, _) = emitCmd(p.cmd)(store, id2FuncDef)
 
-
     val functionDefinitions: List[Component] =
-      for ((id, FuncDef(_, params, retType, Some(bodyOpt))) <- id2FuncDef.toList) yield {
-        val inputs = params.map(param =>
-          param.typ match {
-            case TArray(_, _, _) => throw NotImplemented("Memory as a parameter is not supported yet.", param.pos)
-            case _ => PortDef(CompVar(param.id.toString()), getBitWidth(param.typ))
-          }
-        )
+      for ((id, FuncDef(_, params, retType, Some(bodyOpt))) <- id2FuncDef.toList)
+        yield {
+          val inputs = params.map(param =>
+            param.typ match {
+              case TArray(_, _, _) =>
+                throw NotImplemented(
+                  "Memory as a parameter is not supported yet.",
+                  param.pos
+                )
+              case _ =>
+                PortDef(CompVar(param.id.toString()), getBitWidth(param.typ))
+            }
+          )
 
-        val functionStore = inputs.foldLeft(Map[CompVar, (CompVar, VType)]())((functionStore, inputs) =>
-          inputs match {
-            case PortDef(id, _) => functionStore + (id -> (id, ParameterVar))
-            case _ => functionStore
-          }
-        )
-        val (cmdStructure, controls, _) = emitCmd(bodyOpt)(functionStore, id2FuncDef)
+          val functionStore = inputs.foldLeft(Map[CompVar, (CompVar, VType)]())(
+            (functionStore, inputs) =>
+              inputs match {
+                case PortDef(id, _) =>
+                  functionStore + (id -> (id, ParameterVar))
+                case _ => functionStore
+              }
+          )
+          val (cmdStructure, controls, _) =
+            emitCmd(bodyOpt)(functionStore, id2FuncDef)
 
-        val outputBitWidth = getBitWidth(retType)
-        val output = if (outputBitWidth == 0) List() else List(PortDef(CompVar("out"), outputBitWidth))
+          val outputBitWidth = getBitWidth(retType)
+          val output =
+            if (outputBitWidth == 0) List()
+            else List(PortDef(CompVar("out"), outputBitWidth))
 
-        Component(id.toString(), inputs.toList, output, cmdStructure.sorted, controls)
-    }
+          Component(
+            id.toString(),
+            inputs.toList,
+            output,
+            cmdStructure.sorted,
+            controls
+          )
+        }
     val struct = declStruct ++ cmdStruct
-    val mainComponentName = if (c.kernelName == "kernel") "main" else c.kernelName
+    val mainComponentName =
+      if (c.kernelName == "kernel") "main" else c.kernelName
     Namespace(
       "prog",
       imports
-       ++ functionDefinitions
-       ++ List(Component(mainComponentName, List(), List(), struct.sorted, control))
+        ++ functionDefinitions
+        ++ List(
+          Component(mainComponentName, List(), List(), struct.sorted, control)
+        )
     ).emit()
   }
 }

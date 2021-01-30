@@ -247,7 +247,11 @@ object Futil {
   case class While(port: Port, cond: CompVar, body: Control) extends Control
   case class Print(id: CompVar) extends Control
   case class Enable(id: CompVar) extends Control
-  case class Invoke(id: CompVar, arguments: List[Port], parameters: List[CompVar], enabled: Enable) extends Control
+  case class Invoke(
+      id: CompVar,
+      arguments: List[Port],
+      parameters: List[CompVar]
+  ) extends Control
   case object Empty extends Control
 }
 
