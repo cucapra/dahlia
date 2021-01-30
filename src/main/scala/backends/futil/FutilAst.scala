@@ -9,7 +9,7 @@ object Futil {
   def emitCompStructure(structs: List[Structure]): Doc = {
     val (cells, connections) = structs.partition(st =>
       st match {
-        case _: LibDecl | _: CompDecl => true
+        case _: Cell => true
         case _ => false
       }
     )
@@ -31,7 +31,7 @@ object Futil {
     }
   }
   case class PortDef(id: CompVar, width: Int) extends Emitable {
-    override def doc(): Doc = parens(text("port") <+> id.doc() <+> value(width))
+    override def doc(): Doc = id.doc() <> colon <+> value(width)
   }
 
   /**** definition statements *****/
@@ -48,9 +48,9 @@ object Futil {
       case Component(name, inputs, outputs, structure, control) => {
         text("component") <+>
           text(name) <>
-          parens(hsep(inputs.map(_.doc()))) <+>
+          parens(commaSep(inputs.map(_.doc()))) <+>
           text("->") <+>
-          parens(hsep(outputs.map(_.doc()))) <+>
+          parens(commaSep(outputs.map(_.doc()))) <+>
           scope(
             emitCompStructure(structure) <@>
               text("control") <+> scope(control.doc())
@@ -102,11 +102,9 @@ object Futil {
 
   sealed trait Structure extends Emitable with Ordered[Structure] {
     override def doc(): Doc = this match {
-      case CompDecl(id, comp) =>
-        id.doc() <+> equal <+> comp.doc() <> text("()") <> semi
-      case LibDecl(id, comp, true) =>
+      case Cell(id, comp, true) =>
         text("@external(1)") <+> id.doc() <+> equal <+> comp.doc() <> semi
-      case LibDecl(id, comp, false) =>
+      case Cell(id, comp, false) =>
         id.doc() <+> equal <+> comp.doc() <> semi
       case Connect(src, dest, Some(guard)) =>
         dest.doc() <+> equal <+> guard.doc() <+> text("?") <+> src.doc() <> semi
@@ -123,9 +121,7 @@ object Futil {
 
     def compare(that: Structure): Int = {
       (this, that) match {
-        case (LibDecl(thisId, _, _), LibDecl(thatId, _, _)) =>
-          thisId.compare(thatId)
-        case (CompDecl(thisId, _), CompDecl(thatId, _)) =>
+        case (Cell(thisId, _, _), Cell(thatId, _, _)) =>
           thisId.compare(thatId)
         case (Group(thisId, _, _), Group(thatId, _, _)) =>
           thisId.compare(thatId)
@@ -136,18 +132,15 @@ object Futil {
             thisSrc.compare(thatSrc)
           }
         }
-        case (LibDecl(_, _, _), _) => -1
-        case (_, LibDecl(_, _, _)) => 1
-        case (CompDecl(_, _), _) => -1
-        case (_, CompDecl(_, _)) => 1
+        case (Cell(_, _, _), _) => -1
+        case (_, Cell(_, _, _)) => 1
         case (Group(_, _, _), _) => -1
         case (_, Group(_, _, _)) => 1
       }
     }
   }
-  case class LibDecl(id: CompVar, ci: CompInst, external: Boolean)
+  case class Cell(id: CompVar, ci: CompInst, external: Boolean)
       extends Structure
-  case class CompDecl(id: CompVar, comp: CompVar) extends Structure
   case class Group(
       id: CompVar,
       connections: List[Connect],
@@ -170,7 +163,6 @@ object Futil {
   }
   case class Connect(src: Port, dest: Port, guard: Option[GuardExpr] = None)
       extends Structure
-
   case class CompInst(id: String, args: List[Int]) extends Emitable {
     override def doc(): Doc = {
       val strList = args.map((x: Int) => text(x.toString()))
@@ -231,6 +223,16 @@ object Futil {
       case Print(_) =>
         throw Impossible("Futil does not support print")
       case Enable(id) => id.doc() <> semi
+      case Invoke(id, arguments, parameters) => {
+        val argsDoc = arguments.map(p => p.doc())
+        val paramsDoc = parameters.map(decl => decl.doc())
+        val definitions = (paramsDoc zip argsDoc).map({
+          case (param, arg) => param <> equal <> arg
+        })
+        text("invoke") <+> id.doc() <> parens(commaSep(definitions)) <> text(
+          "()"
+        ) <> semi
+      }
       case Empty => text("empty")
     }
   }
@@ -241,6 +243,11 @@ object Futil {
   case class While(port: Port, cond: CompVar, body: Control) extends Control
   case class Print(id: CompVar) extends Control
   case class Enable(id: CompVar) extends Control
+  case class Invoke(
+      id: CompVar,
+      arguments: List[Port],
+      parameters: List[CompVar]
+  ) extends Control
   case object Empty extends Control
 }
 
@@ -319,12 +326,6 @@ object Stdlib {
         idxSize3
       )
     )
-
-  def sqrt(): Futil.CompInst =
-    Futil.CompInst("std_sqrt", List())
-
-  def exp(): Futil.CompInst =
-    Futil.CompInst("std_exp", List())
 
   // Extended AST to support fixed point constant and operations
   def fixed_point(
