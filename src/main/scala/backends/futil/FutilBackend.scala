@@ -630,7 +630,10 @@ private class FutilBackendHelper {
       }
       case CLet(id, typ, Some(EApp(invokeId, inputs))) => {
         val functionName = invokeId.toString()
-        val argumentPorts = inputs.map(inp => emitExpr(inp).port)
+        val (argPorts, argSt) = inputs.map(inp => {
+          val out = emitExpr(inp)
+          (out.port, out.structure)
+        }).unzip
         val parameters =
           id2FuncDef(invokeId).args.map(decl => CompVar(decl.id.toString()))
         val declName = genName(functionName)
@@ -661,13 +664,13 @@ private class FutilBackendHelper {
         val control = SeqComp(List(
           Invoke(
             declName,
-            argumentPorts.toList,
+            argPorts.toList,
             parameters.toList
           ),
           Enable(group.id)
         ))
         (
-          decl :: reg :: group :: st,
+          argSt.flatten.toList ++ (decl :: reg :: group :: st),
           control,
           store + (CompVar(s"$id") -> (reg.id, LocalVar))
         )
