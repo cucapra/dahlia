@@ -609,11 +609,6 @@ private class FutilBackendHelper {
       }
       case CLet(id, typ, Some(EApp(invokeId, inputs))) => {
         val functionName = invokeId.toString()
-        if (!id2FuncDef.keys.toSeq.contains(invokeId)) {
-          throw Impossible(
-            "This function has not been defined: " + functionName
-          )
-        }
         val argumentPorts = inputs.map(inp => emitExpr(inp).port)
         val parameters =
           id2FuncDef(invokeId).args.map(decl => CompVar(decl.id.toString()))
