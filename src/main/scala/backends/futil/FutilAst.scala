@@ -103,12 +103,11 @@ object Futil {
   sealed trait Structure extends Emitable with Ordered[Structure] {
     override def doc(): Doc = this match {
       case CompDecl(id, comp) =>
-        id.doc() <+> equal <+> comp.doc() <> semi
+        id.doc() <+> equal <+> comp.doc() <> text("()") <> semi
       case LibDecl(id, comp, true) =>
-        text("@external(1)") <+> id.doc() <+> equal <+> text("prim") <+> comp
-          .doc() <> semi
+        text("@external(1)") <+> id.doc() <+> equal <+> comp.doc() <> semi
       case LibDecl(id, comp, false) =>
-        id.doc() <+> equal <+> text("prim") <+> comp.doc() <> semi
+        id.doc() <+> equal <+> comp.doc() <> semi
       case Connect(src, dest, Some(guard)) =>
         dest.doc() <+> equal <+> guard.doc() <+> text("?") <+> src.doc() <> semi
       case Connect(src, dest, None) =>
