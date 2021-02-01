@@ -637,7 +637,7 @@ private class FutilBackendHelper {
           })
           .unzip
         val parameters =
-          id2FuncDef(invokeId).args.map(decl => CompVar(decl.id.toString()))
+          id2FuncDef(invokeId).args.map(decl => ThisPort(CompVar(decl.id.toString())))
         val declName = genName(functionName)
 
         val decl =

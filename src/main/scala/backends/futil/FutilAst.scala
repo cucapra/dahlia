@@ -246,7 +246,7 @@ object Futil {
   case class Invoke(
       id: CompVar,
       arguments: List[Port],
-      parameters: List[CompVar]
+      parameters: List[Port]
   ) extends Control
   case object Empty extends Control
 }
