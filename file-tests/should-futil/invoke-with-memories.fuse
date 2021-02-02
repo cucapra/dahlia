@@ -1,9 +1,9 @@
-def add_one(a: ubit<32>[1][1]): ubit<32> = {
-   let z: ubit<1> = (0 as ubit<1>);
-   let _temp = (1 as ubit<32>) + a[z][z];
-   return _temp;
+def mem_copy(dest: ubit<32>[1], src: ubit<32>[1]) = {
+  let zero = (0 as ubit<1>);
+  dest[zero] := src[zero];
 }
 
-decl X: ubit<32>[1][1];
+decl s: ubit<32>[1];
+decl d: ubit<32>[1];
 
-let ret: ubit<32> = add_one(X);
+mem_copy(d, s);
