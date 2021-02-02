@@ -185,7 +185,7 @@ private class FutilBackendHelper {
     List(mem)
   }
 
-  /** TODO: Document */
+  /** Returns the name of `p`, if it has one. */
   def getPortName(p: Port) : String = {
     p match {
       case CompPort(id, _) => id.name
@@ -195,7 +195,10 @@ private class FutilBackendHelper {
     }
   }
 
-    /** TODO: Document */
+    /** Returns a list of tuples (name, width) for each address port
+        in a memory. For example, a D1 Memory declared as (32, 1, 1)
+        would return List[("addr0", 1)].
+    */
     def getAddrPortToWidths(typ: TArray, id: Id): List[(String, Int)] = {
       // Emit the array to determine the port widths.
       val arrayWidths = emitArrayDecl(typ, id, false) match {
@@ -215,21 +218,20 @@ private class FutilBackendHelper {
       }
     }
 
-/** TODO: Document. */
-def emitInvokeDecl(invokeId: Id, inputs: Seq[Expr])
-                  (implicit store: Store, id2FuncDef: FunctionMapping):
+/** `emitInvokeDecl` computes the necessary structure and control for Syntax.EApp. */
+def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping):
                   (Cell, Seq[Structure], Control) = {
-    val functionName = invokeId.toString()
+    val functionName = app.func.toString()
     val declName = genName(functionName)
     val decl =
       Cell(declName, CompInst(functionName, List()), false)
-    val (inputPorts, argSt) = inputs
+    val (inputPorts, argSt) = app.args
       .map(inp => {
         val out = emitExpr(inp)
         (out.port, out.structure)
       })
       .unzip
-    val paramArgs = id2FuncDef(invokeId).args
+    val paramArgs = id2FuncDef(app.func).args
     val inputToParam = inputPorts zip paramArgs
       val inArgs = inputToParam.foldLeft(List[Port]())(
         { case (inArgs, (inputPort, paramArg)) =>
@@ -759,18 +761,16 @@ def emitInvokeDecl(invokeId: Id, inputs: Seq[Expr])
           store + (CompVar(s"$id") -> (reg.id, LocalVar))
         )
       }
-      case CExpr((EApp(invokeId, inputs))) => {
-        val (invokeDecl, argSt, invokeControl) = emitInvokeDecl(invokeId, inputs)
-
-        val control = SeqComp(List(invokeControl))
+      case CExpr(app: EApp) => {
+        val (invokeDecl, argSt, invokeControl) = emitInvokeDecl(app)
         (
           invokeDecl :: argSt.toList,
-          control,
+          SeqComp(List(invokeControl)),
           store
         )
       }
-      case CLet(id, typ, Some(EApp(invokeId, inputs))) => {
-        val (invokeDecl, argSt, invokeControl) = emitInvokeDecl(invokeId, inputs)
+      case CLet(id, typ, Some(app: EApp)) => {
+        val (invokeDecl, argSt, invokeControl) = emitInvokeDecl(app)
 
         val (typ_b, _) = bitsForType(typ, c.pos)
         val reg = Cell(genName(s"$id"), Stdlib.register(typ_b), false)
