@@ -30,7 +30,7 @@ private case class EmitOutput(
 
 /**
   * CALLING CONVENTION:
-  * The backen supports functions using Calyx's component definitions.
+  * The backend supports functions using Calyx's component definitions.
   * For a function:
   * ```
   * def id(x: ubit<32>): ubit<32> = {
@@ -120,16 +120,7 @@ private class FutilBackendHelper {
       )
     )
 
-    val width = typ.typ match {
-      case _: TBool => 1
-      case TSizedInt(size, _) => {
-        size
-      }
-      case TFixed(size, _, _) => {
-        size
-      }
-      case x => throw NotImplemented(s"Arrays of $x")
-    }
+    val (width, _) = bitsForType(Some(typ.typ), typ.typ.pos)
     val name = CompVar(s"${id}")
 
     val mem = typ.dims.length match {
@@ -193,6 +184,36 @@ private class FutilBackendHelper {
     }
     List(mem)
   }
+
+  /** TODO: Document */
+  def getPortName(p: Port) : String = {
+    p match {
+      case CompPort(id, _) => id.name
+      case ThisPort(id) => id.name
+      case HolePort(id, _) => id.name
+      case ConstantPort(_, _) => throw Impossible("Constant Ports do not have names.")
+    }
+  }
+
+    /** TODO: Document */
+    def getAddrPortToWidths(typ: TArray, id: Id): List[(String, Int)] = {
+      // Emit the array to determine the port widths.
+      val arrayWidths = emitArrayDecl(typ, id, false) match {
+        case (c: Cell) :: Nil => c.ci.args
+        case x => throw Impossible(s"The emitted array declaration is not a Cell. Type: ${x}")
+      }
+      arrayWidths match {
+        case _ :: _ :: a0 :: Nil =>
+          List(("addr0", a0))
+        case _ :: _ :: _ :: a0 :: a1 :: Nil =>
+          List(("addr0", a0), ("addr1", a1))
+        case _ :: _ :: _ :: _ :: a0 :: a1 :: a2 :: Nil =>
+          List(("addr0", a0), ("addr1", a1), ("addr2", a2))
+        case _ :: _ :: _ :: _ :: _ :: a0 :: a1 :: a2 :: a3 :: Nil =>
+          List(("addr0", a0), ("addr1", a1), ("addr2", a2), ("addr3", a3))
+        case _ => throw Impossible("Function parameters do not support arrays with dimensions > 4.")
+      }
+    }
 
   /** `emitDecl(d)` computes the structure that is needed to
     *  represent the declaration `d`. Simply returns a `List[Structure]`.
@@ -519,7 +540,7 @@ private class FutilBackendHelper {
         )
       }
       case EArrAccess(id, accessors) => {
-        val (arr, _) = store
+        val (arr, typ) = store
           .get(CompVar(s"$id"))
           .getOrThrow(
             BackendError(
@@ -527,21 +548,44 @@ private class FutilBackendHelper {
               expr.pos
             )
           )
+        // The array ports change if the array is a function parameter. We want to access the
+        // component ports, e.g. `x_read_data`, rather than the memory ports, `x.read_data`.
+        val isParam = (typ == ParameterVar)
+
+        // The value is generated on `read_data` and written on `write_data`.
+        val portName = if (rhsInfo.isDefined) "write_data" else "read_data"
+
+        val (writeEnPort, donePort, accessPort) =
+          if (isParam) {
+            (
+              ThisPort(CompVar(s"${id}_write_en")),
+              ThisPort(CompVar(s"${id}_done")),
+              ThisPort(CompVar(s"${id}_${portName}"))
+            )
+          } else {
+            (
+              arr.port("write_en"),
+              arr.port("done"),
+              arr.port(portName)
+            )
+          }
+
         // We always need to specify and address on the `addr` ports. Generate
         // the additional structure.
         val indexing = accessors.zipWithIndex.foldLeft(List[Structure]())({
           case (structs, (accessor, idx)) => {
             val result = emitExpr(accessor)
-            val con = Connect(result.port, arr.port("addr" + idx))
+            val addrPort =
+              if (isParam) ThisPort(CompVar(s"${id}_addr${idx}"))
+              else arr.port("addr" + idx)
+            val con = Connect(result.port, addrPort)
             con :: result.structure ++ structs
           }
         })
 
-        // The value is generated on `read_data` and written on `write_data`.
-        val portName = if (rhsInfo.isDefined) "write_data" else "read_data"
         val writeEnStruct =
           rhsInfo match {
-            case Some((port, _)) => List(Connect(port, arr.port("write_en")))
+            case Some((port, _)) => List(Connect(port, writeEnPort))
             case None => List()
           }
         // calculate static delay, rhsDelay + 1 for writes, 0 for reads
@@ -551,8 +595,8 @@ private class FutilBackendHelper {
             case None => Some(0)
           }
         EmitOutput(
-          arr.port(portName),
-          if (rhsInfo.isDefined) arr.port("done") else ConstantPort(1, 1),
+          accessPort,
+          if (rhsInfo.isDefined) donePort else ConstantPort(1, 1),
           indexing ++ writeEnStruct,
           delay
         )
@@ -630,16 +674,80 @@ private class FutilBackendHelper {
       }
       case CLet(id, typ, Some(EApp(invokeId, inputs))) => {
         val functionName = invokeId.toString()
-        val (argPorts, argSt) = inputs
+        val (inputPorts, argSt) = inputs
           .map(inp => {
             val out = emitExpr(inp)
             (out.port, out.structure)
           })
           .unzip
-        val parameters =
-          id2FuncDef(invokeId).args.map(decl => ThisPort(CompVar(decl.id.toString())))
-        val declName = genName(functionName)
+        val paramArgs = id2FuncDef(invokeId).args
+        val inputToParam = inputPorts zip paramArgs
+          val inArgs = inputToParam.foldLeft(List[Port]())(
+            { case (inArgs, (inputPort, paramArg)) =>
+              paramArg.typ match {
+                case _: TArray => {
+                  val inputId = getPortName(inputPort)
+                  inArgs ++ List(
+                     CompPort(CompVar(s"$inputId"), "read_data"),
+                     CompPort(CompVar(s"$inputId"), "done")
+                  )
+              }
+              case _ => inArgs ++ List(inputPort)
+              }
+            }
+          )
 
+          val outArgs = inputToParam.foldLeft(List[Port]())(
+            { case (outArgs, (inputPort, paramArg)) =>
+              paramArg.typ match {
+                case tarr: TArray => {
+                  val addrPortToWidth = getAddrPortToWidths(tarr, paramArg.id)
+                  val inputId = getPortName(inputPort)
+                  val addressPorts =
+                    addrPortToWidth.map({ case (name, _) => CompPort(CompVar(s"$inputId"), s"$name")})
+
+                  outArgs ++ List(
+                     CompPort(CompVar(s"$inputId"), "write_data"),
+                     CompPort(CompVar(s"$inputId"), "write_en")
+                  ) ++ addressPorts
+              }
+              case _ => outArgs ++ List(inputPort)
+              }
+            }
+          )
+
+          val inParams = paramArgs.foldLeft(List[Port]())(
+            (inParams, paramArgs) =>
+            paramArgs.typ match {
+              case _: TArray => {
+                val id = paramArgs.id.toString()
+                inParams ++ List(
+                   ThisPort(CompVar(s"${id}_read_data")),
+                   ThisPort(CompVar(s"${id}_done")),
+                )
+            }
+            case _ => inParams ++ List(ThisPort(CompVar(paramArgs.id.toString())))
+          })
+
+          val outParams = paramArgs.foldLeft(List[Port]())(
+            (outParams, paramArgs) =>
+            paramArgs.typ match {
+              case tarr: TArray => {
+                val id = paramArgs.id.toString()
+
+                val addrPortToWidth = getAddrPortToWidths(tarr, paramArgs.id)
+                val addressPorts =
+                  addrPortToWidth.map({case (name, _) => ThisPort(CompVar(s"${id}_${name}")) })
+
+                outParams ++ List(
+                   ThisPort(CompVar(s"${id}_write_data")),
+                   ThisPort(CompVar(s"${id}_write_en")),
+                ) ++ addressPorts
+            }
+            case _ => outParams
+          })
+
+        val declName = genName(functionName)
         val decl =
           Cell(declName, CompInst(functionName, List()), false)
 
@@ -661,8 +769,10 @@ private class FutilBackendHelper {
           List(
             Invoke(
               declName,
-              argPorts.toList,
-              parameters.toList
+              inParams,
+              inArgs,
+              outParams,
+              outArgs
             ),
             Enable(group.id)
           )
@@ -826,26 +936,53 @@ private class FutilBackendHelper {
     val functionDefinitions: List[Component] =
       for ((id, FuncDef(_, params, retType, Some(bodyOpt))) <- id2FuncDef.toList)
         yield {
-          val inputs = params.map(param =>
-            param.typ match {
-              case TArray(_, _, _) =>
-                throw NotImplemented(
-                  "Memory as a parameter is not supported yet.",
-                  param.pos
+          val inputs = params.map(param => CompVar(param.id.toString()))
+
+          val inputPorts = params.foldLeft(List[PortDef]())(
+            (inputPorts, params) =>
+            params.typ match {
+              case tarr: TArray => {
+                val (bits, _) = bitsForType(Some(tarr.typ), tarr.typ.pos)
+                val id = params.id.toString()
+                inputPorts ++ List(
+                   PortDef(CompVar(s"${id}_read_data"), bits),
+                   PortDef(CompVar(s"${id}_done"), 1)
                 )
+              }
               case _ => {
-                val (bits, _) = bitsForType(Some(param.typ), param.typ.pos)
-                PortDef(CompVar(param.id.toString()), bits)
+                val (bits, _) = bitsForType(Some(params.typ), params.typ.pos)
+                val id = params.id.toString()
+                inputPorts ++ List(PortDef(CompVar(id), bits))
               }
             }
           )
 
+          val outputPorts = params.foldLeft(List[PortDef]())(
+            (outputPorts, params) =>
+            params.typ match {
+              case tarr: TArray => {
+                val (bits, _) = bitsForType(Some(tarr.typ), tarr.typ.pos)
+                val id = params.id.toString()
+                val addrPortToWidth = getAddrPortToWidths(tarr, params.id)
+                val addressPortDefs = addrPortToWidth.map(
+                  { case (name, idxSize) => PortDef(CompVar(s"${id}_${name}"), idxSize) }
+                )
+
+                outputPorts ++ List(
+                   PortDef(CompVar(s"${id}_write_data"), bits),
+                   PortDef(CompVar(s"${id}_write_en"), 1)
+                ) ++ addressPortDefs
+              }
+              case _ => outputPorts
+            }
+          )
+
+
           val functionStore = inputs.foldLeft(Map[CompVar, (CompVar, VType)]())(
             (functionStore, inputs) =>
               inputs match {
-                case PortDef(id, _) =>
+                case id: CompVar =>
                   functionStore + (id -> (id, ParameterVar))
-                case _ => functionStore
               }
           )
           val (cmdStructure, controls, _) =
@@ -853,12 +990,12 @@ private class FutilBackendHelper {
 
           val (outputBitWidth, _) = bitsForType(Some(retType), retType.pos)
           val output =
-            if (outputBitWidth == 0) List()
-            else List(PortDef(CompVar("out"), outputBitWidth))
+            if (outputBitWidth == 0) outputPorts
+            else outputPorts ++ List(PortDef(CompVar("out"), outputBitWidth))
 
           Component(
             id.toString(),
-            inputs.toList,
+            inputPorts,
             output,
             cmdStructure.sorted,
             controls

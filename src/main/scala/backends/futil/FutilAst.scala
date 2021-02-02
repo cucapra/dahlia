@@ -223,15 +223,19 @@ object Futil {
       case Print(_) =>
         throw Impossible("Futil does not support print")
       case Enable(id) => id.doc() <> semi
-      case Invoke(id, arguments, parameters) => {
-        val argsDoc = arguments.map(p => p.doc())
-        val paramsDoc = parameters.map(decl => decl.doc())
-        val definitions = (paramsDoc zip argsDoc).map({
+      case Invoke(id, inArgs, inParams, outArgs, outParams) => {
+        val inputs =
+          (inArgs.map(a => a.doc())) zip inParams.map(p => p.doc())
+        val outputs =
+          (outArgs.map(a => a.doc())) zip outParams.map(p => p.doc())
+        val inputDefs = inputs.map({
           case (param, arg) => param <> equal <> arg
         })
-        text("invoke") <+> id.doc() <> parens(commaSep(definitions)) <> text(
-          "()"
-        ) <> semi
+        val outputDefs = outputs.map({
+          case (param, arg) => param <> equal <> arg
+        })
+        text("invoke") <+> id.doc() <> parens(commaSep(inputDefs)) <>
+          parens(commaSep(outputDefs)) <> semi
       }
       case Empty => text("empty")
     }
@@ -245,8 +249,10 @@ object Futil {
   case class Enable(id: CompVar) extends Control
   case class Invoke(
       id: CompVar,
-      arguments: List[Port],
-      parameters: List[Port]
+      inArgs: List[Port],
+      inParams: List[Port],
+      outArgs: List[Port],
+      outParams: List[Port]
   ) extends Control
   case object Empty extends Control
 }
