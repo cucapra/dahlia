@@ -928,13 +928,14 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
         yield {
           val inputs = params.map(param => CompVar(param.id.toString()))
 
-          val argPorts = params.foldLeft(List[PortDef]())(
-            (argPorts, params) =>
+          val inputPorts = params.foldLeft(List[PortDef]())(
+            (inputPorts, params) =>
             params.typ match {
               case tarr: TArray => {
+                // Currently, we default to exposing all ports for arrays.
                 val (bits, _) = bitsForType(Some(tarr.typ), tarr.typ.pos)
                 val id = params.id.toString()
-                argPorts ++ List(
+                inputPorts ++ List(
                    PortDef(CompVar(s"${id}_read_data"), bits),
                    PortDef(CompVar(s"${id}_done"), 1)
                 )
@@ -942,7 +943,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
               case _ => {
                 val (bits, _) = bitsForType(Some(params.typ), params.typ.pos)
                 val id = params.id.toString()
-                argPorts ++ List(PortDef(CompVar(id), bits))
+                inputPorts ++ List(PortDef(CompVar(id), bits))
               }
             }
           )
@@ -967,7 +968,6 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
             }
           )
 
-
           val functionStore = inputs.foldLeft(Map[CompVar, (CompVar, VType)]())(
             (functionStore, inputs) =>
               inputs match {
@@ -982,7 +982,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
 
           Component(
             id.toString(),
-            argPorts,
+            inputPorts,
             if (outputBitWidth == 0) outputPorts
             else outputPorts ++ List(PortDef(CompVar("out"), outputBitWidth)),
             cmdStructure.sorted,
