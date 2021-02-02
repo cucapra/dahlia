@@ -989,14 +989,12 @@ private class FutilBackendHelper {
             emitCmd(bodyOpt)(functionStore, id2FuncDef)
 
           val (outputBitWidth, _) = bitsForType(Some(retType), retType.pos)
-          val output =
-            if (outputBitWidth == 0) outputPorts
-            else outputPorts ++ List(PortDef(CompVar("out"), outputBitWidth))
 
           Component(
             id.toString(),
             inputPorts,
-            output,
+            if (outputBitWidth == 0) outputPorts
+            else outputPorts ++ List(PortDef(CompVar("out"), outputBitWidth)),
             cmdStructure.sorted,
             controls
           )
