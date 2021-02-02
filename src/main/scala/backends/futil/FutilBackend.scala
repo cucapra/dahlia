@@ -225,82 +225,58 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
     val declName = genName(functionName)
     val decl =
       Cell(declName, CompInst(functionName, List()), false)
-    val (inputPorts, argSt) = app.args
+    val (argPorts, argSt) = app.args
       .map(inp => {
         val out = emitExpr(inp)
         (out.port, out.structure)
       })
       .unzip
-    val paramArgs = id2FuncDef(app.func).args
-    val inputToParam = inputPorts zip paramArgs
-      val inArgs = inputToParam.foldLeft(List[Port]())(
-        { case (inArgs, (inputPort, paramArg)) =>
+    val argToParam = argPorts zip id2FuncDef(app.func).args
+
+    val inConnects = argToParam.foldLeft(List[(String, Port)]())(
+        { case (inConnects, (inputPort, paramArg)) =>
           paramArg.typ match {
             case _: TArray => {
-              val inputId = getPortName(inputPort)
-              inArgs ++ List(
-                 CompPort(CompVar(s"$inputId"), "read_data"),
-                 CompPort(CompVar(s"$inputId"), "done")
+              val argId = getPortName(inputPort)
+              val paramId = paramArg.id.toString()
+              inConnects ++ List(
+                 (s"${paramId}_read_data" , CompPort(CompVar(s"$argId"), "read_data")),
+                 (s"${paramId}_done" ,CompPort(CompVar(s"$argId"), "done"))
               )
           }
-          case _ => inArgs ++ List(inputPort)
+          case _ => inConnects ++ List((paramArg.id.toString(), inputPort))
           }
         }
       )
 
-      val outArgs = inputToParam.foldLeft(List[Port]())(
-        { case (outArgs, (inputPort, paramArg)) =>
+      val outConnects = argToParam.foldLeft(List[(String, Port)]())(
+        { case (outConnects, (inputPort, paramArg)) =>
           paramArg.typ match {
             case tarr: TArray => {
-              val addrPortToWidth = getAddrPortToWidths(tarr, paramArg.id)
-              val inputId = getPortName(inputPort)
-              val addressPorts =
-                addrPortToWidth.map({ case (name, _) => CompPort(CompVar(s"$inputId"), s"$name")})
+            val paramId = paramArg.id.toString()
+            val argId = getPortName(inputPort)
 
-              outArgs ++ List(
-                 CompPort(CompVar(s"$inputId"), "write_data"),
-                 CompPort(CompVar(s"$inputId"), "write_en")
+            // Connect address ports.
+            val addrPortToWidth = getAddrPortToWidths(tarr, paramArg.id)
+            val addressPorts =
+              addrPortToWidth.map({case (name, _) =>
+                (s"${paramId}_${name}", CompPort(CompVar(s"$argId"), s"$name"))
+              })
+
+              outConnects ++ List(
+                 (s"${paramId}_write_data", CompPort(CompVar(s"$argId"), "write_data")),
+                 (s"${paramId}_write_en", CompPort(CompVar(s"$argId"), "write_en"))
               ) ++ addressPorts
           }
-          case _ => outArgs ++ List(inputPort)
+          case _ => outConnects
           }
         }
       )
 
-      val inParams = paramArgs.foldLeft(List[String]())(
-        (inParams, paramArgs) =>
-        paramArgs.typ match {
-          case _: TArray => {
-            val id = paramArgs.id.toString()
-            inParams ++ List(
-               s"${id}_read_data",
-               s"${id}_done",
-            )
-        }
-        case _ => inParams ++ List(paramArgs.id.toString())
-      })
-
-      val outParams = paramArgs.foldLeft(List[String]())(
-        (outParams, paramArgs) =>
-        paramArgs.typ match {
-          case tarr: TArray => {
-            val id = paramArgs.id.toString()
-            val addrPortToWidth = getAddrPortToWidths(tarr, paramArgs.id)
-            val addressPorts =
-              addrPortToWidth.map({case (name, _) => s"${id}_${name}" })
-
-            outParams ++ List(s"${id}_write_data", s"${id}_write_en") ++ addressPorts
-        }
-        case _ => outParams
-      })
       (
         decl,
         argSt.flatten,
-        Invoke(
-           declName,
-           inParams zip inArgs,
-           outParams zip outArgs,
-        )
+        Invoke(declName, inConnects, outConnects)
       )
 }
 
@@ -952,13 +928,13 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
         yield {
           val inputs = params.map(param => CompVar(param.id.toString()))
 
-          val inputPorts = params.foldLeft(List[PortDef]())(
-            (inputPorts, params) =>
+          val argPorts = params.foldLeft(List[PortDef]())(
+            (argPorts, params) =>
             params.typ match {
               case tarr: TArray => {
                 val (bits, _) = bitsForType(Some(tarr.typ), tarr.typ.pos)
                 val id = params.id.toString()
-                inputPorts ++ List(
+                argPorts ++ List(
                    PortDef(CompVar(s"${id}_read_data"), bits),
                    PortDef(CompVar(s"${id}_done"), 1)
                 )
@@ -966,7 +942,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
               case _ => {
                 val (bits, _) = bitsForType(Some(params.typ), params.typ.pos)
                 val id = params.id.toString()
-                inputPorts ++ List(PortDef(CompVar(id), bits))
+                argPorts ++ List(PortDef(CompVar(id), bits))
               }
             }
           )
@@ -1006,7 +982,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
 
           Component(
             id.toString(),
-            inputPorts,
+            argPorts,
             if (outputBitWidth == 0) outputPorts
             else outputPorts ++ List(PortDef(CompVar("out"), outputBitWidth)),
             cmdStructure.sorted,
