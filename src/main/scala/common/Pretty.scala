@@ -20,9 +20,9 @@ object Pretty {
 
   def emitInclude(incl: Include)(implicit debug: Boolean): Doc = {
     text("import") <+>
-    vsep(incl.backends.map({
-      case (b, incl) => text(b.toString) <> parens(quote(text(incl)))
-    })) <+> scope(
+      vsep(incl.backends.map({
+        case (b, incl) => text(b.toString) <> parens(quote(text(incl)))
+      })) <+> scope(
       vsep(incl.defs.map(emitDef))
     )
   }
@@ -30,11 +30,11 @@ object Pretty {
   def emitDef(defi: Definition)(implicit debug: Boolean): Doc = defi match {
     case FuncDef(id, args, ret, bodyOpt) => {
       val retDoc = ret match {
-        case _:TVoid => emptyDoc
+        case _: TVoid => emptyDoc
         case _ => colon <+> emitTyp(ret)
       }
       text("def") <+> id <> parens(ssep(args.map(emitDecl), comma <> space)) <+>
-        retDoc <> bodyOpt.map(emitCmd).getOrElse(semi)
+        retDoc <> bodyOpt.map(c => equal <+> scope(emitCmd(c))).getOrElse(semi)
     }
     case RecordDef(name, fields) => {
       text("record") <+> name <+> scope(vsep(fields.map({
