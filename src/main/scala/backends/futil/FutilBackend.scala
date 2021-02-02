@@ -214,7 +214,7 @@ private class FutilBackendHelper {
           List(("addr0", a0), ("addr1", a1), ("addr2", a2))
         case _ :: _ :: _ :: _ :: _ :: a0 :: a1 :: a2 :: a3 :: Nil =>
           List(("addr0", a0), ("addr1", a1), ("addr2", a2), ("addr3", a3))
-        case _ => throw Impossible("Function parameters do not support arrays with dimensions > 4.")
+        case n => throw NotImplemented(s"Arrays of size $n")
       }
     }
 
