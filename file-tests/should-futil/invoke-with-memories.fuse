@@ -1,14 +1,9 @@
-def two(a: ubit<32>[1][1]): ubit<32> = {
+def add_one(a: ubit<32>[1][1]): ubit<32> = {
    let z: ubit<1> = (0 as ubit<1>);
-   let one: ubit<32> = (1 as ubit<32>);
-   a[z][z] := one;
-   ---
-   let _temp: ubit<32> = a[z][z] + one;
+   let _temp = (1 as ubit<32>) + a[z][z];
    return _temp;
 }
 
 decl X: ubit<32>[1][1];
-decl Y: ubit<32>[1];
 
-let _temp = two(X);
-Y[(0 as ubit<1>)] := _temp;
+let ret: ubit<32> = add_one(X);
