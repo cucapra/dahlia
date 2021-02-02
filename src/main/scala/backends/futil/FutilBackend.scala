@@ -983,7 +983,8 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
           Component(
             id.toString(),
             inputPorts,
-            if (outputBitWidth == 0) outputPorts
+            if (retType == TVoid()) outputPorts
+            // If the return type of the component is not void, add an `out` wire.
             else outputPorts ++ List(PortDef(CompVar("out"), outputBitWidth)),
             cmdStructure.sorted,
             controls
