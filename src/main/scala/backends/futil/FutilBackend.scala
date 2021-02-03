@@ -205,8 +205,7 @@ private class FutilBackendHelper {
         case (c: Cell) :: Nil => c.ci.args
         case x => throw Impossible(s"The emitted array declaration is not a Cell. Type: ${x}")
       }
-      // An array's arguments follows a similar pattern
-      // regardless of dimension:
+      // A memory's arguments follow a similar pattern:
       // (bitwidth, size0, ..., sizeX, addr0, ..., addrX),
       // where X is the number of dimensions - 1.
       val dims =
