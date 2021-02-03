@@ -995,6 +995,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
           )
         }
     val imports =
+      Import("primitives/std.lib") ::
         p.includes.flatMap(_.backends.get(C.Futil)).map(i => Import(i)).toList
 
     val struct = declStruct ++ cmdStruct
