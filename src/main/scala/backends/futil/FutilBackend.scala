@@ -942,8 +942,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
               }
               case _ => {
                 val (bits, _) = bitsForType(Some(params.typ), params.typ.pos)
-                val id = params.id.toString()
-                inputPorts ++ List(PortDef(CompVar(id), bits))
+                inputPorts ++ List(PortDef(CompVar(params.id.toString()), bits))
               }
             }
           )
