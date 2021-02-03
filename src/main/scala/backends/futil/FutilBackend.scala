@@ -217,11 +217,10 @@ private class FutilBackendHelper {
           case 9 => 4
           case _ => throw NotImplemented(s"Arrays of dimension > 4.")
         }
-      val addresses = (0 until dims).toList
-      val indices = (dims + 1 to dims << 1).toList
+      val addressIndices = (dims + 1 to dims << 1).toList
 
-      (addresses zip indices).map({
-        case (a, n) => (s"addr${a}", arrayArgs(n))
+      addressIndices.zipWithIndex.map({
+        case (n, i) => (s"addr${i}", arrayArgs(n))
       })
     }
 
