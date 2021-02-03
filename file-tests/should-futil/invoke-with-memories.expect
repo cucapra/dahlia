@@ -1,0 +1,57 @@
+import "primitives/std.lib";
+component foo(a: 32) -> (out: 32) {
+  cells {
+    temp0 = std_reg(32);
+  }
+  wires {
+    group let3<"static"=1> {
+      temp0.in = a;
+      temp0.write_en = 1'd1;
+      let3[done] = temp0.done;
+    }
+    out = temp0.out;
+  }
+  control {
+    let3;
+  }
+}
+component main() -> () {
+  cells {
+    b0 = std_reg(32);
+    c0 = std_reg(32);
+    const0 = std_const(32,1);
+    d0 = std_reg(32);
+    foo0 = foo();
+    std_sqrt0 = std_sqrt();
+  }
+  wires {
+    group let0<"static"=1> {
+      b0.in = const0.out;
+      b0.write_en = 1'd1;
+      let0[done] = b0.done;
+    }
+    group let1 {
+      c0.in = foo0.out;
+      c0.write_en = 1'd1;
+      let1[done] = c0.done;
+    }
+    group let2 {
+      d0.in = std_sqrt0.out;
+      d0.write_en = 1'd1;
+      let2[done] = d0.done;
+    }
+  }
+  control {
+    par {
+      let0;
+      seq {
+        invoke foo0(a=b0.out)();
+        let1;
+      }
+      seq {
+        invoke std_sqrt0(in=c0.out)();
+        let2;
+      }
+    }
+  }
+}
