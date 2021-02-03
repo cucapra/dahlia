@@ -1,57 +1,54 @@
 import "primitives/std.lib";
-component foo(a: 32) -> (out: 32) {
+component mem_copy(dest_read_data: 32, dest_done: 1, src_read_data: 32, src_done: 1, c: 1) -> (dest_write_data: 32, dest_write_en: 1, dest_addr0: 1, src_write_data: 32, src_write_en: 1, src_addr0: 1, out: 1) {
   cells {
-    temp0 = std_reg(32);
+    add0 = std_add(1);
+    const1 = std_const(1,0);
+    const2 = std_const(1,1);
+    zero0 = std_reg(1);
   }
   wires {
-    group let3<"static"=1> {
-      temp0.in = a;
-      temp0.write_en = 1'd1;
-      let3[done] = temp0.done;
+    group let1<"static"=1> {
+      zero0.in = const1.out;
+      zero0.write_en = 1'd1;
+      let1[done] = zero0.done;
     }
-    out = temp0.out;
+    group upd0<"static"=1> {
+      dest_addr0 = zero0.out;
+      dest_write_en = 1'd1;
+      src_addr0 = zero0.out;
+      dest_write_data = 1'd1 ? src_read_data;
+      upd0[done] = dest_done ? 1'd1;
+    }
+    out = add0.out;
+    add0.right = const2.out;
+    add0.left = c;
   }
   control {
-    let3;
+    par {
+      let1;
+      upd0;
+    }
   }
 }
 component main() -> () {
   cells {
-    b0 = std_reg(32);
-    c0 = std_reg(32);
-    const0 = std_const(32,1);
-    d0 = std_reg(32);
-    foo0 = foo();
-    std_sqrt0 = std_sqrt();
+    @external(1) a = std_mem_d1(32,1,1);
+    @external(1) b = std_mem_d1(32,1,1);
+    const0 = std_const(1,0);
+    mem_copy0 = mem_copy();
+    ok0 = std_reg(1);
   }
   wires {
-    group let0<"static"=1> {
-      b0.in = const0.out;
-      b0.write_en = 1'd1;
-      let0[done] = b0.done;
-    }
-    group let1 {
-      c0.in = foo0.out;
-      c0.write_en = 1'd1;
-      let1[done] = c0.done;
-    }
-    group let2 {
-      d0.in = std_sqrt0.out;
-      d0.write_en = 1'd1;
-      let2[done] = d0.done;
+    group let0 {
+      ok0.in = mem_copy0.out;
+      ok0.write_en = 1'd1;
+      let0[done] = ok0.done;
     }
   }
   control {
-    par {
+    seq {
+      invoke mem_copy0(dest_read_data=b.read_data, dest_done=b.done, src_read_data=a.read_data, src_done=a.done, c=const0.out)(dest_write_data=b.write_data, dest_write_en=b.write_en, dest_addr0=b.addr0, src_write_data=a.write_data, src_write_en=a.write_en, src_addr0=a.addr0);
       let0;
-      seq {
-        invoke foo0(a=b0.out)();
-        let1;
-      }
-      seq {
-        invoke std_sqrt0(in=c0.out)();
-        let2;
-      }
     }
   }
 }

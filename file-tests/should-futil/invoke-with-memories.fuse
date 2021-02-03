@@ -1,3 +1,4 @@
+import futil("primitives/std.lib") {}
 def mem_copy(dest: ubit<32>[1], src: ubit<32>[1]) = {
   let zero = (0 as ubit<1>);
   dest[zero] := src[zero];
