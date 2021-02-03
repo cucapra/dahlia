@@ -201,21 +201,28 @@ private class FutilBackendHelper {
     */
     def getAddrPortToWidths(typ: TArray, id: Id): List[(String, Int)] = {
       // Emit the array to determine the port widths.
-      val arrayWidths = emitArrayDecl(typ, id, false) match {
+      val arrayArgs = emitArrayDecl(typ, id, false) match {
         case (c: Cell) :: Nil => c.ci.args
         case x => throw Impossible(s"The emitted array declaration is not a Cell. Type: ${x}")
       }
-      arrayWidths match {
-        case _ :: _ :: a0 :: Nil =>
-          List(("addr0", a0))
-        case _ :: _ :: _ :: a0 :: a1 :: Nil =>
-          List(("addr0", a0), ("addr1", a1))
-        case _ :: _ :: _ :: _ :: a0 :: a1 :: a2 :: Nil =>
-          List(("addr0", a0), ("addr1", a1), ("addr2", a2))
-        case _ :: _ :: _ :: _ :: _ :: a0 :: a1 :: a2 :: a3 :: Nil =>
-          List(("addr0", a0), ("addr1", a1), ("addr2", a2), ("addr3", a3))
-        case n => throw NotImplemented(s"Arrays of size $n")
-      }
+      // An array's arguments follows a similar pattern
+      // regardless of dimension:
+      // (bitwidth, size0, ..., sizeX, addr0, ..., addrX),
+      // where X is the number of dimensions - 1.
+      val dims =
+        arrayArgs.length match {
+          case 3 => 1
+          case 5 => 2
+          case 7 => 3
+          case 9 => 4
+          case _ => throw NotImplemented(s"Arrays of dimension > 4.")
+        }
+      val addresses = (0 until dims).toList
+      val indices = (dims + 1 to dims << 1).toList
+
+      (addresses zip indices).map({
+        case (a, n) => (s"addr${a}", arrayArgs(n))
+      })
     }
 
 /** `emitInvokeDecl` computes the necessary structure and control for Syntax.EApp. */
