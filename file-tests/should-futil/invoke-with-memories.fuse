@@ -1,0 +1,9 @@
+def mem_copy(dest: ubit<32>[1], src: ubit<32>[1]) = {
+  let zero = (0 as ubit<1>);
+  dest[zero] := src[zero];
+}
+
+decl s: ubit<32>[1];
+decl d: ubit<32>[1];
+
+mem_copy(d, s);
