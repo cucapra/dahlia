@@ -49,8 +49,15 @@ object LowerUnroll extends PartialTransformer {
     *
     * The function returns a map from a Seq[Int] (bank numbers) to the
     * access expression that corresponds to it.
+    *
+    * physical: True if this transformer is associated with a physical array.
     */
-  case class ViewTransformer(val t: TKey => TVal) extends AnyVal
+  case class ViewTransformer(t: TKey => TVal, physical: Boolean) {
+    // Apply method for accesses
+    def apply(key: TKey): TVal = {
+      t(key)
+    }
+  }
   object ViewTransformer {
 
     /**
@@ -98,7 +105,7 @@ object LowerUnroll extends PartialTransformer {
           })
           .toMap
       }
-      ViewTransformer(t)
+      ViewTransformer(t, true)
     }
 
     /**
@@ -146,7 +153,7 @@ object LowerUnroll extends PartialTransformer {
           })
           .toMap
       }
-      ViewTransformer(t)
+      ViewTransformer(t, false)
     }
   }
 
@@ -437,7 +444,7 @@ object LowerUnroll extends PartialTransformer {
       val transformer = env.viewGet(arrId)
       if (transformer.isDefined) {
         val allExprs =
-          (transformer.get.t)(idxs.zip(getBanks(arrId, idxs)(env)))
+          (transformer.get)(idxs.zip(getBanks(arrId, idxs)(env)))
         // Calculate the value for all indices and let-bind them.
         val TArray(typ, arrDims, _) = env.dimsGet(arrId)
         // We generate update expressions for the variable.
@@ -523,7 +530,7 @@ object LowerUnroll extends PartialTransformer {
       l match {
         case EArrAccess(id, idxs) if env.viewGet(id).isDefined => {
           val allExprs =
-            (env.viewGet(id).get.t)(idxs.zip(getBanks(id, idxs)(env)))
+            (env.viewGet(id).get)(idxs.zip(getBanks(id, idxs)(env)))
           // Calculate the value for all indices and let-bind them.
           val arrDims = env.dimsGet(id).dims
           val (newCmd, nEnv) =
@@ -545,7 +552,7 @@ object LowerUnroll extends PartialTransformer {
           val transformer = env.viewGet(id)
           if (transformer.isDefined) {
             val allExprs =
-              (transformer.get.t)(idxs.zip(getBanks(id, idxs)(env)))
+              (transformer.get)(idxs.zip(getBanks(id, idxs)(env)))
             // Calculate the value for all indices and let-bind them.
             val arrDims = env.dimsGet(id).dims
             val (newCmd, nEnv) =
@@ -562,7 +569,7 @@ object LowerUnroll extends PartialTransformer {
               Impossible(s"Array `$id' has no transformer associated with it.")
             )
           val allExprs =
-            (transformer.t)(physIdxs.map(idx => (idx._2, Some(idx._1))))
+            (transformer)(physIdxs.map(idx => (idx._2, Some(idx._1))))
           assert(
             allExprs.size == 1,
             s"Physical access expression generated more than one expression"
@@ -587,7 +594,29 @@ object LowerUnroll extends PartialTransformer {
 
   def myRewriteE: PF[(Expr, Env), (Expr, Env)] = {
     case (e @ EVar(id), env) => {
-      env.rewriteGet(id).map(nId => EVar(nId)).getOrElse(e) -> env
+      val varRewrite = env.rewriteGet(id)
+      val arrRewrite = env.viewGet(id)
+      if (varRewrite.isDefined) {
+        EVar(varRewrite.get) -> env
+      } else if (arrRewrite.isDefined) {
+        val TArray(_, dims, _) = env.dimsGet(id)
+        // Construct a fake access expression
+        val map = (arrRewrite.get)(dims.map(_ => EInt(0) -> None))
+        if (map.size != 1) {
+          throw Impossible(s"Memory parameter is banked: $id.", e.pos)
+        }
+        val List((_, acc)) = map.toList
+        acc match {
+          case EArrAccess(id, _) => rewriteE(EVar(id))(env)
+          case e =>
+            throw Impossible(
+              s"Memory parameter returned unexpected access expression: ${Pretty
+                .emitExpr(e)(false)}"
+            )
+        }
+      } else {
+        e -> env
+      }
     }
     // Since physical access expression imply exactly one expression, we can
     // rewrite them.
@@ -598,7 +627,7 @@ object LowerUnroll extends PartialTransformer {
           Impossible(s"Array `$id' has no transformer associated with it.")
         )
       val allExprs =
-        (transformer.t)(physIdxs.map(idx => (idx._2, Some(idx._1))))
+        transformer(physIdxs.map(idx => (idx._2, Some(idx._1))))
       assert(
         allExprs.size == 1,
         s"Physical access expression generated more than one expression"

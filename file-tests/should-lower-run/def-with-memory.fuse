@@ -1,0 +1,13 @@
+def matadd(a: float[2][2], b: float[2][2], result: float[2][2]) = {
+  for (let i: bit<1> = 0..2) {
+    for (let j: bit<1> = 0..2) {
+      result[i][j] := a[i][j] + b[i][j];
+    }
+  }
+}
+
+decl a: float[2][2];
+decl b: float[2][2];
+decl result: float[2][2];
+
+matadd(a, b, result);

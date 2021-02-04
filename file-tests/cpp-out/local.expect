@@ -1,7 +1,7 @@
 #include "parser.cpp"
 /***************** Parse helpers  ******************/
 /***************************************************/
-void kernel(vector<float> ext, float out) {
+void kernel(vector<float> &ext, float out) {
   
   float internal[4];
   internal[2] = ext[2];

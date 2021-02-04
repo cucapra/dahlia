@@ -1,7 +1,7 @@
 #include "parser.cpp"
 /***************** Parse helpers  ******************/
 /***************************************************/
-void kernel(vector<int> a0, vector<int> b0, int result) {
+void kernel(vector<int> &a0, vector<int> &b0, int result) {
   
   int res = 0;
   for(int i = 0; i < 4; i++) {
