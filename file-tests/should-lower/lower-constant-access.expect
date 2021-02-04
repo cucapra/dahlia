@@ -1,7 +1,7 @@
 #include "parser.cpp"
 /***************** Parse helpers  ******************/
 /***************************************************/
-void kernel(vector<float> A0, vector<float> A1) {
+void kernel(vector<float> &A0, vector<float> &A1) {
   
   float x_;
   x_ = A0[(unsigned int)1];
