@@ -719,6 +719,34 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
       }
       case CLet(_, Some(_: TArray), Some(_)) =>
         throw NotImplemented(s"Futil backend cannot initialize memories", c.pos)
+      case CLet(id, typ, Some(app: EApp)) => {
+        val (invokeDecl, argSt, invokeControl) = emitInvokeDecl(app)
+
+        val (typ_b, _) = bitsForType(typ, c.pos)
+        val reg = Cell(genName(s"$id"), Stdlib.register(typ_b), false)
+
+        val groupName = genName("let")
+        val doneHole = Connect(reg.id.port("done"), HolePort(groupName, "done"))
+
+        val struct =
+          List(
+            Connect(invokeDecl.id.port("out"), reg.id.port("in")),
+            Connect(ConstantPort(1, 1), reg.id.port("write_en")),
+            doneHole
+          )
+        val (group, st) = Group.fromStructure(groupName, struct, None)
+        val control = SeqComp(
+          List(
+            invokeControl,
+            Enable(group.id)
+          )
+        )
+        (
+          argSt.toList ++ (invokeDecl :: reg :: group :: st),
+          control,
+          store + (CompVar(s"$id") -> (reg.id, LocalVar))
+        )
+      }
       // if not clearly specified, Cast the TRational to TFixed
       case CLet(id, Some(TFixed(t, i, un)), Some(e)) => {
         val reg =
@@ -748,34 +776,6 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
           invokeDecl :: argSt.toList,
           SeqComp(List(invokeControl)),
           store
-        )
-      }
-      case CLet(id, typ, Some(app: EApp)) => {
-        val (invokeDecl, argSt, invokeControl) = emitInvokeDecl(app)
-
-        val (typ_b, _) = bitsForType(typ, c.pos)
-        val reg = Cell(genName(s"$id"), Stdlib.register(typ_b), false)
-
-        val groupName = genName("let")
-        val doneHole = Connect(reg.id.port("done"), HolePort(groupName, "done"))
-
-        val struct =
-          List(
-            Connect(invokeDecl.id.port("out"), reg.id.port("in")),
-            Connect(ConstantPort(1, 1), reg.id.port("write_en")),
-            doneHole
-          )
-        val (group, st) = Group.fromStructure(groupName, struct, None)
-        val control = SeqComp(
-          List(
-            invokeControl,
-            Enable(group.id)
-          )
-        )
-        (
-          argSt.toList ++ (invokeDecl :: reg :: group :: st),
-          control,
-          store + (CompVar(s"$id") -> (reg.id, LocalVar))
         )
       }
       case CLet(id, typ, Some(e)) => {
