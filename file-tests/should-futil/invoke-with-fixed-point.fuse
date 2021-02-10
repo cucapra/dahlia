@@ -1,0 +1,7 @@
+def foo(x: ufix<8, 4>): ufix<8, 4> = {
+  let y: ufix<8, 4> = x;
+  return y;
+}
+
+let x: ufix<8, 4> = (1.0 as ufix<8, 4>);
+let tmp: ufix<8, 4> = foo(x);
