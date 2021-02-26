@@ -7,8 +7,6 @@ The Dahlia Programming Language
 </p>
 </h1>
 
-[![CircleCI](https://circleci.com/gh/cucapra/dahlia.svg?style=svg)](https://circleci.com/gh/cucapra/dahlia)
-
 Dahlia is a programming language for designing hardware accelerators.  It
 provides abstractions that guarantee predictable hardware generation after type
 checking. For more details, see [the demo][demo] and [the documentation][docs].
