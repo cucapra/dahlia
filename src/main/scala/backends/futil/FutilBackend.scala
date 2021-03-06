@@ -79,12 +79,22 @@ private class FutilBackendHelper {
     }
   }
 
-  /** Returns true if the given int or fixed point is signed
+  /** Returns true if the given int or fixed point is signed.
     */
   def signed(typ: Option[Type]) = {
     typ match {
       case Some(TSizedInt(_, un)) => un == false
       case Some(TFixed(_, _, un)) => un == false
+      case _ => false
+    }
+  }
+
+  /** Returns true if the type is fixed point,
+    * false otherwise.
+    */
+  def is_fixed_point(typ: Option[Type]) = {
+    typ match {
+      case Some(TFixed(_, _, _)) => true
       case _ => false
     }
   }
@@ -356,8 +366,8 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
             yield d1 + d2
         )
       }
-      // if there is additional information about the integer bit,
-      // use fixed point binary operation
+      // If there is additional information about the integer bit,
+      // use a fixed point binary operation.
       case (e1Bits, Some(intBit1)) => {
         val (e2Bits, Some(intBit2)) = bitsForType(e2.typ, e2.pos)
         val fracBit1 = e1Bits - intBit1
@@ -490,15 +500,15 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
         val compName = op.op match {
           case "+" => "add"
           case "-" => "sub"
-          case "*" => "mult_pipe"
-          case "/" => "div_pipe"
+          case "*" => "mult"
+          case "/" => "div"
           case "<" => "lt"
           case ">" => "gt"
           case "<=" => "le"
           case ">=" => "ge"
           case "!=" => "neq"
           case "==" => "eq"
-          case "%" => "mod_pipe"
+          case "%" => "mod"
           case "&&" => "and"
           case "||" => "or"
           case "&" => "and"
@@ -511,18 +521,17 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
               op.pos
             )
         }
-        op.op match {
-          case "*" =>
+        // Verify expression types are not fixed point,
+        // since there (currently) does not exist
+        // multi-cycle binary operations for fixed point.
+        (op.op, is_fixed_point(e1.typ)) match {
+          case ("*", false) | ("/", false) | ("%", false) =>
             emitMultiCycleBinop(
-              compName,
+              s"${compName}_pipe",
               e1,
               e2,
-              Stdlib.staticTimingMap("mult")
+              Stdlib.staticTimingMap(compName)
             )
-          case "/" =>
-            emitMultiCycleBinop(compName, e1, e2, Stdlib.staticTimingMap("div"))
-          case "%" =>
-            emitMultiCycleBinop(compName, e1, e2, Stdlib.staticTimingMap("mod"))
           case _ => emitBinop(compName, e1, e2)
         }
       }

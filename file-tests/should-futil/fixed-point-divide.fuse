@@ -1,0 +1,3 @@
+let x: fix<2, 1> = (1.0 as fix<2, 1>);
+let y: fix<2, 1> = (2.0 as fix<2, 1>);
+let z: fix<2, 1> = x / y;
