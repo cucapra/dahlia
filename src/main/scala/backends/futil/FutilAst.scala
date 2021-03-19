@@ -404,11 +404,8 @@ object Stdlib {
   ): Futil.CompInst =
     Futil.CompInst(s"fixed_p_std_s$op", List(width, int_bit, frac_bit))
 
-  val staticTimingMap: Map[String, Option[Int]] = Map(
-    "sqrt" -> Some(17),
-    "mult" -> Some(3),
-    "exp" -> None,
-    "div" -> None,
-    "mod" -> None
+  val staticTimingMap: Map[String, Int] = Map(
+    "sqrt" -> 17,
+    "mult" -> 3,
   )
 }

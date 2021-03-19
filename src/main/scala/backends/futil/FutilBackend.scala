@@ -409,6 +409,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
       compName: String,
       e1: Expr,
       e2: Expr,
+      outPort: String,
       delay: Option[Int]
   )(
       implicit store: Store
@@ -461,7 +462,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
       )
     )
     EmitOutput(
-      comp.id.port("out"),
+      comp.id.port(outPort),
       comp.id.port("done"),
       struct ++ e1Out.structure ++ e2Out.structure,
       for (d1 <- e1Out.delay; d2 <- e2Out.delay; d3 <- delay)
@@ -498,7 +499,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
           case ">=" => "ge"
           case "!=" => "neq"
           case "==" => "eq"
-          case "%" => "mod_pipe"
+          case "%" => "div_pipe"
           case "&&" => "and"
           case "||" => "or"
           case "&" => "and"
@@ -517,12 +518,25 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
               compName,
               e1,
               e2,
-              Stdlib.staticTimingMap("mult")
+              "out",
+              Stdlib.staticTimingMap.get("mult")
             )
           case "/" =>
-            emitMultiCycleBinop(compName, e1, e2, Stdlib.staticTimingMap("div"))
+            emitMultiCycleBinop(
+              compName,
+              e1,
+              e2,
+              "out_quotient",
+              Stdlib.staticTimingMap.get("div")
+            )
           case "%" =>
-            emitMultiCycleBinop(compName, e1, e2, Stdlib.staticTimingMap("mod"))
+            emitMultiCycleBinop(
+              compName,
+              e1,
+              e2,
+              "out_remainder",
+              Stdlib.staticTimingMap.get("mod")
+            )
           case _ => emitBinop(compName, e1, e2)
         }
       }
