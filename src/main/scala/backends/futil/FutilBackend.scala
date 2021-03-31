@@ -69,9 +69,11 @@ private class FutilBackendHelper {
     if (bitString.forall(_ == '0')) {
       bitString
     }
-    val temporary = bitString.replaceAll("0", "_").replaceAll("1", "0").replaceAll("_", "1")
-    val integerVal = Integer.parseInt(temporary, 2) + 1
-    integerVal.toBinaryString
+    val t = bitString
+              .replaceAll("0", "_")
+              .replaceAll("1", "0")
+              .replaceAll("_", "1")
+    (Integer.parseInt(t, 2) + 1).toBinaryString
   }
 
   /** Given an integer, returns the corresponding
@@ -600,12 +602,12 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
           Some(0)
         )
       }
-      // Cast ERational to fixed_point.
+      // Cast ERational to Fixed Point.
       case ECast(ERational(value), typ) => {
         val _ = rhsInfo
         val (width, Some(intWidth)) = bitsForType(Some(typ), expr.pos)
         val fracWidth = width - intWidth
-        // Interpret as an integer representation.
+        // Interpret as an integer.
         val isNegative = value.startsWith("-")
         val partition = value.split('.')
         val sIntPart = partition(0)
@@ -627,7 +629,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
 
         val fpconst =
           Cell(
-            genName("const"),
+            genName("fp_const"),
             Stdlib.constant(width, Integer.parseInt(bits, 2)),
             false
           )

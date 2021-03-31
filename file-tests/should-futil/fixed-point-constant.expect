@@ -4,11 +4,11 @@ component main() -> () {
     a_0 = std_reg(4);
     b_0 = std_reg(4);
     c_0 = std_reg(15);
-    const0 = std_const(4,9);
-    const1 = std_const(4,7);
-    const2 = std_const(15,12800);
-    const3 = std_const(15,19968);
     d_0 = std_reg(15);
+    fp_const0 = std_const(4,9);
+    fp_const1 = std_const(4,7);
+    fp_const2 = std_const(15,12800);
+    fp_const3 = std_const(15,19968);
     slice0 = std_slice(4,4);
     slice1 = std_slice(4,4);
     slice2 = std_slice(15,15);
@@ -19,25 +19,25 @@ component main() -> () {
       a_0.in = slice0.out;
       a_0.write_en = 1'd1;
       let0[done] = a_0.done;
-      slice0.in = const0.out;
+      slice0.in = fp_const0.out;
     }
     group let1<"static"=1> {
       b_0.in = slice1.out;
       b_0.write_en = 1'd1;
       let1[done] = b_0.done;
-      slice1.in = const1.out;
+      slice1.in = fp_const1.out;
     }
     group let2<"static"=1> {
       c_0.in = slice2.out;
       c_0.write_en = 1'd1;
       let2[done] = c_0.done;
-      slice2.in = const2.out;
+      slice2.in = fp_const2.out;
     }
     group let3<"static"=1> {
       d_0.in = slice3.out;
       d_0.write_en = 1'd1;
       let3[done] = d_0.done;
-      slice3.in = const3.out;
+      slice3.in = fp_const3.out;
     }
   }
   control {
