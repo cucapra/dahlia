@@ -80,7 +80,7 @@ private class FutilBackendHelper {
     * zero-padded string of size `width`. */
   def binaryString(value: Int, width: Int): String = {
     val s = value.toBinaryString
-    "0" * (width - s.length()) + s
+    "0" * max(width - s.length(), 0) + s
   }
 
   /** Extracts the bits needed from an optional type annotation.
