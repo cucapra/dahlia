@@ -617,10 +617,16 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
           sIntPart
         }
         val bdFracPart = BigDecimal("0." + partition(1))
-        val fracValue = (bdFracPart * BigDecimal(2).pow(fracWidth)).toIntExact
+        val fracValue = (bdFracPart * BigDecimal(2).pow(fracWidth))
+        if (!fracValue.isWhole) {
+          throw BackendError(
+            s"The value $value of type $typ is not representable in fixed point",
+            expr.pos
+          )
+        }
 
         val intBits = binaryString(intPart.toInt, intWidth)
-        val fracBits = binaryString(fracValue, fracWidth)
+        val fracBits = binaryString(fracValue.toIntExact, fracWidth)
         val bits = if (isNegative) {
           negateTwosComplement(intBits + fracBits)
         } else {
