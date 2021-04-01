@@ -1,6 +1,6 @@
 package fuselang.backend.futil
 
-import scala.math.max
+import scala.math.{max, BigDecimal}
 import scala.util.parsing.input.{Position}
 
 import fuselang.backend.futil.Futil._
@@ -60,6 +60,27 @@ private class FutilBackendHelper {
       case None => idx = idx + (base -> 0)
     }
     CompVar(s"$base${idx(base)}")
+  }
+
+  /** Given a binary string, returns the negated
+    * two's complement representation.
+    */
+  def negateTwosComplement(bitString: String): String = {
+    if (bitString.forall(_ == '0')) {
+      bitString
+    }
+    val t = bitString
+              .replaceAll("0", "_")
+              .replaceAll("1", "0")
+              .replaceAll("_", "1")
+    (Integer.parseInt(t, 2) + 1).toBinaryString
+  }
+
+  /** Given an integer, returns the corresponding
+    * zero-padded string of size `width`. */
+  def binaryString(value: Int, width: Int): String = {
+    val s = value.toBinaryString
+    "0" * max(width - s.length(), 0) + s
   }
 
   /** Extracts the bits needed from an optional type annotation.
@@ -581,18 +602,41 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
           Some(0)
         )
       }
-      // Cast ERational to fixed_points
-      case ECast(ERational(d), typ) => {
+      // Cast ERational to Fixed Point.
+      case ECast(ERational(value), typ) => {
         val _ = rhsInfo
-        val (width, Some(int_bit)) = bitsForType(Some(typ), expr.pos)
-        val frac_bit = width - int_bit
-        val lst = d.split('.')
-        val v_1 = lst(0).toInt
-        val v_2 = lst(1).toInt
+        val (width, Some(intWidth)) = bitsForType(Some(typ), expr.pos)
+        val fracWidth = width - intWidth
+        // Interpret as an integer.
+        val isNegative = value.startsWith("-")
+        val partition = value.split('.')
+        val sIntPart = partition(0)
+        val intPart = if (isNegative) {
+          sIntPart.substring(1, sIntPart.length())
+        } else {
+          sIntPart
+        }
+        val bdFracPart = BigDecimal("0." + partition(1))
+        val fracValue = (bdFracPart * BigDecimal(2).pow(fracWidth))
+        if (!fracValue.isWhole) {
+          throw BackendError(
+            s"The value $value of type $typ is not representable in fixed point",
+            expr.pos
+          )
+        }
+
+        val intBits = binaryString(intPart.toInt, intWidth)
+        val fracBits = binaryString(fracValue.toIntExact, fracWidth)
+        val bits = if (isNegative) {
+          negateTwosComplement(intBits + fracBits)
+        } else {
+          intBits + fracBits
+        }
+
         val fpconst =
           Cell(
-            genName("fpconst"),
-            Stdlib.fixed_point(width, int_bit, frac_bit, v_1, v_2),
+            genName("fp_const"),
+            Stdlib.constant(width, Integer.parseInt(bits, 2)),
             false
           )
         EmitOutput(

@@ -20,7 +20,7 @@ component foo(x: 8) -> (out: 8) {
 component main() -> () {
   cells {
     foo0 = foo();
-    fpconst0 = fixed_p_std_const(8,4,4,1,0);
+    fp_const0 = std_const(8,16);
     slice0 = std_slice(8,8);
     tmp_0 = std_reg(8);
     x_0 = std_reg(8);
@@ -30,7 +30,7 @@ component main() -> () {
       x_0.in = slice0.out;
       x_0.write_en = 1'd1;
       let0[done] = x_0.done;
-      slice0.in = fpconst0.out;
+      slice0.in = fp_const0.out;
     }
     group let1 {
       tmp_0.in = foo0.out;

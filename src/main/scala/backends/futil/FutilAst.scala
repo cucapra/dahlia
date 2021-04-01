@@ -328,19 +328,7 @@ object Stdlib {
       )
     )
 
-  // Extended AST to support fixed point constant and operations
-  def fixed_point(
-      width: Int,
-      int_bit: Int,
-      frac_bit: Int,
-      value1: Int,
-      value2: Int
-  ): Futil.CompInst =
-    Futil.CompInst(
-      "fixed_p_std_const",
-      List(width, int_bit, frac_bit, value1, value2)
-    )
-
+  // Extended AST to support fixed point operations.
   def fxd_p_op(
       op: String,
       width: Int,
