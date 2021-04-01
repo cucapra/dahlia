@@ -1,7 +1,7 @@
 // The value in the comment represents the unsigned integer interpretation
 // of the fixed point number with the given bit widths. For example,
 //   2.25 as ufix<4,2>
-//   = 1001
+//   = 10.01
 //   = 9
 
 let a: ufix<4, 2> = (2.25 as ufix<4, 2>); // 9
