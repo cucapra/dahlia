@@ -1,6 +1,7 @@
 package fuselang.passes
 
 import scala.{PartialFunction => PF}
+import scala.collection.immutable.ListMap
 import fuselang.common._
 import Transformer._
 import EnvHelpers._
@@ -9,7 +10,7 @@ import Syntax._
 object HoistMemoryReads extends PartialTransformer {
 
   // Env for storing the assignments for reads to replace
-  case class BufferEnv(map: Map[Expr, CLet])
+  case class BufferEnv(map: ListMap[Expr, CLet] = ListMap())
       extends ScopeManager[BufferEnv]
       with Tracker[Expr, CLet, BufferEnv] {
     def merge(that: BufferEnv) = {
@@ -24,7 +25,7 @@ object HoistMemoryReads extends PartialTransformer {
   }
 
   type Env = BufferEnv
-  val emptyEnv = BufferEnv(Map())
+  val emptyEnv = BufferEnv()
 
   /** Helper for generating unique names. */
   var idx: Map[String, Int] = Map();
@@ -55,12 +56,14 @@ object HoistMemoryReads extends PartialTransformer {
     * Inserts a let binding into the Env and relies on the rewriteC.
     * to insert this into the code. */
   def myRewriteE: PF[(Expr, Env), (Expr, Env)] = {
-    case (e @ EArrAccess(id, _), env) => {
-      env.get(e) match {
-        case Some(let) => EVar(let.id) -> env
+    case (e @ EArrAccess(id, exprs), env) => {
+      val (nexprs, env1) =
+        rewriteSeqWith[Expr](rewriteE(_: Expr)(_: Env))(exprs)(env)
+      env1.get(e) match {
+        case Some(let) => EVar(let.id) -> env1
         case None => {
           val readTmp = genName(s"${id}_read")
-          val read = CLet(readTmp, None, Some(e))
+          val read = CLet(readTmp, None, Some(EArrAccess(id, nexprs.toSeq)))
           val nEnv = env.add(e, read)
           EVar(readTmp) -> nEnv
         }
@@ -75,9 +78,13 @@ object HoistMemoryReads extends PartialTransformer {
   }
 
   def myRewriteC: PF[(Command, Env), (Command, Env)] = {
-    // no reason to rewrite direct reads into a variable
-    case (c @ CLet(_, _, Some(EArrAccess(_, _))), _) => {
-      c -> emptyEnv
+    // Don't rewrite directly bound array reads. Rewrite access expressions
+    // if any.
+    case (c @ CLet(_, _, Some(arr @ EArrAccess(_, exprs))), env) => {
+      val (nexprs, nEnv) =
+        rewriteSeqWith[Expr](rewriteE(_: Expr)(_: Env))(exprs)(env)
+      val nC = c.copy(e = Some(arr.copy(idxs = nexprs.toSeq)))
+      construct(nC, nEnv)
     }
 
     case (CLet(id, typ, Some(e)), _) => {
