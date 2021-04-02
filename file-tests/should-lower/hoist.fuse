@@ -1,0 +1,18 @@
+decl a: bit<32>[1];
+decl b: bit<32>[1];
+
+// Recusively hoist nested reads
+let x = a[b[0]];
+---
+
+// Hoist binary expressions with reads
+let y = 10 + a[0];
+
+// Recusively hoist slow ops
+let z = (x * 10) / (y * 20 - 15);
+
+// Recursively hoist slow index expressions
+let w = b[10 * 12];
+
+// Complex chained binary expression
+let k = (((0-1) * 1 + (2*2) * 2 - 1*1 - 1*2) as ubit<32>);
