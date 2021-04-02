@@ -1,6 +1,7 @@
 package fuselang.passes
 
 import scala.{PartialFunction => PF}
+import scala.collection.immutable.ListMap
 import fuselang.common._
 import Syntax._
 import CompilerError._
@@ -9,7 +10,7 @@ import EnvHelpers._
 
 object HoistSlowBinop extends TypedPartialTransformer {
 
-  case class ExprEnv(map: Map[Expr, CLet])
+  case class ExprEnv(map: ListMap[Expr, CLet])
       extends ScopeManager[ExprEnv]
       with Tracker[Expr, CLet, ExprEnv] {
     def merge(that: ExprEnv) = {
@@ -22,7 +23,7 @@ object HoistSlowBinop extends TypedPartialTransformer {
   }
 
   type Env = ExprEnv
-  val emptyEnv = ExprEnv(Map())
+  val emptyEnv = ExprEnv(ListMap())
 
   private val slowBinops = List("*", "/")
 

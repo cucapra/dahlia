@@ -1,6 +1,7 @@
 package fuselang.passes
 
 import scala.{PartialFunction => PF}
+import scala.collection.immutable.ListMap
 import fuselang.common._
 import Transformer._
 import EnvHelpers._
@@ -9,7 +10,7 @@ import Syntax._
 object HoistMemoryReads extends PartialTransformer {
 
   // Env for storing the assignments for reads to replace
-  case class BufferEnv(map: Map[Expr, CLet])
+  case class BufferEnv(map: ListMap[Expr, CLet] = ListMap())
       extends ScopeManager[BufferEnv]
       with Tracker[Expr, CLet, BufferEnv] {
     def merge(that: BufferEnv) = {
@@ -24,7 +25,7 @@ object HoistMemoryReads extends PartialTransformer {
   }
 
   type Env = BufferEnv
-  val emptyEnv = BufferEnv(Map())
+  val emptyEnv = BufferEnv()
 
   /** Helper for generating unique names. */
   var idx: Map[String, Int] = Map();
