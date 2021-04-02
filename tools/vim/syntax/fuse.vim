@@ -7,10 +7,10 @@ syn match fuseConstant "\v<(\-|\+)?[0-9]+(\.[0-9]+)?(e[0-9]+)?>"
 " Booleans
 syn keyword fuseConstant true false
 " Types
-syn keyword fuseType ubit bit float bool bank double
+syn keyword fuseType ubit bit float bool bank double fix ufix
 
 " Control structures
-syn keyword fuseKeyword if else for while import return
+syn keyword fuseKeyword if else for while import return pipeline
 " Binding variables
 syn keyword fuseKeyword let def decl extern as decor
 syn keyword fuseKeyword unroll record combine
