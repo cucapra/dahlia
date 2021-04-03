@@ -115,9 +115,16 @@ object Cpp {
       * (int <id> = <s>; <id> < <e>; <id>++)
       */
     def emitRange(range: CRange): Doc = parens {
-      text("int") <+> range.iter <+> equal <+> value(range.s) <> semi <+>
-        range.iter <+> text("<") <+> value(range.e) <> semi <+>
-        range.iter <> text("++")
+      val CRange(id, _, rev, s, e, _) = range
+      if (rev) {
+        text("int") <+> id <+> equal <+> value(e - 1) <> semi <+>
+        id <+> text(">=") <+> value(s) <> semi <+>
+        id <> text("--")
+      } else {
+        text("int") <+> id <+> equal <+> value(s) <> semi <+>
+        id <+> text("<") <+> value(e) <> semi <+>
+        id <> text("++")
+      }
     }
 
     implicit def emitCmd(c: Command): Doc = c match {

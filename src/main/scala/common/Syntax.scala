@@ -1,6 +1,7 @@
 package fuselang.common
 
 import scala.util.parsing.input.{Positional, Position}
+import scala.math.abs
 
 import Errors._
 import Configuration.BackendOption
@@ -137,10 +138,10 @@ object Syntax {
   case class EVar(id: Id) extends Expr
   case class ECast(e: Expr, castType: Type) extends Expr
 
-  case class CRange(iter: Id, castType: Option[Type], s: Int, e: Int, u: Int)
+  case class CRange(iter: Id, castType: Option[Type], reversed: Boolean, s: Int, e: Int, u: Int)
       extends Positional {
     def idxType: TIndex = {
-      if ((e - s) % u != 0) {
+      if (abs(e - s) % u != 0) {
         throw UnrollRangeError(this.pos, e - s, u)
       } else {
         TIndex((0, u), (s / u, e / u))

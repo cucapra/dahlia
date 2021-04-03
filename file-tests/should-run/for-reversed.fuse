@@ -1,0 +1,6 @@
+decl a: float[10];
+decl b: float[10];
+
+for (let i: ubit<8> = rev 0..6) {
+  b[9 - i] := a[i];
+}

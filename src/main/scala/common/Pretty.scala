@@ -108,12 +108,14 @@ object Pretty {
   }
 
   def emitRange(range: CRange)(implicit debug: Boolean): Doc = {
-    val CRange(id, t, s, e, u) = range
+    val CRange(id, t, rev, s, e, u) = range
 
     val typAnnot =
       t.map(x => text(":") <+> text(x.toString)).getOrElse(emptyDoc)
     parens(
-      text("let") <+> id <> typAnnot <+> equal <+> value(s) <+> text("..") <+> value(
+      text("let") <+> id <> typAnnot <+> equal <+>
+      (if (rev) text("rev") <+> emptyDoc else emptyDoc) <>
+      value(s) <+> text("..") <+> value(
         e
       )
     ) <>
