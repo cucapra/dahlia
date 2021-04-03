@@ -32,7 +32,7 @@ object LowerForLoops extends PartialTransformer {
     case (CFor(range, pipeline, par, combine), env) => {
       if (pipeline) throw NotImplemented("Lowering pipelined for loops.")
 
-      val CRange(it, typ, s, e, u) = range
+      val CRange(it, typ, rev, s, e, u) = range
       if (u != 1) throw NotImplemented("Lowering unrolled for loops.")
 
       // Generate a let bound variable sequenced with a while loop that
@@ -49,11 +49,20 @@ object LowerForLoops extends PartialTransformer {
       }
 
       val t = typ.get
-      val add = NumOp("+", OpConstructor.add)
-      val init = CLet(it, typ, Some(ECast(EInt(s), t)))
-      val upd =
+      val init = CLet(it, typ, Some(ECast(if (rev) EInt(e - 1) else EInt(s), t)))
+      val upd = if (rev) {
+        val sub = NumOp("-", OpConstructor.sub)
+        CUpdate(itVar.copy(), EBinop(sub, itVar.copy(), ECast(EInt(1), t)))
+      } else {
+        val add = NumOp("+", OpConstructor.add)
         CUpdate(itVar.copy(), EBinop(add, itVar.copy(), ECast(EInt(1), t)))
-      val cond = EBinop(CmpOp("<="), itVar.copy(), ECast(EInt(e - 1), t))
+      }
+      val cond =
+        if (rev) {
+          EBinop(CmpOp(">="), itVar.copy(), ECast(EInt(s), t))
+        } else {
+          EBinop(CmpOp("<="), itVar.copy(), ECast(EInt(e - 1), t))
+        }
       val nEnv = env.add(it.copy(), t)
 
       // Rewrite par and combine

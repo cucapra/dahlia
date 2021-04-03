@@ -245,11 +245,12 @@ case class Parser(input: String) {
     positioned(
       P(
         parens(
-          kw("let") ~/ iden ~ (":" ~ typ).? ~ "=" ~/ number ~/ ".." ~/ number
+          kw("let") ~/ iden ~ (":" ~ typ).? ~ "=" ~ ("rev").!.? ~/ number ~/ ".." ~/ number
         )
           ~/ (kw("unroll") ~/ number).?
       ).map({
-        case (id, typ, s, e, u) => CRange(id, typ, s, e, u.getOrElse(1))
+        case (id, typ, rev, s, e, u) =>
+          CRange(id, typ, rev.isDefined, s, e, u.getOrElse(1))
       })
     )
   def cfor[_: P]: P[Command] =

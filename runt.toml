@@ -3,13 +3,13 @@ ver = "0.2.8"
 [[tests]]
 name = "compile vivado"
 paths = [ "file-tests/should-compile/*.fuse" ]
-cmd = "./fuse {} | tail -n+2"
+cmd = "./fuse {} -l error | tail -n+2"
 expect_dir = "file-tests/vivado-out"
 
 [[tests]]
 name = "compile cpp"
 paths = [ "file-tests/should-run/*.fuse" ]
-cmd = "./fuse {} -b c++ | tail -n+2"
+cmd = "./fuse {} -b c++ -l error | tail -n+2"
 expect_dir = "file-tests/cpp-out"
 
 [[tests]]
@@ -31,7 +31,7 @@ cmd = "./fuse {}"
 name = "run"
 paths = [ "file-tests/should-run/*.fuse" ]
 cmd = """
-./bin/run-dahlia {} "-b c++"
+./bin/run-dahlia {} "-l error -b c++"
 """
 expect_dir = "file-tests/data"
 
