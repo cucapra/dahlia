@@ -49,6 +49,17 @@ object WellFormedChecker {
     }
 
     def myCheckC: PF[(Command, Env), Env] = {
+      case (CFor(r @ CRange(_, _, _, s, e, _), _, par, combine), env) => {
+        assertOrThrow(
+          e > s,
+          Malformed(
+            r.pos,
+            s"Loop range $s (inclusive) to $e (exclusive) contains no elements"
+          )
+        );
+        val e1 = checkC(par)(env)
+        checkC(combine)(e1)
+      }
       case (cmd @ CReduce(op, l, r), e) => {
         assertOrThrow(e.insideUnroll == false, ReduceInsideUnroll(op, cmd.pos))
         checkE(r)(checkE(l)(e))

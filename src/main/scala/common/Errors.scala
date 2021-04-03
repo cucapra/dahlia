@@ -275,6 +275,8 @@ object Errors {
       )
   case class Unsupported(pos: Position, construct: String)
       extends RuntimeException(withPos(s"$construct are not supported.", pos))
+  case class Malformed(pos: Position, msg: String)
+      extends RuntimeException(withPos(msg, pos))
 }
 
 object CompilerError {
