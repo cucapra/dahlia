@@ -253,7 +253,6 @@ object Futil {
 }
 
 /** Represents all of the primitives in Futil. */
-// extend fixed_point primitive
 object Stdlib {
   def register(bitwidth: Int): Futil.CompInst =
     Futil.CompInst("std_reg", List(bitwidth))
