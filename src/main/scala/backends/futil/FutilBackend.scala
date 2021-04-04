@@ -388,7 +388,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
           if (fracBit1 != fracBit2) {
             assertOrThrow(
               compName == "add",
-              NotImplemented("Only addition is supported for different-width operands")
+              NotImplemented("Only addition is supported for different-width operators")
             )
             Stdlib.fixed_point_diff_width(
               s"$compName",
