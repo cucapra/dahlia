@@ -343,7 +343,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
         assertOrThrow(
           e1Bits == e2Bits,
           Impossible(
-            "The widths of the left and right side of a binop didn't match." +
+            "The widths of the left and right side of a binary operation didn't match." +
               s"\nleft: ${Pretty.emitExpr(e1)(false).pretty}: ${e1Bits}" +
               s"\nright: ${Pretty.emitExpr(e2)(false).pretty}: ${e2Bits}"
           )
@@ -360,10 +360,9 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
 
     bitsForType(e1.typ, e1.pos) match {
       case (e1Bits, None) => {
-        val binop =
-          if (signed(e1.typ)) Stdlib.s_op(s"$compName", e1Bits)
-          else Stdlib.op(s"$compName", e1Bits)
-        val comp = Cell(genName(compName), binop, false)
+        val isSigned = signed(e1.typ)
+        val binOp = Stdlib.op(s"$compName", e1Bits, isSigned)
+        val comp = Cell(genName(compName), binOp, false)
         val struct = List(
           comp,
           Connect(e1Out.port, comp.id.port("left")),
@@ -384,32 +383,28 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
         val fracBit1 = e1Bits - intBit1
         val fracBit2 = e2Bits - intBit2
         val outBit = max(intBit1, intBit2) + max(fracBit1, fracBit2)
-        val binop =
+        val isSigned = signed(e1.typ)
+        val binOp =
           if (fracBit1 != fracBit2) {
             assertOrThrow(
               compName == "add",
-              NotImplemented("Signed diffwidth computation other than addition")
+              NotImplemented("Only addition is supported for different-width operands")
             )
-
-            val prim =
-              if (signed(e1.typ)) Stdlib.sdiff_width_add _
-              else Stdlib.diff_width_add _
-
-            prim(
+            Stdlib.fixed_point_diff_width(
+              s"$compName",
               e1Bits,
               e2Bits,
               intBit1,
               fracBit1,
               intBit2,
               fracBit2,
-              outBit
+              outBit,
+              isSigned
             )
-          } else if (signed(e1.typ)) {
-            Stdlib.fxd_p_sop(s"$compName", e1Bits, intBit1, fracBit1);
           } else {
-            Stdlib.fxd_p_op(s"$compName", e1Bits, intBit1, fracBit1);
+            Stdlib.fixed_point_op(s"$compName", e1Bits, intBit1, fracBit1, isSigned);
           }
-        val comp = Cell(genName(compName), binop, false)
+        val comp = Cell(genName(compName), binOp, false)
         val struct = List(
           comp,
           Connect(e1Out.port, comp.id.port("left")),
@@ -444,7 +439,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
         assertOrThrow(
           intBit1 == intBit2,
           NotImplemented(
-            "Multiplication between different int-bitwith fixed points"
+            "Multiplication between different int-bitwidth fixed points"
           )
         )
       }
@@ -452,7 +447,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
         assertOrThrow(
           e1Bits == e2Bits,
           Impossible(
-            "The widths of the left and right side of a binop didn't match." +
+            "The widths of the left and right side of a binary operation didn't match." +
               s"\nleft: ${Pretty.emitExpr(e1)(false).pretty}: ${e1Bits}" +
               s"\nright: ${Pretty.emitExpr(e2)(false).pretty}: ${e2Bits}"
           )
@@ -467,11 +462,10 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
       }
     }
     val (typ_b, _) = bitsForType(e1.typ, e1.pos)
-    val binop =
-      if (signed(e1.typ)) Stdlib.s_op(s"$compName", typ_b)
-      else Stdlib.op(s"$compName", typ_b);
+    val isSigned = signed(e1.typ)
+    val binOp = Stdlib.op(s"$compName", typ_b, isSigned)
 
-    val comp = Cell(genName(compName), binop, false)
+    val comp = Cell(genName(compName), binOp, false)
     val struct = List(
       comp,
       Connect(e1Out.port, comp.id.port("left")),
