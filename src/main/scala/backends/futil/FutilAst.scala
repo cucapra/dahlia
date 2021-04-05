@@ -253,7 +253,6 @@ object Futil {
 }
 
 /** Represents all of the primitives in Futil. */
-// extend fixed_point primitive
 object Stdlib {
   def register(bitwidth: Int): Futil.CompInst =
     Futil.CompInst("std_reg", List(bitwidth))
@@ -264,8 +263,11 @@ object Stdlib {
   def constant(bitwidth: Int, v: Int): Futil.CompInst =
     Futil.CompInst("std_const", List(bitwidth, v))
 
-  def op(op: String, bitwidth: Int): Futil.CompInst =
-    Futil.CompInst(s"std_$op", List(bitwidth))
+  def op(op: String, bitwidth: Int, is_signed: Boolean): Futil.CompInst =
+    Futil.CompInst(
+      "std_" + (if (is_signed) "s" else "") + s"$op",
+      List(bitwidth)
+    )
 
   def slice(in: Int, out: Int): Futil.CompInst =
     Futil.CompInst(s"std_slice", List(in, out))
@@ -329,25 +331,31 @@ object Stdlib {
     )
 
   // Extended AST to support fixed point operations.
-  def fxd_p_op(
+  def fixed_point_op(
       op: String,
       width: Int,
-      int_bit: Int,
-      frac_bit: Int
+      int_width: Int,
+      frac_width: Int,
+      is_signed: Boolean
   ): Futil.CompInst =
-    Futil.CompInst(s"fixed_p_std_$op", List(width, int_bit, frac_bit))
+    Futil.CompInst(
+      "std_fp_" +  (if (is_signed) "s" else "") + s"$op",
+      List(width, int_width, frac_width)
+    )
 
-  def diff_width_add(
+  def fixed_point_diff_width(
+      op: String,
       width1: Int,
       width2: Int,
       int_width1: Int,
       fract_width1: Int,
       int_width2: Int,
       fract_width2: Int,
-      out_width: Int
+      out_width: Int,
+      is_signed: Boolean
   ): Futil.CompInst =
     Futil.CompInst(
-      "fixed_p_std_add_dbit",
+      "std_fp_" +  (if (is_signed) "s" else "") + s"$op" + "_dwidth",
       List(
         width1,
         width2,
@@ -358,39 +366,6 @@ object Stdlib {
         out_width
       )
     )
-
-  def sdiff_width_add(
-      width1: Int,
-      width2: Int,
-      int_width1: Int,
-      fract_width1: Int,
-      int_width2: Int,
-      fract_width2: Int,
-      out_width: Int
-  ): Futil.CompInst =
-    Futil.CompInst(
-      "sfixed_p_std_add_dbit",
-      List(
-        width1,
-        width2,
-        int_width1,
-        fract_width1,
-        int_width2,
-        fract_width2,
-        out_width
-      )
-    )
-
-  def s_op(op: String, bitwidth: Int): Futil.CompInst =
-    Futil.CompInst(s"std_s$op", List(bitwidth))
-
-  def fxd_p_sop(
-      op: String,
-      width: Int,
-      int_bit: Int,
-      frac_bit: Int
-  ): Futil.CompInst =
-    Futil.CompInst(s"fixed_p_std_s$op", List(width, int_bit, frac_bit))
 
   val staticTimingMap: Map[String, Int] = Map(
     "sqrt" -> 17,
