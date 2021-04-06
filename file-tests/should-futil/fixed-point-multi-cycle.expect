@@ -1,0 +1,139 @@
+import "primitives/std.lib";
+component main() -> () {
+  cells {
+    a_0 = std_reg(2);
+    b_0 = std_reg(2);
+    bin_read0_0 = std_reg(2);
+    bin_read1_0 = std_reg(2);
+    bin_read2_0 = std_reg(1);
+    bin_read3_0 = std_reg(1);
+    const0 = std_const(1,1);
+    const1 = std_const(1,1);
+    fp_const0 = std_const(2,2);
+    fp_const1 = std_const(2,2);
+    i_0 = std_reg(1);
+    j_0 = std_reg(1);
+    mult_pipe0 = std_fp_smult_pipe(2,1,1);
+    mult_pipe1 = std_fp_mult_pipe(2,1,1);
+    mult_pipe2 = std_mult_pipe(1);
+    mult_pipe3 = std_smult_pipe(1);
+    slice0 = std_slice(2,2);
+    slice1 = std_slice(2,2);
+    slice2 = std_slice(2,2);
+    slice3 = std_slice(2,2);
+    slice4 = std_slice(2,2);
+    slice5 = std_slice(2,2);
+    t_0 = std_reg(1);
+    u_0 = std_reg(1);
+    x_0 = std_reg(2);
+    y_0 = std_reg(2);
+  }
+  wires {
+    group let0<"static"=1> {
+      x_0.in = slice0.out;
+      x_0.write_en = 1'd1;
+      let0[done] = x_0.done;
+      slice0.in = fp_const0.out;
+    }
+    group let1<"static"=1> {
+      bin_read0_0.in = slice1.out;
+      bin_read0_0.write_en = 1'd1;
+      let1[done] = bin_read0_0.done;
+      slice1.in = mult_pipe0.out;
+      mult_pipe0.left = x_0.out;
+      mult_pipe0.right = x_0.out;
+      mult_pipe0.go = !mult_pipe0.done ? 1'd1;
+    }
+    group let10<"static"=4> {
+      bin_read3_0.in = mult_pipe3.out;
+      bin_read3_0.write_en = mult_pipe3.done;
+      let10[done] = bin_read3_0.done;
+      mult_pipe3.left = i_0.out;
+      mult_pipe3.right = i_0.out;
+      mult_pipe3.go = !mult_pipe3.done ? 1'd1;
+    }
+    group let11<"static"=1> {
+      j_0.in = bin_read3_0.out;
+      j_0.write_en = 1'd1;
+      let11[done] = j_0.done;
+    }
+    group let2<"static"=1> {
+      y_0.in = slice2.out;
+      y_0.write_en = 1'd1;
+      let2[done] = y_0.done;
+      slice2.in = bin_read0_0.out;
+    }
+    group let3<"static"=1> {
+      a_0.in = slice3.out;
+      a_0.write_en = 1'd1;
+      let3[done] = a_0.done;
+      slice3.in = fp_const1.out;
+    }
+    group let4<"static"=1> {
+      bin_read1_0.in = slice4.out;
+      bin_read1_0.write_en = 1'd1;
+      let4[done] = bin_read1_0.done;
+      slice4.in = mult_pipe1.out;
+      mult_pipe1.left = a_0.out;
+      mult_pipe1.right = a_0.out;
+      mult_pipe1.go = !mult_pipe1.done ? 1'd1;
+    }
+    group let5<"static"=1> {
+      b_0.in = slice5.out;
+      b_0.write_en = 1'd1;
+      let5[done] = b_0.done;
+      slice5.in = bin_read1_0.out;
+    }
+    group let6<"static"=1> {
+      t_0.in = const0.out;
+      t_0.write_en = 1'd1;
+      let6[done] = t_0.done;
+    }
+    group let7<"static"=4> {
+      bin_read2_0.in = mult_pipe2.out;
+      bin_read2_0.write_en = mult_pipe2.done;
+      let7[done] = bin_read2_0.done;
+      mult_pipe2.left = t_0.out;
+      mult_pipe2.right = t_0.out;
+      mult_pipe2.go = !mult_pipe2.done ? 1'd1;
+    }
+    group let8<"static"=1> {
+      u_0.in = bin_read2_0.out;
+      u_0.write_en = 1'd1;
+      let8[done] = u_0.done;
+    }
+    group let9<"static"=1> {
+      i_0.in = const1.out;
+      i_0.write_en = 1'd1;
+      let9[done] = i_0.done;
+    }
+  }
+  control {
+    seq {
+      let0;
+      par {
+        seq {
+          let1;
+          let2;
+        }
+        let3;
+      }
+      par {
+        seq {
+          let4;
+          let5;
+        }
+        let6;
+      }
+      par {
+        seq {
+          let7;
+          let8;
+        }
+        let9;
+      }
+      let10;
+      let11;
+    }
+  }
+}

@@ -461,10 +461,19 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
         )
       }
     }
-    val (typ_b, _) = bitsForType(e1.typ, e1.pos)
-    val isSigned = signed(e1.typ)
-    val binOp = Stdlib.op(s"$compName", typ_b, isSigned)
-
+    val binOp = e1.typ match {
+      case Some(TFixed(width, intWidth, unsigned)) =>
+        Stdlib.fixed_point_op(
+          s"$compName",
+          width,
+          intWidth,
+          width - intWidth,
+          !unsigned
+        )
+      case Some(TSizedInt(width, unsigned)) =>
+        Stdlib.op(s"$compName", width, !unsigned)
+      case _ => throw Impossible(s"The multi-cycle binary operation has unsupported type: $e1.typ")
+    }
     val comp = Cell(genName(compName), binOp, false)
     val struct = List(
       comp,
