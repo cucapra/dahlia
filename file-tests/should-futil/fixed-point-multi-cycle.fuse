@@ -1,0 +1,4 @@
+let a: fix<2, 1> = (1.0 as fix<2, 1>) * (1.0 as fix<2, 1>);
+let b: ufix<2, 1> = (1.0 as ufix<2, 1>) * (1.0 as ufix<2, 1>);
+let c: ubit<1> = (1 as ubit<1>) * (1 as ubit<1>);
+let d: bit<1> = (1 as bit<1>) * (1 as bit<1>);
