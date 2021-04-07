@@ -472,7 +472,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
         )
       case Some(TSizedInt(width, unsigned)) =>
         Stdlib.op(s"$compName", width, !unsigned)
-      case _ => throw Impossible(s"The multi-cycle binary operation has unsupported type: $e1.typ")
+      case _ => throw NotImplemented(s"Multi-cycle binary operation with type: $e1.typ")
     }
     val comp = Cell(genName(compName), binOp, false)
     val struct = List(
