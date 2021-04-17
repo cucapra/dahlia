@@ -1,5 +1,6 @@
 import "primitives/std.lib";
 import "primitives/bitnum/math.futil";
+import "primitives/fixed/math.futil";
 component main() -> () {
   cells {
     const0 = std_const(32,1);

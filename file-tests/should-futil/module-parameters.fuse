@@ -1,5 +1,7 @@
 import futil("primitives/bitnum/math.futil") {
   def sqrt(in: ubit<32>): ubit<32>;
+}
+import futil("primitives/fixed/math.futil") {
   def fp_sqrt(in: ufix<32,16>): ufix<32,16>;
 }
 let i: ubit<32> = sqrt((1 as ubit<32>));
