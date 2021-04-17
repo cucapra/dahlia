@@ -260,15 +260,19 @@ def getWidthParameters(funcId: Id)(implicit id2FuncDef: FunctionMapping): List[I
   val requiresParameters = List("sqrt", "fp_sqrt")
 
   val id = funcId.toString()
-  val typ = id2FuncDef(funcId).retTy;
+  if (requiresParameters.contains(id)) {
+    val typ = id2FuncDef(funcId).retTy;
 
-  // These parameters *usually* care about the widths.
-  val params = typ match {
-    case TSizedInt(width, _) => List(width)
-    case TFixed(width, intWidth, _) => List(width, intWidth, width - intWidth)
-    case _ => throw Impossible(s"Type: $typ for $id is not supported.")
+    // These parameters *usually* care about the widths.
+    val params = typ match {
+      case TSizedInt(width, _) => List(width)
+      case TFixed(width, intWidth, _) => List(width, intWidth, width - intWidth)
+      case _ => throw Impossible(s"Type: $typ for $id is not supported.")
+    }
+    params
+  } else {
+    List()
   }
-  if (requiresParameters.contains(id)) params else List()
 }
 
 /** `emitInvokeDecl` computes the necessary structure and control for Syntax.EApp. */
