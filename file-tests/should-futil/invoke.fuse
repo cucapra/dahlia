@@ -1,4 +1,4 @@
-import futil("primitives/bitnum/math.futil") { def std_sqrt(in: ubit<32>): ubit<32>; }
+import futil("primitives/bitnum/math.futil") { def sqrt(in: ubit<32>): ubit<32>; }
 
 def foo(a: ubit<32>): ubit<32> = {
   let temp: ubit<32> = a;
@@ -7,4 +7,4 @@ def foo(a: ubit<32>): ubit<32> = {
 
 let b: ubit<32> = (1 as ubit<32>);
 let c: ubit<32> = foo(b);
-let d: ubit<32> = std_sqrt(c);
+let d: ubit<32> = sqrt(c);
