@@ -244,9 +244,9 @@ private class FutilBackendHelper {
       })
     }
 
-/** Returns the width parameter(s) of a given function, based on the return
+/** Returns the width argument(s) of a given function, based on the return
   * type of the function. This is necessary because some components may
-  * need to have certain module parameters in SystemVerilog. For example,
+  * require certain module parameters in SystemVerilog. For example,
   * `foo` with SystemVerilog module definition:
   * ```
   *   module foo #(
@@ -254,24 +254,22 @@ private class FutilBackendHelper {
   *   ) ( ... );
   * ```
   * Requires that a `WIDTH` be provided. Currently, the functions that
-  * do require these parameters must be manually added to `requiresParameters`. */
-def getWidthParameters(funcId: Id)(implicit id2FuncDef: FunctionMapping): List[Int] = {
-  // A list of functions that require width parameters.
-  val requiresParameters = List("sqrt", "fp_sqrt")
+  * do require these parameters must be manually added to the list
+  * `requiresWidthArguments`. */
+def getCompInstArgs(funcId: Id)(implicit id2FuncDef: FunctionMapping): List[Int] = {
+  // A list of functions that require width arguments.
+  val requiresWidthArguments = List("fp_sqrt", "sqrt")
 
   val id = funcId.toString()
-  if (requiresParameters.contains(id)) {
+  if (!requiresWidthArguments.contains(id)) {
+    List()
+  } else {
     val typ = id2FuncDef(funcId).retTy;
-
-    // These parameters *usually* care about the widths.
-    val params = typ match {
+    typ match {
       case TSizedInt(width, _) => List(width)
       case TFixed(width, intWidth, _) => List(width, intWidth, width - intWidth)
       case _ => throw Impossible(s"Type: $typ for $id is not supported.")
     }
-    params
-  } else {
-    List()
   }
 }
 
@@ -280,9 +278,9 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
                   (Cell, Seq[Structure], Control) = {
     val functionName = app.func.toString()
     val declName = genName(functionName)
-    val compInstParams = getWidthParameters(app.func)
+    val compInstArgs = getCompInstArgs(app.func)
     val decl =
-      Cell(declName, CompInst(functionName, compInstParams), false)
+      Cell(declName, CompInst(functionName, compInstArgs), false)
     val (argPorts, argSt) = app.args
       .map(inp => {
         val out = emitExpr(inp)
