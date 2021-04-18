@@ -1,5 +1,5 @@
 import "primitives/std.lib";
-import "primitives/bitnum/math.futil";
+import "primitives/math.futil";
 component foo(a: 32) -> (out: 32) {
   cells {
     temp_0 = std_reg(32);
