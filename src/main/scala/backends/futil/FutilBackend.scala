@@ -50,6 +50,10 @@ private case class EmitOutput(
   * https://github.com/cucapra/futil/issues/304
   */
 private class FutilBackendHelper {
+  /** A list of function IDs that require width arguments
+    * in their SystemVerilog module definition.
+    */
+  val requiresWidthArguments = List("fp_sqrt", "sqrt")
 
   /** Helper for generating unique names. */
   var idx: Map[String, Int] = Map();
@@ -244,13 +248,40 @@ private class FutilBackendHelper {
       })
     }
 
+/** Returns the width argument(s) of a given function, based on the return
+  * type of the function. This is necessary because some components may
+  * require certain module parameters in SystemVerilog. For example,
+  * `foo` with SystemVerilog module definition:
+  * ```
+  *   module foo #(
+  *     parameter WIDTH
+  *   ) ( ... );
+  * ```
+  * Requires that a `WIDTH` be provided. Currently, the functions that
+  * do require these parameters must be manually added to the list
+  * `requiresWidthArguments`. */
+def getCompInstArgs(funcId: Id)(implicit id2FuncDef: FunctionMapping): List[Int] = {
+  val id = funcId.toString()
+  if (!requiresWidthArguments.contains(id)) {
+    List()
+  } else {
+    val typ = id2FuncDef(funcId).retTy;
+    typ match {
+      case TSizedInt(width, _) => List(width)
+      case TFixed(width, intWidth, _) => List(width, intWidth, width - intWidth)
+      case _ => throw Impossible(s"Type: $typ for $id is not supported.")
+    }
+  }
+}
+
 /** `emitInvokeDecl` computes the necessary structure and control for Syntax.EApp. */
 def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping):
                   (Cell, Seq[Structure], Control) = {
     val functionName = app.func.toString()
     val declName = genName(functionName)
+    val compInstArgs = getCompInstArgs(app.func)
     val decl =
-      Cell(declName, CompInst(functionName, List()), false)
+      Cell(declName, CompInst(functionName, compInstArgs), false)
     val (argPorts, argSt) = app.args
       .map(inp => {
         val out = emitExpr(inp)
