@@ -23,7 +23,7 @@ component main() -> () {
     const0 = std_const(32,1);
     d_0 = std_reg(32);
     foo0 = foo();
-    std_sqrt0 = std_sqrt();
+    sqrt0 = sqrt(32);
   }
   wires {
     group let0<"static"=1> {
@@ -37,7 +37,7 @@ component main() -> () {
       let1[done] = c_0.done;
     }
     group let2 {
-      d_0.in = std_sqrt0.out;
+      d_0.in = sqrt0.out;
       d_0.write_en = 1'd1;
       let2[done] = d_0.done;
     }
@@ -47,7 +47,7 @@ component main() -> () {
       let0;
       invoke foo0(a=b_0.out)();
       let1;
-      invoke std_sqrt0(in=c_0.out)();
+      invoke sqrt0(in=c_0.out)();
       let2;
     }
   }
