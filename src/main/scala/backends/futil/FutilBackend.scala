@@ -50,6 +50,10 @@ private case class EmitOutput(
   * https://github.com/cucapra/futil/issues/304
   */
 private class FutilBackendHelper {
+  /** A list of function IDs that require width arguments
+    * in their SystemVerilog module definition.
+    */
+  val requiresWidthArguments = List("fp_sqrt", "sqrt")
 
   /** Helper for generating unique names. */
   var idx: Map[String, Int] = Map();
@@ -257,9 +261,6 @@ private class FutilBackendHelper {
   * do require these parameters must be manually added to the list
   * `requiresWidthArguments`. */
 def getCompInstArgs(funcId: Id)(implicit id2FuncDef: FunctionMapping): List[Int] = {
-  // A list of functions that require width arguments.
-  val requiresWidthArguments = List("fp_sqrt", "sqrt")
-
   val id = funcId.toString()
   if (!requiresWidthArguments.contains(id)) {
     List()
