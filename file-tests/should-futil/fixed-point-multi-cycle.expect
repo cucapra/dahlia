@@ -11,24 +11,20 @@ component main() -> () {
     fp_const1 = std_const(2,2);
     mult_pipe0 = std_fp_mult_pipe(2,1,1);
     mult_pipe1 = std_smult_pipe(1);
-    slice0 = std_slice(2,2);
-    slice1 = std_slice(2,2);
   }
   wires {
     group let0 {
-      bin_read0_0.in = slice0.out;
+      bin_read0_0.in = mult_pipe0.out;
       bin_read0_0.write_en = mult_pipe0.done;
       let0[done] = bin_read0_0.done;
-      slice0.in = mult_pipe0.out;
       mult_pipe0.left = fp_const0.out;
       mult_pipe0.right = fp_const1.out;
       mult_pipe0.go = !mult_pipe0.done ? 1'd1;
     }
     group let1<"static"=1> {
-      b_0.in = slice1.out;
+      b_0.in = bin_read0_0.out;
       b_0.write_en = 1'd1;
       let1[done] = b_0.done;
-      slice1.in = bin_read0_0.out;
     }
     group let2 {
       bin_read1_0.in = mult_pipe1.out;

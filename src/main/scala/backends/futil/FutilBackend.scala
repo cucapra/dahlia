@@ -697,24 +697,34 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
       case ECast(e, t) => {
         val (vBits, _) = bitsForType(e.typ, e.pos)
         val (cBits, _) = bitsForType(Some(t), e.pos)
-        val comp = if (cBits > vBits) {
-          Cell(genName("pad"), Stdlib.pad(vBits, cBits), false)
-        } else {
-          Cell(genName("slice"), Stdlib.slice(vBits, cBits), false)
-        }
         val res = emitExpr(e)
-        val struct = List(
-          comp,
-          Connect(res.port, comp.id.port("in"))
-        )
-
-        EmitOutput(
-          comp.id.port("out"),
-          ConstantPort(1, 1),
-          struct ++ res.structure,
-          Some(0),
-          res.multiCycleInfo
-        )
+        if (vBits == cBits) {
+        // No slicing or padding is necessary.
+          EmitOutput(
+            res.port,
+            ConstantPort(1, 1),
+            res.structure,
+            Some(0),
+            res.multiCycleInfo
+          )
+        } else {
+          val comp = if (cBits > vBits) {
+            Cell(genName("pad"), Stdlib.pad(vBits, cBits), false)
+          } else {
+            Cell(genName("slice"), Stdlib.slice(vBits, cBits), false)
+          }
+          val struct = List(
+            comp,
+            Connect(res.port, comp.id.port("in"))
+          )
+          EmitOutput(
+            comp.id.port("out"),
+            ConstantPort(1, 1),
+            struct ++ res.structure,
+            Some(0),
+            res.multiCycleInfo
+          )
+        }
       }
       case EArrAccess(id, accessors) => {
         val (arr, typ) = store
