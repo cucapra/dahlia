@@ -15,17 +15,24 @@ import fuselang.common.{Configuration => C}
   *  Helper class that gives names to the fields of the output of `emitExpr` and
   *  `emitBinop`.
   *  - `port` holds either an input or output port that represents how data
-  *    flows between exprs
+  *    flows between expressions.
   *  - `done` holds the port that signals when the writing or reading from `port`
-  *     is done
+  *    is done.
   *  - `structure` represents additional structure involved in computing the
   *    expression.
+  *  - `delay` is the static delay required to complete the structure within
+  *    the emitted output.
+  *  - `multiCycleInfo` is the name and delay of the of the op that requires multiple
+  *    cycles to complete. This is necessary for the case when a `write_en` signal
+  *    should not be high until the op is `done`. If this is None, then the emitted
+  *    output has no multi-cycle ops.
   */
 private case class EmitOutput(
     val port: Port,
     val done: Port,
     val structure: List[Structure],
-    val delay: Option[Int]
+    val delay: Option[Int],
+    val multiCycleInfo: Option[(String, Option[Int])]
 )
 
 /**
@@ -404,7 +411,8 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
           ConstantPort(1, 1),
           struct ++ e1Out.structure ++ e2Out.structure,
           for (d1 <- e1Out.delay; d2 <- e2Out.delay)
-            yield d1 + d2
+            yield d1 + d2,
+          None
         )
       }
       // if there is additional information about the integer bit,
@@ -446,7 +454,8 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
           ConstantPort(1, 1),
           struct ++ e1Out.structure ++ e2Out.structure,
           for (d1 <- e1Out.delay; d2 <- e2Out.delay)
-            yield d1 + d2
+            yield d1 + d2,
+          None
         )
       }
     }
@@ -521,7 +530,8 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
       comp.id.port("done"),
       struct ++ e1Out.structure ++ e2Out.structure,
       for (d1 <- e1Out.delay; d2 <- e2Out.delay; d3 <- delay)
-        yield d1 + d2 + d3
+        yield d1 + d2 + d3,
+      Some((compName, delay))
     )
   }
 
@@ -617,7 +627,8 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
           else ThisPort(varName),
           if (rhsInfo.isDefined) varName.port("done") else ConstantPort(1, 1),
           struct,
-          delay
+          delay,
+          None
         )
       // Integers don't need adaptors
       case ECast(EInt(v, _), typ) => {
@@ -633,7 +644,8 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
           const.id.port("out"),
           ConstantPort(1, 1),
           List(const),
-          Some(0)
+          Some(0),
+          None
         )
       }
       // Cast ERational to Fixed Point.
@@ -677,7 +689,8 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
           fpconst.id.port("out"),
           ConstantPort(1, 1),
           List(fpconst),
-          Some(0)
+          Some(0),
+          None
         )
       }
       case ECast(e, t) => {
@@ -698,7 +711,8 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
           comp.id.port("out"),
           ConstantPort(1, 1),
           struct ++ res.structure,
-          Some(0)
+          Some(0),
+          res.multiCycleInfo
         )
       }
       case EArrAccess(id, accessors) => {
@@ -760,7 +774,8 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
           accessPort,
           if (rhsInfo.isDefined) donePort else ConstantPort(1, 1),
           indexing ++ writeEnStruct,
-          delay
+          delay,
+          None
         )
       }
       case EApp(functionId, _) =>
@@ -839,7 +854,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
           store + (CompVar(s"$id") -> (reg.id, LocalVar))
         )
       }
-      // if not clearly specified, Cast the TRational to TFixed
+      // If not clearly specified, Cast the TRational to TFixed.
       case CLet(id, Some(TFixed(t, i, un)), Some(e)) => {
         val reg =
           Cell(genName(s"$id"), Stdlib.register(t), false)
@@ -849,13 +864,21 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
           reg.id.port("done"),
           HolePort(groupName, "done")
         )
+        // The write enable signal should not be high until
+        // the multi-cycle operation is complete, if it exists.
+        val (writeEnableSrcPort, delay) = out.multiCycleInfo match {
+          case Some((name, Some(delay))) =>
+            (CompPort(CompVar(name), "done"), out.delay.map(_ + delay))
+          case Some((name, None)) =>
+            (CompPort(CompVar(name), "done"), None)
+          case None => (out.done, out.delay.map(_ + 1))
+        }
         val struct =
           Connect(out.port, reg.id.port("in")) :: Connect(
-            out.done,
-            reg.id.port("write_en")
+          writeEnableSrcPort, reg.id.port("write_en")
           ) :: doneHole :: out.structure
         val (group, st) =
-          Group.fromStructure(groupName, struct, out.delay.map(_ + 1))
+          Group.fromStructure(groupName, struct, delay)
         (
           reg :: group :: st,
           Enable(group.id),
