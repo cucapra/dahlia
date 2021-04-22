@@ -22,17 +22,17 @@ import fuselang.common.{Configuration => C}
   *    expression.
   *  - `delay` is the static delay required to complete the structure within
   *    the emitted output.
-  *  - `multiCycleInfo` is the name and delay of the of the op that requires multiple
-  *    cycles to complete. This is necessary for the case when a `write_en` signal
-  *    should not be high until the op is `done`. If this is None, then the emitted
-  *    output has no multi-cycle ops.
+  *  - `multiCycleInfo` is the variable and delay of the of the op that requires
+  *    multiple cycles to complete. This is necessary for the case when a
+  *    `write_en` signal should not be high until the op is `done`. If this is
+  *    None, then the emitted output has no multi-cycle ops.
   */
 private case class EmitOutput(
     val port: Port,
     val done: Port,
     val structure: List[Structure],
     val delay: Option[Int],
-    val multiCycleInfo: Option[(String, Option[Int])]
+    val multiCycleInfo: Option[(CompVar, Option[Int])]
 )
 
 /**
@@ -514,7 +514,8 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
         Stdlib.op(s"$compName", width, !unsigned)
       case _ => throw NotImplemented(s"Multi-cycle binary operation with type: $e1.typ")
     }
-    val comp = Cell(genName(compName), binOp, false)
+    val compVar = genName(compName)
+    val comp = Cell(compVar, binOp, false)
     val struct = List(
       comp,
       Connect(e1Out.port, comp.id.port("left")),
@@ -531,7 +532,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
       struct ++ e1Out.structure ++ e2Out.structure,
       for (d1 <- e1Out.delay; d2 <- e2Out.delay; d3 <- delay)
         yield d1 + d2 + d3,
-      Some((compName, delay))
+      Some((compVar, delay))
     )
   }
 
@@ -867,10 +868,10 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
         // The write enable signal should not be high until
         // the multi-cycle operation is complete, if it exists.
         val (writeEnableSrcPort, delay) = out.multiCycleInfo match {
-          case Some((name, Some(delay))) =>
-            (CompPort(CompVar(name), "done"), out.delay.map(_ + delay))
-          case Some((name, None)) =>
-            (CompPort(CompVar(name), "done"), None)
+          case Some((compVar, Some(delay))) =>
+            (CompPort(compVar, "done"), out.delay.map(_ + delay))
+          case Some((compVar, None)) =>
+            (CompPort(compVar, "done"), None)
           case None => (out.done, out.delay.map(_ + 1))
         }
         val struct =
