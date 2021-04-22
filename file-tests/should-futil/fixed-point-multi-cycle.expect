@@ -17,7 +17,7 @@ component main() -> () {
   wires {
     group let0 {
       bin_read0_0.in = slice0.out;
-      bin_read0_0.write_en = mult_pipe.done;
+      bin_read0_0.write_en = mult_pipe0.done;
       let0[done] = bin_read0_0.done;
       slice0.in = mult_pipe0.out;
       mult_pipe0.left = fp_const0.out;
