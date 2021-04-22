@@ -699,7 +699,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
         val (cBits, _) = bitsForType(Some(t), e.pos)
         val res = emitExpr(e)
         if (vBits == cBits) {
-        // No slicing or padding is necessary.
+          // No slicing or padding is necessary.
           EmitOutput(
             res.port,
             ConstantPort(1, 1),
