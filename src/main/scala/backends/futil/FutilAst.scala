@@ -367,8 +367,5 @@ object Stdlib {
       )
     )
 
-  val staticTimingMap: Map[String, Int] = Map(
-    "sqrt" -> 17,
-    "mult" -> 3,
-  )
+  val staticTimingMap: Map[String, Int] = Map()
 }
