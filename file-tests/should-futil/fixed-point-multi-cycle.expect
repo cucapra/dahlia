@@ -13,7 +13,7 @@ component main() -> () {
     mult_pipe1 = std_smult_pipe(1);
   }
   wires {
-    group let0 {
+    group let0<"static"=3> {
       bin_read0_0.in = mult_pipe0.out;
       bin_read0_0.write_en = mult_pipe0.done;
       let0[done] = bin_read0_0.done;
@@ -26,7 +26,7 @@ component main() -> () {
       b_0.write_en = 1'd1;
       let1[done] = b_0.done;
     }
-    group let2 {
+    group let2<"static"=4> {
       bin_read1_0.in = mult_pipe1.out;
       bin_read1_0.write_en = mult_pipe1.done;
       let2[done] = bin_read1_0.done;
