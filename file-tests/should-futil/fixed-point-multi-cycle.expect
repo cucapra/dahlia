@@ -3,14 +3,15 @@ component main() -> () {
   cells {
     b_0 = std_reg(2);
     bin_read0_0 = std_reg(2);
-    bin_read1_0 = std_reg(1);
-    const0 = std_const(1,1);
-    const1 = std_const(1,1);
-    d_0 = std_reg(1);
+    bin_read1_0 = std_reg(2);
+    const0 = std_const(1,0);
+    d0 = std_mem_d1(2,1,1);
     fp_const0 = std_const(2,2);
     fp_const1 = std_const(2,2);
+    fp_const2 = std_const(2,2);
+    fp_const3 = std_const(2,2);
     mult_pipe0 = std_fp_mult_pipe(2,1,1);
-    mult_pipe1 = std_smult_pipe(1);
+    mult_pipe1 = std_fp_mult_pipe(2,1,1);
   }
   wires {
     group let0<"static"=4> {
@@ -30,26 +31,23 @@ component main() -> () {
       bin_read1_0.in = mult_pipe1.out;
       bin_read1_0.write_en = mult_pipe1.done;
       let2[done] = bin_read1_0.done;
-      mult_pipe1.left = const0.out;
-      mult_pipe1.right = const1.out;
+      mult_pipe1.left = fp_const2.out;
+      mult_pipe1.right = fp_const3.out;
       mult_pipe1.go = !mult_pipe1.done ? 1'd1;
     }
-    group let3<"static"=1> {
-      d_0.in = bin_read1_0.out;
-      d_0.write_en = 1'd1;
-      let3[done] = d_0.done;
+    group upd0<"static"=1> {
+      d0.addr0 = const0.out;
+      d0.write_en = 1'd1;
+      d0.write_data = 1'd1 ? bin_read1_0.out;
+      upd0[done] = d0.done ? 1'd1;
     }
   }
   control {
-    par {
-      seq {
-        let0;
-        let1;
-      }
-      seq {
-        let2;
-        let3;
-      }
+    seq {
+      let0;
+      let1;
+      let2;
+      upd0;
     }
   }
 }

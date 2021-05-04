@@ -1,2 +1,7 @@
 let b: ufix<2, 1> = (1.0 as ufix<2, 1>) * (1.0 as ufix<2, 1>);
-let d: bit<1> = (1 as bit<1>) * (1 as bit<1>);
+
+let d: ufix<2, 1>[1];
+---
+d[0] := (1.0 as ufix<2, 1>) * (1.0 as ufix<2, 1>);
+
+
