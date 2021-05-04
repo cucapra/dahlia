@@ -879,7 +879,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
         // the multi-cycle operation is complete, if it exists.
         val (writeEnableSrcPort, delay) = out.multiCycleInfo match {
           case Some((compVar, Some(delay))) =>
-            (CompPort(compVar, "done"), out.delay.map(_ + delay))
+            (CompPort(compVar, "done"), out.delay.map(_ + delay + 1))
           case Some((compVar, None)) =>
             (CompPort(compVar, "done"), None)
           case None => (out.done, out.delay.map(_ + 1))
