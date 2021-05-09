@@ -67,7 +67,7 @@ object Transformer {
         val (nBody, env2) = bodyOpt match {
           case None => (None, env1)
           case Some(body) => {
-            val (nbody, nEnv) = rewriteC(body)(env1)
+            val (nbody, nEnv) = env1.withScopeAndRet(rewriteC(body)(_))
             Some(nbody) -> nEnv
           }
         }
