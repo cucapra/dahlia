@@ -108,7 +108,7 @@ object Compiler {
   def compileString(prog: String, c: Config): Either[String, String] = {
     Try(codegen(checkStringWithError(prog, c), c)).toEither.left
       .map(err => {
-        scribe.debug(err.getStackTrace().take(10).mkString("\n"))
+        scribe.info(err.getStackTrace().take(10).mkString("\n"))
         err match {
           case _: Errors.TypeError => {
             s"[${red("Type error")}] ${err.getMessage}" +

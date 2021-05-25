@@ -20,7 +20,6 @@ object Logger {
   def stringToLevel(str: String): Level = str match {
     case "error" => Level.Error
     case "warn" => Level.Warn
-    case "info" => Level.Info
     case "debug" => Level.Debug
     case _ => throw new RuntimeException(s"Unknown level: $str")
   }
