@@ -1,5 +1,6 @@
 package fuselang.backend.futil
 
+import scala.math.BigInt
 import fuselang.common.PrettyPrint.Doc
 import fuselang.common.CompilerError._
 import Doc._
@@ -98,7 +99,7 @@ object Futil {
   case class CompPort(id: CompVar, name: String) extends Port
   case class ThisPort(id: CompVar) extends Port
   case class HolePort(id: CompVar, name: String) extends Port
-  case class ConstantPort(width: Int, value: Int) extends Port
+  case class ConstantPort(width: Int, value: BigInt) extends Port
 
   sealed trait Structure extends Emitable with Ordered[Structure] {
     override def doc(): Doc = this match {
@@ -163,9 +164,9 @@ object Futil {
   }
   case class Connect(src: Port, dest: Port, guard: Option[GuardExpr] = None)
       extends Structure
-  case class CompInst(id: String, args: List[Int]) extends Emitable {
+  case class CompInst(id: String, args: List[BigInt]) extends Emitable {
     override def doc(): Doc = {
-      val strList = args.map((x: Int) => text(x.toString()))
+      val strList = args.map((x: BigInt) => text(x.toString()))
       text(id) <> parens(hsep(strList, comma))
     }
   }
@@ -260,7 +261,7 @@ object Stdlib {
   def iterator(bitwidth: Int, start: Int, end: Int, incr: Int): Futil.CompInst =
     Futil.CompInst("std_iterator", List(bitwidth, start, end, incr))
 
-  def constant(bitwidth: Int, v: Int): Futil.CompInst =
+  def constant(bitwidth: Int, v: BigInt): Futil.CompInst =
     Futil.CompInst("std_const", List(bitwidth, v))
 
   def op(op: String, bitwidth: Int, is_signed: Boolean): Futil.CompInst =
