@@ -76,7 +76,7 @@ object Main {
 
     opt[String]('l', "log-level")
       .action((s, c) => c.copy(logLevel = Logger.stringToLevel(s)))
-      .text("Set logging level for the compiler. Default: `info`.")
+      .text("Set logging level for the compiler. Default: `warn`.")
 
     opt[Unit]('h', "header")
       .action((_, c) => c.copy(header = true))

@@ -8,7 +8,7 @@ libraryDependencies ++= Seq(
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2",
   "com.lihaoyi" %% "fastparse" % "2.3.0",
   "com.github.scopt" %% "scopt" % "4.0.0",
-  "com.outr" %% "scribe" % "3.2.4",
+  "com.outr" %% "scribe" % "3.5.5",
   "com.lihaoyi" %% "sourcecode" % "0.2.1"
 )
 
