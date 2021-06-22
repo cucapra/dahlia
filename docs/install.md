@@ -12,7 +12,7 @@ To get things running, you will need a Java runtime, Scala itself, and [sbt][].
 Here's what you need to do:
 
 - Get Java if you don't already have it. On macOS with [Homebrew][], for example, you can use `brew cask install adoptopenjdk`.
-- Install Scala and sbt. On macOS, use `brew install scala sbt`.
+- Install Scala and sbt. On macOS, use `brew install scala sbt`. For debian/Ubuntu see [this](https://www.scala-sbt.org/1.x/docs/Installing-sbt-on-Linux.html#Ubuntu+and+other+Debian-based+distributions).
 
 Now you can compile the compiler by typing `sbt compile`.
 Use `sbt test` to run the tests.
