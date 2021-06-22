@@ -13,7 +13,7 @@ context also defines `---` that corresponds to the sequencing operator in
 Dahlia.
 
 To play with examples, open `tools/array-access-visualizer/examples.rkt`
-in [DrRacket][drracket] and click run. This will generate three sequences of
+in [DrRacket](https://download.racket-lang.org) and click run. This will generate three sequences of
 images that corresponds to the two examples.
 
 For the first example, we have:
