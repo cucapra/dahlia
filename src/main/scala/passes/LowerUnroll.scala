@@ -59,7 +59,6 @@ object LowerUnroll extends PartialTransformer {
     }
   }
   object ViewTransformer {
-
     /**
       * Define a transformer for a base memory.
       */
