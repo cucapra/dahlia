@@ -1,15 +1,15 @@
-name := "Fuse"
+name := "Dahlia"
 version := "0.0.2"
 
-scalaVersion := "2.13.4"
+scalaVersion := "2.13.6"
 
 libraryDependencies ++= Seq(
-  "org.scalatest" %% "scalatest" % "3.0.8" % "test",
-  "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2",
+  "org.scalatest" %% "scalatest" % "3.2.9" % "test",
+  "org.scala-lang.modules" %% "scala-parser-combinators" % "2.0.0",
   "com.lihaoyi" %% "fastparse" % "2.3.0",
-  "com.github.scopt" %% "scopt" % "4.0.0",
+  "com.github.scopt" %% "scopt" % "4.0.1",
   "com.outr" %% "scribe" % "3.5.5",
-  "com.lihaoyi" %% "sourcecode" % "0.2.1"
+  "com.lihaoyi" %% "sourcecode" % "0.2.7"
 )
 
 scalacOptions ++= Seq(
