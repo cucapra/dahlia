@@ -14,7 +14,8 @@ object Main {
   val backends = Map(
     "vivado" -> Vivado,
     "c++" -> Cpp,
-    "futil" -> Futil
+    "futil" -> Calyx,
+    "calyx" -> Calyx
   )
 
   val memoryInterfaces = Map(

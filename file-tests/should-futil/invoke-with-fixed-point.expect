@@ -1,5 +1,5 @@
 import "primitives/std.lib";
-component foo(x: 8) -> (out: 8) {
+component foo(x: 8) -> (@stable(1) out: 8) {
   cells {
     y_0 = std_reg(8);
   }

@@ -40,7 +40,7 @@ object Compiler {
   def toBackend(str: BackendOption): fuselang.backend.Backend = str match {
     case Vivado => backend.VivadoBackend
     case Cpp => backend.CppRunnable
-    case Futil => backend.futil.FutilBackend
+    case Calyx => backend.calyx.CalyxBackend
   }
 
   def checkStringWithError(prog: String, c: Config = emptyConf) = {

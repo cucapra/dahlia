@@ -1,14 +1,16 @@
-package fuselang.backend.futil
-import scala.math.{max, BigDecimal, BigInt}
-import scala.util.parsing.input.{Position}
+package fuselang.backend.calyx
 
-import fuselang.backend.futil.Futil._
+import scala.math.{max, BigDecimal, BigInt}
+
+import fuselang.backend.calyx.Calyx._
 import fuselang.Utils._
 import fuselang.common._
 import Syntax._
 import Configuration._
 import CompilerError._
 import fuselang.common.{Configuration => C}
+
+import Helpers._
 
 /**
   *  Helper class that gives names to the fields of the output of `emitExpr` and
@@ -53,9 +55,10 @@ private case class EmitOutput(
   *
   * The `out` port is marked using the "stable" attributed which is verified
   * by the Calyx compiler to enable such uses:
-  * https://github.com/cucapra/futil/issues/304
+  * https://github.com/cucapra/Calyx/issues/304
   */
-private class FutilBackendHelper {
+private class CalyxBackendHelper {
+
   /** A list of function IDs that require width arguments
     * in their SystemVerilog module definition.
     */
@@ -72,55 +75,7 @@ private class FutilBackendHelper {
     CompVar(s"$base${idx(base)}")
   }
 
-  /** Given a binary string, returns the negated
-    * two's complement representation.
-    */
-  def negateTwosComplement(bitString: String): String = {
-    if (bitString.forall(_ == '0')) {
-      bitString
-    }
-    val t = bitString
-              .replaceAll("0", "_")
-              .replaceAll("1", "0")
-              .replaceAll("_", "1")
-    (BigInt(t, 2) + 1).toString(2)
-  }
-
-  /** Given an integer, returns the corresponding
-    * zero-padded string of size `width`. */
-  def binaryString(value: Int, width: Int): String = {
-    val s = value.toBinaryString
-    "0" * max(width - s.length(), 0) + s
-  }
-
-  /** Extracts the bits needed from an optional type annotation.
-    *  Returns (total size, Option[integral]) bits for the computation.
-    */
-  def bitsForType(t: Option[Type], pos: Position): (Int, Option[Int]) = {
-    t match {
-      case Some(TSizedInt(width, _)) => (width, None)
-      case Some(TFixed(t, i, _)) => (t, Some(i))
-      case Some(_: TBool) => (1, None)
-      case Some(_: TVoid) => (0, None)
-      case x =>
-        throw NotImplemented(
-          s"Futil cannot infer bitwidth for type $x. Please manually annotate it using a cast expression.",
-          pos
-        )
-    }
-  }
-
-  /** Returns true if the given int or fixed point is signed
-    */
-  def signed(typ: Option[Type]) = {
-    typ match {
-      case Some(TSizedInt(_, un)) => un == false
-      case Some(TFixed(_, _, un)) => un == false
-      case _ => false
-    }
-  }
-
-  /** A Futil variable will either be a
+  /** A Calyx variable will either be a
     * local variable (LocalVar) or
     * a function parameter (ParameterVar). */
   sealed trait VType
@@ -128,7 +83,7 @@ private class FutilBackendHelper {
   case object ParameterVar extends VType
 
   /** Store mappings from Dahlia variables to
-    * generated Futil variables. */
+    * generated Calyx variables. */
   type Store = Map[CompVar, (CompVar, VType)]
 
   /** Mappings from Function Id to Function Definition. */
@@ -138,156 +93,120 @@ private class FutilBackendHelper {
     *  external memories and internal memories. This is so that
     *  we can generate external memories for `decl`s and internal
     *  memories for local arrays. */
-  def emitArrayDecl(typ: TArray, id: Id, external: Boolean): List[Structure] = {
+  def emitArrayDecl(
+      arr: TArray,
+      id: Id,
+      attrs: List[(String, Int)] = List()
+  ): Cell = {
     // No support for multi-ported memories or banked memories.
     assertOrThrow(
-      typ.ports == 1,
+      arr.ports == 1,
       NotImplemented("Multi-ported memories.")
     )
     assertOrThrow(
-      typ.dims.forall(_._2 == 1),
+      arr.dims.forall(_._2 == 1),
       Impossible(
         "Banked memories should be lowered. Did you pass the `--lower` flag to the compiler?."
       )
     )
+    val dims = arr.dims.length
+    assertOrThrow(
+      dims <= 4,
+      NotImplemented(
+        s"Calyx standard library does not support ${dims}-dimensional memories"
+      )
+    )
 
-    val (width, _) = bitsForType(Some(typ.typ), typ.typ.pos)
+    val (width, _) = bitsForType(Some(arr.typ), arr.typ.pos)
     val name = CompVar(s"${id}")
 
-    val mem = typ.dims.length match {
-      case 1 => {
-        val size = typ.dims(0)._1
-        val idxSize = bitsNeeded(size)
-        Cell(name, Stdlib.mem_d1(width, size, idxSize), external)
-      }
-      case 2 => {
-        val size0 = typ.dims(0)._1
-        val size1 = typ.dims(1)._1
-        val idxSize0 = bitsNeeded(size0)
-        val idxSize1 = bitsNeeded(size1)
-        Cell(
-          name,
-          Stdlib.mem_d2(width, size0, size1, idxSize0, idxSize1),
-          external
-        )
-      }
-      case 3 => {
-        val size0 = typ.dims(0)._1
-        val size1 = typ.dims(1)._1
-        val size2 = typ.dims(2)._1
-        val idxSize0 = bitsNeeded(size0)
-        val idxSize1 = bitsNeeded(size1)
-        val idxSize2 = bitsNeeded(size2)
-        Cell(
-          name,
-          Stdlib
-            .mem_d3(width, size0, size1, size2, idxSize0, idxSize1, idxSize2),
-          external
-        )
-      }
-      case 4 => {
-        val size0 = typ.dims(0)._1
-        val size1 = typ.dims(1)._1
-        val size2 = typ.dims(2)._1
-        val size3 = typ.dims(3)._1
-        val idxSize0 = bitsNeeded(size0)
-        val idxSize1 = bitsNeeded(size1)
-        val idxSize2 = bitsNeeded(size2)
-        val idxSize3 = bitsNeeded(size3)
-        Cell(
-          name,
-          Stdlib
-            .mem_d4(
-              width,
-              size0,
-              size1,
-              size2,
-              size3,
-              idxSize0,
-              idxSize1,
-              idxSize2,
-              idxSize3
-            ),
-          external
-        )
-      }
-      case n => throw NotImplemented(s"Arrays of size $n")
-    }
-    List(mem)
+    // Memory primitives are defined as:
+    // std_mem_d$n(WIDTH, DIM_1_SIZE, .., DIM_$n_SIZE, IDX_1_SIZE, IDX_$n_SIZE)
+    val dimSizes = arr.dims.map(_._1)
+    val idxSizes = dimSizes.map(bitsNeeded)
+    Cell(
+      name,
+      CompInst(s"std_mem_d${dims}", ((width +: dimSizes) ++ idxSizes).toList.map(i => BigInt(i))),
+      attrs
+    )
   }
 
   /** Returns the name of `p`, if it has one. */
-  def getPortName(p: Port) : String = {
+  def getPortName(p: Port): String = {
     p match {
       case CompPort(id, _) => id.name
       case ThisPort(id) => id.name
       case HolePort(id, _) => id.name
-      case ConstantPort(_, _) => throw Impossible("Constant Ports do not have names.")
+      case ConstantPort(_, _) =>
+        throw Impossible("Constant Ports do not have names.")
     }
   }
 
-    /** Returns a list of tuples (name, width) for each address port
+  /** Returns a list of tuples (name, width) for each address port
         in a memory. For example, a D1 Memory declared as (32, 1, 1)
         would return List[("addr0", 1)].
     */
-    def getAddrPortToWidths(typ: TArray, id: Id): List[(String, BigInt)] = {
-      // Emit the array to determine the port widths.
-      val arrayArgs = emitArrayDecl(typ, id, false) match {
-        case (c: Cell) :: Nil => c.ci.args
-        case x => throw Impossible(s"The emitted array declaration is not a Cell. Type: ${x}")
+  def getAddrPortToWidths(typ: TArray, id: Id): List[(String, BigInt)] = {
+    // Emit the array to determine the port widths.
+    val Cell(_, CompInst(_, arrayArgs), _) = emitArrayDecl(typ, id)
+
+    // A memory's arguments follow a similar pattern:
+    // (bitwidth, size0, ..., sizeX, addr0, ..., addrX),
+    // where X is the number of dimensions - 1.
+    val dims =
+      arrayArgs.length match {
+        case 3 => 1
+        case 5 => 2
+        case 7 => 3
+        case 9 => 4
+        case _ => throw NotImplemented(s"Arrays of dimension > 4.")
       }
-      // A memory's arguments follow a similar pattern:
-      // (bitwidth, size0, ..., sizeX, addr0, ..., addrX),
-      // where X is the number of dimensions - 1.
-      val dims =
-        arrayArgs.length match {
-          case 3 => 1
-          case 5 => 2
-          case 7 => 3
-          case 9 => 4
-          case _ => throw NotImplemented(s"Arrays of dimension > 4.")
-        }
-      val addressIndices = (dims + 1 to dims << 1).toList
+    val addressIndices = (dims + 1 to dims << 1).toList
 
-      addressIndices.zipWithIndex.map({
-        case (n: Int, i: Int) => (s"addr${i}", arrayArgs(n))
-      })
-    }
+    addressIndices.zipWithIndex.map({
+      case (n: Int, i: Int) => (s"addr${i}", arrayArgs(n))
+    })
+  }
 
-/** Returns the width argument(s) of a given function, based on the return
-  * type of the function. This is necessary because some components may
-  * require certain module parameters in SystemVerilog. For example,
-  * `foo` with SystemVerilog module definition:
-  * ```
-  *   module foo #(
-  *     parameter WIDTH
-  *   ) ( ... );
-  * ```
-  * Requires that a `WIDTH` be provided. Currently, the functions that
-  * do require these parameters must be manually added to the list
-  * `requiresWidthArguments`. */
-def getCompInstArgs(funcId: Id)(implicit id2FuncDef: FunctionMapping): List[BigInt] = {
-  val id = funcId.toString()
-  if (!requiresWidthArguments.contains(id)) {
-    List()
-  } else {
-    val typ = id2FuncDef(funcId).retTy;
-    typ match {
-      case TSizedInt(width, _) => List(width)
-      case TFixed(width, intWidth, _) => List(width, intWidth, width - intWidth)
-      case _ => throw Impossible(s"Type: $typ for $id is not supported.")
+  /** Returns the width argument(s) of a given function, based on the return
+    * type of the function. This is necessary because some components may
+    * require certain module parameters in SystemVerilog. For example,
+    * `foo` with SystemVerilog module definition:
+    * ```
+    *   module foo #(
+    *     parameter WIDTH
+    *   ) ( ... );
+    * ```
+    * Requires that a `WIDTH` be provided. Currently, the functions that
+    * do require these parameters must be manually added to the list
+    * `requiresWidthArguments`. */
+  def getCompInstArgs(
+      funcId: Id
+  )(implicit id2FuncDef: FunctionMapping): List[BigInt] = {
+    val id = funcId.toString()
+    if (!requiresWidthArguments.contains(id)) {
+      List()
+    } else {
+      val typ = id2FuncDef(funcId).retTy;
+      typ match {
+        case TSizedInt(width, _) => List(width)
+        case TFixed(width, intWidth, _) =>
+          List(width, intWidth, width - intWidth)
+        case _ => throw Impossible(s"Type: $typ for $id is not supported.")
+      }
     }
   }
-}
 
-/** `emitInvokeDecl` computes the necessary structure and control for Syntax.EApp. */
-def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping):
-                  (Cell, Seq[Structure], Control) = {
+  /** `emitInvokeDecl` computes the necessary structure and control for Syntax.EApp. */
+  def emitInvokeDecl(app: EApp)(
+      implicit store: Store,
+      id2FuncDef: FunctionMapping
+  ): (Cell, Seq[Structure], Control) = {
     val functionName = app.func.toString()
     val declName = genName(functionName)
     val compInstArgs = getCompInstArgs(app.func)
     val decl =
-      Cell(declName, CompInst(functionName, compInstArgs), false)
+      Cell(declName, CompInst(functionName, compInstArgs), List())
     val (argPorts, argSt) = app.args
       .map(inp => {
         val out = emitExpr(inp)
@@ -297,69 +216,75 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
     val argToParam = argPorts zip id2FuncDef(app.func).args
 
     val inConnects = argToParam.foldLeft(List[(String, Port)]())(
-        { case (inConnects, (inputPort, paramArg)) =>
+      {
+        case (inConnects, (inputPort, paramArg)) =>
           paramArg.typ match {
             case _: TArray => {
               val argId = getPortName(inputPort)
               val paramId = paramArg.id.toString()
               inConnects ++ List(
-                 (s"${paramId}_read_data" , CompPort(CompVar(s"$argId"), "read_data")),
-                 (s"${paramId}_done" ,CompPort(CompVar(s"$argId"), "done"))
+                (
+                  s"${paramId}_read_data",
+                  CompPort(CompVar(s"$argId"), "read_data")
+                ),
+                (s"${paramId}_done", CompPort(CompVar(s"$argId"), "done"))
               )
+            }
+            case _ => inConnects ++ List((paramArg.id.toString(), inputPort))
           }
-          case _ => inConnects ++ List((paramArg.id.toString(), inputPort))
-          }
-        }
-      )
+      }
+    )
 
-      val outConnects = argToParam.foldLeft(List[(String, Port)]())(
-        { case (outConnects, (inputPort, paramArg)) =>
+    val outConnects = argToParam.foldLeft(List[(String, Port)]())(
+      {
+        case (outConnects, (inputPort, paramArg)) =>
           paramArg.typ match {
             case tarr: TArray => {
-            val paramId = paramArg.id.toString()
-            val argId = getPortName(inputPort)
+              val paramId = paramArg.id.toString()
+              val argId = getPortName(inputPort)
 
-            // Connect address ports.
-            val addrPortToWidth = getAddrPortToWidths(tarr, paramArg.id)
-            val addressPorts =
-              addrPortToWidth.map({case (name, _) =>
-                (s"${paramId}_${name}", CompPort(CompVar(s"$argId"), s"$name"))
-              })
+              // Connect address ports.
+              val addrPortToWidth = getAddrPortToWidths(tarr, paramArg.id)
+              val addressPorts =
+                addrPortToWidth.map({
+                  case (name, _) =>
+                    (
+                      s"${paramId}_${name}",
+                      CompPort(CompVar(s"$argId"), s"$name")
+                    )
+                })
 
               outConnects ++ List(
-                 (s"${paramId}_write_data", CompPort(CompVar(s"$argId"), "write_data")),
-                 (s"${paramId}_write_en", CompPort(CompVar(s"$argId"), "write_en"))
+                (
+                  s"${paramId}_write_data",
+                  CompPort(CompVar(s"$argId"), "write_data")
+                ),
+                (
+                  s"${paramId}_write_en",
+                  CompPort(CompVar(s"$argId"), "write_en")
+                )
               ) ++ addressPorts
+            }
+            case _ => outConnects
           }
-          case _ => outConnects
-          }
-        }
-      )
+      }
+    )
 
-      (
-        decl,
-        argSt.flatten,
-        Invoke(declName, inConnects, outConnects)
-      )
-}
+    (
+      decl,
+      argSt.flatten,
+      Invoke(declName, inConnects, outConnects)
+    )
+  }
 
   /** `emitDecl(d)` computes the structure that is needed to
     *  represent the declaration `d`. Simply returns a `List[Structure]`.
     */
-  def emitDecl(d: Decl): List[Structure] = d.typ match {
-    case tarr: TArray => emitArrayDecl(tarr, d.id, true)
-    case _: TBool => {
-      val reg = Cell(CompVar(s"${d.id}"), Stdlib.register(1), false)
-      List(reg)
-    }
-    case TSizedInt(size, _) => {
-      val reg = Cell(CompVar(s"${d.id}"), Stdlib.register(size), false)
-      List(reg)
-    }
-    case TFixed(ltotal, _, _) => {
-      val reg = Cell(CompVar(s"${d.id}"), Stdlib.register(ltotal), false)
-      List(reg)
-    }
+  def emitDecl(d: Decl): Structure = d.typ match {
+    case tarr: TArray => emitArrayDecl(tarr, d.id, List("external" -> 1))
+    case _: TBool => Stdlib.register(CompVar(s"${d.id}"), 1)
+    case TSizedInt(size, _) => Stdlib.register(CompVar(s"${d.id}"), size)
+    case TFixed(ltotal, _, _) => Stdlib.register(CompVar(s"${d.id}"), ltotal)
     case x => throw NotImplemented(s"Type $x not implemented for decls.", x.pos)
   }
 
@@ -398,12 +323,12 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
     bitsForType(e1.typ, e1.pos) match {
       case (e1Bits, None) => {
         val isSigned = signed(e1.typ)
-        val binOp = Stdlib.op(s"$compName", e1Bits, isSigned)
-        val comp = Cell(genName(compName), binOp, false)
+        val binOp = Stdlib.binop(s"$compName", e1Bits, isSigned)
+        val comp = Cell(genName(compName), binOp, List())
         val struct = List(
           comp,
-          Connect(e1Out.port, comp.id.port("left")),
-          Connect(e2Out.port, comp.id.port("right"))
+          Assign(e1Out.port, comp.id.port("left")),
+          Assign(e2Out.port, comp.id.port("right"))
         )
         EmitOutput(
           comp.id.port("out"),
@@ -426,7 +351,9 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
           if (fracBit1 != fracBit2) {
             assertOrThrow(
               compName == "add",
-              NotImplemented("Only addition is supported for different-width operators")
+              NotImplemented(
+                "Only addition is supported for different-width operators"
+              )
             )
             Stdlib.fixed_point_diff_width(
               s"$compName",
@@ -440,13 +367,19 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
               isSigned
             )
           } else {
-            Stdlib.fixed_point_op(s"$compName", e1Bits, intBit1, fracBit1, isSigned);
+            Stdlib.fixed_point_binop(
+              s"$compName",
+              e1Bits,
+              intBit1,
+              fracBit1,
+              isSigned
+            );
           }
-        val comp = Cell(genName(compName), binOp, false)
+        val comp = Cell(genName(compName), binOp, List())
         val struct = List(
           comp,
-          Connect(e1Out.port, comp.id.port("left")),
-          Connect(e2Out.port, comp.id.port("right"))
+          Assign(e1Out.port, comp.id.port("left")),
+          Assign(e2Out.port, comp.id.port("right"))
         )
         EmitOutput(
           comp.id.port("out"),
@@ -502,7 +435,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
     }
     val binOp = e1.typ match {
       case Some(TFixed(width, intWidth, unsigned)) =>
-        Stdlib.fixed_point_op(
+        Stdlib.fixed_point_binop(
           s"$compName",
           width,
           intWidth,
@@ -510,19 +443,20 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
           !unsigned
         )
       case Some(TSizedInt(width, unsigned)) =>
-        Stdlib.op(s"$compName", width, !unsigned)
-      case _ => throw NotImplemented(s"Multi-cycle binary operation with type: $e1.typ")
+        Stdlib.binop(s"$compName", width, !unsigned)
+      case _ =>
+        throw NotImplemented(s"Multi-cycle binary operation with type: $e1.typ")
     }
     val compVar = genName(compName)
-    val comp = Cell(compVar, binOp, false)
+    val comp = Cell(compVar, binOp, List())
     val struct = List(
       comp,
-      Connect(e1Out.port, comp.id.port("left")),
-      Connect(e2Out.port, comp.id.port("right")),
-      Connect(
+      Assign(e1Out.port, comp.id.port("left")),
+      Assign(e2Out.port, comp.id.port("right")),
+      Assign(
         ConstantPort(1, 1),
         comp.id.port("go"),
-        Some(Not(Atom(comp.id.port("done"))))
+        Not(Atom(comp.id.port("done")))
       )
     )
     EmitOutput(
@@ -573,7 +507,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
           case "<<" => "lsh"
           case x =>
             throw NotImplemented(
-              s"Futil backend does not support '$x' yet.",
+              s"Calyx backend does not support '$x' yet.",
               op.pos
             )
         }
@@ -607,13 +541,13 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
       }
       case EVar(id) =>
         val portName = if (rhsInfo.isDefined) "in" else "out"
-        val (varName, futilVarType) = store
+        val (varName, calyxVarType) = store
           .get(CompVar(s"$id"))
           .getOrThrow(BackendError(s"`$id' was not in store", expr.pos))
         val struct =
           rhsInfo match {
             case Some((port, _)) =>
-              List(Connect(port, varName.port("write_en")))
+              List(Assign(port, varName.port("write_en")))
             case None => List()
           }
         // calculate static delay, rhsDelay + 1 for writes, 0 for reads
@@ -623,7 +557,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
             case None => Some(0)
           }
         EmitOutput(
-          if (futilVarType == LocalVar) varName.port(portName)
+          if (calyxVarType == LocalVar) varName.port(portName)
           else ThisPort(varName),
           if (rhsInfo.isDefined) varName.port("done") else ConstantPort(1, 1),
           struct,
@@ -638,7 +572,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
           Cell(
             genName("const"),
             Stdlib.constant(typ_b, v),
-            false
+            List()
           )
         EmitOutput(
           const.id.port("out"),
@@ -682,7 +616,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
           Cell(
             genName("fp_const"),
             Stdlib.constant(width, BigInt(bits, 2)),
-            false
+            List()
           )
         EmitOutput(
           fpconst.id.port("out"),
@@ -707,13 +641,13 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
           )
         } else {
           val comp = if (cBits > vBits) {
-            Cell(genName("pad"), Stdlib.pad(vBits, cBits), false)
+            Cell(genName("pad"), Stdlib.pad(vBits, cBits), List())
           } else {
-            Cell(genName("slice"), Stdlib.slice(vBits, cBits), false)
+            Cell(genName("slice"), Stdlib.slice(vBits, cBits), List())
           }
           val struct = List(
             comp,
-            Connect(res.port, comp.id.port("in"))
+            Assign(res.port, comp.id.port("in"))
           )
           EmitOutput(
             comp.id.port("out"),
@@ -763,14 +697,14 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
             val addrPort =
               if (isParam) ThisPort(CompVar(s"${id}_addr${idx}"))
               else arr.port("addr" + idx)
-            val con = Connect(result.port, addrPort)
+            val con = Assign(result.port, addrPort)
             con :: result.structure ++ structs
           }
         })
 
         val writeEnStruct =
           rhsInfo match {
-            case Some((port, _)) => List(Connect(port, writeEnPort))
+            case Some((port, _)) => List(Assign(port, writeEnPort))
             case None => List()
           }
         // calculate static delay, rhsDelay + 1 for writes, 0 for reads
@@ -794,7 +728,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
           functionId.pos
         )
       case x =>
-        throw NotImplemented(s"Futil backend does not support $x yet.", x.pos)
+        throw NotImplemented(s"Calyx backend does not support $x yet.", x.pos)
     }
 
   def emitCmd(
@@ -828,26 +762,26 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
       case CLet(id, Some(tarr: TArray), None) => {
         val arr = CompVar(s"$id")
         (
-          emitArrayDecl(tarr, id, false),
+          List(emitArrayDecl(tarr, id, List())),
           Empty,
           store + (arr -> (arr, LocalVar))
         )
       }
       case CLet(_, Some(_: TArray), Some(_)) =>
-        throw NotImplemented(s"Futil backend cannot initialize memories", c.pos)
+        throw NotImplemented(s"Calyx backend cannot initialize memories", c.pos)
       case CLet(id, typ, Some(app: EApp)) => {
         val (invokeDecl, argSt, invokeControl) = emitInvokeDecl(app)
 
         val (typ_b, _) = bitsForType(typ, c.pos)
-        val reg = Cell(genName(s"$id"), Stdlib.register(typ_b), false)
+        val reg = Stdlib.register(genName(s"$id"), typ_b)
 
         val groupName = genName("let")
-        val doneHole = Connect(reg.id.port("done"), HolePort(groupName, "done"))
+        val doneHole = Assign(reg.id.port("done"), HolePort(groupName, "done"))
 
         val struct =
           List(
-            Connect(invokeDecl.id.port("out"), reg.id.port("in")),
-            Connect(ConstantPort(1, 1), reg.id.port("write_en")),
+            Assign(invokeDecl.id.port("out"), reg.id.port("in")),
+            Assign(ConstantPort(1, 1), reg.id.port("write_en")),
             doneHole
           )
         val (group, st) = Group.fromStructure(groupName, struct, None)
@@ -865,11 +799,10 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
       }
       // If not clearly specified, Cast the TRational to TFixed.
       case CLet(id, Some(TFixed(t, i, un)), Some(e)) => {
-        val reg =
-          Cell(genName(s"$id"), Stdlib.register(t), false)
+        val reg = Stdlib.register(genName(s"$id"), t)
         val out = emitExpr(ECast(e, TFixed(t, i, un)))(store)
         val groupName = genName("let")
-        val doneHole = Connect(
+        val doneHole = Assign(
           reg.id.port("done"),
           HolePort(groupName, "done")
         )
@@ -883,8 +816,9 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
           case None => (out.done, out.delay.map(_ + 1))
         }
         val struct =
-          Connect(out.port, reg.id.port("in")) :: Connect(
-          writeEnableSrcPort, reg.id.port("write_en")
+          Assign(out.port, reg.id.port("in")) :: Assign(
+            writeEnableSrcPort,
+            reg.id.port("write_en")
           ) :: doneHole :: out.structure
         val (group, st) =
           Group.fromStructure(groupName, struct, delay)
@@ -905,15 +839,15 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
       case CLet(id, typ, Some(e)) => {
         val (typ_b, _) = bitsForType(typ, c.pos)
         val reg =
-          Cell(genName(s"$id"), Stdlib.register(typ_b), false)
+          Stdlib.register(genName(s"$id"), typ_b)
         val out = emitExpr(e)(store)
         val groupName = genName("let")
-        val doneHole = Connect(
+        val doneHole = Assign(
           reg.id.port("done"),
           HolePort(groupName, "done")
         )
         val struct =
-          Connect(out.port, reg.id.port("in")) :: Connect(
+          Assign(out.port, reg.id.port("in")) :: Assign(
             out.done,
             reg.id.port("write_en")
           ) :: doneHole :: out.structure
@@ -928,7 +862,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
       case CLet(id, typ, None) => {
         val (typ_b, _) = bitsForType(typ, c.pos)
         val reg =
-          Cell(genName(s"$id"), Stdlib.register(typ_b), false)
+          Stdlib.register(genName(s"$id"), typ_b)
         val struct = List(reg)
         (struct, Empty, store + (CompVar(s"$id") -> (reg.id, LocalVar)))
       }
@@ -937,14 +871,14 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
         val lOut = emitExpr(lhs, Some((rOut.done, rOut.delay)))(store)
         val groupName = genName("upd")
         val doneHole =
-          Connect(
+          Assign(
             ConstantPort(1, 1),
             HolePort(groupName, "done"),
-            Some(Atom(lOut.done))
+            Atom(lOut.done)
           )
         val struct =
           lOut.structure ++ rOut.structure ++ List(
-            Connect(rOut.port, lOut.port, Some(Atom(rOut.done))),
+            Assign(rOut.port, lOut.port, Atom(rOut.done)),
             doneHole
           )
         val (group, other_st) =
@@ -957,7 +891,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
         val (fStruct, fCon, _) = emitCmd(fbranch)
         val struct = tStruct ++ fStruct
         val groupName = genName("cond")
-        val doneHole = Connect(condOut.done, HolePort(groupName, "done"))
+        val doneHole = Assign(condOut.done, HolePort(groupName, "done"))
         val (group, st) =
           Group.fromStructure(
             groupName,
@@ -971,7 +905,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
       case CWhile(cond, _, body) => {
         val condOut = emitExpr(cond)
         val groupName = genName("cond")
-        val doneHole = Connect(condOut.done, HolePort(groupName, "done"))
+        val doneHole = Assign(condOut.done, HolePort(groupName, "done"))
         val (condGroup, condDefs) =
           Group.fromStructure(
             groupName,
@@ -998,7 +932,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
             emitCmd(CUpdate(e1, EBinop(NumOp("*", _ * _), e1, e2)))
           case _ =>
             throw NotImplemented(
-              s"Futil backend does not support $op yet",
+              s"Calyx backend does not support $op yet",
               c.pos
             )
         }
@@ -1007,12 +941,12 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
         // Hooks the output port of the emitted `expr` to PortDef `out` of the component.
         val condOut = emitExpr(expr)
         val outPort = ThisPort(CompVar("out"))
-        val returnConnect = Connect(condOut.port, outPort)
+        val returnConnect = Assign(condOut.port, outPort)
         (returnConnect :: condOut.structure, Empty, store)
       }
       case _: CDecorate => (List(), Empty, store)
       case x =>
-        throw NotImplemented(s"Futil backend does not support $x yet", x.pos)
+        throw NotImplemented(s"Calyx backend does not support $x yet", x.pos)
     }
   }
 
@@ -1021,7 +955,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
     definition match {
       case fd: FuncDef => fd
       case x =>
-        throw NotImplemented(s"Futil backend does not support $x yet", x.pos)
+        throw NotImplemented(s"Calyx backend does not support $x yet", x.pos)
     }
   }
 
@@ -1031,6 +965,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
     val definitions =
       p.defs.map(definition => emitDefinition(definition)) ++ importDefinitions
 
+    // Build a mapping from names to function definitions
     val id2FuncDef =
       definitions.foldLeft(Map[Id, FuncDef]())((definitions, defn) =>
         defn match {
@@ -1041,8 +976,7 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
         }
       )
 
-    val declStruct =
-      p.decls.map(x => emitDecl(x)).foldLeft(List[Structure]())(_ ++ _)
+    val declStruct = p.decls.map(emitDecl)
     val store =
       declStruct.foldLeft(Map[CompVar, (CompVar, VType)]())((store, struct) =>
         struct match {
@@ -1057,44 +991,49 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
         yield {
           val inputs = params.map(param => CompVar(param.id.toString()))
 
-          val inputPorts = params.foldLeft(List[PortDef]())(
-            (inputPorts, params) =>
-            params.typ match {
-              case tarr: TArray => {
-                // Currently, we default to exposing all ports for arrays.
-                val (bits, _) = bitsForType(Some(tarr.typ), tarr.typ.pos)
-                val id = params.id.toString()
-                inputPorts ++ List(
-                   PortDef(CompVar(s"${id}_read_data"), bits),
-                   PortDef(CompVar(s"${id}_done"), 1)
-                )
+          val inputPorts =
+            params.foldLeft(List[PortDef]())((inputPorts, params) =>
+              params.typ match {
+                case tarr: TArray => {
+                  // Currently, we default to exposing all ports for arrays.
+                  val (bits, _) = bitsForType(Some(tarr.typ), tarr.typ.pos)
+                  val id = params.id.toString()
+                  inputPorts ++ List(
+                    PortDef(CompVar(s"${id}_read_data"), bits),
+                    PortDef(CompVar(s"${id}_done"), 1)
+                  )
+                }
+                case _ => {
+                  val (bits, _) = bitsForType(Some(params.typ), params.typ.pos)
+                  inputPorts ++ List(
+                    PortDef(CompVar(params.id.toString()), bits)
+                  )
+                }
               }
-              case _ => {
-                val (bits, _) = bitsForType(Some(params.typ), params.typ.pos)
-                inputPorts ++ List(PortDef(CompVar(params.id.toString()), bits))
-              }
-            }
-          )
+            )
 
-          val outputPorts = params.foldLeft(List[PortDef]())(
-            (outputPorts, params) =>
-            params.typ match {
-              case tarr: TArray => {
-                val (bits, _) = bitsForType(Some(tarr.typ), tarr.typ.pos)
-                val id = params.id.toString()
-                val addrPortToWidth = getAddrPortToWidths(tarr, params.id)
-                val addressPortDefs = addrPortToWidth.map(
-                  { case (name, idxSize) => PortDef(CompVar(s"${id}_${name}"), idxSize.toInt) }
-                )
+          val outputPorts =
+            params.foldLeft(List[PortDef]())((outputPorts, params) =>
+              params.typ match {
+                case tarr: TArray => {
+                  val (bits, _) = bitsForType(Some(tarr.typ), tarr.typ.pos)
+                  val id = params.id.toString()
+                  val addrPortToWidth = getAddrPortToWidths(tarr, params.id)
+                  val addressPortDefs = addrPortToWidth.map(
+                    {
+                      case (name, idxSize) =>
+                        PortDef(CompVar(s"${id}_${name}"), idxSize.toInt)
+                    }
+                  )
 
-                outputPorts ++ List(
-                   PortDef(CompVar(s"${id}_write_data"), bits),
-                   PortDef(CompVar(s"${id}_write_en"), 1)
-                ) ++ addressPortDefs
+                  outputPorts ++ List(
+                    PortDef(CompVar(s"${id}_write_data"), bits),
+                    PortDef(CompVar(s"${id}_write_en"), 1)
+                  ) ++ addressPortDefs
+                }
+                case _ => outputPorts
               }
-              case _ => outputPorts
-            }
-          )
+            )
 
           val functionStore = inputs.foldLeft(Map[CompVar, (CompVar, VType)]())(
             (functionStore, inputs) =>
@@ -1113,16 +1052,19 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
             inputPorts,
             if (retType == TVoid()) outputPorts
             // If the return type of the component is not void, add an `out` wire.
-            else outputPorts ++ List(PortDef(CompVar("out"), outputBitWidth)),
+            else
+              outputPorts ++ List(
+                PortDef(CompVar("out"), outputBitWidth, List(("stable" -> 1)))
+              ),
             cmdStructure.sorted,
             controls
           )
         }
     val imports =
       Import("primitives/std.lib") ::
-        p.includes.flatMap(_.backends.get(C.Futil)).map(i => Import(i)).toList
+        p.includes.flatMap(_.backends.get(C.Calyx)).map(i => Import(i)).toList
 
-    val struct = declStruct ++ cmdStruct
+    val struct = declStruct.toList ++ cmdStruct
     val mainComponentName =
       if (c.kernelName == "kernel") "main" else c.kernelName
     Namespace(
@@ -1136,9 +1078,9 @@ def emitInvokeDecl(app: EApp)(implicit store: Store, id2FuncDef: FunctionMapping
   }
 }
 
-case object FutilBackend extends fuselang.backend.Backend {
+case object CalyxBackend extends fuselang.backend.Backend {
   def emitProg(p: Prog, c: Config) = {
-    (new FutilBackendHelper()).emitProg(p, c)
+    (new CalyxBackendHelper()).emitProg(p, c)
   }
   val canGenerateHeader = false
   override val commentPrefix: String = "//"
