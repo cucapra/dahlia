@@ -1,6 +1,6 @@
 package fuselang.backend.calyx
 
-import scala.math.{max, BigDecimal}
+import scala.math.{max, BigDecimal, BigInt}
 
 import fuselang.backend.calyx.Calyx._
 import fuselang.Utils._
@@ -126,7 +126,7 @@ private class CalyxBackendHelper {
     val idxSizes = dimSizes.map(bitsNeeded)
     Cell(
       name,
-      CompInst(s"std_mem_d${dims}", ((width +: dimSizes) ++ idxSizes).toList),
+      CompInst(s"std_mem_d${dims}", ((width +: dimSizes) ++ idxSizes).toList.map(i => BigInt(i))),
       attrs
     )
   }
@@ -146,7 +146,7 @@ private class CalyxBackendHelper {
         in a memory. For example, a D1 Memory declared as (32, 1, 1)
         would return List[("addr0", 1)].
     */
-  def getAddrPortToWidths(typ: TArray, id: Id): List[(String, Int)] = {
+  def getAddrPortToWidths(typ: TArray, id: Id): List[(String, BigInt)] = {
     // Emit the array to determine the port widths.
     val Cell(_, CompInst(_, arrayArgs), _) = emitArrayDecl(typ, id)
 
@@ -164,7 +164,7 @@ private class CalyxBackendHelper {
     val addressIndices = (dims + 1 to dims << 1).toList
 
     addressIndices.zipWithIndex.map({
-      case (n, i) => (s"addr${i}", arrayArgs(n))
+      case (n: Int, i: Int) => (s"addr${i}", arrayArgs(n))
     })
   }
 
@@ -182,7 +182,7 @@ private class CalyxBackendHelper {
     * `requiresWidthArguments`. */
   def getCompInstArgs(
       funcId: Id
-  )(implicit id2FuncDef: FunctionMapping): List[Int] = {
+  )(implicit id2FuncDef: FunctionMapping): List[BigInt] = {
     val id = funcId.toString()
     if (!requiresWidthArguments.contains(id)) {
       List()
@@ -612,11 +612,10 @@ private class CalyxBackendHelper {
         } else {
           intBits + fracBits
         }
-
         val fpconst =
           Cell(
             genName("fp_const"),
-            Stdlib.constant(width, Integer.parseInt(bits, 2)),
+            Stdlib.constant(width, BigInt(bits, 2)),
             List()
           )
         EmitOutput(
@@ -1023,7 +1022,7 @@ private class CalyxBackendHelper {
                   val addressPortDefs = addrPortToWidth.map(
                     {
                       case (name, idxSize) =>
-                        PortDef(CompVar(s"${id}_${name}"), idxSize)
+                        PortDef(CompVar(s"${id}_${name}"), idxSize.toInt)
                     }
                   )
 

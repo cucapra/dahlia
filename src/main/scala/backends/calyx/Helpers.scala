@@ -1,6 +1,6 @@
 package fuselang.backend.calyx
 
-import scala.math.{max}
+import scala.math.{max, BigInt}
 import scala.util.parsing.input.{Position}
 
 import fuselang.common._
@@ -20,7 +20,7 @@ object Helpers {
       .replaceAll("0", "_")
       .replaceAll("1", "0")
       .replaceAll("_", "1")
-    (Integer.parseInt(t, 2) + 1).toBinaryString
+    (BigInt(t, 2) + 1).toString(2)
   }
 
   /** Given an integer, returns the corresponding

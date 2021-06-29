@@ -1,5 +1,6 @@
 package fuselang.backend.calyx
 
+import scala.math.BigInt
 import fuselang.common.PrettyPrint.Doc
 import Doc._
 
@@ -106,7 +107,7 @@ object Calyx {
   case class CompPort(id: CompVar, name: String) extends Port
   case class ThisPort(id: CompVar) extends Port
   case class HolePort(id: CompVar, name: String) extends Port
-  case class ConstantPort(width: Int, value: Int) extends Port
+  case class ConstantPort(width: Int, value: BigInt) extends Port
 
   sealed trait Structure extends Emitable with Ordered[Structure] {
     override def doc(): Doc = this match {
@@ -182,9 +183,9 @@ object Calyx {
     }
   }
 
-  case class CompInst(id: String, args: List[Int]) extends Emitable {
+  case class CompInst(id: String, args: List[BigInt]) extends Emitable {
     override def doc(): Doc = {
-      val strList = args.map((x: Int) => text(x.toString()))
+      val strList = args.map((x: BigInt) => text(x.toString()))
       text(id) <> parens(hsep(strList, comma))
     }
   }
@@ -279,7 +280,7 @@ object Stdlib {
       List()
     )
 
-  def constant(bitwidth: Int, v: Int): Calyx.CompInst =
+  def constant(bitwidth: Int, v: BigInt): Calyx.CompInst =
     Calyx.CompInst("std_const", List(bitwidth, v))
 
   def binop(op: String, bitwidth: Int, signed: Boolean): Calyx.CompInst =
