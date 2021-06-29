@@ -902,7 +902,7 @@ private class CalyxBackendHelper {
         (group :: st ++ struct, control, store)
       }
       case CEmpty => (List(), Empty, store)
-      case CWhile(cond, _, body) => {
+      case wh@CWhile(cond, _, body) => {
         val condOut = emitExpr(cond)
         val groupName = genName("cond")
         val doneHole = Assign(condOut.done, HolePort(groupName, "done"))
@@ -914,6 +914,7 @@ private class CalyxBackendHelper {
           )
         val (bodyStruct, bodyCon, st) = emitCmd(body)
         val control = While(condOut.port, condGroup.id, bodyCon)
+        control.attributes = wh.attributes
         (condGroup :: bodyStruct ++ condDefs, control, st)
       }
       case _: CFor =>

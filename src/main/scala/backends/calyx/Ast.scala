@@ -207,6 +207,8 @@ object Calyx {
 
   /***** control *****/
   sealed trait Control extends Emitable {
+    var attributes = Map[String, Int]()
+
     def seq(c: Control): Control = (this, c) match {
       case (Empty, c) => c
       case (c, Empty) => c
@@ -224,37 +226,51 @@ object Calyx {
       case (par0, par1: ParComp) => ParComp(par0 :: par1.stmts)
       case _ => ParComp(List(this, c))
     }
-    override def doc(): Doc = this match {
-      case SeqComp(stmts) =>
-        text("seq") <+> scope(vsep(stmts.map(_.doc())))
-      case ParComp(stmts) =>
-        text("par") <+> scope(vsep(stmts.map(_.doc())))
-      case If(port, cond, trueBr, falseBr) =>
-        text("if") <+> port.doc() <+> text("with") <+>
-          cond.doc() <+>
-          scope(trueBr.doc()) <> (
-          if (falseBr == Empty)
-            emptyDoc
-          else
-            space <> text("else") <+> scope(falseBr.doc())
-        )
-      case While(port, cond, body) =>
-        text("while") <+> port.doc() <+> text("with") <+>
-          cond.doc() <+>
-          scope(body.doc())
-      case Enable(id) => id.doc() <> semi
-      case Invoke(id, inConnects, outConnects) => {
-        val inputDefs = inConnects.map({
-          case (param, arg) => text(param) <> equal <> arg.doc()
-        })
-        val outputDefs = outConnects.map({
-          case (param, arg) => text(param) <> equal <> arg.doc()
-        })
-        text("invoke") <+> id.doc() <>
-          parens(commaSep(inputDefs)) <>
-          parens(commaSep(outputDefs)) <> semi
+
+    def attributesDoc(): Doc =
+      if (this.attributes.isEmpty) {
+        emptyDoc
+      } else {
+        hsep(attributes.map({
+          case (attr, v) =>
+            text(s"@$attr") <> parens(text(v.toString()))
+        })) <> space
       }
-      case Empty => text("empty")
+
+    override def doc(): Doc = {
+      val controlDoc = this match {
+        case SeqComp(stmts) =>
+          text("seq") <+> scope(vsep(stmts.map(_.doc())))
+        case ParComp(stmts) =>
+          text("par") <+> scope(vsep(stmts.map(_.doc())))
+        case If(port, cond, trueBr, falseBr) =>
+          text("if") <+> port.doc() <+> text("with") <+>
+            cond.doc() <+>
+            scope(trueBr.doc()) <> (
+            if (falseBr == Empty)
+              emptyDoc
+            else
+              space <> text("else") <+> scope(falseBr.doc())
+          )
+        case While(port, cond, body) =>
+          text("while") <+> port.doc() <+> text("with") <+>
+            cond.doc() <+>
+            scope(body.doc())
+        case Enable(id) => id.doc() <> semi
+        case Invoke(id, inConnects, outConnects) => {
+          val inputDefs = inConnects.map({
+            case (param, arg) => text(param) <> equal <> arg.doc()
+          })
+          val outputDefs = outConnects.map({
+            case (param, arg) => text(param) <> equal <> arg.doc()
+          })
+          text("invoke") <+> id.doc() <>
+            parens(commaSep(inputDefs)) <>
+            parens(commaSep(outputDefs)) <> semi
+        }
+        case Empty => text("empty")
+      }
+      attributesDoc() <> controlDoc
     }
   }
   case class SeqComp(stmts: List[Control]) extends Control

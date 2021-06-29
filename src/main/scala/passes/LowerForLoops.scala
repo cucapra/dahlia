@@ -29,7 +29,7 @@ object LowerForLoops extends PartialTransformer {
   val emptyEnv = ForEnv(Map())
 
   def myRewriteC: PF[(Command, Env), (Command, Env)] = {
-    case (CFor(range, pipeline, par, combine), env) => {
+    case (cfor@CFor(range, pipeline, par, combine), env) => {
       if (pipeline) throw NotImplemented("Lowering pipelined for loops.")
 
       val CRange(it, typ, rev, s, e, u) = range
@@ -69,7 +69,9 @@ object LowerForLoops extends PartialTransformer {
       val (npar, _) = rewriteC(par)(nEnv)
       val (ncombine, _) = rewriteC(combine)(nEnv)
       val body = CSeq.smart(Seq(npar, ncombine, upd))
-      CBlock(CSeq.smart(Seq(init, CWhile(cond, false, body)))) -> nEnv
+      val wh = CWhile(cond, false, body)
+      wh.attributes = cfor.attributes
+      CBlock(CSeq.smart(Seq(init, wh))) -> nEnv
     }
   }
 

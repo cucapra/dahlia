@@ -175,7 +175,9 @@ object Syntax {
   case class View(suffix: Suffix, prefix: Option[Int], shrink: Option[Int])
       extends Positional
 
-  sealed trait Command extends Positional
+  sealed trait Command extends Positional {
+    var attributes: Map[String, Int] = Map()
+  }
   case class CPar(cmds: Seq[Command]) extends Command
   case class CSeq(cmds: Seq[Command]) extends Command
   case class CLet(id: Id, var typ: Option[Type], e: Option[Expr])
