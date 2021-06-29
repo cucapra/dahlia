@@ -30,8 +30,17 @@ object Calyx {
       this.name.compare(that.name)
     }
   }
-  case class PortDef(id: CompVar, width: Int) extends Emitable {
-    override def doc(): Doc = id.doc() <> colon <+> value(width)
+  case class PortDef(
+      id: CompVar,
+      width: Int,
+      attrs: List[(String, Int)] = List()
+  ) extends Emitable {
+    override def doc(): Doc = {
+      val attrDoc = hsep(attrs.map({
+        case (attr, v) => text(s"@${attr}") <> parens(text(v.toString()))
+      })) <> (if (attrs.isEmpty) emptyDoc else space)
+      attrDoc <> id.doc() <> colon <+> value(width)
+    }
   }
 
   /**** definition statements *****/
