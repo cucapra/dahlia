@@ -1,7 +1,6 @@
-package fuselang.backend.futil
+package fuselang.backend.calyx
 
 import fuselang.common.PrettyPrint.Doc
-import fuselang.common.CompilerError._
 import Doc._
 
 object Calyx {
@@ -242,8 +241,6 @@ object Calyx {
         text("while") <+> port.doc() <+> text("with") <+>
           cond.doc() <+>
           scope(body.doc())
-      case Print(_) =>
-        throw Impossible("Futil does not support print")
       case Enable(id) => id.doc() <> semi
       case Invoke(id, inConnects, outConnects) => {
         val inputDefs = inConnects.map({
@@ -264,7 +261,6 @@ object Calyx {
   case class If(port: Port, cond: CompVar, trueBr: Control, falseBr: Control)
       extends Control
   case class While(port: Port, cond: CompVar, body: Control) extends Control
-  case class Print(id: CompVar) extends Control
   case class Enable(id: CompVar) extends Control
   case class Invoke(
       id: CompVar,
@@ -274,7 +270,7 @@ object Calyx {
   case object Empty extends Control
 }
 
-/** Represents all of the primitives in Futil. */
+/** Construct primitives in Calyx. */
 object Stdlib {
   def register(name: Calyx.CompVar, width: Int) =
     Calyx.Cell(

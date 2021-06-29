@@ -1,8 +1,8 @@
-package fuselang.backend.futil
+package fuselang.backend.calyx
 
 import scala.math.{max, BigDecimal}
 
-import fuselang.backend.futil.Calyx._
+import fuselang.backend.calyx.Calyx._
 import fuselang.Utils._
 import fuselang.common._
 import Syntax._
@@ -55,7 +55,7 @@ private case class EmitOutput(
   *
   * The `out` port is marked using the "stable" attributed which is verified
   * by the Calyx compiler to enable such uses:
-  * https://github.com/cucapra/futil/issues/304
+  * https://github.com/cucapra/Calyx/issues/304
   */
 private class CalyxBackendHelper {
 
@@ -75,7 +75,7 @@ private class CalyxBackendHelper {
     CompVar(s"$base${idx(base)}")
   }
 
-  /** A Futil variable will either be a
+  /** A Calyx variable will either be a
     * local variable (LocalVar) or
     * a function parameter (ParameterVar). */
   sealed trait VType
@@ -83,7 +83,7 @@ private class CalyxBackendHelper {
   case object ParameterVar extends VType
 
   /** Store mappings from Dahlia variables to
-    * generated Futil variables. */
+    * generated Calyx variables. */
   type Store = Map[CompVar, (CompVar, VType)]
 
   /** Mappings from Function Id to Function Definition. */
@@ -507,7 +507,7 @@ private class CalyxBackendHelper {
           case "<<" => "lsh"
           case x =>
             throw NotImplemented(
-              s"Futil backend does not support '$x' yet.",
+              s"Calyx backend does not support '$x' yet.",
               op.pos
             )
         }
@@ -541,7 +541,7 @@ private class CalyxBackendHelper {
       }
       case EVar(id) =>
         val portName = if (rhsInfo.isDefined) "in" else "out"
-        val (varName, futilVarType) = store
+        val (varName, calyxVarType) = store
           .get(CompVar(s"$id"))
           .getOrThrow(BackendError(s"`$id' was not in store", expr.pos))
         val struct =
@@ -557,7 +557,7 @@ private class CalyxBackendHelper {
             case None => Some(0)
           }
         EmitOutput(
-          if (futilVarType == LocalVar) varName.port(portName)
+          if (calyxVarType == LocalVar) varName.port(portName)
           else ThisPort(varName),
           if (rhsInfo.isDefined) varName.port("done") else ConstantPort(1, 1),
           struct,
@@ -729,7 +729,7 @@ private class CalyxBackendHelper {
           functionId.pos
         )
       case x =>
-        throw NotImplemented(s"Futil backend does not support $x yet.", x.pos)
+        throw NotImplemented(s"Calyx backend does not support $x yet.", x.pos)
     }
 
   def emitCmd(
@@ -769,7 +769,7 @@ private class CalyxBackendHelper {
         )
       }
       case CLet(_, Some(_: TArray), Some(_)) =>
-        throw NotImplemented(s"Futil backend cannot initialize memories", c.pos)
+        throw NotImplemented(s"Calyx backend cannot initialize memories", c.pos)
       case CLet(id, typ, Some(app: EApp)) => {
         val (invokeDecl, argSt, invokeControl) = emitInvokeDecl(app)
 
@@ -933,7 +933,7 @@ private class CalyxBackendHelper {
             emitCmd(CUpdate(e1, EBinop(NumOp("*", _ * _), e1, e2)))
           case _ =>
             throw NotImplemented(
-              s"Futil backend does not support $op yet",
+              s"Calyx backend does not support $op yet",
               c.pos
             )
         }
@@ -947,7 +947,7 @@ private class CalyxBackendHelper {
       }
       case _: CDecorate => (List(), Empty, store)
       case x =>
-        throw NotImplemented(s"Futil backend does not support $x yet", x.pos)
+        throw NotImplemented(s"Calyx backend does not support $x yet", x.pos)
     }
   }
 
@@ -956,7 +956,7 @@ private class CalyxBackendHelper {
     definition match {
       case fd: FuncDef => fd
       case x =>
-        throw NotImplemented(s"Futil backend does not support $x yet", x.pos)
+        throw NotImplemented(s"Calyx backend does not support $x yet", x.pos)
     }
   }
 
@@ -966,6 +966,7 @@ private class CalyxBackendHelper {
     val definitions =
       p.defs.map(definition => emitDefinition(definition)) ++ importDefinitions
 
+    // Build a mapping from names to function definitions
     val id2FuncDef =
       definitions.foldLeft(Map[Id, FuncDef]())((definitions, defn) =>
         defn match {
@@ -976,7 +977,7 @@ private class CalyxBackendHelper {
         }
       )
 
-    val declStruct = p.decls.map(x => emitDecl(x))
+    val declStruct = p.decls.map(emitDecl)
     val store =
       declStruct.foldLeft(Map[CompVar, (CompVar, VType)]())((store, struct) =>
         struct match {

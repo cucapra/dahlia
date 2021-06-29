@@ -20,7 +20,7 @@ object Configuration {
     override def toString() = this match {
       case Vivado => "vivado"
       case Cpp => "c++"
-      case Calyx => "futil"
+      case Calyx => "calyx"
     }
   }
   final case object Vivado extends BackendOption

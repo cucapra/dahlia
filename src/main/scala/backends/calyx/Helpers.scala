@@ -1,4 +1,4 @@
-package fuselang.backend.futil
+package fuselang.backend.calyx
 
 import scala.math.{max}
 import scala.util.parsing.input.{Position}

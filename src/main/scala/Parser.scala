@@ -414,7 +414,7 @@ case class Parser(input: String) {
     positioned(P(kw("decl") ~/ args ~ ";"))
 
   def backend[_: P]: P[String] =
-    P(("c++" | "vivado" | "futil").!)
+    P(("c++" | "vivado" | "futil" | "calyx").!)
       .map(s => s)
       .opaque("known backend: `vivado(\"...\")`")
 
