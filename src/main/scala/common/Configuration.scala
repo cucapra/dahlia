@@ -11,7 +11,7 @@ object Configuration {
   def stringToBackend(name: String): Option[BackendOption] = name match {
     case "vivado" => Some(Vivado)
     case "c++" => Some(Cpp)
-    case "futil" => Some(Futil)
+    case "futil" => Some(Calyx)
     case _ => None
   }
 
@@ -20,12 +20,12 @@ object Configuration {
     override def toString() = this match {
       case Vivado => "vivado"
       case Cpp => "c++"
-      case Futil => "futil"
+      case Calyx => "futil"
     }
   }
   final case object Vivado extends BackendOption
   final case object Cpp extends BackendOption
-  final case object Futil extends BackendOption
+  final case object Calyx extends BackendOption
 
   // The type of Vivado memory interface to generate
   sealed trait MemoryInterface

@@ -56,7 +56,7 @@ private case class EmitOutput(
   * by the Calyx compiler to enable such uses:
   * https://github.com/cucapra/futil/issues/304
   */
-private class FutilBackendHelper {
+private class CalyxBackendHelper {
 
   /** A list of function IDs that require width arguments
     * in their SystemVerilog module definition.
@@ -1106,7 +1106,7 @@ private class FutilBackendHelper {
         }
     val imports =
       Import("primitives/std.lib") ::
-        p.includes.flatMap(_.backends.get(C.Futil)).map(i => Import(i)).toList
+        p.includes.flatMap(_.backends.get(C.Calyx)).map(i => Import(i)).toList
 
     val struct = declStruct.toList ++ cmdStruct
     val mainComponentName =
@@ -1122,9 +1122,9 @@ private class FutilBackendHelper {
   }
 }
 
-case object FutilBackend extends fuselang.backend.Backend {
+case object CalyxBackend extends fuselang.backend.Backend {
   def emitProg(p: Prog, c: Config) = {
-    (new FutilBackendHelper()).emitProg(p, c)
+    (new CalyxBackendHelper()).emitProg(p, c)
   }
   val canGenerateHeader = false
   override val commentPrefix: String = "//"
