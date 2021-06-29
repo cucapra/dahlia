@@ -138,8 +138,14 @@ object Syntax {
   case class EVar(id: Id) extends Expr
   case class ECast(e: Expr, castType: Type) extends Expr
 
-  case class CRange(iter: Id, castType: Option[Type], reversed: Boolean, s: Int, e: Int, u: Int)
-      extends Positional {
+  case class CRange(
+      iter: Id,
+      castType: Option[Type],
+      reversed: Boolean,
+      s: Int,
+      e: Int,
+      u: Int
+  ) extends Positional {
     def idxType: TIndex = {
       if (abs(e - s) % u != 0) {
         throw UnrollRangeError(this.pos, e - s, u)
@@ -209,11 +215,13 @@ object Syntax {
     }
 
     def smart(cmds: Seq[Command]): Command = {
-      val flat = cmds.flatMap(cmd => cmd match {
-            case CPar(cs) => cs
-            case CEmpty => Seq()
-            case _ => Seq(cmd)
-      })
+      val flat = cmds.flatMap(cmd =>
+        cmd match {
+          case CPar(cs) => cs
+          case CEmpty => Seq()
+          case _ => Seq(cmd)
+        }
+      )
       if (flat.length == 0) {
         CEmpty
       } else if (flat.length == 1) {
@@ -234,11 +242,13 @@ object Syntax {
     }
 
     def smart(cmds: Seq[Command]): Command = {
-      val flat = cmds.flatMap(cmd => cmd match {
+      val flat = cmds.flatMap(cmd =>
+        cmd match {
           case CSeq(cs) => cs
           case CEmpty => Seq()
           case _ => Seq(cmd)
-      })
+        }
+      )
       if (flat.length == 0) {
         CEmpty
       } else if (flat.length == 1) {
@@ -275,8 +285,8 @@ object Syntax {
     * An include with the name of the module and function definitions.
     */
   case class Include(
-    backends: Map[BackendOption, String],
-    defs: Seq[FuncDef]
+      backends: Map[BackendOption, String],
+      defs: Seq[FuncDef]
   ) extends Positional
 
   case class Decl(id: Id, typ: Type) extends Positional
