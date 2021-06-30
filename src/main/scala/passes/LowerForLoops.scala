@@ -29,7 +29,7 @@ object LowerForLoops extends PartialTransformer {
   val emptyEnv = ForEnv(Map())
 
   def myRewriteC: PF[(Command, Env), (Command, Env)] = {
-    case (cfor@CFor(range, pipeline, par, combine), env) => {
+    case (cfor @ CFor(range, pipeline, par, combine), env) => {
       if (pipeline) throw NotImplemented("Lowering pipelined for loops.")
 
       val CRange(it, typ, rev, s, e, u) = range
@@ -49,14 +49,15 @@ object LowerForLoops extends PartialTransformer {
       }
 
       val t = typ.get
-      val init = CLet(it, typ, Some(ECast(if (rev) EInt(e - 1) else EInt(s), t)))
-      val upd = if (rev) {
-        val sub = NumOp("-", OpConstructor.sub)
-        CUpdate(itVar.copy(), EBinop(sub, itVar.copy(), ECast(EInt(1), t)))
+      val init =
+        CLet(it, typ, Some(ECast(if (rev) EInt(e - 1) else EInt(s), t)))
+      val op = if (rev) {
+        NumOp("-", OpConstructor.sub)
       } else {
-        val add = NumOp("+", OpConstructor.add)
-        CUpdate(itVar.copy(), EBinop(add, itVar.copy(), ECast(EInt(1), t)))
+        NumOp("+", OpConstructor.add)
       }
+      val upd =
+        CUpdate(itVar.copy(), EBinop(op, itVar.copy(), ECast(EInt(1), t)))
       val cond =
         if (rev) {
           EBinop(CmpOp(">="), itVar.copy(), ECast(EInt(s), t))
@@ -87,7 +88,8 @@ object LowerForLoops extends PartialTransformer {
     }
   }
 
-  override def rewriteC(cmd: Command)(implicit env: Env) =
+  override def rewriteC(cmd: Command)(implicit env: Env) = {
     mergeRewriteC(myRewriteC)(cmd, env)
+  }
 
 }

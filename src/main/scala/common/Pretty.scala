@@ -114,8 +114,8 @@ object Pretty {
       t.map(x => text(":") <+> text(x.toString)).getOrElse(emptyDoc)
     parens(
       text("let") <+> id <> typAnnot <+> equal <+>
-      (if (rev) text("rev") <+> emptyDoc else emptyDoc) <>
-      value(s) <+> text("..") <+> value(
+        (if (rev) text("rev") <+> emptyDoc else emptyDoc) <>
+        value(s) <+> text("..") <+> value(
         e
       )
     ) <>
@@ -135,7 +135,25 @@ object Pretty {
       sh.map(sh => space <> text("bank") <+> value(sh)).getOrElse(emptyDoc)
   }
 
-  implicit def emitCmd(c: Command)(implicit debug: Boolean): Doc = c match {
+  def emitAttributes(attrs: Map[String, Int]): Doc = {
+    hsep(attrs.map({
+      case (attr, v) => text(s"@${attr}") <> parens(text(v.toString()))
+    }))
+  }
+
+  implicit def emitCmd(c: Command)(
+      implicit debug: Boolean
+  ): Doc = {
+    val attr =
+      if (c.attributes.isEmpty) emptyDoc
+      else
+        text("/*") <+>
+        emitAttributes(c.attributes) <+> text("*/") <> space
+
+    attr <> emitCmdBare(c)(debug)
+  }
+
+  def emitCmdBare(c: Command)(implicit debug: Boolean): Doc = c match {
     case CPar(cmds) => vsep(cmds.map(emitCmd))
     case CSeq(cmds) => vsep(cmds.map(emitCmd), text("---"))
     case CLet(id, typ, e) =>
