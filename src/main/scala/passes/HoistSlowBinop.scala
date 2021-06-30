@@ -87,12 +87,12 @@ object HoistSlowBinop extends TypedPartialTransformer {
         env
       )
     }
-    case (CWhile(cond, pipeline, body), _) => {
-      val (expr, env) = rewriteE(cond)(emptyEnv)
-      construct(
-        CWhile(expr, pipeline, rewriteC(body)(env)._1),
-        env
-      )
+    case (wh @ CWhile(cond, _, body), _) => {
+      val (nCond, env) = rewriteE(cond)(emptyEnv)
+      val (nBody, _) = rewriteC(body)(env)
+      val nWh = wh.copy(cond = nCond, body = nBody)
+      nWh.attributes = wh.attributes
+      construct(nWh, env)
     }
     case (CUpdate(lhs, rhs), _) => {
       val (rewrLhs, env) = rewriteE(lhs)(emptyEnv)

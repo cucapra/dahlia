@@ -122,7 +122,7 @@ object Transformer {
 
     def rewriteLVal(e: Expr)(implicit env: Env): (Expr, Env) = rewriteE(e)
 
-    def rewriteC(cmd: Command)(implicit env: Env): (Command, Env) = cmd match {
+    def rewriteCBare(cmd: Command)(implicit env: Env): (Command, Env) = cmd match {
       case _: CSplit | _: CView | CEmpty | _: CDecorate => (cmd, env)
       case CPar(cmds) => {
         val (ncmds, env1) = rewriteCSeq(cmds)
@@ -178,6 +178,13 @@ object Transformer {
         val (nbody, env1) = env.withScopeAndRet(rewriteC(body)(_))
         cb.copy(cmd = nbody) -> env1
       }
+    }
+
+    // Rewrite the command and transfer the attribute
+    def rewriteC(cmd: Command)(implicit env: Env): (Command, Env) = {
+      val (nCmd, nEnv) = rewriteCBare(cmd)(env)
+      nCmd.attributes = cmd.attributes
+      nCmd -> nEnv
     }
 
   }

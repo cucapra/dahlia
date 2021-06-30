@@ -510,7 +510,10 @@ object LowerUnroll extends PartialTransformer {
           val (c, _) = rewriteC(combine)(e1)
           (p, c) -> e1
         })
-        c.copy(par = nPar, combine = nComb) -> env
+        val cfor = c.copy(par = nPar, combine = nComb)
+        // Add bound attribute
+        cfor.attributes = cfor.attributes + ("bound" -> (range.e - range.s))
+        cfor -> env
       } else {
         mergePar((0 until range.u).map(idx => {
           val nRange = range.copy(e = range.e / range.u, u = 1)
