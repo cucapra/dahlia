@@ -126,7 +126,10 @@ private class CalyxBackendHelper {
     val idxSizes = dimSizes.map(bitsNeeded)
     Cell(
       name,
-      CompInst(s"std_mem_d${dims}", ((width +: dimSizes) ++ idxSizes).toList.map(i => BigInt(i))),
+      CompInst(
+        s"std_mem_d${dims}",
+        ((width +: dimSizes) ++ idxSizes).toList.map(i => BigInt(i))
+      ),
       attrs
     )
   }
@@ -902,7 +905,7 @@ private class CalyxBackendHelper {
         (group :: st ++ struct, control, store)
       }
       case CEmpty => (List(), Empty, store)
-      case wh@CWhile(cond, _, body) => {
+      case wh @ CWhile(cond, _, body) => {
         val condOut = emitExpr(cond)
         val groupName = genName("cond")
         val doneHole = Assign(condOut.done, HolePort(groupName, "done"))
@@ -921,20 +924,37 @@ private class CalyxBackendHelper {
         throw BackendError(
           "for loops cannot be directly generated. Use the `--lower` flag to turn them into while loops."
         )
-      case c @ CReduce(op, e1, e2) => {
+      case c @ CReduce(rop, e1, e2) => {
         // rewrite statements of the form
         //   lhs += rhs
         // to
         //   lhs = lhs + rhs
-        op.toString match {
-          case "+=" =>
-            emitCmd(CUpdate(e1, EBinop(NumOp("+", _ + _), e1, e2)))
-          case "*=" =>
-            emitCmd(CUpdate(e1, EBinop(NumOp("*", _ * _), e1, e2)))
-          case _ =>
-            throw NotImplemented(
-              s"Calyx backend does not support $op yet",
-              c.pos
+        val (op, numOp) =
+          rop.toString match {
+            case "+=" => ("+", (x: Double, y: Double) => x + y)
+            case "*=" => ("*", (x: Double, y: Double) => x * y)
+            case _ =>
+              throw NotImplemented(
+                s"Calyx backend does not support $rop yet",
+                c.pos
+              )
+          }
+
+        e1 match {
+          case _: EVar =>
+            emitCmd(CUpdate(e1, EBinop(NumOp(op, numOp), e1, e2)))
+          case ea: EArrAccess => {
+            // Create a binding for the memory read.
+            val name = Id(genName("red_read").name)
+            val bind = CLet(name, ea.typ, Some(ea))
+            val nLhs = EVar(name)
+            nLhs.typ = ea.typ;
+            val upd = CUpdate(e1, EBinop(NumOp(op, numOp), nLhs, e2))
+            emitCmd(CSeq.smart(Seq(bind, upd)))
+          }
+          case e =>
+            throw Impossible(
+              s"LHS is neither a variable nor a memory access: ${Pretty.emitExpr(e)(false).pretty}"
             )
         }
       }
