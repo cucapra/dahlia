@@ -4,7 +4,7 @@ import scala.math.{log10, ceil, abs}
 
 object Utils {
 
-  implicit class RichOption[A](opt: Option[A]) {
+  implicit class RichOption[A](opt: => Option[A]) {
     def getOrThrow[T <: Throwable](except: T) = opt match {
       case Some(v) => v
       case None => throw except
