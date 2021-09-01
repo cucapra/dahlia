@@ -1,0 +1,21 @@
+#include "parser.cpp"
+/***************** Parse helpers  ******************/
+/***************************************************/
+void kernel(vector<float> &a, vector<float> &b) {
+  
+  for(int i = 5; i >= 0; i--) {
+    b[(9 - i)] = a[i];
+  }
+  json_t __;
+  __["a"] = a;
+  __["b"] = b;
+  std::cout << __.dump(2) << std::endl;
+}
+int main(int argc, char** argv) {
+  using namespace flattening;
+  auto v = parse_data(argc, argv);;
+  auto a = get_arg<n_dim_vec_t<float, 1>>("a", "float[]", v);
+  auto b = get_arg<n_dim_vec_t<float, 1>>("b", "float[]", v);
+  kernel(a, b);
+  return 0;
+}
