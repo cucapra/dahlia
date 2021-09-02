@@ -2,8 +2,6 @@ package fuselang.backend.calyx
 
 import scala.math.BigInt
 import fuselang.common.PrettyPrint.Doc
-import fuselang.common.CompilerError._
-import fuselang.Utils.RichOption
 import Doc._
 
 object Calyx {
@@ -97,22 +95,12 @@ object Calyx {
       case (HolePort(thisId, _), HolePort(thatId, _)) => thisId.compare(thatId)
       case (ConstantPort(_, thisV), ConstantPort(_, thatV)) =>
         thisV.compare(thatV)
-      case (_: ThisPort, _) => 1
-      case (_, _: ThisPort) => -1
-      case (_: CompPort, _) => 1
-      case (_, _: CompPort) => -1
-      case (_: ConstantPort, _) => 1
-      case (_, _: ConstantPort) => -1
-    }
-
-    def isHole(): Boolean = this match {
-      case _: HolePort => true
-      case _ => false
-    }
-
-    def isConstant(value: Int, width: Int) = this match {
-      case ConstantPort(v, w) if v == value && w == width => true
-      case _ => false
+      case (ThisPort(_), _) => 1
+      case (_, ThisPort(_)) => -1
+      case (CompPort(_, _), _) => 1
+      case (_, CompPort(_, _)) => -1
+      case (ConstantPort(_, _), _) => 1
+      case (_, ConstantPort(_, _)) => -1
     }
   }
 
@@ -140,12 +128,12 @@ object Calyx {
         dest.doc() <+> equal <+> src.doc() <> semi
       case Assign(src, dest, guard) =>
         dest.doc() <+> equal <+> guard.doc() <+> text("?") <+> src.doc() <> semi
-      case Group(id, conns, delay, comb) =>
-        (if (comb) text("comb ") else emptyDoc) <>
-          text("group") <+> id.doc() <>
-          (if (delay.isDefined)
-             angles(text("\"static\"") <> equal <> text(delay.get.toString()))
-           else emptyDoc) <+>
+      case Group(id, conns, Some(delay)) =>
+        text("group") <+> id.doc() <>
+          angles(text("\"static\"") <> equal <> text(delay.toString())) <+>
+          scope(vsep(conns.map(_.doc())))
+      case Group(id, conns, None) =>
+        text("group") <+> id.doc() <+>
           scope(vsep(conns.map(_.doc())))
     }
 
@@ -153,7 +141,7 @@ object Calyx {
       (this, that) match {
         case (Cell(thisId, _, _), Cell(thatId, _, _)) =>
           thisId.compare(thatId)
-        case (Group(thisId, _, _, _), Group(thatId, _, _, _)) =>
+        case (Group(thisId, _, _), Group(thatId, _, _)) =>
           thisId.compare(thatId)
         case (Assign(thisSrc, thisDest, _), Assign(thatSrc, thatDest, _)) => {
           if (thisSrc.compare(thatSrc) == 0) {
@@ -162,10 +150,10 @@ object Calyx {
             thisSrc.compare(thatSrc)
           }
         }
-        case (_: Cell, _) => -1
-        case (_, _: Cell) => 1
-        case (_: Group, _) => -1
-        case (_, _: Group) => 1
+        case (Cell(_, _, _), _) => -1
+        case (_, Cell(_, _, _)) => 1
+        case (Group(_, _, _), _) => -1
+        case (_, Group(_, _, _)) => 1
       }
     }
   }
@@ -174,9 +162,7 @@ object Calyx {
   case class Group(
       id: CompVar,
       connections: List[Assign],
-      staticDelay: Option[Int],
-      // True if the group is combinational
-      combinationa: Boolean
+      staticDelay: Option[Int]
   ) extends Structure
   case class Assign(src: Port, dest: Port, guard: GuardExpr = True)
       extends Structure
@@ -193,18 +179,7 @@ object Calyx {
           case s => Right(s)
         }
       )
-      val doneAssign = connections
-        .find(assign => assign.dest.isHole())
-        .getOrThrow(Impossible("Group does not have a done hole"))
-
-      // If this is a combinational group, remove the group done assignment
-      val isComb = doneAssign.guard == True && doneAssign.src.isConstant(1, 1)
-      val conns = if (isComb) {
-        connections.filter(assign => !assign.dest.isHole())
-      } else {
-        connections
-      }
-      (this(id, conns, if (isComb) None else staticDelay, isComb), st)
+      (this(id, connections, staticDelay), st)
     }
   }
 
