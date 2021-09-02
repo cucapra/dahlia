@@ -14,7 +14,8 @@ component main() -> () {
     le0 = std_le(4);
   }
   wires {
-    comb group cond0 {
+    group cond0<"static"=0> {
+      cond0[done] = 1'd1;
       le0.left = i0.out;
       le0.right = const1.out;
     }
