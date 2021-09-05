@@ -32,7 +32,7 @@ jobs:
 
     - name: Run SBT tests
       run: |
-        sbt "; assembly; test"
+        sbt "; getHeaders; assembly; test"
 
     - name: Cache runt
       id: runt-cache
