@@ -7,6 +7,7 @@ import Syntax._
 import CompilerError._
 import Transformer._
 import EnvHelpers._
+import fuselang.backend.calyx.{Helpers => calyx};
 
 object HoistSlowBinop extends TypedPartialTransformer {
 
@@ -24,8 +25,6 @@ object HoistSlowBinop extends TypedPartialTransformer {
 
   type Env = ExprEnv
   val emptyEnv = ExprEnv(ListMap())
-
-  private val slowBinops = List("*", "/", "%")
 
   var idx: Map[String, Int] = Map();
   def genName(base: String): Id = {
@@ -58,7 +57,7 @@ object HoistSlowBinop extends TypedPartialTransformer {
   }
 
   def myRewriteE: PF[(Expr, Env), (Expr, Env)] = {
-    case (e @ EBinop(op, left, right), env) if slowBinops.contains(op.op) => {
+    case (e @ EBinop(op, left, right), env) if calyx.slowBinops.contains(op.op) => {
       env.get(e) match {
         case Some(let) => (EVar(let.id), env)
         case None => {

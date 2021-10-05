@@ -409,6 +409,7 @@ private class CalyxBackendHelper {
     val e2Out = emitExpr(e2)
     val (e1Bits, e1Int) = bitsForType(e1.typ, e1.pos)
     val (e2Bits, e2Int) = bitsForType(e2.typ, e2.pos)
+    // Check if we can compile this expression.
     (e1Int, e2Int) match {
       case (Some(intBit1), Some(intBit2)) => {
         assertOrThrow(
@@ -831,6 +832,38 @@ private class CalyxBackendHelper {
           store + (CompVar(s"$id") -> (reg.id, LocalVar))
         )
       }
+      case CLet(id, typ, Some(e)) => {
+        val (typ_b, _) = bitsForType(typ, c.pos)
+        val reg =
+          Stdlib.register(genName(s"$id"), typ_b)
+        // XXX(rachit): Why is multiCycleInfo ignored here?
+        val EmitOutput(port, done, structure, delay, _) = emitExpr(e)(store)
+        val groupName = genName("let")
+        val doneHole = Assign(
+          reg.id.port("done"),
+          HolePort(groupName, "done")
+        )
+        val struct =
+          Assign(port, reg.id.port("in")) :: Assign(
+            done,
+            reg.id.port("write_en")
+          ) :: doneHole :: structure
+        val (group, st) =
+          Group.fromStructure(groupName, struct, delay.map(_ + 1))
+        (
+          reg :: group :: st,
+          Enable(group.id),
+          store + (CompVar(s"$id") -> (reg.id, LocalVar))
+        )
+      }
+      // A `let` that just defines a register for future use.
+      case CLet(id, typ, None) => {
+        val (typ_b, _) = bitsForType(typ, c.pos)
+        val reg =
+          Stdlib.register(genName(s"$id"), typ_b)
+        val struct = List(reg)
+        (struct, Empty, store + (CompVar(s"$id") -> (reg.id, LocalVar)))
+      }
       case CExpr(app: EApp) => {
         val (invokeDecl, argSt, invokeControl) = emitInvokeDecl(app)
         (
@@ -838,36 +871,6 @@ private class CalyxBackendHelper {
           SeqComp(List(invokeControl)),
           store
         )
-      }
-      case CLet(id, typ, Some(e)) => {
-        val (typ_b, _) = bitsForType(typ, c.pos)
-        val reg =
-          Stdlib.register(genName(s"$id"), typ_b)
-        val out = emitExpr(e)(store)
-        val groupName = genName("let")
-        val doneHole = Assign(
-          reg.id.port("done"),
-          HolePort(groupName, "done")
-        )
-        val struct =
-          Assign(out.port, reg.id.port("in")) :: Assign(
-            out.done,
-            reg.id.port("write_en")
-          ) :: doneHole :: out.structure
-        val (group, st) =
-          Group.fromStructure(groupName, struct, out.delay.map(_ + 1))
-        (
-          reg :: group :: st,
-          Enable(group.id),
-          store + (CompVar(s"$id") -> (reg.id, LocalVar))
-        )
-      }
-      case CLet(id, typ, None) => {
-        val (typ_b, _) = bitsForType(typ, c.pos)
-        val reg =
-          Stdlib.register(genName(s"$id"), typ_b)
-        val struct = List(reg)
-        (struct, Empty, store + (CompVar(s"$id") -> (reg.id, LocalVar)))
       }
       case CUpdate(lhs, rhs) => {
         val rOut = emitExpr(rhs)(store)

@@ -9,6 +9,8 @@ import CompilerError._
 
 object Helpers {
 
+  val slowBinops = List("*", "/", "%")
+
   /** Given a binary string, returns the negated
     * two's complement representation.
     */
@@ -39,11 +41,12 @@ object Helpers {
       case Some(TFixed(t, i, _)) => (t, Some(i))
       case Some(_: TBool) => (1, None)
       case Some(_: TVoid) => (0, None)
-      case x =>
+      case Some(x) =>
         throw NotImplemented(
           s"Calyx cannot infer bitwidth for type $x. Please manually annotate it using a cast expression.",
           pos
         )
+      case None => throw Impossible(s"Explicit type missing. Try running with `--lower` or report an error with a reproducible program.")
     }
   }
 
