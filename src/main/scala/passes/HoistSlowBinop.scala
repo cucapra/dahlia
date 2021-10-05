@@ -25,7 +25,7 @@ object HoistSlowBinop extends TypedPartialTransformer {
   type Env = ExprEnv
   val emptyEnv = ExprEnv(ListMap())
 
-  private val slowBinops = List("*", "/")
+  private val slowBinops = List("*", "/", "%")
 
   var idx: Map[String, Int] = Map();
   def genName(base: String): Id = {
