@@ -1082,8 +1082,9 @@ private class CalyxBackendHelper {
           )
         }
     val imports =
-      Import("primitives/std.lib") ::
-        p.includes.flatMap(_.backends.get(C.Calyx)).map(i => Import(i)).toList
+      Import("primitives/core.futil") ::
+      Import("primitives/binary_operators.futil") ::
+      p.includes.flatMap(_.backends.get(C.Calyx)).map(i => Import(i)).toList
 
     val struct = declStruct.toList ++ cmdStruct
     val mainComponentName =
