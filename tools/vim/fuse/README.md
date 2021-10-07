@@ -4,4 +4,4 @@
 
 ## Install
 - If you're using [Pathogen](https://github.com/tpope/vim-pathogen):
-    - `cp -r tools/vim ~/.vim/bundle/vim-fuse`
+    - `cp -r tools/vim/fuse ~/.vim/bundle/vim-fuse`
