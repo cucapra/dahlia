@@ -349,7 +349,7 @@ private class CalyxBackendHelper {
         val fracBit1 = e1Bits - intBit1
         val fracBit2 = e2Bits - intBit2
         val isSigned = signed(e1.typ)
-        assertOrThrow(fracBit1 == fracBit2,
+        assertOrThrow(fracBit1 == fracBit2 && intBit1 == intBit2,
           NotImplemented(
             "Different-width fixed point not implemented. " +
             "Please open an issue if this is blocking."
