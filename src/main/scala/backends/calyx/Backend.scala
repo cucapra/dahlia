@@ -1,6 +1,6 @@
 package fuselang.backend.calyx
 
-import scala.math.{max, BigDecimal, BigInt}
+import scala.math.{BigDecimal, BigInt}
 
 import fuselang.backend.calyx.Calyx._
 import fuselang.Utils._
@@ -348,36 +348,21 @@ private class CalyxBackendHelper {
         val (e2Bits, Some(intBit2)) = bitsForType(e2.typ, e2.pos)
         val fracBit1 = e1Bits - intBit1
         val fracBit2 = e2Bits - intBit2
-        val outBit = max(intBit1, intBit2) + max(fracBit1, fracBit2)
         val isSigned = signed(e1.typ)
+        assertOrThrow(fracBit1 == fracBit2 && intBit1 == intBit2,
+          NotImplemented(
+            "Different-width fixed point not implemented. " +
+            "Please open an issue if this is blocking."
+          )
+        )
         val binOp =
-          if (fracBit1 != fracBit2) {
-            assertOrThrow(
-              compName == "add",
-              NotImplemented(
-                "Only addition is supported for different-width operators"
-              )
-            )
-            Stdlib.fixed_point_diff_width(
-              s"$compName",
-              e1Bits,
-              e2Bits,
-              intBit1,
-              fracBit1,
-              intBit2,
-              fracBit2,
-              outBit,
-              isSigned
-            )
-          } else {
-            Stdlib.fixed_point_binop(
-              s"$compName",
-              e1Bits,
-              intBit1,
-              fracBit1,
-              isSigned
-            );
-          }
+          Stdlib.fixed_point_binop(
+            s"$compName",
+            e1Bits,
+            intBit1,
+            fracBit1,
+            isSigned
+        );
         val comp = Cell(genName(compName), binOp, List())
         val struct = List(
           comp,
