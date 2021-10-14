@@ -349,30 +349,6 @@ object Stdlib {
       List(width, int_width, frac_width)
     )
 
-  def fixed_point_diff_width(
-      op: String,
-      width1: Int,
-      width2: Int,
-      int_width1: Int,
-      fract_width1: Int,
-      int_width2: Int,
-      fract_width2: Int,
-      out_width: Int,
-      signed: Boolean
-  ): Calyx.CompInst =
-    Calyx.CompInst(
-      "std_fp_" + (if (signed) "s" else "") + s"$op" + "_dwidth",
-      List(
-        width1,
-        width2,
-        int_width1,
-        fract_width1,
-        int_width2,
-        fract_width2,
-        out_width
-      )
-    )
-
   val staticTimingMap: Map[String, Int] = Map(
     "mult" -> 3
   )
