@@ -1,0 +1,6 @@
+for (let i: ubit<4> = 0..10) {
+  let x: ubit<4> = 0;
+  for (let j: ubit<4> = 0..10) {
+    x += j;
+  }
+}
