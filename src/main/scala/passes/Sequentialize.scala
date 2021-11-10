@@ -13,7 +13,10 @@ object Sequentialize extends PartialTransformer {
   case class SeqEnv(uses: Set[Id], defines: Set[Id], useLHS: Boolean)
       extends ScopeManager[SeqEnv] {
     def merge(that: SeqEnv) = {
-      assert(this.useLHS == that.useLHS)
+      assert(
+        this.useLHS == that.useLHS,
+        "Attempting to merge environment with different useLHS"
+      )
       SeqEnv(
         this.uses union that.uses,
         this.defines union that.defines,
@@ -24,8 +27,8 @@ object Sequentialize extends PartialTransformer {
       this.copy(uses = this.uses + x)
     def addDefine(x: Id) =
       this.copy(defines = this.defines + x)
-    def shouldUseLHS() =
-      this.copy(useLHS = true)
+    def setUseLHS(useLHS: Boolean) =
+      this.copy(useLHS = useLHS)
   }
 
   type Env = SeqEnv
@@ -66,8 +69,8 @@ object Sequentialize extends PartialTransformer {
     }
     case (c @ CReduce(_, lhs, rhs), env) => {
       val (nRhs, e1) = rewriteE(rhs)(env)
-      val (nLhs, e2) = rewriteLVal(lhs)(e1.shouldUseLHS())
-      c.copy(lhs = nLhs, rhs = nRhs) -> e2
+      val (nLhs, e2) = rewriteLVal(lhs)(e1.setUseLHS(true))
+      c.copy(lhs = nLhs, rhs = nRhs) -> e2.setUseLHS(false)
     }
     case (c @ CLet(id, _, Some(init)), env) => {
       val (nInit, e1) = rewriteE(init)(env)
