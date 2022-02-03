@@ -74,6 +74,8 @@ object CodeGenHelpers {
     case (NumOp("*", _), _, EInt(0, b)) => EInt(0, b)
     case (NumOp("+", _), l, EInt(0, _)) => l
     case (NumOp("+", _), EInt(0, _), r) => r
+    case (BitOp("<<"), l, EInt(0, _)) => l
+    case (BitOp(">>"), l, EInt(0, _)) => l
     case _ => EBinop(op, l, r)
   }
 
