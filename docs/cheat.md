@@ -240,7 +240,7 @@ The split factor must divide the size of the dimension that is being split.
 
 ```dahlia
 let A: float[8];
-view split_A = split A[by 2]; // split_A has type float[4 bank 2][2 bank 2]
+split split_A = A[by 2]; // split_A has type float[4 bank 2][2 bank 2]
 ```
 
 ## Program Structure
