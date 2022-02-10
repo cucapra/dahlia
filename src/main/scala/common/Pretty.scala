@@ -194,7 +194,7 @@ object Pretty {
         ssep(
           factors.map(factor => brackets(text("by") <+> value(factor))),
           emptyDoc
-        )
+        ) <> semi
     case CBlock(cmd) => scope(emitCmd(cmd))
   }
 }

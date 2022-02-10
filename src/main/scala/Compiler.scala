@@ -113,7 +113,7 @@ object Compiler {
           case _: Errors.TypeError => {
             s"[${red("Type error")}] ${err.getMessage}" +
               (if (c.enableLowering)
-                 "\nDoes this program type check without the `--lower` flag? If not, please report this as an error."
+                 "\nDoes this program type check without the `--lower` flag? If it does, please report this as an error."
                else "")
           }
           case _: Errors.ParserError =>
