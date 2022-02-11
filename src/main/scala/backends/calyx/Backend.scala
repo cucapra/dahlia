@@ -716,6 +716,13 @@ private class CalyxBackendHelper {
             + s"e.g. `let _temp = $functionId(...);`",
           functionId.pos
         )
+      case e: ERational => {
+        val pretty = Pretty.emitExpr(e)(false).pretty
+        throw BackendError(
+          s"Expression `${pretty}` inferred to be an `ERational` which cannot be emitted. If you intended this to be a fixed-point constant, use a cast expression: ($pretty as fix<64, 32>) ",
+          e.pos
+        )
+      }
       case x =>
         throw NotImplemented(s"Calyx backend does not support $x yet.", x.pos)
     }
