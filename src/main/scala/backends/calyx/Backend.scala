@@ -600,7 +600,7 @@ private class CalyxBackendHelper {
         }
 
         val intBits = binaryString(intPart.toInt, intWidth)
-        val fracBits = binaryString(fracValue.toIntExact, fracWidth)
+        val fracBits = binaryString(fracValue.toBigInt, fracWidth)
         val bits = if (isNegative) {
           negateTwosComplement(intBits + fracBits)
         } else {

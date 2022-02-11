@@ -27,8 +27,8 @@ object Helpers {
 
   /** Given an integer, returns the corresponding
     * zero-padded string of size `width`. */
-  def binaryString(value: Int, width: Int): String = {
-    val s = value.toBinaryString
+  def binaryString(value: BigInt, width: Int): String = {
+    val s = value.toString(2)
     "0" * max(width - s.length(), 0) + s
   }
 
