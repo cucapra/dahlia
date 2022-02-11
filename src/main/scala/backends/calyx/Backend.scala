@@ -572,6 +572,10 @@ private class CalyxBackendHelper {
           None
         )
       }
+      case EBool(v) => {
+        val const = Cell(genName("bool"), Stdlib.constant(1, if (v) 1 else 0), List())
+        EmitOutput(const.id.port("out"), ConstantPort(1, 1), List(const), Some(0), None)
+      }
       // Cast ERational to Fixed Point.
       case ECast(ERational(value), typ) => {
         val _ = rhsInfo
