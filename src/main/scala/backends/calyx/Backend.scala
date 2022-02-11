@@ -494,6 +494,7 @@ private class CalyxBackendHelper {
           case "|" => "or"
           case ">>" => "rsh"
           case "<<" => "lsh"
+          case "^" => "xor"
           case x =>
             throw NotImplemented(
               s"Calyx backend does not support '$x' yet.",
