@@ -349,10 +349,11 @@ private class CalyxBackendHelper {
         val fracBit1 = e1Bits - intBit1
         val fracBit2 = e2Bits - intBit2
         val isSigned = signed(e1.typ)
-        assertOrThrow(fracBit1 == fracBit2 && intBit1 == intBit2,
+        assertOrThrow(
+          fracBit1 == fracBit2 && intBit1 == intBit2,
           NotImplemented(
             "Different-width fixed point not implemented. " +
-            "Please open an issue if this is blocking."
+              "Please open an issue if this is blocking."
           )
         )
         val binOp =
@@ -362,7 +363,7 @@ private class CalyxBackendHelper {
             intBit1,
             fracBit1,
             isSigned
-        );
+          );
         val comp = Cell(genName(compName), binOp, List())
         val struct = List(
           comp,
@@ -573,8 +574,15 @@ private class CalyxBackendHelper {
         )
       }
       case EBool(v) => {
-        val const = Cell(genName("bool"), Stdlib.constant(1, if (v) 1 else 0), List())
-        EmitOutput(const.id.port("out"), ConstantPort(1, 1), List(const), Some(0), None)
+        val const =
+          Cell(genName("bool"), Stdlib.constant(1, if (v) 1 else 0), List())
+        EmitOutput(
+          const.id.port("out"),
+          ConstantPort(1, 1),
+          List(const),
+          Some(0),
+          None
+        )
       }
       // Cast ERational to Fixed Point.
       case ECast(ERational(value), typ) => {
@@ -997,16 +1005,6 @@ private class CalyxBackendHelper {
         }
       )
 
-    val declStruct = p.decls.map(emitDecl)
-    val store =
-      declStruct.foldLeft(Map[CompVar, (CompVar, VType)]())((store, struct) =>
-        struct match {
-          case Cell(id, _, _) => store + (id -> (id, LocalVar))
-          case _ => store
-        }
-      )
-    val (cmdStruct, control, _) = emitCmd(p.cmd)(store, id2FuncDef)
-
     val functionDefinitions: List[Component] =
       for ((id, FuncDef(_, params, retType, Some(bodyOpt))) <- id2FuncDef.toList)
         yield {
@@ -1081,14 +1079,26 @@ private class CalyxBackendHelper {
             controls
           )
         }
+
     val imports =
       Import("primitives/core.futil") ::
-      Import("primitives/binary_operators.futil") ::
-      p.includes.flatMap(_.backends.get(C.Calyx)).map(i => Import(i)).toList
+        Import("primitives/binary_operators.futil") ::
+        p.includes.flatMap(_.backends.get(C.Calyx)).map(i => Import(i)).toList
+
+    val declStruct = p.decls.map(emitDecl)
+    val store =
+      declStruct.foldLeft(Map[CompVar, (CompVar, VType)]())((store, struct) =>
+        struct match {
+          case Cell(id, _, _) => store + (id -> (id, LocalVar))
+          case _ => store
+        }
+      )
+    val (cmdStruct, control, _) = emitCmd(p.cmd)(store, id2FuncDef)
 
     val struct = declStruct.toList ++ cmdStruct
     val mainComponentName =
       if (c.kernelName == "kernel") "main" else c.kernelName
+
     Namespace(
       "prog",
       imports
