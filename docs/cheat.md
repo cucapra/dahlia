@@ -195,32 +195,37 @@ import "printer.h" {
 ## Views
 
 Views are used to represent different memory access patterns.
-Once created, they are accessed transparently as arrays.
+Once created, they are accessed transparently as arrays and can be used to
+define other views.
 
 ### Shrink Views
 A shrink view reduces the banking of a memory by a integer factor.
 
 ```dahlia
 let A: float[16 bank 8];
-view sh = shrink[by 4];
+view sh = A[_: bank 4];
 for (let i = 0..8) unroll 2 {
   sh[i]; // OK: sh has 2 banks (8 / 4 = 2)
 }
 ```
 
-### Suffix and Prefix Views
-These views let you take a prefix or a suffix of a memory as long as the banking factor of a memory
-is a factor of the prefix / suffix. To enforce this restriction, the syntax of suffix/prefix is
-`suffix M[by k * e]` where `k` must be an integer.
+The leading `_` tells the compiler that this view is only reducing the banking
+factor without affecting the indexing logic.
+
+### Suffix Views
+These views let you take a suffix of a memory as long as the banking factor of a memory
+is a factor of the suffix. To enforce this restriction, the syntax of suffix/prefix is
+`M[k * e: bank b]` where `k` must be an integer factor of `b`.
 
 ```dahlia
 let A: float[6 bank 4];
 for (let i = 0..4) {
-  view s = suffix A[by 2 * i];
-  ---
-  view s = prefix A[by 2 * i];
+  view s = A[2 * i: bank 4];
 }
 ```
+
+The `bank 4` refers to a possible shrink view. This allows for terse
+expressions of combined suffix and shrink views.
 
 ### Shift Views
 These are generalized suffix/prefix views that lift the restriction that the banking factor
@@ -230,7 +235,7 @@ any expression.
 ```dahlia
 let A: float[6 bank 4];
 for (let i = 0..4) {
-  view s = shift A[by i * i];
+  view s = A[i * i: bank 4];
 }
 ```
 
