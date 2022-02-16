@@ -168,7 +168,7 @@ Functions cannot return values. They can only modify buffers.
 
 ```dahlia
 
-def foo(a: bit<32>[10], b: bit<32>[10]) {
+def foo(a: bit<32>[10], b: bit<32>[10]) = {
   a[0] := b[0];
 }
 ```
