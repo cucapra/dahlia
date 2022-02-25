@@ -40,7 +40,7 @@ object Configuration {
       output: Option[String] = None, // Name of output file.
       backend: BackendOption = Vivado, // Backend used for code generation
       mode: Mode = Compile, // Compilation mode
-      compilerOpts: List[String] = List(), // Extra options to the generateExec Compiler
+      compilerOpts: List[String] = List(), // Extra options for the backend
       header: Boolean = false, // Generate a header
       passDebug: Boolean = false, // Show AST after every state
       logLevel: scribe.Level = scribe.Level.Warn,

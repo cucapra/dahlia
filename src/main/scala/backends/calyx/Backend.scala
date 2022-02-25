@@ -1085,27 +1085,31 @@ private class CalyxBackendHelper {
         Import("primitives/binary_operators.futil") ::
         p.includes.flatMap(_.backends.get(C.Calyx)).map(i => Import(i)).toList
 
-    val declStruct = p.decls.map(emitDecl)
-    val store =
-      declStruct.foldLeft(Map[CompVar, (CompVar, VType)]())((store, struct) =>
-        struct match {
-          case Cell(id, _, _) => store + (id -> (id, LocalVar))
-          case _ => store
-        }
-      )
-    val (cmdStruct, control, _) = emitCmd(p.cmd)(store, id2FuncDef)
+    val main = if (!c.compilerOpts.contains("no-main")) {
+      val declStruct = p.decls.map(emitDecl)
+      val store =
+        declStruct.foldLeft(Map[CompVar, (CompVar, VType)]())((store, struct) =>
+          struct match {
+            case Cell(id, _, _) => store + (id -> (id, LocalVar))
+            case _ => store
+          }
+        )
+      val (cmdStruct, control, _) = emitCmd(p.cmd)(store, id2FuncDef)
 
-    val struct = declStruct.toList ++ cmdStruct
-    val mainComponentName =
-      if (c.kernelName == "kernel") "main" else c.kernelName
+      val struct = declStruct.toList ++ cmdStruct
+      val mainComponentName =
+        if (c.kernelName == "kernel") "main" else c.kernelName
+      List(
+        Component(mainComponentName, List(), List(), struct.sorted, control)
+      )
+    } else {
+      List()
+    }
 
     Namespace(
       "prog",
       imports
-        ++ functionDefinitions
-        ++ List(
-          Component(mainComponentName, List(), List(), struct.sorted, control)
-        )
+        ++ functionDefinitions ++ main
     ).emit()
   }
 }

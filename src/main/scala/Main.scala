@@ -98,6 +98,13 @@ object Main {
       .action((m, c) => c.copy(memoryInterface = memoryInterfaces(m)))
       .text("The memory interface to use for the Vivado backend. Default `axi`")
 
+
+    opt[String]('x', "compiler-opt")
+      .optional()
+      .unbounded()
+      .action((x, c) => c.copy(compilerOpts = x :: c.compilerOpts))
+      .text("Options to be passed to the backend. Can be repeated.")
+
     cmd("run")
       .action((_, c) => c.copy(mode = Run, backend = Cpp))
       .text(
@@ -108,11 +115,6 @@ object Main {
           .required()
           .action((f, c) => c.copy(output = Some(f)))
           .text("Name of the output artifact."),
-        opt[String]('x', "compiler-opt")
-          .optional()
-          .unbounded()
-          .action((x, c) => c.copy(compilerOpts = x :: c.compilerOpts))
-          .text("Option to be passed to the C++ compiler. Can be repeated.")
       )
   }
 
