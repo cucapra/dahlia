@@ -1,7 +1,26 @@
 name := "Dahlia"
-version := "0.0.2"
+ThisBuild / version := "0.0.2"
+ThisBuild / scalaVersion := "2.13.6"
 
-scalaVersion := "2.13.6"
+lazy val shared = project
+  /* .settings(scalaVersion := "3.0.0") */
+lazy val root = (project in file("."))
+  .dependsOn(shared)
+  /* .settings(scalacOptions += "-Ytasty-reader") */
+
+shared / libraryDependencies ++= Seq(
+  "org.scala-lang.modules" %% "scala-parser-combinators" % "2.1.1",
+  "com.outr" %% "scribe" % "3.5.5",
+)
+
+ThisBuild / scalacOptions ++= Seq(
+  "-deprecation",
+  "-unchecked",
+  "-feature",
+  "-Ywarn-unused",
+  "-Ywarn-value-discard",
+  "-Xfatal-warnings"
+)
 
 libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.0.8" % "test",
@@ -12,14 +31,6 @@ libraryDependencies ++= Seq(
   "com.lihaoyi" %% "sourcecode" % "0.2.7"
 )
 
-scalacOptions ++= Seq(
-  "-deprecation",
-  "-unchecked",
-  "-feature",
-  "-Ywarn-unused",
-  "-Ywarn-value-discard",
-  "-Xfatal-warnings"
-)
 
 // Reload changes to this file.
 Global / onChangedBuildSource := ReloadOnSourceChanges

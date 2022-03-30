@@ -390,7 +390,7 @@ case class Parser(input: String) {
         case (fn, args, ret) => FuncDef(fn, args.toList, ret, None)
       })
     )
-  def funcDef[_: P]: P[FuncDef] =
+  def funcDef[Q: P]: P[FuncDef] =
     positioned(
       P(kw("def") ~/ iden ~ parens(args.rep(sep = ",")) ~ retTyp ~ "=" ~ block)
         .map({
