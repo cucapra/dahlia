@@ -101,7 +101,7 @@ object PrettyPrint {
     /** A nested Doc, which will be indented as specified. */
     def nest(d: Doc, i: Int): Doc = DocNest(i, d)
 
-    def folddoc(ds: Iterable[Doc], f: (Doc, Doc) => Doc) =
+    def folddoc(ds: Iterable[Doc], f: (Doc, Doc) => Doc): Doc =
       if (ds.isEmpty) emptyDoc
       else ds.tail.foldLeft(ds.head)(f)
 
@@ -121,21 +121,21 @@ object PrettyPrint {
     def vsep(ds: Iterable[Doc]): Doc =
       folddoc(ds, (_ <@> _))
 
-    def enclose(l: Doc, d: Doc, r: Doc) = l <> d <> r
+    def enclose(l: Doc, d: Doc, r: Doc): Doc = l <> d <> r
 
-    def surround(d: Doc, s: Doc) = enclose(s, d, s)
+    def surround(d: Doc, s: Doc): Doc = enclose(s, d, s)
 
-    def commaSep(docs: Seq[Doc]) = hsep(docs, comma <> space)
+    def commaSep(docs: Seq[Doc]): Doc = hsep(docs, comma <> space)
 
     def scope(doc: Doc, indent: Int = 2): Doc =
       lbrace <> nest(emptyDoc <@> doc, indent) <@> rbrace
 
     /** Common functions **/
-    def quote(d: Doc) = surround(d, text("\""))
+    def quote(d: Doc): Doc = surround(d, text("\""))
 
-    def parens(d: Doc) = enclose(text("("), d, text(")"))
-    def braces(d: Doc) = enclose(text("{"), d, text("}"))
-    def brackets(d: Doc) = enclose(text("["), d, text("]"))
-    def angles(d: Doc) = enclose(text("<"), d, text(">"))
+    def parens(d: Doc): Doc = enclose(text("("), d, text(")"))
+    def braces(d: Doc): Doc = enclose(text("{"), d, text("}"))
+    def brackets(d: Doc): Doc = enclose(text("["), d, text("]"))
+    def angles(d: Doc): Doc = enclose(text("<"), d, text(">"))
   }
 }

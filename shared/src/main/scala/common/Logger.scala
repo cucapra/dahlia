@@ -3,12 +3,13 @@ package fuselang.common
 import scala.util.parsing.input.Positional
 import scribe._
 import scribe.format._
+import scribe.output.TextOutput
 
 object Logger {
 
   /** Makes all positionals logable by scribe */
   implicit object PositionalLoggable extends Loggable[(String, Positional)] {
-    override def apply(value: (String, Positional)) = {
+    override def apply(value: (String, Positional)): TextOutput = {
       val pos = value._2.pos
 
       new output.TextOutput(
@@ -27,7 +28,7 @@ object Logger {
   /**
     * Stateful function to set the logging level in the compiler.
     */
-  def setLogLevel(level: Level) = {
+  def setLogLevel(level: Level): scribe.Logger = {
     scribe.Logger.root
       .clearHandlers()
       .withHandler(formatter = format, minimumLevel = Some(level))

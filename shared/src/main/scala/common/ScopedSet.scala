@@ -6,7 +6,7 @@ package fuselang.common
 case class ScopedSet[V](val setList: List[Set[V]] = List(Set[V]()))
     extends AnyVal {
 
-  override def toString =
+  override def toString: String =
     setList.map(set => s"{${set.mkString(", ")}}").mkString("->")
 
   def contains(v: V): Boolean = setList.exists(set => set.contains(v))

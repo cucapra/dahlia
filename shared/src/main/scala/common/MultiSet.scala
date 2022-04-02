@@ -4,7 +4,7 @@ import scala.collection.immutable.Map
 
 object MultiSet {
 
-  def emptyMultiSet[K]() = MultiSet[K](Map[K, Int]())
+  def emptyMultiSet[K](): MultiSet[K] = MultiSet[K](Map[K, Int]())
 
   def fromSeq[K](seq: Seq[K]): MultiSet[K] =
     MultiSet(seq.foldLeft(Map[K, Int]())({
@@ -21,7 +21,7 @@ object MultiSet {
     def containsAtLeast(element: K, num: Int): Boolean =
       setMap.get(element).map(_ >= num).getOrElse(false)
 
-    override def toString =
+    override def toString: String =
       setMap.toList
         .map({ case (v, n) => List.tabulate(n)(_ => v) })
         .flatten
@@ -42,23 +42,23 @@ object MultiSet {
     }
 
     /** Calculate multiset difference */
-    def diff(that: MultiSet[K]) =
+    def diff(that: MultiSet[K]): MultiSet[K] =
       MultiSet(setMap.map({
         case (k, v) => {
           k -> (if (that.setMap.contains(k)) (v - that.setMap(k)) else v)
         }
       }))
 
-    def add(key: K) = MultiSet(setMap + (key -> (setMap.getOrElse(key, 0) + 1)))
+    def add(key: K): MultiSet[K] = MultiSet(setMap + (key -> (setMap.getOrElse(key, 0) + 1)))
 
-    def remove(key: K) =
+    def remove(key: K): MultiSet[K] =
       MultiSet(setMap + (key -> (setMap.getOrElse(key, 0) - 1)))
 
     def keys = setMap.keys
 
-    def forall = setMap.forall _
+    def forall: (((K, Int)) => Boolean) => Boolean = setMap.forall _
 
-    def find = setMap.find _
+    def find: (((K, Int)) => Boolean) => Option[(K, Int)] = setMap.find _
 
     def getCount(k: K): Int = setMap(k)
 

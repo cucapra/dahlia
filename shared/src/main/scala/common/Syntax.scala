@@ -13,8 +13,8 @@ object Syntax {
     */
   object Annotations {
     sealed trait Consumable
-    final case object ShouldConsume extends Consumable
-    final case object SkipConsume extends Consumable
+    case object ShouldConsume extends Consumable
+    case object SkipConsume extends Consumable
 
     sealed trait ConsumableAnnotation {
       var consumable: Option[Consumable] = None
@@ -36,16 +36,16 @@ object Syntax {
   import Annotations._
 
   case class Id(v: String) extends Positional with TypeAnnotation {
-    override def toString = s"$v"
+    override def toString: String = s"$v"
   }
 
   // Capabilities for read/write
   sealed trait Capability
-  final case object Read extends Capability
-  final case object Write extends Capability
+  case object Read extends Capability
+  case object Write extends Capability
 
   sealed trait Type extends Positional {
-    override def toString = this match {
+    override def toString: String = this match {
       case _: TVoid => "void"
       case _: TBool => "bool"
       case _: TRational => "rational"
@@ -102,7 +102,7 @@ object Syntax {
 
   sealed trait BOp extends Positional {
     val op: String;
-    override def toString = this.op
+    override def toString: String = this.op
     def toFun: Option[(Double, Double) => Double] = this match {
       case n: NumOp => Some(n.fun)
       case _ => None
@@ -116,7 +116,7 @@ object Syntax {
   case class BitOp(op: String) extends BOp
 
   sealed trait Expr extends Positional with TypeAnnotation {
-    def isLVal = this match {
+    def isLVal: Boolean = this match {
       case _: EVar | _: EArrAccess | _: EPhysAccess => true
       case _ => false
     }
@@ -156,7 +156,7 @@ object Syntax {
   }
 
   case class ROp(op: String) extends Positional {
-    override def toString = this.op
+    override def toString: String = this.op
   }
 
   /** Views **/

@@ -60,7 +60,7 @@ object Transformer {
     def rewriteDeclSeq(ds: Seq[Decl])(implicit env: Env): (Seq[Decl], Env) =
       (ds, env)
 
-    def rewriteDef(defi: Definition)(implicit env: Env) = defi match {
+    def rewriteDef(defi: Definition)(implicit env: Env): (Definition, Env) = defi match {
       case fdef @ FuncDef(_, args, _, bodyOpt) => {
         val (nArgs, env1) = rewriteDeclSeq(args)
 

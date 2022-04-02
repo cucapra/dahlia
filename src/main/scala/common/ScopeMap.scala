@@ -12,7 +12,7 @@ object ScopeMap {
   case class ScopedMap[K, V](val mapList: List[Map[K, V]] = List(Map[K, V]()))
       extends AnyVal {
 
-    override def toString =
+    override def toString: String =
       mapList
         .map(map => s"${map.map({ case (k, v) => s"$k -> $v" }).mkString(",")}")
         .mkString(" ==> ")
@@ -20,7 +20,7 @@ object ScopeMap {
     def iterator = mapList.iterator
 
     def head = mapList.head
-    def length = mapList.length - 1
+    def length: Int = mapList.length - 1
 
     /**
       * Returns first occurance of the binding for key in the scope chain.
@@ -68,10 +68,10 @@ object ScopeMap {
     }
 
     /** Return the set of all keys. */
-    def keys = mapList.flatMap(m => m.keys).toSet
+    def keys: Set[K] = mapList.flatMap(m => m.keys).toSet
 
     // Convinience methods
-    def apply(k: K) =
+    def apply(k: K): V =
       get(k).getOrThrow(Impossible(s"$k was not found in $this."))
 
     def +(bind: (K, V)) = add(bind._1, bind._2)

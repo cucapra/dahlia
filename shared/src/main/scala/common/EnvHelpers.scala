@@ -54,7 +54,7 @@ object EnvHelpers {
     * information.
     */
   final case class UnitEnv() extends ScopeManager[UnitEnv] {
-    def merge(that: UnitEnv) = this
+    def merge(that: UnitEnv): UnitEnv = this
   }
 
 }

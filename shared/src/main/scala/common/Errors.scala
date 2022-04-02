@@ -6,7 +6,7 @@ import scala.util.parsing.input.Position
 
 object Errors {
 
-  def withPos(s: String, pos: Position, postMsg: String = "") =
+  def withPos(s: String, pos: Position, postMsg: String = ""): String =
     s"[Line ${pos.line}, Column ${pos.column}] $s\n${pos.longString}\n${postMsg}"
 
   class TypeError(msg: String) extends RuntimeException(msg) {
@@ -22,7 +22,7 @@ object Errors {
       conLocs: MultiSet[Position],
       pos: Position,
       trace: Seq[String]
-  ) = {
+  ): String = {
     val prevCons = conLocs.setMap
       .dropRight(1)
       .map({
@@ -45,10 +45,10 @@ object Errors {
       """.stripMargin.trim
   }
 
-  @deprecated(
+  /* @deprecated(
     "MsgErrors are not informative. Either create a new Error case or reuse one of the exisiting ones",
     "fuse 0.0.1"
-  )
+  ) */
   case class MsgError(msg: String, pos: Position) extends TypeError(msg, pos)
 
   // Type mismatch
@@ -306,7 +306,10 @@ object CompilerError {
       line: sourcecode.Line
   ) extends RuntimeException(s"[$func:$line] $msg")
   object Impossible {
-    def apply(msg: String, pos: Position): Impossible =
+    def apply(msg: String, pos: Position)(
+        implicit func: sourcecode.Enclosing,
+        line: sourcecode.Line
+    ): Impossible =
       this(Errors.withPos(msg, pos))
   }
 

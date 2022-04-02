@@ -11,18 +11,22 @@ lazy val root = (project in file("."))
 shared / libraryDependencies ++= Seq(
   "org.scala-lang.modules" %% "scala-parser-combinators" % "2.1.1",
   "com.outr" %% "scribe" % "3.5.5",
+  "com.lihaoyi" %% "sourcecode" % "0.2.8",
 )
 
 ThisBuild / scalacOptions ++= Seq(
   "-deprecation",
   "-unchecked",
   "-feature",
-  "-Ywarn-unused",
-  "-Ywarn-value-discard",
   "-Xfatal-warnings"
 )
 
-libraryDependencies ++= Seq(
+root / scalacOptions ++= Seq(
+  "-Ywarn-unused",
+  "-Ywarn-value-discard",
+)
+
+root / libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.0.8" % "test",
   "org.scala-lang.modules" %% "scala-parser-combinators" % "2.0.0",
   "com.lihaoyi" %% "fastparse" % "2.3.0",
@@ -39,14 +43,14 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 scalacOptions in (Compile, console) ~=
   (_ filterNot ((Set("-Xfatal-warnings", "-Ywarn-unused").contains(_))))
 
-testOptions in Test += Tests.Argument("-oD")
-parallelExecution in Test := false
-logBuffered in Test := false
+Test / testOptions += Tests.Argument("-oD")
+Test / parallelExecution := false
+Test / logBuffered := false
 
 /* Store commit hash information */
-resourceGenerators in Compile += Def.task {
+Compile / resourceGenerators += Def.task {
   import scala.sys.process._
-  val file = (resourceManaged in Compile).value / "version.properties"
+  val file = (Compile / resourceManaged).value / "version.properties"
   val gitHash = "git rev-parse --short HEAD".!!
   val gitDiff = "git diff --stat".!!
   val status = if (gitDiff.trim() != "") "dirty" else "clean"
@@ -59,11 +63,11 @@ resourceGenerators in Compile += Def.task {
 }
 
 /* sbt-assembly configuration: build an executable jar. */
-assemblyOption in assembly := (assemblyOption in assembly).value.copy(
+assembly / assemblyOption := (assembly / assemblyOption ).value.copy(
     prependShellScript = Some(sbtassembly.AssemblyPlugin.defaultShellScript)
 )
-assemblyJarName in assembly := "fuse.jar"
-test in assembly := {}
+assembly / assemblyJarName  := "fuse.jar"
+assembly / test := {}
 
 /* Define task to download picojson headers */
 val getHeaders = taskKey[Unit]("Download header dependencies for runnable backend.")

@@ -51,7 +51,7 @@ object Checker {
       checkSeqWith[Command](checkC(_: Command)(_: Env))(cmds)(env)
     }
 
-    def checkDef(defi: Definition)(implicit env: Env) = defi match {
+    def checkDef(defi: Definition)(implicit env: Env): Env = defi match {
       case FuncDef(_, _, _, bodyOpt) => bodyOpt.map(checkC).getOrElse(env)
       case _: RecordDef => env
     }

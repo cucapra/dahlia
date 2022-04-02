@@ -5,7 +5,7 @@ import scala.math.{log10, ceil, abs}
 object Utils {
 
   implicit class RichOption[A](opt: => Option[A]) {
-    def getOrThrow[T <: Throwable](except: T) = opt match {
+    def getOrThrow[T <: Throwable](except: T): A = opt match {
       case Some(v) => v
       case None => throw except
     }
@@ -43,7 +43,7 @@ object Utils {
     case (a, b) => f(a, b)
   }
 
-  @inline def assertOrThrow[T <: Throwable](cond: Boolean, except: => T) = {
+  @inline def assertOrThrow[T <: Throwable](cond: Boolean, except: => T): Unit = {
     if (!cond) throw except
   }
 
@@ -51,7 +51,7 @@ object Utils {
     "pr is used for debugging. Remove all call to it before committing",
     "fuse 0.0.1"
   )
-  @inline def pr[T](v: T) = {
+  @inline def pr[T](v: T): T = {
     println(v)
     v
   }
