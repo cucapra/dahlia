@@ -12,7 +12,7 @@ import EnvHelpers._
 
 object DependentLoops {
 
-  def check(p: Prog) = DepCheck.check(p)
+  def check(p: Prog): Unit = DepCheck.check(p)
 
   private case class UseEnv(
       used: Set[Id]
@@ -28,13 +28,13 @@ object DependentLoops {
   private final case object UseCheck extends PartialChecker {
 
     type Env = UseEnv
-    val emptyEnv = UseEnv(Set())
+    val emptyEnv: UseEnv = UseEnv(Set())
 
     def myCheckE: PF[(Expr, Env), Env] = {
       case (EVar(id), env) => env.add(id)
     }
 
-    override def checkE(expr: Expr)(implicit env: Env) =
+    override def checkE(expr: Expr)(implicit env: Env): Env =
       mergeCheckE(myCheckE)(expr, env)
   }
 
@@ -72,7 +72,7 @@ object DependentLoops {
   private final case object DepCheck extends PartialChecker {
 
     type Env = DepEnv
-    val emptyEnv = DepEnv(Set(), Set())
+    val emptyEnv: DepEnv = DepEnv(Set(), Set())
 
     def myCheckE: PF[(Expr, Env), Env] = {
       case (EArrAccess(id @ _, idxs), env) => {
@@ -114,9 +114,9 @@ object DependentLoops {
       }
     }
 
-    override def checkE(expr: Expr)(implicit env: Env) =
+    override def checkE(expr: Expr)(implicit env: Env): Env =
       mergeCheckE(myCheckE)(expr, env)
-    override def checkC(cmd: Command)(implicit env: Env) =
+    override def checkC(cmd: Command)(implicit env: Env): Env =
       mergeCheckC(myCheckC)(cmd, env)
   }
 }

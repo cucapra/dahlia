@@ -12,7 +12,7 @@ import Checker._
 
 object CapabilityChecker {
 
-  def check(p: Prog) = CapChecker.check(p)
+  def check(p: Prog): Unit = CapChecker.check(p)
 
   private final case object CapChecker extends PartialChecker {
 
@@ -55,7 +55,7 @@ object CapabilityChecker {
       * This doesn't need to be partial function since it deals with all
       * cases in checkLVal.
       */
-    override def checkLVal(e: Expr)(implicit env: Env) = e match {
+    override def checkLVal(e: Expr)(implicit env: Env): Env = e match {
       case acc @ EArrAccess(_, idxs) => {
         val (nEnv, consumableAnn, cap) = env.get(e) match {
           case Some(Write) => throw AlreadyWrite(e)
@@ -68,9 +68,9 @@ object CapabilityChecker {
       case _ => checkE(e)
     }
 
-    override def checkE(expr: Expr)(implicit env: Env) =
+    override def checkE(expr: Expr)(implicit env: Env): Env =
       mergeCheckE(myCheckE)(expr, env)
-    override def checkC(cmd: Command)(implicit env: Env) =
+    override def checkC(cmd: Command)(implicit env: Env): Env =
       mergeCheckC(myCheckC)(cmd, env)
 
   }

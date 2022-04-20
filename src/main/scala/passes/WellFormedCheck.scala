@@ -12,7 +12,7 @@ import EnvHelpers._
 
 object WellFormedChecker {
 
-  def check(p: Prog) = WFCheck.check(p)
+  def check(p: Prog): Unit = WFCheck.check(p)
 
   private case class WFEnv(
       insideUnroll: Boolean = false,
@@ -24,9 +24,9 @@ object WellFormedChecker {
   private final case object WFCheck extends PartialChecker {
 
     type Env = WFEnv
-    val emptyEnv = WFEnv()
+    val emptyEnv: WFEnv = WFEnv()
 
-    override def checkDef(defi: Definition)(implicit env: Env) = defi match {
+    override def checkDef(defi: Definition)(implicit env: Env): Env = defi match {
       case FuncDef(_, _, _, bodyOpt) =>
         bodyOpt.map(checkC(_)(env.copy(insideFunc = true))).getOrElse(env)
       case _: RecordDef => env
@@ -96,9 +96,9 @@ object WellFormedChecker {
       }
     }
 
-    override def checkE(expr: Expr)(implicit env: Env) =
+    override def checkE(expr: Expr)(implicit env: Env): Env =
       mergeCheckE(myCheckE)(expr, env)
-    override def checkC(cmd: Command)(implicit env: Env) =
+    override def checkC(cmd: Command)(implicit env: Env): Env =
       mergeCheckC(myCheckC)(cmd, env)
   }
 }

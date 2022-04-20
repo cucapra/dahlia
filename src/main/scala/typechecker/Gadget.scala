@@ -50,7 +50,7 @@ object Gadgets {
       * The root for all gadgets. Maps a multidimensional consume list to
       * corresponding one dimensional banks.
       */
-    def getSummary(consume: ConsumeList) = {
+    def getSummary(consume: ConsumeList): (Id, Seq[Int], Seq[String]) = {
       // Transform consumelist into a Seq[Seq[A]] where the inner list
       // represents a sequence of banks for the dimension. These are
       // latter transformed to 1D banks.
@@ -72,7 +72,7 @@ object Gadgets {
       * A base physical memory with `k` banks redirects access from bank `b` to
       * to `b % k`.
       */
-    def getSummary(consume: ConsumeList) = {
+    def getSummary(consume: ConsumeList): (Id, Seq[Int], Seq[String]) = {
       val resourceTransform = consume
         .zip(dim)
         .map({ case (resources, (_, banks)) => resources.map(_ % banks) })
@@ -86,7 +86,7 @@ object Gadgets {
       underlying: Gadget,
       transformer: ConsumeList => ConsumeList
   ) extends Gadget {
-    def getSummary(consume: ConsumeList) = {
+    def getSummary(consume: ConsumeList): (Id, Seq[Int], Seq[String]) = {
       val outRes = transformer(consume)
       val (res, sum, trace) = underlying.getSummary(outRes)
       (res, sum, clString(outRes) +: trace)

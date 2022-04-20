@@ -110,7 +110,7 @@ object Calyx {
       case _ => false
     }
 
-    def isConstant(value: Int, width: Int) = this match {
+    def isConstant(value: Int, width: Int): Boolean = this match {
       case ConstantPort(v, w) if v == value && w == width => true
       case _ => false
     }
@@ -232,7 +232,7 @@ object Calyx {
 
   /***** control *****/
   sealed trait Control extends Emitable {
-    var attributes = Map[String, Int]()
+    var attributes: Map[String,Int] = Map[String, Int]()
 
     def seq(c: Control): Control = (this, c) match {
       case (Empty, c) => c
@@ -314,7 +314,7 @@ object Calyx {
 
 /** Construct primitives in Calyx. */
 object Stdlib {
-  def register(name: Calyx.CompVar, width: Int) =
+  def register(name: Calyx.CompVar, width: Int): Calyx.Cell =
     Calyx.Cell(
       name,
       Calyx.CompInst("std_reg", List(width)),

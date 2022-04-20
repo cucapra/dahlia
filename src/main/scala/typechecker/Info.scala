@@ -25,7 +25,7 @@ object Info {
 
     def consumeResources(
         resources: Seq[Int]
-    )(implicit pos: Position, trace: Seq[String]) = {
+    )(implicit pos: Position, trace: Seq[String]): ArrayInfo = {
 
       // Make sure banks exist.
       val missingBank = resources.find(!avBanks.containsAtLeast(_, 1))
@@ -58,9 +58,9 @@ object Info {
     }
 
     // Return a copy of the physical resource with all the resources available.
-    def toFresh = this.copy(remBanks = avBanks, conLocs = Map())
+    def toFresh: ArrayInfo = this.copy(remBanks = avBanks, conLocs = Map())
 
-    def merge(that: ArrayInfo) = {
+    def merge(that: ArrayInfo): ArrayInfo = {
       val remBanks = this.remBanks.zipWith(that.remBanks, Math.min)
       this.copy(remBanks = remBanks, conLocs = this.conLocs ++ that.conLocs)
     }

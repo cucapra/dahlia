@@ -14,17 +14,17 @@ object HoistSlowBinop extends TypedPartialTransformer {
   case class ExprEnv(map: ListMap[Expr, CLet])
       extends ScopeManager[ExprEnv]
       with Tracker[Expr, CLet, ExprEnv] {
-    def merge(that: ExprEnv) = {
+    def merge(that: ExprEnv): ExprEnv = {
       ExprEnv(this.map ++ that.map)
     }
-    def get(key: Expr) = this.map.get(key)
-    def add(key: Expr, value: CLet) = {
+    def get(key: Expr): Option[CLet] = this.map.get(key)
+    def add(key: Expr, value: CLet): ExprEnv = {
       ExprEnv(this.map + (key -> value))
     }
   }
 
   type Env = ExprEnv
-  val emptyEnv = ExprEnv(ListMap())
+  val emptyEnv: ExprEnv = ExprEnv(ListMap())
 
   var idx: Map[String, Int] = Map();
   def genName(base: String): Id = {
@@ -117,8 +117,8 @@ object HoistSlowBinop extends TypedPartialTransformer {
     }
   }
 
-  override def rewriteE(expr: Expr)(implicit env: Env) =
+  override def rewriteE(expr: Expr)(implicit env: Env): (Expr, Env) =
     mergeRewriteE(myRewriteE)(expr, env)
-  override def rewriteC(cmd: Command)(implicit env: Env) =
+  override def rewriteC(cmd: Command)(implicit env: Env): (Command, Env) =
     mergeRewriteC(myRewriteC)(cmd, env)
 }

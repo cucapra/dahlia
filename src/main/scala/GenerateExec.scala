@@ -12,10 +12,10 @@ import common.CompilerError.HeaderMissing
   */
 object GenerateExec {
   // TODO(rachit): Move this to build.sbt
-  val headers = List("parser.cpp", "json.hpp")
+  val headers: List[String] = List("parser.cpp", "json.hpp")
 
-  var headerLocation = Paths.get("src/main/resources/headers")
-  val headerFallbackLocation = Paths.get("_headers/")
+  var headerLocation: Path = Paths.get("src/main/resources/headers")
+  val headerFallbackLocation: Path = Paths.get("_headers/")
 
 
   // Not the compiler directory, check if the fallback directory has been setup.

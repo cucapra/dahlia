@@ -62,7 +62,7 @@ private class CalyxBackendHelper {
   /** A list of function IDs that require width arguments
     * in their SystemVerilog module definition.
     */
-  val requiresWidthArguments = List("fp_sqrt", "sqrt")
+  val requiresWidthArguments: List[String] = List("fp_sqrt", "sqrt")
 
   /** Helper for generating unique names. */
   var idx: Map[String, Int] = Map();
@@ -186,7 +186,7 @@ private class CalyxBackendHelper {
   def getCompInstArgs(
       funcId: Id
   )(implicit id2FuncDef: FunctionMapping): List[BigInt] = {
-    val id = funcId.toString()
+    val id = funcId.toString
     if (!requiresWidthArguments.contains(id)) {
       List()
     } else {
@@ -205,7 +205,7 @@ private class CalyxBackendHelper {
       implicit store: Store,
       id2FuncDef: FunctionMapping
   ): (Cell, Seq[Structure], Control) = {
-    val functionName = app.func.toString()
+    val functionName = app.func.toString
     val declName = genName(functionName)
     val compInstArgs = getCompInstArgs(app.func)
     val decl =
@@ -224,7 +224,7 @@ private class CalyxBackendHelper {
           paramArg.typ match {
             case _: TArray => {
               val argId = getPortName(inputPort)
-              val paramId = paramArg.id.toString()
+              val paramId = paramArg.id.toString
               inConnects ++ List(
                 (
                   s"${paramId}_read_data",
@@ -233,7 +233,7 @@ private class CalyxBackendHelper {
                 (s"${paramId}_done", CompPort(CompVar(s"$argId"), "done"))
               )
             }
-            case _ => inConnects ++ List((paramArg.id.toString(), inputPort))
+            case _ => inConnects ++ List((paramArg.id.toString, inputPort))
           }
       }
     )
@@ -243,7 +243,7 @@ private class CalyxBackendHelper {
         case (outConnects, (inputPort, paramArg)) =>
           paramArg.typ match {
             case tarr: TArray => {
-              val paramId = paramArg.id.toString()
+              val paramId = paramArg.id.toString
               val argId = getPortName(inputPort)
 
               // Connect address ports.
@@ -1008,7 +1008,7 @@ private class CalyxBackendHelper {
     val functionDefinitions: List[Component] =
       for ((id, FuncDef(_, params, retType, Some(bodyOpt))) <- id2FuncDef.toList)
         yield {
-          val inputs = params.map(param => CompVar(param.id.toString()))
+          val inputs = params.map(param => CompVar(param.id.toString))
 
           val inputPorts =
             params.foldLeft(List[PortDef]())((inputPorts, params) =>
@@ -1016,7 +1016,7 @@ private class CalyxBackendHelper {
                 case tarr: TArray => {
                   // Currently, we default to exposing all ports for arrays.
                   val (bits, _) = bitsForType(Some(tarr.typ), tarr.typ.pos)
-                  val id = params.id.toString()
+                  val id = params.id.toString
                   inputPorts ++ List(
                     PortDef(CompVar(s"${id}_read_data"), bits),
                     PortDef(CompVar(s"${id}_done"), 1)
@@ -1025,7 +1025,7 @@ private class CalyxBackendHelper {
                 case _ => {
                   val (bits, _) = bitsForType(Some(params.typ), params.typ.pos)
                   inputPorts ++ List(
-                    PortDef(CompVar(params.id.toString()), bits)
+                    PortDef(CompVar(params.id.toString), bits)
                   )
                 }
               }
@@ -1036,7 +1036,7 @@ private class CalyxBackendHelper {
               params.typ match {
                 case tarr: TArray => {
                   val (bits, _) = bitsForType(Some(tarr.typ), tarr.typ.pos)
-                  val id = params.id.toString()
+                  val id = params.id.toString
                   val addrPortToWidth = getAddrPortToWidths(tarr, params.id)
                   val addressPortDefs = addrPortToWidth.map(
                     {
@@ -1067,7 +1067,7 @@ private class CalyxBackendHelper {
           val (outputBitWidth, _) = bitsForType(Some(retType), retType.pos)
 
           Component(
-            id.toString(),
+            id.toString,
             inputPorts,
             if (retType == TVoid()) outputPorts
             // If the return type of the component is not void, add an `out` wire.
@@ -1115,7 +1115,7 @@ private class CalyxBackendHelper {
 }
 
 case object CalyxBackend extends fuselang.backend.Backend {
-  def emitProg(p: Prog, c: Config) = {
+  def emitProg(p: Prog, c: Config): String = {
     (new CalyxBackendHelper()).emitProg(p, c)
   }
   val canGenerateHeader = false

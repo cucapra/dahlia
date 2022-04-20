@@ -9,7 +9,7 @@ import CompilerError._
 
 object Helpers {
 
-  val slowBinops = List("*", "/", "%")
+  val slowBinops: List[String] = List("*", "/", "%")
 
   /** Given a binary string, returns the negated
     * two's complement representation.
@@ -52,7 +52,7 @@ object Helpers {
 
   /** Returns true if the given int or fixed point is signed
     */
-  def signed(typ: Option[Type]) = {
+  def signed(typ: Option[Type]): Boolean = {
     typ match {
       case Some(TSizedInt(_, un)) => un == false
       case Some(TFixed(_, _, un)) => un == false

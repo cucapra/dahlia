@@ -7,24 +7,26 @@ import scala.io.Source
 import Compiler._
 import common.Logger
 import common.Configuration._
+import java.io.InputStream
+import scopt.OptionParser
 
 object Main {
 
   // Command-line names for backends.
-  val backends = Map(
+  val backends: Map[String,BackendOption] = Map(
     "vivado" -> Vivado,
     "c++" -> Cpp,
     "futil" -> Calyx,
     "calyx" -> Calyx
   )
 
-  val memoryInterfaces = Map(
+  val memoryInterfaces: Map[String,MemoryInterface] = Map(
     "ap_memory" -> ApMemory,
     "axi" -> Axi
   )
 
-  val version = getClass.getResourceAsStream("/version.properties")
-  val meta = Source
+  val version: InputStream = getClass.getResourceAsStream("/version.properties")
+  val meta: Map[String,String] = Source
     .fromInputStream(version)
     .getLines()
     .filter(l => l.trim != "")
@@ -34,7 +36,7 @@ object Main {
      })
     .toMap
 
-  val parser = new scopt.OptionParser[Config]("fuse") {
+  val parser: OptionParser[Config] = new scopt.OptionParser[Config]("fuse") {
 
     head(s"Dahlia (sha = ${meta("git.hash")}, status = ${meta("git.status")})")
 

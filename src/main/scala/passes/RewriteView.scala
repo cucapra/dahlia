@@ -25,24 +25,24 @@ object RewriteView extends TypedPartialTransformer {
   case class ViewEnv(map: Map[Id, Seq[Expr] => Expr])
       extends ScopeManager[ViewEnv]
       with Tracker[Id, Seq[Expr] => Expr, ViewEnv] {
-    def merge(that: ViewEnv) = {
+    def merge(that: ViewEnv): ViewEnv = {
       if (this.map.keys != that.map.keys)
         throw Impossible("Tried to merge ViewEnvs with different keys.")
       this
     }
 
-    def get(arrId: Id) = this.map.get(arrId)
+    def get(arrId: Id): Option[Seq[Expr] => Expr] = this.map.get(arrId)
 
-    def add(arrId: Id, func: Seq[Expr] => Expr) =
+    def add(arrId: Id, func: Seq[Expr] => Expr): ViewEnv =
       ViewEnv(this.map + (arrId -> func))
   }
 
   type Env = ViewEnv
-  val emptyEnv = ViewEnv(Map())
+  val emptyEnv: ViewEnv = ViewEnv(Map())
 
   private def genViewAccessExpr(view: View, idx: Expr): Expr =
     view.suffix match {
-      case Aligned(factor, e2) => (EInt(factor) * e2) + idx
+      case Aligned(factor, e2) => (EInt(factor, 10) * e2) + idx
       case Rotation(e) => e + idx
     }
 
@@ -52,9 +52,9 @@ object RewriteView extends TypedPartialTransformer {
       arrBank: Int,
       viewBank: Int
   ): Expr = {
-    (i * EInt(viewBank)) +
-      ((j / EInt(viewBank)) * EInt(arrBank)) +
-      (j % EInt(viewBank))
+    (i * EInt(viewBank, 10)) +
+      ((j / EInt(viewBank, 10)) * EInt(arrBank, 10)) +
+      (j % EInt(viewBank, 10))
   }
 
   def myRewriteE: PF[(Expr, Env), (Expr, Env)] = {
@@ -123,8 +123,8 @@ object RewriteView extends TypedPartialTransformer {
   }
 
   // Compose custom traversal with parent's generic traversal.
-  override def rewriteC(cmd: Command)(implicit env: Env) =
+  override def rewriteC(cmd: Command)(implicit env: Env): (Command, Env) =
     mergeRewriteC(myRewriteC)(cmd, env)
-  override def rewriteE(expr: Expr)(implicit env: Env) =
+  override def rewriteE(expr: Expr)(implicit env: Env): (Expr, Env) =
     mergeRewriteE(myRewriteE)(expr, env)
 }

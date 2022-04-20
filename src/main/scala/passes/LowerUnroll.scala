@@ -21,7 +21,7 @@ object LowerUnroll extends PartialTransformer {
 
   private def genViewAccessExpr(suffix: Suffix, idx: Expr): Expr =
     suffix match {
-      case Aligned(factor, e2) => (EInt(factor) * e2) + idx
+      case Aligned(factor, e2) => (EInt(factor, 10) * e2) + idx
       case Rotation(e) => e + idx
     }
 
@@ -63,7 +63,7 @@ object LowerUnroll extends PartialTransformer {
     /**
       * Define a transformer for a base memory.
       */
-    def fromArray(id: Id, ta: TArray) = {
+    def fromArray(id: Id, ta: TArray): ViewTransformer = {
       val t = (idxs: Seq[(Expr, Option[Int])]) => {
         // If any of the indices are constants, scale them to the index in the
         // bank.
@@ -139,7 +139,7 @@ object LowerUnroll extends PartialTransformer {
                 .map(b => bankMap(b))
                 .getOrElse(bankMap.flatten)
               banks.map(bank =>
-                (bank, (bank, genViewAccessExpr(suf, idxExpr / EInt(arrBank))))
+                (bank, (bank, genViewAccessExpr(suf, idxExpr / EInt(arrBank, 10))))
               )
             }
           })
@@ -173,12 +173,12 @@ object LowerUnroll extends PartialTransformer {
       dimsMap: Map[Id, TArray]
   ) extends ScopeManager[ForEnv]
       with Tracker[Id, Int, ForEnv] {
-    def merge(that: ForEnv) = {
+    def merge(that: ForEnv): ForEnv = {
       assert(this == that, "Tried to merge different unroll envs")
       this
     }
 
-    override def withScopeAndRet[V](inScope: Env => (V, Env)) = {
+    override def withScopeAndRet[V](inScope: Env => (V, Env)): (V, ForEnv) = {
       val (ret, nEnv) = inScope(this.copy(rewrites = rewrites.addScope))
       val rws = nEnv.rewrites.endScope match {
         case Some((_, rs)) => rs
@@ -187,12 +187,12 @@ object LowerUnroll extends PartialTransformer {
       ret -> nEnv.copy(rewrites = rws)
     }
 
-    def get(key: Id) = this.idxMap.get(key)
-    def add(key: Id, bank: Int) =
+    def get(key: Id): Option[Int] = this.idxMap.get(key)
+    def add(key: Id, bank: Int): ForEnv =
       this.copy(idxMap = this.idxMap + (key -> bank))
 
-    def rewriteGet(key: Id) = this.rewrites.get(key)
-    def rewriteAdd(k: Id, v: Id) = {
+    def rewriteGet(key: Id): Option[Id] = this.rewrites.get(key)
+    def rewriteAdd(k: Id, v: Id): ForEnv = {
       val newRewrites = this.rewrites.add(k, v) match {
         case None => throw AlreadyBound(k)
         case Some(rw) => rw
@@ -200,14 +200,14 @@ object LowerUnroll extends PartialTransformer {
       this.copy(rewrites = newRewrites)
     }
 
-    def viewAdd(k: Id, v: ViewTransformer) =
+    def viewAdd(k: Id, v: ViewTransformer): ForEnv =
       this.copy(viewMap = viewMap + (k -> v))
-    def viewGet(k: Id) =
+    def viewGet(k: Id): Option[ViewTransformer] =
       this.viewMap.get(k)
 
-    def dimsAdd(k: Id, v: TArray) =
+    def dimsAdd(k: Id, v: TArray): ForEnv =
       this.copy(dimsMap = dimsMap + (k -> v))
-    def dimsGet(k: Id) =
+    def dimsGet(k: Id): TArray =
       this.dimsMap
         .get(k)
         .getOrThrow(Impossible(s"Dimensions for `$k' not bound"))
@@ -215,7 +215,7 @@ object LowerUnroll extends PartialTransformer {
   }
 
   type Env = ForEnv
-  val emptyEnv = ForEnv(Map(), ScopedMap(), Map(), Map())
+  val emptyEnv: ForEnv = ForEnv(Map(), ScopedMap(), Map(), Map())
 
   def unbankedDecls(id: Id, ta: TArray): Seq[(Id, Type)] = {
     val TArray(typ, dims, ports) = ta
@@ -228,7 +228,7 @@ object LowerUnroll extends PartialTransformer {
     })
   }
 
-  override def rewriteDeclSeq(ds: Seq[Decl])(implicit env: Env) = {
+  override def rewriteDeclSeq(ds: Seq[Decl])(implicit env: Env): (Seq[Decl], Env) = {
     ds.flatMap(d =>
       d.typ match {
         case ta: TArray => {
@@ -425,7 +425,7 @@ object LowerUnroll extends PartialTransformer {
           .foldLeft[Expr](EBool(true))({
             case (expr, ((bv, idx), arrBank)) => {
               and(
-                EBinop(EqOp("=="), idx % EInt(arrBank), EInt(bv)),
+                EBinop(EqOp("=="), idx % EInt(arrBank, 10), EInt(bv, 10)),
                 expr
               )
             }
@@ -604,7 +604,7 @@ object LowerUnroll extends PartialTransformer {
       } else if (arrRewrite.isDefined) {
         val TArray(_, dims, _) = env.dimsGet(id)
         // Construct a fake access expression
-        val map = (arrRewrite.get)(dims.map(_ => EInt(0) -> None))
+        val map = (arrRewrite.get)(dims.map(_ => EInt(0, 10) -> None))
         if (map.size != 1) {
           throw Impossible(s"Memory parameter is banked: $id.", e.pos)
         }
@@ -640,10 +640,10 @@ object LowerUnroll extends PartialTransformer {
     }
   }
 
-  override def rewriteC(cmd: Command)(implicit env: Env) =
+  override def rewriteC(cmd: Command)(implicit env: Env): (Command, Env) =
     mergeRewriteC(myRewriteC)(cmd, env)
 
-  override def rewriteE(expr: Expr)(implicit env: Env) =
+  override def rewriteE(expr: Expr)(implicit env: Env): (Expr, Env) =
     mergeRewriteE(myRewriteE)(expr, env)
 
 }

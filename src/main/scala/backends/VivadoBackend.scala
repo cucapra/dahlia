@@ -18,7 +18,7 @@ private class VivadoBackend(config: Config) extends CppLike {
   def unroll(n: Int): Doc =
     value(s"#pragma HLS UNROLL factor=$n skip_exit_check")
 
-  def interfaceValid(decls: Seq[Decl]) =
+  def interfaceValid(decls: Seq[Decl]): Seq[Unit] =
     decls.collect({
       case Decl(id, typ: TArray) => {
         if (typ.ports > 1)
@@ -182,7 +182,7 @@ private class VivadoBackendHeader(c: Config) extends VivadoBackend(c) {
       emitType(ret) <+> id <> parens(as) <> semi
   }
 
-  override def emitProg(p: Prog, c: Config) = {
+  override def emitProg(p: Prog, c: Config): String = {
     val declarations =
       vsep(p.includes.flatMap(_.backends.get(C.Vivado).map(emitInclude))) <@>
       vsep(p.defs.map(emitDef)) <@>
@@ -193,7 +193,7 @@ private class VivadoBackendHeader(c: Config) extends VivadoBackend(c) {
 }
 
 case object VivadoBackend extends Backend {
-  def emitProg(p: Prog, c: Config) = c.header match {
+  def emitProg(p: Prog, c: Config): String = c.header match {
     case true => (new VivadoBackendHeader(c)).emitProg(p, c)
     case false => (new VivadoBackend(c)).emitProg(p, c)
   }

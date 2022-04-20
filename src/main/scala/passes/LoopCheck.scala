@@ -18,7 +18,7 @@ object LoopChecker {
   case object Def extends States
   case object DontKnow extends States
 
-  def check(p: Prog) = LCheck.check(p)
+  def check(p: Prog): Unit = LCheck.check(p)
 
   private case class LEnv(
       stateMap: ScopedMap[Id, States] = ScopedMap(),
@@ -103,12 +103,12 @@ object LoopChecker {
     // To satisfy envhelper
     override def withScope(inScope: LEnv => LEnv): LEnv = withScope(1)(inScope)
 
-    def addScope(resources: Int) = {
+    def addScope(resources: Int): LEnv = {
       LEnv(stateMap.addScope, nameMap.addScope, exprMap.addScope)(
         res * resources
       )
     }
-    def endScope(resources: Int) = {
+    def endScope(resources: Int): LEnv = {
       val nmap = nameMap.endScope.get._2
       val emap = exprMap.endScope.get._2
       val (innermap, outermap) = stateMap.endScope.get
@@ -119,10 +119,10 @@ object LoopChecker {
       }
       outerenv
     }
-    def addNameScope = {
+    def addNameScope: LEnv = {
       LEnv(stateMap, nameMap.addScope, exprMap)
     }
-    def endNameScope = {
+    def endNameScope: LEnv = {
       val nmap = nameMap.endScope.get._2
       LEnv(stateMap, nmap, exprMap)
     }
@@ -159,7 +159,7 @@ object LoopChecker {
 
     type Env = LEnv
 
-    val emptyEnv = LEnv()(1)
+    val emptyEnv: LEnv = LEnv()(1)
 
     def myCheckLVal(e: Expr, env: Env): Env = {
       e match {
@@ -209,9 +209,9 @@ object LoopChecker {
       }
     }
 
-    override def checkE(expr: Expr)(implicit env: Env) =
+    override def checkE(expr: Expr)(implicit env: Env): Env =
       mergeCheckE(myCheckE)(expr, env)
-    override def checkC(cmd: Command)(implicit env: Env) =
+    override def checkC(cmd: Command)(implicit env: Env): Env =
       mergeCheckC(myCheckC)(cmd, env)
   }
 }

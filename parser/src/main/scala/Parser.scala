@@ -90,7 +90,7 @@ case class Parser(input: String) {
     positioned(
       P(
         "0" | "-".? ~ (CharIn("1-9") ~ CharsWhileIn("0-9").?)
-      ).!.map((n: String) => EInt(n.toInt)).opaque("integer")
+      ).!.map((n: String) => EInt(n.toInt, 10)).opaque("integer")
     )
   def hex[_: P]: P[Expr] =
     positioned(
@@ -323,7 +323,7 @@ case class Parser(input: String) {
   def viewSuffix[_: P]: P[Suffix] =
     positioned(
       P(
-        "_".!.map(_ => Rotation(EInt(0))) |
+        "_".!.map(_ => Rotation(EInt(0, 10))) |
           (number ~ "*" ~/ expr).map({ case (fac, e) => Aligned(fac, e) }) |
           (expr ~ "!").map(e => Rotation(e))
       ).opaque("<view-suffix>: _ | <number> * <expr> | <expr> !")

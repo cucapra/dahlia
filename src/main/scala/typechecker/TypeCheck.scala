@@ -26,7 +26,7 @@ object TypeChecker {
    * all the declarations and definitions, then check the command in that environment
    * (`checkC`).
    */
-  def typeCheck(p: Prog) = {
+  def typeCheck(p: Prog): Environment = {
     val Prog(includes, defs, _, decls, cmd) = p
 
     val allDefs = includes.flatMap(_.defs) ++ defs

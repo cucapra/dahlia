@@ -43,7 +43,7 @@ object Compiler {
     case Calyx => backend.calyx.CalyxBackend
   }
 
-  def checkStringWithError(prog: String, c: Config = emptyConf) = {
+  def checkStringWithError(prog: String, c: Config = emptyConf): Prog = {
     val preAst = Parser(prog).parse()
 
     // Run pre transformers if lowering is enabled
@@ -82,7 +82,7 @@ object Compiler {
     ast
   }
 
-  def codegen(ast: Prog, c: Config = emptyConf) = {
+  def codegen(ast: Prog, c: Config = emptyConf): String = {
     // Filter out transformers not running in this mode
     val toRun = postTransformers.filter({
       case (_, (_, onlyLower)) => {

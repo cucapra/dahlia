@@ -89,11 +89,11 @@ object TypeEnv {
   ) extends Environment {
 
     /** Type definitions */
-    def addType(alias: Id, typ: Type) = typeDefMap.get(alias) match {
+    def addType(alias: Id, typ: Type): Environment = typeDefMap.get(alias) match {
       case Some(_) => throw AlreadyBound(alias)
       case None => this.copy(typeDefMap = typeDefMap + (alias -> typ))
     }
-    def getType(alias: Id) = typeDefMap.get(alias).getOrThrow(Unbound(alias))
+    def getType(alias: Id): Type = typeDefMap.get(alias).getOrThrow(Unbound(alias))
 
     def resolveType(typ: Type): Type = typ match {
       case TAlias(n) => getType(n)
@@ -103,30 +103,30 @@ object TypeEnv {
     }
 
     /** Type binding methods */
-    def get(id: Id) = typeMap.get(id)
-    def add(id: Id, typ: Type) =
+    def get(id: Id): Option[Type] = typeMap.get(id)
+    def add(id: Id, typ: Type): Env =
       this.copy(typeMap =
         typeMap.add(id, resolveType(typ)).getOrThrow(AlreadyBound(id))
       )
 
     /** Helper functions for ScopeManager */
-    def addScope = {
+    def addScope: Env = {
       Env(typeMap.addScope, typeDefMap, retType)
     }
-    def endScope = {
+    def endScope: Env = {
       val scopes = for {
         (_, tMap) <- typeMap.endScope
       } yield Env(tMap, typeDefMap, retType)
 
       scopes.getOrThrow(Impossible("Removed topmost scope"))
     }
-    def withScope(inScope: Environment => Environment) = {
+    def withScope(inScope: Environment => Environment): Environment = {
       inScope(this.addScope) match {
         case env: Env => env.endScope
       }
     }
 
     def getReturn = retType
-    def withReturn(typ: Type) = this.copy(retType = Some(typ))
+    def withReturn(typ: Type): Env = this.copy(retType = Some(typ))
   }
 }

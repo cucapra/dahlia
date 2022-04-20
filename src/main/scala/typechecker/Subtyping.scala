@@ -41,7 +41,7 @@ import fuselang.Utils.bitsNeeded
   *  t2.
   */
 object Subtyping {
-  def areEqual(t1: Type, t2: Type) = (t1, t2) match {
+  def areEqual(t1: Type, t2: Type): Boolean = (t1, t2) match {
     case (TStaticInt(v1), TStaticInt(v2)) => v1 == v2
     case (_: TIndex, _: TIndex) => true
     case (_: TFloat, _: TFloat) => true
@@ -130,7 +130,7 @@ object Subtyping {
     else joinOfHelper(t2, t1, op)
   }
 
-  def safeCast(originalType: Type, castType: Type) =
+  def safeCast(originalType: Type, castType: Type): Boolean =
     (originalType, castType) match {
       case (t1: IntType, t2: TSizedInt) => isSubtype(t1, t2)
       case (_: TFloat, _: TSizedInt) => false

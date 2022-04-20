@@ -14,19 +14,19 @@ object LowerForLoops extends PartialTransformer {
   case class ForEnv(map: Map[Id, Type])
       extends ScopeManager[ForEnv]
       with Tracker[Id, Type, ForEnv] {
-    def merge(that: ForEnv) = {
+    def merge(that: ForEnv): ForEnv = {
       ForEnv(this.map ++ that.map)
     }
 
-    def get(key: Id) = this.map.get(key)
+    def get(key: Id): Option[Type] = this.map.get(key)
 
-    def add(key: Id, typ: Type) = {
+    def add(key: Id, typ: Type): ForEnv = {
       ForEnv(this.map + (key -> typ))
     }
   }
 
   type Env = ForEnv
-  val emptyEnv = ForEnv(Map())
+  val emptyEnv: ForEnv = ForEnv(Map())
 
   def myRewriteC: PF[(Command, Env), (Command, Env)] = {
     case (cfor @ CFor(range, pipeline, par, combine), env) => {
@@ -50,19 +50,19 @@ object LowerForLoops extends PartialTransformer {
 
       val t = typ.get
       val init =
-        CLet(it, typ, Some(ECast(if (rev) EInt(e - 1) else EInt(s), t)))
+        CLet(it, typ, Some(ECast(if (rev) EInt(e - 1, 10) else EInt(s, 10), t)))
       val op = if (rev) {
         NumOp("-", OpConstructor.sub)
       } else {
         NumOp("+", OpConstructor.add)
       }
       val upd =
-        CUpdate(itVar.copy(), EBinop(op, itVar.copy(), ECast(EInt(1), t)))
+        CUpdate(itVar.copy(), EBinop(op, itVar.copy(), ECast(EInt(1, 10), t)))
       val cond =
         if (rev) {
-          EBinop(CmpOp(">="), itVar.copy(), ECast(EInt(s), t))
+          EBinop(CmpOp(">="), itVar.copy(), ECast(EInt(s, 10), t))
         } else {
-          EBinop(CmpOp("<="), itVar.copy(), ECast(EInt(e - 1), t))
+          EBinop(CmpOp("<="), itVar.copy(), ECast(EInt(e - 1, 10), t))
         }
       val nEnv = env.add(it.copy(), t)
 
@@ -88,7 +88,7 @@ object LowerForLoops extends PartialTransformer {
     }
   }
 
-  override def rewriteC(cmd: Command)(implicit env: Env) = {
+  override def rewriteC(cmd: Command)(implicit env: Env): (Command, Env) = {
     mergeRewriteC(myRewriteC)(cmd, env)
   }
 

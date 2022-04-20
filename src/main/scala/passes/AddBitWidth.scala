@@ -14,14 +14,14 @@ import fuselang.typechecker.Subtyping
 object AddBitWidth extends TypedPartialTransformer {
 
   case class ABEnv(curTyp: Option[Type]) extends ScopeManager[ABEnv] {
-    def merge(that: ABEnv) = {
+    def merge(that: ABEnv): ABEnv = {
       assert(this == that, "Tried to merge different bitwidth envs")
       this
     }
   }
 
   type Env = ABEnv
-  val emptyEnv = ABEnv(None)
+  val emptyEnv: ABEnv = ABEnv(None)
 
   def myRewriteE: PF[(Expr, Env), (Expr, Env)] = {
     case (e: ECast, env) => e -> env
@@ -105,8 +105,8 @@ object AddBitWidth extends TypedPartialTransformer {
     (e1, env1)
   }
 
-  override def rewriteC(cmd: Command)(implicit env: Env) =
+  override def rewriteC(cmd: Command)(implicit env: Env): (Command, Env) =
     mergeRewriteC(myRewriteC)(cmd, env)
-  override def rewriteE(expr: Expr)(implicit env: Env) =
+  override def rewriteE(expr: Expr)(implicit env: Env): (Expr, Env) =
     mergeRewriteE(myRewriteE)(expr, env)
 }

@@ -110,13 +110,13 @@ object AffineEnv {
 
     def consumeWithGadget(gadget: Id, consumeList: ConsumeList)(
         implicit pos: Position
-    ) = {
+    ): Environment = {
       val (resName, resources, trace) = this(gadget).getSummary(consumeList)
       implicit val t = trace
       this.consumeResource(resName, resources)
     }
 
-    override def toString = {
+    override def toString: String = {
       val lst =
         for { (ps, gs) <- phyRes.iterator.zip(gadgetMap.iterator) } yield (
           ps.map({ case (k, v) => s"$k -> $v" }).mkString(", "),
@@ -127,15 +127,15 @@ object AffineEnv {
     }
 
     /** Tracking bound gadgets */
-    def add(id: Id, resource: Gadget) =
+    def add(id: Id, resource: Gadget): Env =
       this.copy(gadgetMap =
         gadgetMap.add(id, resource).getOrThrow(AlreadyBound(id))
       )
-    def apply(id: Id) = gadgetMap.get(id).getOrThrow(Unbound(id))
-    def get(id: Id) = gadgetMap.get(id)
+    def apply(id: Id): Gadget = gadgetMap.get(id).getOrThrow(Unbound(id))
+    def get(id: Id): Option[Gadget] = gadgetMap.get(id)
 
     /** Managing physical resources */
-    def addResource(id: Id, info: ArrayInfo) = {
+    def addResource(id: Id, info: ArrayInfo): Env = {
       val pRes = phyRes.add(id, info).getOrThrow(AlreadyBound(id))
       this.copy(phyRes = pRes)
     }
@@ -191,10 +191,10 @@ object AffineEnv {
     }
 
     /** Helper functions for ScopeManager */
-    def addScope(resources: Int) = {
+    def addScope(resources: Int): Env = {
       Env(phyRes.addScope, gadgetMap.addScope)(res * resources)
     }
-    def endScope(resources: Int) = {
+    def endScope(resources: Int): (Env, Map[Id,ArrayInfo], Map[Id,Gadget]) = {
       val scopes = for {
         (pDefs, pMap) <- phyRes.endScope
         (gDefs, gMap) <- gadgetMap.endScope
@@ -204,14 +204,14 @@ object AffineEnv {
     }
     def withScope(
         resources: Int
-    )(inScope: Environment => Environment) = {
+    )(inScope: Environment => Environment): (Environment, Map[Id,ArrayInfo], Map[Id,Gadget]) = {
       inScope(this.addScope(resources)) match {
         case env: Env => env.endScope(resources)
       }
     }
     override def withScopeAndRet[R](
         inScope: Environment => (R, Environment)
-    ) = {
+    ): (R, Environment) = {
       inScope(this.addScope(1)) match {
         case (r, env: Env) => (r, env.endScope(1)._1)
       }

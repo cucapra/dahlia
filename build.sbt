@@ -3,24 +3,32 @@ ThisBuild / version := "0.0.2"
 ThisBuild / scalaVersion := "2.13.6"
 
 lazy val shared = (project in file("shared/"))
+  .settings(
+    scalaVersion := "3.0.1"
+  )
 lazy val parser = (project in file("parser/"))
   .dependsOn(shared)
+  .settings(
+    scalacOptions += "-Ytasty-reader"
+  )
 lazy val root = (project in file("."))
   .dependsOn(parser,shared)
+  .settings(
+    scalacOptions += "-Ytasty-reader"
+  )
 
 // Libraries
-/* shared / libraryDependencies ++= Seq(
-  "org.scala-lang.modules" %% "scala-parser-combinators" % "2.1.1",
+shared / libraryDependencies := Seq(
   "com.outr" %% "scribe" % "3.5.5",
-  "com.lihaoyi" %% "sourcecode" % "0.2.8",
-) */
-ThisBuild / libraryDependencies ++= Seq(
-  "org.scalatest" %% "scalatest" % "3.0.8" % "test",
+  "com.lihaoyi" %% "sourcecode" % "0.2.7",
   "org.scala-lang.modules" %% "scala-parser-combinators" % "2.0.0",
+).map(_.cross(CrossVersion.for3Use2_13))
+parser / libraryDependencies := Seq(
   "com.lihaoyi" %% "fastparse" % "2.3.0",
+)
+root / libraryDependencies := Seq(
+  "org.scalatest" %% "scalatest" % "3.2.11" % "test",
   "com.github.scopt" %% "scopt" % "4.0.1",
-  "com.outr" %% "scribe" % "3.5.5",
-  "com.lihaoyi" %% "sourcecode" % "0.2.7"
 )
 
 // Scalac options

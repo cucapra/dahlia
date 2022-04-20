@@ -13,19 +13,19 @@ object HoistMemoryReads extends PartialTransformer {
   case class BufferEnv(map: ListMap[Expr, CLet] = ListMap())
       extends ScopeManager[BufferEnv]
       with Tracker[Expr, CLet, BufferEnv] {
-    def merge(that: BufferEnv) = {
+    def merge(that: BufferEnv): BufferEnv = {
       BufferEnv(this.map ++ that.map)
     }
 
-    def get(key: Expr) = this.map.get(key)
+    def get(key: Expr): Option[CLet] = this.map.get(key)
 
-    def add(key: Expr, value: CLet) = {
+    def add(key: Expr, value: CLet): BufferEnv = {
       BufferEnv(this.map + (key -> value))
     }
   }
 
   type Env = BufferEnv
-  val emptyEnv = BufferEnv()
+  val emptyEnv: BufferEnv = BufferEnv()
 
   /** Helper for generating unique names. */
   var idx: Map[String, Int] = Map();
@@ -140,9 +140,9 @@ object HoistMemoryReads extends PartialTransformer {
     }
   }
 
-  override def rewriteC(cmd: Command)(implicit env: Env) =
+  override def rewriteC(cmd: Command)(implicit env: Env): (Command, Env) =
     mergeRewriteC(myRewriteC)(cmd, env)
 
-  override def rewriteE(expr: Expr)(implicit env: Env) =
+  override def rewriteE(expr: Expr)(implicit env: Env): (Expr, Env) =
     mergeRewriteE(myRewriteE)(expr, env)
 }

@@ -12,7 +12,7 @@ object Sequentialize extends PartialTransformer {
 
   case class SeqEnv(uses: Set[Id], defines: Set[Id], useLHS: Boolean)
       extends ScopeManager[SeqEnv] {
-    def merge(that: SeqEnv) = {
+    def merge(that: SeqEnv): SeqEnv = {
       assert(
         this.useLHS == that.useLHS,
         "Attempting to merge environment with different useLHS"
@@ -23,16 +23,16 @@ object Sequentialize extends PartialTransformer {
         this.useLHS
       )
     }
-    def addUse(x: Id) =
+    def addUse(x: Id): SeqEnv =
       this.copy(uses = this.uses + x)
-    def addDefine(x: Id) =
+    def addDefine(x: Id): SeqEnv =
       this.copy(defines = this.defines + x)
-    def setUseLHS(useLHS: Boolean) =
+    def setUseLHS(useLHS: Boolean): SeqEnv =
       this.copy(useLHS = useLHS)
   }
 
   type Env = SeqEnv
-  val emptyEnv = SeqEnv(Set(), Set(), false)
+  val emptyEnv: SeqEnv = SeqEnv(Set(), Set(), false)
 
   def myRewriteE: PF[(Expr, Env), (Expr, Env)] = {
     case (e @ EVar(id), env) => e -> env.addUse(id)
@@ -119,9 +119,9 @@ object Sequentialize extends PartialTransformer {
     }
   }
 
-  override def rewriteC(cmd: Command)(implicit env: Env) =
+  override def rewriteC(cmd: Command)(implicit env: Env): (Command, Env) =
     mergeRewriteC(myRewriteC)(cmd, env)
   // No need to traverse expressions
-  override def rewriteE(expr: Expr)(implicit env: Env) =
+  override def rewriteE(expr: Expr)(implicit env: Env): (Expr, Env) =
     mergeRewriteE(myRewriteE)(expr, env)
 }

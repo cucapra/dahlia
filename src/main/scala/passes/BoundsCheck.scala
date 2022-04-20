@@ -14,13 +14,13 @@ import EnvHelpers._
 
 object BoundsChecker {
 
-  def check(p: Prog) = BCheck.check(p)
+  def check(p: Prog): Unit = BCheck.check(p)
 
   private final case object BCheck extends PartialChecker {
 
     type Env = UnitEnv
 
-    val emptyEnv = UnitEnv()
+    val emptyEnv: UnitEnv = UnitEnv()
 
     /**
       * Given a view with a known prefix length, check if it **might** cause an
@@ -111,9 +111,9 @@ object BoundsChecker {
       }
     }
 
-    override def checkE(expr: Expr)(implicit env: Env) =
+    override def checkE(expr: Expr)(implicit env: Env): Env =
       mergeCheckE(myCheckE)(expr, env)
-    override def checkC(cmd: Command)(implicit env: Env) =
+    override def checkC(cmd: Command)(implicit env: Env): Env =
       mergeCheckC(myCheckC)(cmd, env)
   }
 }

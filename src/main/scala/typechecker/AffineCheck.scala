@@ -74,7 +74,7 @@ import CompilerError._
 
 object AffineChecker {
 
-  def check(p: Prog) = AffineChecker.check(p)
+  def check(p: Prog): Unit = AffineChecker.check(p)
 
   private final case object AffineChecker extends PartialChecker {
 
@@ -92,7 +92,7 @@ object AffineChecker {
       ()
     }
 
-    override def checkDef(defi: Definition)(implicit env: Env) = defi match {
+    override def checkDef(defi: Definition)(implicit env: Env): Env = defi match {
       case FuncDef(_, args, _, bodyOpt) => {
         val (env2, _, _) = env.withScope(1) { newScope =>
           // Add physical resources corresponding to array decls
@@ -179,7 +179,7 @@ object AffineChecker {
       (newBank, (pre.getOrElse(len) -> newBank))
     }*/
 
-    override def checkLVal(e: Expr)(implicit env: Env) = e match {
+    override def checkLVal(e: Expr)(implicit env: Env): Env = e match {
       case acc @ EArrAccess(id, idxs) => {
         // This only triggers for l-values.
         val TArray(_, dims, _) = id.typ.get
@@ -296,9 +296,9 @@ object AffineChecker {
       }
     }
 
-    override def checkE(expr: Expr)(implicit env: Env) =
+    override def checkE(expr: Expr)(implicit env: Env): Env =
       mergeCheckE(myCheckE)(expr, env)
-    override def checkC(cmd: Command)(implicit env: Env) =
+    override def checkC(cmd: Command)(implicit env: Env): Env =
       mergeCheckC(myCheckC)(cmd, env)
   }
 }
