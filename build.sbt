@@ -2,31 +2,19 @@ name := "Dahlia"
 ThisBuild / version := "0.0.2"
 ThisBuild / scalaVersion := "2.13.6"
 
-lazy val shared = project
-  /* .settings(scalaVersion := "3.0.0") */
-lazy val root = (project in file("."))
+lazy val shared = (project in file("shared/"))
+lazy val parser = (project in file("parser/"))
   .dependsOn(shared)
-  /* .settings(scalacOptions += "-Ytasty-reader") */
+lazy val root = (project in file("."))
+  .dependsOn(parser,shared)
 
-shared / libraryDependencies ++= Seq(
+// Libraries
+/* shared / libraryDependencies ++= Seq(
   "org.scala-lang.modules" %% "scala-parser-combinators" % "2.1.1",
   "com.outr" %% "scribe" % "3.5.5",
   "com.lihaoyi" %% "sourcecode" % "0.2.8",
-)
-
-ThisBuild / scalacOptions ++= Seq(
-  "-deprecation",
-  "-unchecked",
-  "-feature",
-  "-Xfatal-warnings"
-)
-
-root / scalacOptions ++= Seq(
-  "-Ywarn-unused",
-  "-Ywarn-value-discard",
-)
-
-root / libraryDependencies ++= Seq(
+) */
+ThisBuild / libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.0.8" % "test",
   "org.scala-lang.modules" %% "scala-parser-combinators" % "2.0.0",
   "com.lihaoyi" %% "fastparse" % "2.3.0",
@@ -35,12 +23,24 @@ root / libraryDependencies ++= Seq(
   "com.lihaoyi" %% "sourcecode" % "0.2.7"
 )
 
+// Scalac options
+ThisBuild / scalacOptions ++= Seq(
+  "-deprecation",
+  "-unchecked",
+  "-feature",
+  "-Xfatal-warnings"
+)
+root / scalacOptions ++= Seq(
+  "-Ywarn-unused",
+  "-Ywarn-value-discard",
+)
+
 
 // Reload changes to this file.
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
 // Disable options in sbt console.
-scalacOptions in (Compile, console) ~=
+Compile / console / scalacOptions ~=
   (_ filterNot ((Set("-Xfatal-warnings", "-Ywarn-unused").contains(_))))
 
 Test / testOptions += Tests.Argument("-oD")
