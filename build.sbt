@@ -1,6 +1,5 @@
 name := "Dahlia"
 ThisBuild / version := "0.0.2"
-ThisBuild / scalaVersion := "2.13.6"
 
 lazy val shared = (project in file("shared/"))
   .settings(
@@ -9,11 +8,13 @@ lazy val shared = (project in file("shared/"))
 lazy val parser = (project in file("parser/"))
   .dependsOn(shared)
   .settings(
+    scalaVersion := "2.13.6",
     scalacOptions += "-Ytasty-reader"
   )
 lazy val root = (project in file("."))
   .dependsOn(parser,shared)
   .settings(
+    scalaVersion := "2.13.6",
     scalacOptions += "-Ytasty-reader"
   )
 

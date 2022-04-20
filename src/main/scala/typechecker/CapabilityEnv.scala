@@ -16,8 +16,8 @@ object CapabilityEnv {
       with Tracker[Expr, Capability, CapabilityEnv]
 
   private case class Env(
-      readSet: ScopedSet[Expr] = ScopedSet(List()),
-      writeSet: ScopedSet[Expr] = ScopedSet(List())
+      readSet: ScopedSet[Expr] = ScopedSet(List(Set())),
+      writeSet: ScopedSet[Expr] = ScopedSet(List(Set()))
   ) extends CapabilityEnv {
 
     def get(e: Expr): Option[Capability] =
