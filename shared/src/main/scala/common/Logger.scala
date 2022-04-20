@@ -5,36 +5,31 @@ import scribe._
 import scribe.format._
 import scribe.output.TextOutput
 
-object Logger {
+object Logger:
 
   /** Makes all positionals logable by scribe */
-  implicit object PositionalLoggable extends Loggable[(String, Positional)] {
-    override def apply(value: (String, Positional)): TextOutput = {
+  implicit object PositionalLoggable extends Loggable[(String, Positional)]:
+    override def apply(value: (String, Positional)): TextOutput =
       val pos = value._2.pos
 
       new output.TextOutput(
         s"[${pos.line}.${pos.column}] ${value._1}\n${pos.longString}"
       )
-    }
-  }
 
-  def stringToLevel(str: String): Level = str match {
+  def stringToLevel(str: String): Level = str match
     case "error" => Level.Error
     case "warn" => Level.Warn
     case "debug" => Level.Debug
     case _ => throw new RuntimeException(s"Unknown level: $str")
-  }
 
   /**
     * Stateful function to set the logging level in the compiler.
     */
-  def setLogLevel(level: Level): scribe.Logger = {
+  def setLogLevel(level: Level): scribe.Logger =
     scribe.Logger.root
       .clearHandlers()
       .withHandler(formatter = format, minimumLevel = Some(level))
       .replace()
-  }
 
   val format: Formatter = formatter"[$levelColored] $message$newLine"
 
-}

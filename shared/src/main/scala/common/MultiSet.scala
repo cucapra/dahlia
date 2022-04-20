@@ -2,18 +2,18 @@ package fuselang.common
 
 import scala.collection.immutable.Map
 
-object MultiSet {
+object MultiSet:
 
   def emptyMultiSet[K](): MultiSet[K] = MultiSet[K](Map[K, Int]())
 
   def fromSeq[K](seq: Seq[K]): MultiSet[K] =
     MultiSet(seq.foldLeft(Map[K, Int]())({
       case (ms, v) =>
-        if (ms.contains(v)) ms + (v -> (ms(v) + 1))
+        if ms.contains(v) then ms + (v -> (ms(v) + 1))
         else ms + (v -> 1)
     }))
 
-  case class MultiSet[K](val setMap: Map[K, Int]) extends AnyVal {
+  case class MultiSet[K](val setMap: Map[K, Int]) extends AnyVal:
 
     /**
       * Contains at least [[num]] copies of [[element]]
@@ -30,22 +30,20 @@ object MultiSet {
     /**
       * Apply [[op]] on the values associated with the same key in [[this]] and [[that]].
       */
-    def zipWith(that: MultiSet[K], op: (Int, Int) => Int): MultiSet[K] = {
+    def zipWith(that: MultiSet[K], op: (Int, Int) => Int): MultiSet[K] =
       val thatMap = that.setMap
       val (thisKeys, thatKeys) = (setMap.keys.toSet, thatMap.keys.toSet)
-      if (thisKeys != thatKeys) {
+      if thisKeys != thatKeys then
         throw new NoSuchElementException(
           s"Element ${thisKeys.diff(thatKeys).head} not in both multisets.\nThis: ${setMap}\nThat: ${thatMap}."
         )
-      }
       MultiSet(setMap.map({ case (k, v) => k -> op(v, thatMap(k)) }))
-    }
 
     /** Calculate multiset difference */
     def diff(that: MultiSet[K]): MultiSet[K] =
       MultiSet(setMap.map({
         case (k, v) => {
-          k -> (if (that.setMap.contains(k)) (v - that.setMap(k)) else v)
+          k -> (if that.setMap.contains(k) then (v - that.setMap(k)) else v)
         }
       }))
 
@@ -62,6 +60,4 @@ object MultiSet {
 
     def getCount(k: K): Int = setMap(k)
 
-  }
 
-}

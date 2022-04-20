@@ -3,7 +3,8 @@ ThisBuild / version := "0.0.2"
 
 lazy val shared = (project in file("shared/"))
   .settings(
-    scalaVersion := "3.1.2"
+    scalaVersion := "3.1.2",
+    scalacOptions ++= Seq("-new-syntax", "-indent"),
   )
 lazy val parser = (project in file("parser/"))
   .dependsOn(shared)

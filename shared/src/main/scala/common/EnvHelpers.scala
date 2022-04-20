@@ -1,6 +1,6 @@
 package fuselang.common
 
-object EnvHelpers {
+object EnvHelpers:
 
   trait ScopeManager[T <: ScopeManager[_]] { this: T =>
 
@@ -10,9 +10,8 @@ object EnvHelpers {
       *
       * @param inScope Commands executed inside a new Scope level.
       */
-    def withScope(inScope: T => T): T = {
+    def withScope(inScope: T => T): T =
       inScope(this)
-    }
 
     /**
       * Open a new scope and run commands in it. When the scope ends, the
@@ -21,9 +20,8 @@ object EnvHelpers {
       *
       * @param inScope Commands executed inside a new Scope level.
       */
-    def withScopeAndRet[V](inScope: T => (V, T)): (V, T) = {
+    def withScopeAndRet[V](inScope: T => (V, T)): (V, T) =
       inScope(this)
-    }
 
     /**
       * Merge this environment with [[that]] for some abstract merge function.
@@ -53,8 +51,6 @@ object EnvHelpers {
     * Definition of a trivial environment that doesn't track any
     * information.
     */
-  final case class UnitEnv() extends ScopeManager[UnitEnv] {
+  final case class UnitEnv() extends ScopeManager[UnitEnv]:
     def merge(that: UnitEnv): UnitEnv = this
-  }
 
-}
