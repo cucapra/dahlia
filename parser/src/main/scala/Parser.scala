@@ -14,18 +14,18 @@ import CompilerError.BackendError
 case class Parser(input: String) {
 
   // Common surround expressions
-  def braces[_: P, T](p: => P[T]): P[T] = P("{" ~/ p ~ "}")
-  def brackets[_: P, T](p: => P[T]): P[T] = P("[" ~ p ~ "]")
-  def angular[_: P, T](p: => P[T]): P[T] = P("<" ~/ p ~ ">")
-  def parens[_: P, T](p: => P[T]): P[T] = P("(" ~/ p ~ ")")
+  def braces[K: P, T](p: => P[T]): P[T] = P("{" ~/ p ~ "}")
+  def brackets[K: P, T](p: => P[T]): P[T] = P("[" ~ p ~ "]")
+  def angular[K: P, T](p: => P[T]): P[T] = P("<" ~/ p ~ ">")
+  def parens[K: P, T](p: => P[T]): P[T] = P("(" ~/ p ~ ")")
 
-  def positioned[_: P, T <: Positional](p: => P[T]): P[T] = {
+  def positioned[K: P, T <: Positional](p: => P[T]): P[T] = {
     P(Index ~ p).map({
       case (index, t) => t.setPos(OffsetPosition(input, index))
     })
   }
 
-  /*def notKws[_: P] = {
+  /*def notKws[K: P] = {
     import fastparse.NoWhitespace._
     P(!(StringIn(
       "float", "double", "bool", "bit", "ubit", "fix", "ufix", "let", "for",
@@ -35,27 +35,27 @@ case class Parser(input: String) {
     ) ~ &(" "))).opaque("non reserved keywords")
   }*/
 
-  def kw[_: P](word: String): P[Unit] = {
+  def kw[K: P](word: String): P[Unit] = {
     import fastparse.NoWhitespace._
     P(word ~ !CharsWhileIn("a-zA-Z0-9_"))
   }
 
   // Basic atoms
-  def iden[_: P]: P[Id] = {
+  def iden[K: P]: P[Id] = {
     import fastparse.NoWhitespace._
     positioned(P(CharIn("a-zA-Z_") ~ CharsWhileIn("a-zA-Z0-9_").?).!.map({
       case rest => Id(rest)
     }).opaque("Expected valid identifier"))
   }
 
-  def number[_: P]: P[Int] =
+  def number[K: P]: P[Int] =
     P(CharIn("0-9").rep(1).!.map(_.toInt)).opaque("Expected positive number")
 
-  def stringVal[_: P]: P[String] =
+  def stringVal[K: P]: P[String] =
     P("\"" ~/ CharPred(_ != '"').rep.! ~ "\"")
 
   // Types
-  def typAtom[_: P]: P[Type] =
+  def typAtom[K: P]: P[Type] =
     positioned(
       P(
         kw("float").!.map(_ => TFloat()) |
@@ -73,12 +73,12 @@ case class Parser(input: String) {
       )
     )
 
-  def typIdx[_: P]: P[DimSpec] =
+  def typIdx[K: P]: P[DimSpec] =
     P(brackets(number ~ (kw("bank") ~ number).?)).map({
       case (n, b) => (n, b.getOrElse(1))
     })
 
-  def typ[_: P]: P[Type] =
+  def typ[K: P]: P[Type] =
     positioned(P(typAtom ~ (braces(number).? ~ typIdx.rep(1)).?).map({
       case (typ, Some((ports, dims))) =>
         TArray(typ, dims.toList, ports.getOrElse(1))
@@ -86,32 +86,32 @@ case class Parser(input: String) {
     }))
 
   // Literals
-  def uInt[_: P]: P[Expr] =
+  def uInt[K: P]: P[Expr] =
     positioned(
       P(
         "0" | "-".? ~ (CharIn("1-9") ~ CharsWhileIn("0-9").?)
       ).!.map((n: String) => EInt(n.toInt, 10)).opaque("integer")
     )
-  def hex[_: P]: P[Expr] =
+  def hex[K: P]: P[Expr] =
     positioned(
       P("0x" ~/ CharIn("0-9a-fA-F").rep(1)).!.map((n: String) =>
         EInt(Integer.parseInt(n.substring(2), 16), 16)
       ).opaque("hexademical")
     )
-  def octal[_: P]: P[Expr] =
+  def octal[K: P]: P[Expr] =
     positioned(
       P("0" ~ CharsWhileIn("0-7")).!.map((n: String) =>
         EInt(Integer.parseInt(n.substring(1), 8), 8)
       ).opaque("ocatal")
     )
-  def rational[_: P]: P[Expr] =
+  def rational[K: P]: P[Expr] =
     positioned(
       P(
         "-".? ~ ("0" | (CharIn("1-9") ~ CharsWhileIn("0-9").?)) ~
           "." ~/ CharsWhileIn("0-9")
       ).!.map(ERational(_)).opaque("rational")
     )
-  def boolean[_: P]: P[Expr] =
+  def boolean[K: P]: P[Expr] =
     positioned(P(StringIn("true", "false")).!.map({
       case "true" => EBool(true)
       case "false" => EBool(false)
@@ -119,42 +119,42 @@ case class Parser(input: String) {
 
   // Compound literals
 
-  def recLitField[_: P]: P[(Id, Expr)] =
+  def recLitField[K: P]: P[(Id, Expr)] =
     P(iden ~ "=" ~/ expr)
       .map({
         case (id, e) => (id, e)
       })
       .opaque("<iden> = <expr>")
-  def arrIn[_: P]: P[Expr] =
+  def arrIn[K: P]: P[Expr] =
     positioned(P(expr.rep(1, sep = ",").map(es => EArrLiteral(es.toList))))
-  def recIn[_: P]: P[Expr] =
+  def recIn[K: P]: P[Expr] =
     positioned(
       P(recLitField.rep(1, sep = ";").map(fs => ERecLiteral(fs.toMap)))
     )
-  def compoundLiteral[_: P]: P[Expr] =
+  def compoundLiteral[K: P]: P[Expr] =
     positioned(P(braces(recIn | arrIn)).opaque("array or record literal"))
 
   // Access expressions
-  def arrayAccess[_: P]: P[Expr] =
+  def arrayAccess[K: P]: P[Expr] =
     positioned(P(iden ~ brackets(expr).rep(1)).map({
       case (id, idxs) => EArrAccess(id, idxs.toList)
     }))
 
   // Cast expressions or parenthesized expressions
-  def exprCast[_: P]: P[Expr] =
+  def exprCast[K: P]: P[Expr] =
     positioned(P(parens(expr ~ ("as" ~/ typAtom.opaque("type")).?)).map({
       case (e, Some(t)) => ECast(e, t)
       case (e, None) => e
     }))
 
   // Atoms that start with identifiers
-  def appOrVar[_: P]: P[Expr] =
+  def appOrVar[K: P]: P[Expr] =
     positioned(P(iden ~/ parens(expr.rep(sep = ",")).?).map({
       case (f, Some(args)) => EApp(f, args.toList)
       case (id, None) => EVar(id)
     }))
 
-  def simpleAtom[_: P]: P[Expr] = P(
+  def simpleAtom[K: P]: P[Expr] = P(
     exprCast |
       compoundLiteral |
       arrayAccess |
@@ -167,7 +167,7 @@ case class Parser(input: String) {
   )
 
   // Record access syntax
-  def recAccess[_: P]: P[Expr] =
+  def recAccess[K: P]: P[Expr] =
     P((simpleAtom ~ ("." ~ iden).rep).map({
       case (rec, fields) =>
         fields.foldLeft[Expr](rec)({
@@ -177,7 +177,7 @@ case class Parser(input: String) {
 
   // Binary operators
   import Syntax.{OpConstructor => OC}
-  def mulOps[_: P]: P[BOp] =
+  def mulOps[K: P]: P[BOp] =
     positioned(
       P(
         StringIn("/", "*", "%").!
@@ -187,7 +187,7 @@ case class Parser(input: String) {
         case "%" => NumOp("%", OC.mod)
       })
     )
-  def addOps[_: P]: P[BOp] =
+  def addOps[K: P]: P[BOp] =
     positioned(
       P(
         StringIn("+", "-").!
@@ -196,7 +196,7 @@ case class Parser(input: String) {
         case "-" => NumOp("-", OC.sub)
       })
     )
-  def eqOps[_: P]: P[BOp] =
+  def eqOps[K: P]: P[BOp] =
     positioned(
       P(
         StringIn("==", "!=", ">=", "<=", ">", "<").!
@@ -205,20 +205,20 @@ case class Parser(input: String) {
         case op @ (">=" | "<=" | ">" | "<") => CmpOp(op)
       })
     )
-  def shOps[_: P]: P[BOp] =
+  def shOps[K: P]: P[BOp] =
     positioned(
       P(
         StringIn(">>", "<<").!
       ).map(op => BitOp(op))
     )
-  def bAnd[_: P]: P[BOp] = positioned(P("&".!.map(op => BitOp(op))))
-  def bOr[_: P]: P[BOp] = positioned(P("|".!.map(op => BitOp(op))))
-  def bXor[_: P]: P[BOp] = positioned(P("^".!.map(op => BitOp(op))))
-  def and[_: P]: P[BOp] = positioned(P("&&".!.map(op => BoolOp(op))))
-  def or[_: P]: P[BOp] = positioned(P("||".!.map(op => BoolOp(op))))
+  def bAnd[K: P]: P[BOp] = positioned(P("&".!.map(op => BitOp(op))))
+  def bOr[K: P]: P[BOp] = positioned(P("|".!.map(op => BitOp(op))))
+  def bXor[K: P]: P[BOp] = positioned(P("^".!.map(op => BitOp(op))))
+  def and[K: P]: P[BOp] = positioned(P("&&".!.map(op => BoolOp(op))))
+  def or[K: P]: P[BOp] = positioned(P("||".!.map(op => BoolOp(op))))
 
   // Helper to generate binary op parsers
-  def parseOp[_: P](atom: => P[Expr], op: => P[BOp]): P[Expr] =
+  def parseOp[K: P](atom: => P[Expr], op: => P[BOp]): P[Expr] =
     positioned({
       (atom ~ (op ~ atom).rep).map({
         case (left, rights) =>
@@ -228,20 +228,20 @@ case class Parser(input: String) {
       })
     })
 
-  def binMul[_: P]: P[Expr] = P(parseOp(recAccess, mulOps))
-  def binAdd[_: P]: P[Expr] = P(parseOp(binMul, addOps))
-  def binEq[_: P]: P[Expr] = P(parseOp(binAdd, eqOps))
-  def binSh[_: P]: P[Expr] = P(parseOp(binEq, shOps))
-  def binBAnd[_: P]: P[Expr] = P(parseOp(binSh, bAnd))
-  def binBXor[_: P]: P[Expr] = P(parseOp(binBAnd, bXor))
-  def binBOr[_: P]: P[Expr] = P(parseOp(binBXor, bOr))
-  def binAnd[_: P]: P[Expr] = P(parseOp(binBOr, and))
-  def binOr[_: P]: P[Expr] = P(parseOp(binAnd, or))
+  def binMul[K: P]: P[Expr] = P(parseOp(recAccess, mulOps))
+  def binAdd[K: P]: P[Expr] = P(parseOp(binMul, addOps))
+  def binEq[K: P]: P[Expr] = P(parseOp(binAdd, eqOps))
+  def binSh[K: P]: P[Expr] = P(parseOp(binEq, shOps))
+  def binBAnd[K: P]: P[Expr] = P(parseOp(binSh, bAnd))
+  def binBXor[K: P]: P[Expr] = P(parseOp(binBAnd, bXor))
+  def binBOr[K: P]: P[Expr] = P(parseOp(binBXor, bOr))
+  def binAnd[K: P]: P[Expr] = P(parseOp(binBOr, and))
+  def binOr[K: P]: P[Expr] = P(parseOp(binAnd, or))
 
-  def expr[_: P]: P[Expr] = binOr
+  def expr[K: P]: P[Expr] = binOr
 
   // For loops
-  def range[_: P]: P[CRange] =
+  def range[K: P]: P[CRange] =
     positioned(
       P(
         parens(
@@ -253,7 +253,7 @@ case class Parser(input: String) {
           CRange(id, typ, rev.isDefined, s, e, u.getOrElse(1))
       })
     )
-  def cfor[_: P]: P[Command] =
+  def cfor[K: P]: P[Command] =
     positioned(
       P(
         kw("for") ~/ range ~/ (kw("pipeline").!).? ~ block ~ (kw("combine") ~/ block).?
@@ -270,7 +270,7 @@ case class Parser(input: String) {
     )
 
   // While loops
-  def whLoop[_: P]: P[Command] =
+  def whLoop[K: P]: P[Command] =
     positioned(
       P(kw("while") ~/ parens(expr) ~ kw("pipeline").!.? ~/ block).map({
         case (cond, pl, CBlock(body)) => CWhile(cond, pl.isDefined, body)
@@ -282,7 +282,7 @@ case class Parser(input: String) {
     )
 
   // Conditionals
-  def ifElse[_: P]: P[Command] =
+  def ifElse[K: P]: P[Command] =
     positioned(
       P(kw("if") ~/ parens(expr) ~ block ~ (kw("else") ~/ block).?).map({
         case (cond, CBlock(cons), Some(CBlock(alt))) =>
@@ -297,13 +297,13 @@ case class Parser(input: String) {
     )
 
   // let
-  def bind[_: P]: P[Command] =
+  def bind[K: P]: P[Command] =
     positioned((kw("let") ~/ iden ~ (":" ~ typ).? ~/ ("=" ~ expr).?).map({
       case (id, t, exp) => CLet(id, t, exp)
     }))
 
   // Update expressions
-  def upd[_: P]: P[Command] =
+  def upd[K: P]: P[Command] =
     positioned(
       P(
         expr ~/ (
@@ -320,7 +320,7 @@ case class Parser(input: String) {
     )
 
   // Views
-  def viewSuffix[_: P]: P[Suffix] =
+  def viewSuffix[K: P]: P[Suffix] =
     positioned(
       P(
         "_".!.map(_ => Rotation(EInt(0, 10))) |
@@ -328,19 +328,19 @@ case class Parser(input: String) {
           (expr ~ "!").map(e => Rotation(e))
       ).opaque("<view-suffix>: _ | <number> * <expr> | <expr> !")
     )
-  def viewParam[_: P]: P[View] =
+  def viewParam[K: P]: P[View] =
     positioned(
       P(viewSuffix ~/ ":" ~ ("+" ~ number).? ~ (kw("bank") ~/ number).?).map({
         case (suf, prefixOpt, shrinkOpt) => View(suf, prefixOpt, shrinkOpt)
       })
     )
-  def view[_: P]: P[Command] =
+  def view[K: P]: P[Command] =
     positioned(
       P(kw("view") ~/ iden ~ "=" ~ iden ~ brackets(viewParam).rep(1)).map({
         case (id, arrId, params) => CView(id, arrId, params.toList)
       })
     )
-  def split[_: P]: P[Command] =
+  def split[K: P]: P[Command] =
     positioned(
       P(kw("split") ~/ iden ~ "=" ~ iden ~ brackets(kw("by") ~/ number).rep(1))
         .map({
@@ -348,7 +348,7 @@ case class Parser(input: String) {
         })
     )
 
-  def simpleCmd[_: P]: P[Command] = P(
+  def simpleCmd[K: P]: P[Command] = P(
     bind |
       view |
       split |
@@ -357,34 +357,34 @@ case class Parser(input: String) {
   )
 
   // Block commands
-  def block[_: P]: P[Command] = positioned(P(braces(cmd)).map(c => CBlock(c)))
-  def blockCmd[_: P]: P[Command] = P(cfor | ifElse | whLoop | block | decor)
+  def block[K: P]: P[Command] = positioned(P(braces(cmd)).map(c => CBlock(c)))
+  def blockCmd[K: P]: P[Command] = P(cfor | ifElse | whLoop | block | decor)
 
-  def parCmd[_: P]: P[Command] =
+  def parCmd[K: P]: P[Command] =
     positioned(
       P(
         (blockCmd | (simpleCmd ~/ ";")).rep
       ).map(cmds => CPar.smart(cmds))
     )
 
-  def cmd[_: P]: P[Command] =
+  def cmd[K: P]: P[Command] =
     positioned(P(parCmd ~ ("---" ~/ parCmd).rep).map({
       case (init, rest) => CSeq.smart(init +: rest)
     }))
 
   // Functions
-  def args[_: P]: P[Decl] =
+  def args[K: P]: P[Decl] =
     positioned(
       P(iden ~ ":" ~ typ)
         .map({ case (i, t) => Decl(i, t) })
         .opaque("<iden> : <typ>")
     )
-  def retTyp[_: P]: P[Type] =
+  def retTyp[K: P]: P[Type] =
     positioned(P(":" ~ typ).?.map({
       case Some(t) => t
       case None => TVoid()
     }))
-  def funcSignature[_: P]: P[FuncDef] =
+  def funcSignature[K: P]: P[FuncDef] =
     positioned(
       P(kw("def") ~/ iden ~ parens(args.rep(sep = ",")) ~ retTyp ~ ";").map({
         case (fn, args, ret) => FuncDef(fn, args.toList, ret, None)
@@ -404,22 +404,22 @@ case class Parser(input: String) {
     )
 
   // Record definitions
-  def recordDef[_: P]: P[RecordDef] =
+  def recordDef[K: P]: P[RecordDef] =
     positioned(P(kw("record") ~/ iden ~ braces(args.rep(sep = ";"))).map({
       case (n, fs) => RecordDef(n, fs.map(d => d.id -> d.typ).toMap)
     }))
 
   // Declarations
-  def decl[_: P]: P[Decl] =
+  def decl[K: P]: P[Decl] =
     positioned(P(kw("decl") ~/ args ~ ";"))
 
-  def backend[_: P]: P[String] =
+  def backend[K: P]: P[String] =
     P(("c++" | "vivado" | "futil" | "calyx").!)
       .map(s => s)
       .opaque("known backend: `vivado(\"...\")`")
 
   // include statements
-  def include[_: P]: P[Include] =
+  def include[K: P]: P[Include] =
     positioned(
       P(kw("import") ~/
         (backend ~/ parens(stringVal)).rep(1) ~/
@@ -435,12 +435,12 @@ case class Parser(input: String) {
     )
 
   // Top-level decorations
-  def decor[_: P]: P[CDecorate] =
+  def decor[K: P]: P[CDecorate] =
     positioned(
       P(kw("decor") ~/ stringVal).map(CDecorate(_)).opaque("decor <string>")
     )
 
-  def prog[_: P]: P[Prog] =
+  def prog[K: P]: P[Prog] =
     positioned(
       P(
         include.rep ~/

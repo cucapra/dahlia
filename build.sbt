@@ -3,18 +3,18 @@ ThisBuild / version := "0.0.2"
 
 lazy val shared = (project in file("shared/"))
   .settings(
-    scalaVersion := "3.0.1"
+    scalaVersion := "3.1.2"
   )
 lazy val parser = (project in file("parser/"))
   .dependsOn(shared)
   .settings(
-    scalaVersion := "2.13.6",
+    scalaVersion := "2.13.7",
     scalacOptions += "-Ytasty-reader"
   )
 lazy val root = (project in file("."))
   .dependsOn(parser,shared)
   .settings(
-    scalaVersion := "2.13.6",
+    scalaVersion := "2.13.7",
     scalacOptions += "-Ytasty-reader"
   )
 
