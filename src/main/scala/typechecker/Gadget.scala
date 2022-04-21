@@ -14,29 +14,26 @@ import CompilerError._
   * asks for resources from a gadget, the gadget determines which resources
   * it requires from the underlying gadget.
   */
-object Gadgets {
+object Gadgets:
 
   type ConsumeList = Seq[Seq[Int]]
 
-  def clString(cl: Seq[Seq[Int]]): String = {
+  def clString(cl: Seq[Seq[Int]]): String =
     cl.map(els => els.mkString("{", ",", "}")).mkString("[", "][", "]")
-  }
 
-  trait Gadget {
+  trait Gadget:
     // Return the name of the resource, the list of banks to be consumed,
     // and a trace of transformations done on the original resource.
     def getSummary(consume: ConsumeList): (Id, Seq[Int], Seq[String])
-  }
 
-  case class ResourceGadget(resource: Id, banks: Seq[Int]) extends Gadget {
-    private def cross[A](acc: Seq[Seq[A]], l: Seq[A]): Seq[Seq[A]] = {
-      for { a <- acc; el <- l } yield a :+ el
-    }
+  case class ResourceGadget(resource: Id, banks: Seq[Int]) extends Gadget:
+    private def cross[A](acc: Seq[Seq[A]], l: Seq[A]): Seq[Seq[A]] =
+      for  a <- acc; el <- l  yield a :+ el
 
     override def toString = resource.toString
 
-    private def hyperBankToBank(hyperBanks: Seq[Int]) = {
-      if (hyperBanks.length != banks.length)
+    private def hyperBankToBank(hyperBanks: Seq[Int]) =
+      if hyperBanks.length != banks.length then
         throw Impossible("hyperbank size is different from original banking")
 
       hyperBanks
@@ -44,13 +41,12 @@ object Gadgets {
         .foldLeft(0)({
           case (acc, (hb, b)) => b * acc + hb
         })
-    }
 
     /**
       * The root for all gadgets. Maps a multidimensional consume list to
       * corresponding one dimensional banks.
       */
-    def getSummary(consume: ConsumeList): (Id, Seq[Int], Seq[String]) = {
+    def getSummary(consume: ConsumeList): (Id, Seq[Int], Seq[String]) =
       // Transform consumelist into a Seq[Seq[A]] where the inner list
       // represents a sequence of banks for the dimension. These are
       // latter transformed to 1D banks.
@@ -62,36 +58,30 @@ object Gadgets {
       val outRes = hyperBanks.map(hyperBankToBank)
 
       (resource, outRes, Seq(clString(Seq(outRes))))
-    }
-  }
 
   case class MultiDimGadget(underlying: Gadget, dim: Seq[DimSpec])
-      extends Gadget {
+      extends Gadget:
 
     /**
       * A base physical memory with `k` banks redirects access from bank `b` to
       * to `b % k`.
       */
-    def getSummary(consume: ConsumeList): (Id, Seq[Int], Seq[String]) = {
+    def getSummary(consume: ConsumeList): (Id, Seq[Int], Seq[String]) =
       val resourceTransform = consume
         .zip(dim)
         .map({ case (resources, (_, banks)) => resources.map(_ % banks) })
 
       val (res, sum, trace) = underlying.getSummary(resourceTransform)
       (res, sum, clString(resourceTransform) +: trace)
-    }
-  }
 
   case class ViewGadget(
       underlying: Gadget,
       transformer: ConsumeList => ConsumeList
-  ) extends Gadget {
-    def getSummary(consume: ConsumeList): (Id, Seq[Int], Seq[String]) = {
+  ) extends Gadget:
+    def getSummary(consume: ConsumeList): (Id, Seq[Int], Seq[String]) =
       val outRes = transformer(consume)
       val (res, sum, trace) = underlying.getSummary(outRes)
       (res, sum, clString(outRes) +: trace)
-    }
-  }
 
   /**
     * Creates a conservative simple view that fully consumes the array
@@ -103,7 +93,7 @@ object Gadgets {
       underlying: Gadget,
       shrinks: Seq[Int],
       arrDims: Seq[DimSpec]
-  ): ViewGadget = {
+  ): ViewGadget =
     // Multiply the resource requirements by the origBanking / shrink.
     // This simulates that shrinking "connects" multiple banks into a
     // single one.
@@ -135,7 +125,6 @@ object Gadgets {
         })
     }
     ViewGadget(underlying, transformer)
-  }
 
   /**
     * Creates logic for a split view. A split view always has an even number
@@ -148,7 +137,5 @@ object Gadgets {
       underlying: Gadget,
       arrayDims: Seq[DimSpec],
       @deprecated("Not used", "0.0.1") splitDims: Seq[DimSpec]
-  ): ViewGadget = {
+  ): ViewGadget =
     viewGadget(underlying, arrayDims.map(_._2), arrayDims)
-  }
-}

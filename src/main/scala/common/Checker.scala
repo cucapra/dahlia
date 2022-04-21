@@ -5,7 +5,7 @@ import fuselang.Utils.asPartial
 import Syntax._
 import EnvHelpers._
 
-object Checker {
+object Checker:
 
   /**
     * A checker is a compiler pass that collects information using some Environment
@@ -18,7 +18,7 @@ object Checker {
     * val env1 = check(e1)(currEnv)
     * check(e2)(env1)
     */
-  abstract class Checker {
+  abstract class Checker:
 
     type Env <: ScopeManager[Env]
 
@@ -27,7 +27,7 @@ object Checker {
     /**
       * Top level function called on the AST.
       */
-    def check(p: Prog): Unit = {
+    def check(p: Prog): Unit =
       val Prog(_, defs, _, _, cmd) = p
 
       val env = defs.foldLeft(emptyEnv)({
@@ -35,7 +35,6 @@ object Checker {
       })
 
       checkC(cmd)(env); ()
-    }
 
     /**
       * Helper functions for checking sequences of the same element.
@@ -43,20 +42,17 @@ object Checker {
     def checkSeqWith[T](f: (T, Env) => Env)(iter: Iterable[T])(env: Env): Env =
       iter.foldLeft(env)({ case (env, t) => f(t, env) })
 
-    def checkESeq(exprs: Iterable[Expr])(implicit env: Env): Env = {
+    def checkESeq(exprs: Iterable[Expr])(implicit env: Env): Env =
       checkSeqWith[Expr](checkE(_: Expr)(_: Env))(exprs)(env)
-    }
 
-    def checkCSeq(cmds: Iterable[Command])(implicit env: Env): Env = {
+    def checkCSeq(cmds: Iterable[Command])(implicit env: Env): Env =
       checkSeqWith[Command](checkC(_: Command)(_: Env))(cmds)(env)
-    }
 
-    def checkDef(defi: Definition)(implicit env: Env): Env = defi match {
+    def checkDef(defi: Definition)(implicit env: Env): Env = defi match
       case FuncDef(_, _, _, bodyOpt) => bodyOpt.map(checkC).getOrElse(env)
       case _: RecordDef => env
-    }
 
-    def checkE(expr: Expr)(implicit env: Env): Env = expr match {
+    def checkE(expr: Expr)(implicit env: Env): Env = expr match
       case _: ERational | _: EInt | _: EBool | _: EVar => env
       case ERecLiteral(fields) => checkESeq(fields.map(_._2))
       case EArrLiteral(idxs) => checkESeq(idxs)
@@ -67,11 +63,10 @@ object Checker {
       case EArrAccess(_, idxs) => checkESeq(idxs)
       case EPhysAccess(_, bankIdxs) =>
         checkESeq(bankIdxs.map(_._2))
-    }
 
     def checkLVal(e: Expr)(implicit env: Env): Env = checkE(e)
 
-    def checkC(cmd: Command)(implicit env: Env): Env = cmd match {
+    def checkC(cmd: Command)(implicit env: Env): Env = cmd match
       case _: CSplit | _: CView | CEmpty | _: CDecorate => env
       case CPar(cmds) => checkCSeq(cmds)
       case CSeq(cmds) => checkCSeq(cmds)
@@ -94,9 +89,7 @@ object Checker {
         checkE(cond).withScope(checkC(body)(_))
       }
       case CBlock(cmd) => env.withScope(checkC(cmd)(_))
-    }
 
-  }
 
   /**
     * Partial checker defines helper functions for writing down
@@ -121,7 +114,7 @@ object Checker {
     * executes myCheckE first and if there are no matching cases, falls
     * back to partialRewriteE which has the default traversal behavior.
     */
-  abstract class PartialChecker extends Checker {
+  abstract class PartialChecker extends Checker:
     private val partialCheckE: PF[(Expr, Env), Env] =
       asPartial(super.checkE(_: Expr)(_: Env))
 
@@ -132,13 +125,9 @@ object Checker {
     // pattern.
     def mergeCheckE(
         myCheckE: PF[(Expr, Env), Env]
-    ): PF[(Expr, Env), Env] = {
+    ): PF[(Expr, Env), Env] =
         myCheckE.orElse(partialCheckE)
-    }
     def mergeCheckC(
         myCheckC: PF[(Command, Env), Env]
-    ): PF[(Command, Env), Env] = {
+    ): PF[(Command, Env), Env] =
         myCheckC.orElse(partialCheckC)
-    }
-  }
-}

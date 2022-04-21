@@ -12,11 +12,11 @@ import Logger._
 import Checker._
 import EnvHelpers._
 
-object BoundsChecker {
+object BoundsChecker:
 
   def check(p: Prog): Unit = BCheck.check(p)
 
-  private case object BCheck extends PartialChecker {
+  private case object BCheck extends PartialChecker:
 
     type Env = UnitEnv
 
@@ -26,14 +26,13 @@ object BoundsChecker {
       * Given a view with a known prefix length, check if it **might** cause an
       * out of bound access when accessed.
       */
-    private def checkView(arrLen: Int, viewId: Id, view: View) = {
-      if (view.prefix.isDefined) {
+    private def checkView(arrLen: Int, viewId: Id, view: View) =
+      if view.prefix.isDefined then
         val View(suf, Some(pre), _) = view
 
-        val (sufExpr, fac) = suf match {
+        val (sufExpr, fac) = suf match
           case Aligned(fac, e) => (e, fac)
           case Rotation(e) => (e, 1)
-        }
 
         val maxVal: Int =
           sufExpr.typ
@@ -51,13 +50,10 @@ object BoundsChecker {
                 1
             }
 
-        if (maxVal + pre > arrLen) {
+        if maxVal + pre > arrLen then
           throw IndexOutOfBounds(viewId, arrLen, maxVal + pre, viewId.pos)
-        }
-      }
-    }
 
-    def myCheckE: PF[(Expr, Env), Env] = {
+    def myCheckE: PF[(Expr, Env), Env] =
       case (EArrAccess(id, idxs), e) => {
         id.typ
           .getOrThrow(Impossible(s"$id missing type in $e"))
@@ -70,7 +66,7 @@ object BoundsChecker {
                   case ((idx, t), (size, _)) =>
                     t.foreach({
                       case idxt @ TSizedInt(n, _) =>
-                        if ((math.pow(2, n) - 1) >= size) {
+                        if (math.pow(2, n) - 1) >= size then {
                           /* scribe.warn(
                             (
                               s"$idxt is used for an array access. " +
@@ -80,10 +76,10 @@ object BoundsChecker {
                           ) */
                         }
                       case TStaticInt(v) =>
-                        if (v >= size)
+                        if v >= size then
                           throw IndexOutOfBounds(id, size, v, idx.pos)
                       case t @ TIndex(_, _) =>
-                        if (t.maxVal >= size)
+                        if t.maxVal >= size then
                           throw IndexOutOfBounds(id, size, t.maxVal, idx.pos)
                       case t =>
                         throw UnexpectedType(id.pos, "array access", s"[$t]", t)
@@ -92,9 +88,8 @@ object BoundsChecker {
           }
         e
       }
-    }
 
-    def myCheckC: PF[(Command, Env), Env] = {
+    def myCheckC: PF[(Command, Env), Env] =
       case (c @ CView(viewId, arrId, views), e) => {
         val typ =
           arrId.typ.getOrThrow(Impossible(s"$arrId is missing type in $c"))
@@ -109,11 +104,8 @@ object BoundsChecker {
         }
         e
       }
-    }
 
     override def checkE(expr: Expr)(implicit env: Env): Env =
       mergeCheckE(myCheckE)(expr, env)
     override def checkC(cmd: Command)(implicit env: Env): Env =
       mergeCheckC(myCheckC)(cmd, env)
-  }
-}

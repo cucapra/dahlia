@@ -9,56 +9,47 @@ import Transformer._
 import EnvHelpers._
 import fuselang.backend.calyx.{Helpers => calyx};
 
-object HoistSlowBinop extends TypedPartialTransformer {
+object HoistSlowBinop extends TypedPartialTransformer:
 
   case class ExprEnv(map: ListMap[Expr, CLet])
       extends ScopeManager[ExprEnv]
-      with Tracker[Expr, CLet, ExprEnv] {
-    def merge(that: ExprEnv): ExprEnv = {
+      with Tracker[Expr, CLet, ExprEnv]:
+    def merge(that: ExprEnv): ExprEnv =
       ExprEnv(this.map ++ that.map)
-    }
     def get(key: Expr): Option[CLet] = this.map.get(key)
-    def add(key: Expr, value: CLet): ExprEnv = {
+    def add(key: Expr, value: CLet): ExprEnv =
       ExprEnv(this.map + (key -> value))
-    }
-  }
 
   type Env = ExprEnv
   val emptyEnv: ExprEnv = ExprEnv(ListMap())
 
   var idx: Map[String, Int] = Map();
-  def genName(base: String): Id = {
+  def genName(base: String): Id =
     // update idx
-    idx.get(base) match {
+    idx.get(base) match
       case Some(n) => idx = idx + (base -> (n + 1))
       case None => idx = idx + (base -> 0)
-    }
     Id(s"$base${idx(base)}_")
-  }
 
   def construct(
       cmd: Command,
       env: Env,
       acc: Command = CEmpty
-  ): (Command, Env) = {
-    if (env.map.values.isEmpty && acc == CEmpty) {
+  ): (Command, Env) =
+    if env.map.values.isEmpty && acc == CEmpty then
       cmd -> emptyEnv
-    } else {
+    else
       CSeq.smart(env.map.values.toSeq :+ acc :+ cmd) -> emptyEnv
-    }
-  }
 
-  def binopRecur(expr: Expr, env: Env): (Expr, Env) = {
-    expr match {
+  def binopRecur(expr: Expr, env: Env): (Expr, Env) =
+    expr match
       // only recur when children are binops
       case EBinop(_, _, _) => rewriteE(expr)(env)
       case _ => (expr, env)
-    }
-  }
 
-  def myRewriteE: PF[(Expr, Env), (Expr, Env)] = {
+  def myRewriteE: PF[(Expr, Env), (Expr, Env)] =
     case (e @ EBinop(op, left, right), env) if calyx.slowBinops.contains(op.op) => {
-      env.get(e) match {
+      env.get(e) match
         case Some(let) => (EVar(let.id), env)
         case None => {
           val (leftRead, leftEnv) = binopRecur(left, env)
@@ -70,11 +61,9 @@ object HoistSlowBinop extends TypedPartialTransformer {
           )
           EVar(let.id) -> rightEnv.add(EBinop(op, leftRead, rightRead), let)
         }
-      }
     }
-  }
 
-  def myRewriteC: PF[(Command, Env), (Command, Env)] = {
+  def myRewriteC: PF[(Command, Env), (Command, Env)] =
     case (CLet(id, typ, Some(e)), _) => {
       val (expr, env) = rewriteE(e)(emptyEnv)
       construct(CLet(id, typ, Some(expr)), env)
@@ -99,10 +88,9 @@ object HoistSlowBinop extends TypedPartialTransformer {
       construct(CUpdate(rewrLhs, rewrRhs), nEnv)
     }
     case (CReduce(rop, lhs, rhs), _) => {
-      rop.op match {
+      rop.op match
         case "*=" | "/=" => throw NotImplemented(s"Hoisting $rop.op", rop.pos)
         case _ => ()
-      }
       val (rewrLhs, env) = rewriteE(lhs)(emptyEnv)
       val (rewrRhs, nEnv) = rewriteE(rhs)(env)
       construct(CReduce(rop, rewrLhs, rewrRhs), nEnv)
@@ -115,10 +103,8 @@ object HoistSlowBinop extends TypedPartialTransformer {
       val (nExpr, env) = rewriteE(expr)(emptyEnv)
       construct(CExpr(nExpr), env)
     }
-  }
 
   override def rewriteE(expr: Expr)(implicit env: Env): (Expr, Env) =
     mergeRewriteE(myRewriteE)(expr, env)
   override def rewriteC(cmd: Command)(implicit env: Env): (Command, Env) =
     mergeRewriteC(myRewriteC)(cmd, env)
-}

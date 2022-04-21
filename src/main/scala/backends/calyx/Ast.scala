@@ -7,8 +7,8 @@ import fuselang.common.CompilerError._
 import fuselang.Utils.RichOption
 import Doc._
 
-object Calyx {
-  def emitCompStructure(structs: List[Structure]): Doc = {
+object Calyx:
+  def emitCompStructure(structs: List[Structure]): Doc =
     val (cells, connections) = structs.partition(st =>
       st match {
         case _: Cell => true
@@ -17,45 +17,38 @@ object Calyx {
     )
     text("cells") <+> scope(vsep(cells.map(_.doc()))) <@>
       text("wires") <+> scope(vsep(connections.map(_.doc())))
-  }
 
-  sealed trait Emitable {
+  sealed trait Emitable:
     def doc(): Doc
     def emit(): String = this.doc().pretty
-  }
 
   /** A variable representing the name of a component. **/
-  case class CompVar(name: String) extends Emitable with Ordered[CompVar] {
+  case class CompVar(name: String) extends Emitable with Ordered[CompVar]:
     override def doc(): Doc = text(name)
     def port(port: String): CompPort = CompPort(this, port)
     def addSuffix(suffix: String): CompVar = CompVar(s"$name$suffix")
-    override def compare(that: CompVar): Int = {
+    override def compare(that: CompVar): Int =
       this.name.compare(that.name)
-    }
-  }
   case class PortDef(
       id: CompVar,
       width: Int,
       attrs: List[(String, Int)] = List()
-  ) extends Emitable {
-    override def doc(): Doc = {
+  ) extends Emitable:
+    override def doc(): Doc =
       val attrDoc = hsep(attrs.map({
         case (attr, v) => text(s"@${attr}") <> parens(text(v.toString()))
-      })) <> (if (attrs.isEmpty) emptyDoc else space)
+      })) <> (if attrs.isEmpty then emptyDoc else space)
       attrDoc <> id.doc() <> colon <+> value(width)
-    }
-  }
 
   /**** definition statements *****/
   case class Namespace(name: String, comps: List[NamespaceStatement])
-      extends Emitable {
+      extends Emitable:
     override def doc(): Doc =
       vsep(comps.map(_.doc()))
-  }
 
   /** The statements that can appear at the top-level. */
-  sealed trait NamespaceStatement extends Emitable {
-    override def doc(): Doc = this match {
+  sealed trait NamespaceStatement extends Emitable:
+    override def doc(): Doc = this match
       case Import(filename) => text("import") <+> quote(text(filename)) <> semi
       case Component(name, inputs, outputs, structure, control) => {
         text("component") <+>
@@ -68,8 +61,6 @@ object Calyx {
               text("control") <+> scope(control.doc())
           )
       }
-    }
-  }
 
   case class Import(filename: String) extends NamespaceStatement
   case class Component(
@@ -81,8 +72,8 @@ object Calyx {
   ) extends NamespaceStatement
 
   /***** structure *****/
-  sealed trait Port extends Emitable with Ordered[Port] {
-    override def doc(): Doc = this match {
+  sealed trait Port extends Emitable with Ordered[Port]:
+    override def doc(): Doc = this match
       case CompPort(id, name) =>
         id.doc() <> dot <> text(name)
       case ThisPort(id) => id.doc()
@@ -90,9 +81,8 @@ object Calyx {
         id.doc() <> brackets(text(name))
       case ConstantPort(width, value) =>
         text(width.toString) <> text("'d") <> text(value.toString)
-    }
 
-    override def compare(that: Port): Int = (this, that) match {
+    override def compare(that: Port): Int = (this, that) match
       case (ThisPort(thisId), ThisPort(thatId)) => thisId.compare(thatId)
       case (CompPort(thisId, _), CompPort(thatId, _)) => thisId.compare(thatId)
       case (HolePort(thisId, _), HolePort(thatId, _)) => thisId.compare(thatId)
@@ -104,26 +94,22 @@ object Calyx {
       case (_, _: CompPort) => -1
       case (_: ConstantPort, _) => 1
       case (_, _: ConstantPort) => -1
-    }
 
-    def isHole(): Boolean = this match {
+    def isHole(): Boolean = this match
       case _: HolePort => true
       case _ => false
-    }
 
-    def isConstant(value: Int, width: Int): Boolean = this match {
+    def isConstant(value: Int, width: Int): Boolean = this match
       case ConstantPort(v, w) if v == value && w == width => true
       case _ => false
-    }
-  }
 
   case class CompPort(id: CompVar, name: String) extends Port
   case class ThisPort(id: CompVar) extends Port
   case class HolePort(id: CompVar, name: String) extends Port
   case class ConstantPort(width: Int, value: BigInt) extends Port
 
-  sealed trait Structure extends Emitable with Ordered[Structure] {
-    override def doc(): Doc = this match {
+  sealed trait Structure extends Emitable with Ordered[Structure]:
+    override def doc(): Doc = this match
       case Cell(id, comp, attrs) => {
         val attrDoc =
           hsep(
@@ -132,7 +118,7 @@ object Calyx {
                 case (attr, v) =>
                   text("@") <> text(attr) <> parens(text(v.toString()))
               })
-          ) <> (if (attrs.isEmpty) emptyDoc else space)
+          ) <> (if attrs.isEmpty then emptyDoc else space)
 
         attrDoc <>
           id.doc() <+> equal <+> comp.doc() <> semi
@@ -142,34 +128,29 @@ object Calyx {
       case Assign(src, dest, guard) =>
         dest.doc() <+> equal <+> guard.doc() <+> text("?") <+> src.doc() <> semi
       case Group(id, conns, delay, comb) =>
-        (if (comb) text("comb ") else emptyDoc) <>
+        (if comb then text("comb ") else emptyDoc) <>
           text("group") <+> id.doc() <>
-          (if (delay.isDefined)
+          (if delay.isDefined then
              angles(text("\"static\"") <> equal <> text(delay.get.toString()))
            else emptyDoc) <+>
           scope(vsep(conns.map(_.doc())))
-    }
 
-    def compare(that: Structure): Int = {
-      (this, that) match {
+    def compare(that: Structure): Int =
+      (this, that) match
         case (Cell(thisId, _, _), Cell(thatId, _, _)) =>
           thisId.compare(thatId)
         case (Group(thisId, _, _, _), Group(thatId, _, _, _)) =>
           thisId.compare(thatId)
         case (Assign(thisSrc, thisDest, _), Assign(thatSrc, thatDest, _)) => {
-          if (thisSrc.compare(thatSrc) == 0) {
+          if thisSrc.compare(thatSrc) == 0 then
             thisDest.compare(thatDest)
-          } else {
+          else
             thisSrc.compare(thatSrc)
-          }
         }
         case (_: Cell, _) => -1
         case (_, _: Cell) => 1
         case (_: Group, _) => -1
         case (_, _: Group) => 1
-      }
-    }
-  }
   case class Cell(id: CompVar, ci: CompInst, attributes: List[(String, Int)])
       extends Structure
   case class Group(
@@ -182,12 +163,12 @@ object Calyx {
   case class Assign(src: Port, dest: Port, guard: GuardExpr = True)
       extends Structure
 
-  object Group {
+  object Group:
     def fromStructure(
         id: CompVar,
         structure: List[Structure],
         staticDelay: Option[Int]
-    ): (Group, List[Structure]) = {
+    ): (Group, List[Structure]) =
       val (connections, st) = structure.partitionMap[Assign, Structure](st =>
         st match {
           case c: Assign => Left(c)
@@ -200,31 +181,24 @@ object Calyx {
 
       // If this is a combinational group, remove the group done assignment
       val isComb = doneAssign.guard == True && doneAssign.src.isConstant(1, 1)
-      val conns = if (isComb) {
+      val conns = if isComb then
         connections.filter(assign => !assign.dest.isHole())
-      } else {
+      else
         connections
-      }
-      (this(id, conns, if (isComb) None else staticDelay, isComb), st)
-    }
-  }
+      (this(id, conns, if isComb then None else staticDelay, isComb), st)
 
-  case class CompInst(id: String, args: List[BigInt]) extends Emitable {
-    override def doc(): Doc = {
+  case class CompInst(id: String, args: List[BigInt]) extends Emitable:
+    override def doc(): Doc =
       val strList = args.map((x: BigInt) => text(x.toString()))
       text(id) <> parens(hsep(strList, comma))
-    }
-  }
 
-  sealed trait GuardExpr extends Emitable {
-    override def doc(): Doc = this match {
+  sealed trait GuardExpr extends Emitable:
+    override def doc(): Doc = this match
       case Atom(item) => item.doc()
       case And(left, right) => parens(left.doc() <+> text("&") <+> right.doc())
       case Or(left, right) => parens(left.doc() <+> text("|") <+> right.doc())
       case Not(inner) => text("!") <> inner.doc()
       case True => emptyDoc
-    }
-  }
   case class Atom(item: Port) extends GuardExpr
   case class And(left: GuardExpr, right: GuardExpr) extends GuardExpr
   case class Or(left: GuardExpr, right: GuardExpr) extends GuardExpr
@@ -232,39 +206,36 @@ object Calyx {
   case object True extends GuardExpr
 
   /***** control *****/
-  sealed trait Control extends Emitable {
+  sealed trait Control extends Emitable:
     var attributes: Map[String,Int] = Map[String, Int]()
 
-    def seq(c: Control): Control = (this, c) match {
+    def seq(c: Control): Control = (this, c) match
       case (Empty, c) => c
       case (c, Empty) => c
       case (seq0: SeqComp, seq1: SeqComp) => SeqComp(seq0.stmts ++ seq1.stmts)
       case (seq: SeqComp, _) => SeqComp(seq.stmts ++ List(c))
       case (_, seq: SeqComp) => SeqComp(this :: seq.stmts)
       case _ => SeqComp(List(this, c))
-    }
 
-    def par(c: Control): Control = (this, c) match {
+    def par(c: Control): Control = (this, c) match
       case (Empty, c) => c
       case (c, Empty) => c
       case (par0: ParComp, par1: ParComp) => ParComp(par0.stmts ++ par1.stmts)
       case (par0: ParComp, par1) => ParComp(par0.stmts ++ List(par1))
       case (par0, par1: ParComp) => ParComp(par0 :: par1.stmts)
       case _ => ParComp(List(this, c))
-    }
 
     def attributesDoc(): Doc =
-      if (this.attributes.isEmpty) {
+      if this.attributes.isEmpty then
         emptyDoc
-      } else {
+      else
         hsep(attributes.map({
           case (attr, v) =>
             text(s"@$attr") <> parens(text(v.toString()))
         })) <> space
-      }
 
-    override def doc(): Doc = {
-      val controlDoc = this match {
+    override def doc(): Doc =
+      val controlDoc = this match
         case SeqComp(stmts) =>
           text("seq") <+> scope(vsep(stmts.map(_.doc())))
         case ParComp(stmts) =>
@@ -273,7 +244,7 @@ object Calyx {
           text("if") <+> port.doc() <+> text("with") <+>
             cond.doc() <+>
             scope(trueBr.doc()) <> (
-            if (falseBr == Empty)
+            if falseBr == Empty then
               emptyDoc
             else
               space <> text("else") <+> scope(falseBr.doc())
@@ -295,10 +266,7 @@ object Calyx {
             parens(commaSep(outputDefs)) <> semi
         }
         case Empty => text("empty")
-      }
       attributesDoc() <> controlDoc
-    }
-  }
   case class SeqComp(stmts: List[Control]) extends Control
   case class ParComp(stmts: List[Control]) extends Control
   case class If(port: Port, cond: CompVar, trueBr: Control, falseBr: Control)
@@ -311,10 +279,9 @@ object Calyx {
       outConnects: List[(String, Port)]
   ) extends Control
   case object Empty extends Control
-}
 
 /** Construct primitives in Calyx. */
-object Stdlib {
+object Stdlib:
   def register(name: Calyx.CompVar, width: Int): Calyx.Cell =
     Calyx.Cell(
       name,
@@ -327,7 +294,7 @@ object Stdlib {
 
   def binop(op: String, bitwidth: Int, signed: Boolean): Calyx.CompInst =
     Calyx.CompInst(
-      s"std_${if (signed) "s" else ""}$op",
+      s"std_${if signed then "s" else ""}$op",
       List(bitwidth)
     )
 
@@ -346,11 +313,10 @@ object Stdlib {
       signed: Boolean
   ): Calyx.CompInst =
     Calyx.CompInst(
-      s"std_fp_${(if (signed) "s" else "")}$op",
+      s"std_fp_${(if signed then "s" else "")}$op",
       List(width, int_width, frac_width)
     )
 
   val staticTimingMap: Map[String, Int] = Map(
     "mult" -> 3
   )
-}

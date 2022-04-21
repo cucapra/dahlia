@@ -11,7 +11,7 @@ import Errors._
 import CompilerError._
 import EnvHelpers._
 
-object TypeEnv {
+object TypeEnv:
 
   val emptyEnv: Environment = Env()
 
@@ -26,7 +26,7 @@ object TypeEnv {
     * last two associations. A scope is a logical grouping of assoication
     * corresponding to lexical scope in programs.
     */
-  sealed trait Environment extends Tracker[Id, Type, Environment] {
+  sealed trait Environment extends Tracker[Id, Type, Environment]:
 
     /**
       * Type binding manipulation
@@ -80,27 +80,24 @@ object TypeEnv {
     def getReturn: Option[Type]
     def withReturn(typ: Type): Environment
 
-  }
 
   private case class Env(
       typeMap: ScopedMap[Id, Type] = ScopedMap(),
       typeDefMap: Map[Id, Type] = Map(),
       retType: Option[Type] = None
-  ) extends Environment {
+  ) extends Environment:
 
     /** Type definitions */
-    def addType(alias: Id, typ: Type): Environment = typeDefMap.get(alias) match {
+    def addType(alias: Id, typ: Type): Environment = typeDefMap.get(alias) match
       case Some(_) => throw AlreadyBound(alias)
       case None => this.copy(typeDefMap = typeDefMap + (alias -> typ))
-    }
     def getType(alias: Id): Type = typeDefMap.get(alias).getOrThrow(Unbound(alias))
 
-    def resolveType(typ: Type): Type = typ match {
+    def resolveType(typ: Type): Type = typ match
       case TAlias(n) => getType(n)
       case TFun(args, ret) => TFun(args.map(resolveType(_)), resolveType(ret))
       case arr @ TArray(t, _, _) => arr.copy(typ = resolveType(t))
       case t => t
-    }
 
     /** Type binding methods */
     def get(id: Id): Option[Type] = typeMap.get(id)
@@ -110,23 +107,17 @@ object TypeEnv {
       )
 
     /** Helper functions for ScopeManager */
-    def addScope: Env = {
+    def addScope: Env =
       Env(typeMap.addScope, typeDefMap, retType)
-    }
-    def endScope: Env = {
-      val scopes = for {
+    def endScope: Env =
+      val scopes = for
         (_, tMap) <- typeMap.endScope
-      } yield Env(tMap, typeDefMap, retType)
+      yield Env(tMap, typeDefMap, retType)
 
       scopes.getOrThrow(Impossible("Removed topmost scope"))
-    }
-    def withScope(inScope: Environment => Environment): Environment = {
-      inScope(this.addScope) match {
+    def withScope(inScope: Environment => Environment): Environment =
+      inScope(this.addScope) match
         case env: Env => env.endScope
-      }
-    }
 
     def getReturn = retType
     def withReturn(typ: Type): Env = this.copy(retType = Some(typ))
-  }
-}

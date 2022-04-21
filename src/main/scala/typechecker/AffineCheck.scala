@@ -72,17 +72,17 @@ import CompilerError._
  *
  */
 
-object AffineChecker {
+object AffineChecker:
 
   def check(p: Prog): Unit = AffineChecker.check(p)
 
-  private case object AffineChecker extends PartialChecker {
+  private case object AffineChecker extends PartialChecker:
 
     type Env = AffineEnv.Environment
 
     val emptyEnv = AffineEnv.emptyEnv
 
-    override def check(p: Prog): Unit = {
+    override def check(p: Prog): Unit =
       val Prog(_, defs, _, decls, cmd) = p
 
       val topFunc = FuncDef(Id(""), decls, TVoid(), Some(cmd))
@@ -90,9 +90,8 @@ object AffineChecker {
         case (e, d) => checkDef(d)(e)
       }
       ()
-    }
 
-    override def checkDef(defi: Definition)(implicit env: Env): Env = defi match {
+    override def checkDef(defi: Definition)(implicit env: Env): Env = defi match
       case FuncDef(_, args, _, bodyOpt) => {
         val (env2, _, _) = env.withScope(1) { newScope =>
           // Add physical resources corresponding to array decls
@@ -110,18 +109,16 @@ object AffineChecker {
         env2
       }
       case _: RecordDef => env
-    }
 
     /**
       * Add physical resources and default accessor gadget corresponding to a new
       * array. This is used for `decl` with arrays and new `let` bound arrays.
       */
-    private def addPhysicalResource(id: Id, typ: TArray, env: Env) = {
+    private def addPhysicalResource(id: Id, typ: TArray, env: Env) =
       val banks = typ.dims.map(_._2)
       env
         .addResource(id, ArrayInfo(id, banks, typ.ports))
         .add(id, MultiDimGadget(ResourceGadget(id, banks), typ.dims))
-    }
 
     /**
       * Generate a ConsumeList corresponding to the underlying memory type and
@@ -129,7 +126,7 @@ object AffineChecker {
       */
     private def getConsumeList(idxs: Seq[Expr], dims: Seq[DimSpec])(
         implicit arrId: Id
-    ) = {
+    ) =
 
       val (bres, consume) = idxs.zipWithIndex.foldLeft(
         (1, IndexedSeq[Seq[Int]]())
@@ -138,7 +135,7 @@ object AffineChecker {
           idx.typ.get match {
             // Index is an index type.
             case TIndex((s, e), _) =>
-              if ((e - s) % dims(dim)._2 != 0)
+              if (e - s) % dims(dim)._2 != 0 then
                 throw BankUnrollInvalid(arrId, dims(dim)._2, e - s)(idx.pos)
               else
                 (bres * (e - s), Range(s, e) +: consume)
@@ -147,7 +144,7 @@ object AffineChecker {
               (bres * 1, Seq(v % dims(dim)._2) +: consume)
             // Index is a dynamic number.
             case _: TSizedInt =>
-              if (dims(dim)._2 != 1)
+              if dims(dim)._2 != 1 then
                 throw InvalidDynamicIndex(arrId, dims(dim)._2)
               else (bres * 1, Seq(0) +: consume)
 
@@ -158,7 +155,6 @@ object AffineChecker {
 
       // Reverse the types list to match the order with idxs.
       (bres, consume.reverse)
-    }
 
     /**
       * Checks a given simple view and returns the dimensions for the view,
@@ -179,15 +175,15 @@ object AffineChecker {
       (newBank, (pre.getOrElse(len) -> newBank))
     }*/
 
-    override def checkLVal(e: Expr)(implicit env: Env): Env = e match {
+    override def checkLVal(e: Expr)(implicit env: Env): Env = e match
       case acc @ EArrAccess(id, idxs) => {
         // This only triggers for l-values.
         val TArray(_, dims, _) = id.typ.get
-        acc.consumable match {
+        acc.consumable match
           case Some(Annotations.ShouldConsume) => {
             val (bres, consumeList) = getConsumeList(idxs, dims)(id)
             // Check if the accessors generated enough copies for the context.
-            if (bres != env.getResources)
+            if bres != env.getResources then
               throw InsufficientResourcesInUnrollContext(
                 env.getResources,
                 bres,
@@ -198,12 +194,10 @@ object AffineChecker {
           }
           case con =>
             throw Impossible(s"$acc in write position has $con annotation")
-        }
       }
       case _ => checkE(e)
-    }
 
-    def myCheckC: PF[(Command, Env), Env] = {
+    def myCheckC: PF[(Command, Env), Env] =
       case (CLet(id, Some(ta @ TArray(_, _, _)), _), env) => {
         addPhysicalResource(id, ta, env)
       }
@@ -255,9 +249,8 @@ object AffineChecker {
         val TArray(_, vdims, _) = id.typ.get
         env.add(id, splitGadget(env(arrId), adims, vdims))
       }
-    }
 
-    def myCheckE: PF[(Expr, Env), Env] = {
+    def myCheckE: PF[(Expr, Env), Env] =
       case (EApp(_, args), env) => {
         args.foldLeft(env)({
           case (e, argExpr) => {
@@ -278,7 +271,7 @@ object AffineChecker {
       }
       case (expr @ EArrAccess(id, idxs), env) => {
         val TArray(_, dims, _) = id.typ.get
-        expr.consumable match {
+        expr.consumable match
           case None =>
             throw Impossible(
               s"$expr in read position has no consumable annotation"
@@ -289,16 +282,12 @@ object AffineChecker {
             // Consume the resources required by this gadget.
             env.consumeWithGadget(id, consumeList)(expr.pos)
           }
-        }
       }
       case (_: EPhysAccess, _) => {
         throw NotImplemented("Affine checking for physical accesses.")
       }
-    }
 
     override def checkE(expr: Expr)(implicit env: Env): Env =
       mergeCheckE(myCheckE)(expr, env)
     override def checkC(cmd: Command)(implicit env: Env): Env =
       mergeCheckC(myCheckC)(cmd, env)
-  }
-}

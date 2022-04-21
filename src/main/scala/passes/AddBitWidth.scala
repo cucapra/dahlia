@@ -11,19 +11,17 @@ import fuselang.typechecker.Subtyping
 
 // Add bitwidth information to all leaves of a binary expression by adding
 // case expressions.
-object AddBitWidth extends TypedPartialTransformer {
+object AddBitWidth extends TypedPartialTransformer:
 
-  case class ABEnv(curTyp: Option[Type]) extends ScopeManager[ABEnv] {
-    def merge(that: ABEnv): ABEnv = {
+  case class ABEnv(curTyp: Option[Type]) extends ScopeManager[ABEnv]:
+    def merge(that: ABEnv): ABEnv =
       assert(this == that, "Tried to merge different bitwidth envs")
       this
-    }
-  }
 
   type Env = ABEnv
   val emptyEnv: ABEnv = ABEnv(None)
 
-  def myRewriteE: PF[(Expr, Env), (Expr, Env)] = {
+  def myRewriteE: PF[(Expr, Env), (Expr, Env)] =
     case (e: ECast, env) => e -> env
     case (e @ EArrAccess(arrId, idxs), env) => {
       val Some(TArray(_, dims, _)) = arrId.typ
@@ -45,11 +43,10 @@ object AddBitWidth extends TypedPartialTransformer {
       e.copy(idxs = nIdxs) -> env
     }
     case (e: EInt, env) =>
-      if (env.curTyp.isDefined) {
+      if env.curTyp.isDefined then
         (ECast(e, env.curTyp.get), env)
-      } else {
+      else
         e -> env
-      }
     case (expr @ EBinop(_: EqOp | _: CmpOp, l, r), env) => {
       val typ = Subtyping
         .joinOf(l.typ.get, r.typ.get, expr.op)
@@ -60,20 +57,18 @@ object AddBitWidth extends TypedPartialTransformer {
       expr.copy(e1 = nl, e2 = nr) -> env
     }
     case (expr @ EBinop(_: NumOp | _: BitOp, l, r), env) => {
-      val nEnv = if (env.curTyp.isDefined) {
+      val nEnv = if env.curTyp.isDefined then
         env
-      } else {
+      else
         ABEnv(
           Some(expr.typ.getOrThrow(PassError("Expression is missing type")))
         )
-      }
       val (nl, _) = rewriteE(l)(nEnv)
       val (nr, _) = rewriteE(r)(nEnv)
       expr.copy(e1 = nl, e2 = nr) -> env
     }
-  }
 
-  def myRewriteC: PF[(Command, Env), (Command, Env)] = {
+  def myRewriteC: PF[(Command, Env), (Command, Env)] =
     case (CUpdate(l, r), env) => {
       val nEnv = ABEnv(
         Some(l.typ.getOrThrow(PassError("LHS is missing type")))
@@ -89,24 +84,20 @@ object AddBitWidth extends TypedPartialTransformer {
       val (ne, _) = rewriteE(e)(nEnv)
       cmd.copy(e = Some(ne)) -> env
     }
-  }
 
   override def transferType(expr: Expr, f: PF[(Expr, Env), (Expr, Env)])(
       implicit env: Env
-  ): (Expr, Env) = {
+  ): (Expr, Env) =
     val (e1, env1) = f(expr, env)
-    val nTyp = e1 match {
+    val nTyp = e1 match
       case ECast(_, t) => {
         Some(t)
       }
       case _ => expr.typ
-    }
     e1.typ = nTyp
     (e1, env1)
-  }
 
   override def rewriteC(cmd: Command)(implicit env: Env): (Command, Env) =
     mergeRewriteC(myRewriteC)(cmd, env)
   override def rewriteE(expr: Expr)(implicit env: Env): (Expr, Env) =
     mergeRewriteE(myRewriteE)(expr, env)
-}

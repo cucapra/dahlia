@@ -5,9 +5,9 @@ import Syntax._
 import EnvHelpers._
 import scala.{PartialFunction => PF}
 
-object Transformer {
+object Transformer:
 
-  abstract class Transformer {
+  abstract class Transformer:
 
     type Env <: ScopeManager[Env]
 
@@ -16,69 +16,62 @@ object Transformer {
     /**
       * Top level function called on the AST.
       */
-    def rewrite(p: Prog): Prog = {
+    def rewrite(p: Prog): Prog =
       val Prog(_, defs, _, decls, cmd) = p
 
       val (ndefs, env) = rewriteDefSeq(defs)(emptyEnv)
       val (ndecls, env1) = rewriteDeclSeq(decls)(env)
       val (ncmd, _) = rewriteC(cmd)(env1)
       p.copy(defs = ndefs.toSeq, decls = ndecls.toSeq, cmd = ncmd)
-    }
 
     /**
       * Helper functions for checking sequences of the same element.
       */
     def rewriteSeqWith[T](
         f: (T, Env) => (T, Env)
-    )(iter: Iterable[T])(env: Env): (Iterable[T], Env) = {
+    )(iter: Iterable[T])(env: Env): (Iterable[T], Env) =
       val (ts, env1) = iter.foldLeft(Seq[T](), env)({
         case ((ts, env), t) =>
           val (t1, env1) = f(t, env)
           (t1 +: ts, env1)
       })
       (ts.reverse, env1)
-    }
 
     def rewriteESeq(
         exprs: Iterable[Expr]
-    )(implicit env: Env): (Iterable[Expr], Env) = {
+    )(implicit env: Env): (Iterable[Expr], Env) =
       rewriteSeqWith[Expr](rewriteE(_: Expr)(_: Env))(exprs)(env)
-    }
 
     def rewriteCSeq(
         cmds: Iterable[Command]
-    )(implicit env: Env): (Iterable[Command], Env) = {
+    )(implicit env: Env): (Iterable[Command], Env) =
       rewriteSeqWith[Command](rewriteC(_: Command)(_: Env))(cmds)(env)
-    }
 
     def rewriteDefSeq(
         defs: Iterable[Definition]
-    )(implicit env: Env): (Iterable[Definition], Env) = {
+    )(implicit env: Env): (Iterable[Definition], Env) =
       rewriteSeqWith[Definition](rewriteDef(_: Definition)(_: Env))(defs)(env)
-    }
 
     def rewriteDeclSeq(ds: Seq[Decl])(implicit env: Env): (Seq[Decl], Env) =
       (ds, env)
 
-    def rewriteDef(defi: Definition)(implicit env: Env): (Definition, Env) = defi match {
+    def rewriteDef(defi: Definition)(implicit env: Env): (Definition, Env) = defi match
       case fdef @ FuncDef(_, args, _, bodyOpt) => {
         val (nArgs, env1) = rewriteDeclSeq(args)
 
-        val (nBody, env2) = bodyOpt match {
+        val (nBody, env2) = bodyOpt match
           case None => (None, env1)
           case Some(body) => {
             val (nbody, nEnv) = env1.withScopeAndRet(rewriteC(body)(_))
             Some(nbody) -> nEnv
           }
-        }
 
         fdef.copy(args = nArgs, bodyOpt = nBody) -> env2
       }
       case _: RecordDef => (defi, env)
-    }
 
     def rewriteE(expr: Expr)(implicit env: Env): (Expr, Env) =
-      expr match {
+      expr match
         case _: ERational | _: EInt | _: EBool | _: EVar => (expr, env)
         case ERecLiteral(fields) => {
           val (fs, env1) = rewriteESeq(fields.map(_._2))
@@ -118,11 +111,10 @@ object Transformer {
           })
           acc.copy(bankIdxs = nBankIdxsReversed.reverse) -> nEnv
         }
-      }
 
     def rewriteLVal(e: Expr)(implicit env: Env): (Expr, Env) = rewriteE(e)
 
-    def rewriteCBare(cmd: Command)(implicit env: Env): (Command, Env) = cmd match {
+    def rewriteCBare(cmd: Command)(implicit env: Env): (Command, Env) = cmd match
       case _: CSplit | _: CView | CEmpty | _: CDecorate => (cmd, env)
       case CPar(cmds) => {
         val (ncmds, env1) = rewriteCSeq(cmds)
@@ -143,13 +135,12 @@ object Transformer {
         red.copy(lhs = nlhs, rhs = nrhs) -> env2
       }
       case let @ CLet(_, _, eOpt) =>
-        eOpt match {
+        eOpt match
           case None => let -> env
           case Some(e) => {
             val (e1, env1) = rewriteE(e)
             let.copy(e = Some(e1)) -> env1
           }
-        }
       case CExpr(e) => {
         val (e1, env1) = rewriteE(e)
         CExpr(e1) -> env1
@@ -178,16 +169,13 @@ object Transformer {
         val (nbody, env1) = env.withScopeAndRet(rewriteC(body)(_))
         cb.copy(cmd = nbody) -> env1
       }
-    }
 
     // Rewrite the command and transfer the attribute
-    def rewriteC(cmd: Command)(implicit env: Env): (Command, Env) = {
+    def rewriteC(cmd: Command)(implicit env: Env): (Command, Env) =
       val (nCmd, nEnv) = rewriteCBare(cmd)(env)
       nCmd.attributes = cmd.attributes
       nCmd -> nEnv
-    }
 
-  }
 
   /**
     * Partial transformer defines helper functions for writing down
@@ -212,7 +200,7 @@ object Transformer {
     * executes myRewriteE first and if there are no matching cases, falls
     * back to partialRewriteE which has the default traversal behavior.
     */
-  abstract class PartialTransformer extends Transformer {
+  abstract class PartialTransformer extends Transformer:
     private val partialRewriteE: PF[(Expr, Env), (Expr, Env)] =
       asPartial(super.rewriteE(_: Expr)(_: Env))
 
@@ -223,15 +211,12 @@ object Transformer {
     // pattern.
     def mergeRewriteE(
         myRewriteE: PF[(Expr, Env), (Expr, Env)]
-    ): PF[(Expr, Env), (Expr, Env)] = {
+    ): PF[(Expr, Env), (Expr, Env)] =
       myRewriteE.orElse(partialRewriteE)
-    }
     def mergeRewriteC(
         myRewriteC: PF[(Command, Env), (Command, Env)]
-    ): PF[(Command, Env), (Command, Env)] = {
+    ): PF[(Command, Env), (Command, Env)] =
       myRewriteC.orElse(partialRewriteC)
-    }
-  }
 
   /**
     * Transformer that adds type annotations to newly created AST nodes
@@ -241,7 +226,7 @@ object Transformer {
     * environment returned from the TypeChecker and use it to add type
     * annotations to every AST node.
     */
-  abstract class TypedPartialTransformer extends PartialTransformer {
+  abstract class TypedPartialTransformer extends PartialTransformer:
     private val partialRewriteE: PF[(Expr, Env), (Expr, Env)] =
       asPartial(super.rewriteE(_: Expr)(_: Env))
 
@@ -251,19 +236,15 @@ object Transformer {
       */
     def transferType(expr: Expr, f: PF[(Expr, Env), (Expr, Env)])(
         implicit env: Env
-    ): (Expr, Env) = {
+    ): (Expr, Env) =
       val (e1, env1) = f(expr, env)
       e1.typ = expr.typ
       (e1, env1)
-    }
 
     override def mergeRewriteE(
         myRewriteE: PF[(Expr, Env), (Expr, Env)]
-    ): PF[(Expr, Env), (Expr, Env)] = {
+    ): PF[(Expr, Env), (Expr, Env)] =
       val func = (expr: Expr, env: Env) => {
         transferType(expr, myRewriteE.orElse(partialRewriteE))(env)
       }
       asPartial(func(_: Expr, _: Env))
-    }
-  }
-}

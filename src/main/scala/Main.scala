@@ -10,7 +10,7 @@ import common.Configuration._
 import java.io.InputStream
 import scopt.OptionParser
 
-object Main {
+object Main:
 
   // Command-line names for backends.
   val backends: Map[String,BackendOption] = Map(
@@ -55,7 +55,7 @@ object Main {
     opt[String]('n', "name")
       .valueName("<kernel>")
       .validate(x =>
-        if (x.matches("[A-Za-z0-9_]+")) success
+        if x.matches("[A-Za-z0-9_]+") then success
         else failure("Kernel name should only contain alphanumerals and _")
       )
       .action((x, c) => c.copy(kernelName = x))
@@ -64,7 +64,7 @@ object Main {
     opt[String]('b', "backend")
       .valueName("<backend>")
       .validate(b =>
-        if (backends.contains(b)) success
+        if backends.contains(b) then success
         else
           failure(
             s"Invalid backend name. Valid backends are ${backends.keys.mkString(", ")}"
@@ -91,7 +91,7 @@ object Main {
 
     opt[String]("memory-interface")
       .validate(b =>
-        if (memoryInterfaces.contains(b)) success
+        if memoryInterfaces.contains(b) then success
         else
           failure(
             s"Invalid memory interface. Valid memory interfaces are ${memoryInterfaces.keys.mkString(", ")}"
@@ -120,14 +120,13 @@ object Main {
       )
   }
 
-  def runWithConfig(conf: Config): Either[String, Int] = {
+  def runWithConfig(conf: Config): Either[String, Int] =
     type ErrString = String
 
     val path = conf.srcFile.toPath
-    val prog = Files.exists(path) match {
+    val prog = Files.exists(path) match
       case true => Right(new String(Files.readAllBytes(path)))
       case false => Left(s"$path: No such file in working directory")
-    }
 
     val cppPath: Either[ErrString, Option[Path]] = prog.flatMap(prog =>
       conf.output match {
@@ -151,11 +150,10 @@ object Main {
     )
 
     status
-  }
 
-  def main(args: Array[String]): Unit = {
+  def main(args: Array[String]): Unit =
 
-    parser.parse(args, emptyConf) match {
+    parser.parse(args, emptyConf) match
       case Some(conf) => {
         Logger.setLogLevel(conf.logLevel)
         val status = runWithConfig(conf)
@@ -168,6 +166,3 @@ object Main {
       case None => {
         sys.exit(1)
       }
-    }
-  }
-}

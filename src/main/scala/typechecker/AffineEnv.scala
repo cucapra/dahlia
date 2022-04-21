@@ -13,7 +13,7 @@ import Errors._
 import CompilerError._
 import EnvHelpers._
 
-object AffineEnv {
+object AffineEnv:
 
   val emptyEnv: Environment = Env()(1)
 
@@ -25,7 +25,7 @@ object AffineEnv {
     */
   sealed trait Environment
       extends ScopeManager[Environment]
-      with Tracker[Id, Gadget, Environment] {
+      with Tracker[Id, Gadget, Environment]:
 
     /**
       * Associate a gadget to the name of the physical resource it consumes.
@@ -100,31 +100,28 @@ object AffineEnv {
         implicit pos: Position
     ): Environment
 
-  }
 
   private case class Env(
       phyRes: ScopedMap[Id, ArrayInfo] = ScopedMap(),
       gadgetMap: ScopedMap[Id, Gadget] = ScopedMap()
   )(implicit val res: Int)
-      extends Environment {
+      extends Environment:
 
     def consumeWithGadget(gadget: Id, consumeList: ConsumeList)(
         implicit pos: Position
-    ): Environment = {
+    ): Environment =
       val (resName, resources, trace) = this(gadget).getSummary(consumeList)
       implicit val t = trace
       this.consumeResource(resName, resources)
-    }
 
-    override def toString: String = {
+    override def toString: String =
       val lst =
-        for { (ps, gs) <- phyRes.iterator.zip(gadgetMap.iterator) } yield (
+        for  (ps, gs) <- phyRes.iterator.zip(gadgetMap.iterator)  yield (
           ps.map({ case (k, v) => s"$k -> $v" }).mkString(", "),
           gs.keys.mkString("{", ", ", "}")
         )
 
       lst.mkString(" ==> ")
-    }
 
     /** Tracking bound gadgets */
     def add(id: Id, resource: Gadget): Env =
@@ -135,15 +132,14 @@ object AffineEnv {
     def get(id: Id): Option[Gadget] = gadgetMap.get(id)
 
     /** Managing physical resources */
-    def addResource(id: Id, info: ArrayInfo): Env = {
+    def addResource(id: Id, info: ArrayInfo): Env =
       val pRes = phyRes.add(id, info).getOrThrow(AlreadyBound(id))
       this.copy(phyRes = pRes)
-    }
     def consumeResource(
         name: Id,
         resources: Seq[Int]
-    )(implicit pos: Position, trace: Seq[String]): Environment = {
-      phyRes.get(name) match {
+    )(implicit pos: Position, trace: Seq[String]): Environment =
+      phyRes.get(name) match
         case None =>
           throw Impossible(s"No physical resource named $name.")
         case Some(info) => {
@@ -151,32 +147,28 @@ object AffineEnv {
             phyRes.update(name, info.consumeResources(resources))
           )
         }
-      }
-    }
 
     /** Helper functions for Mergable[Env] */
-    def merge(env: Environment): Environment = env match {
+    def merge(env: Environment): Environment = env match
       case next: Env =>
         val (oldRes, nextRes) = (this.phyRes.keys, next.phyRes.keys)
         val (oldGads, nextGads) = (this.gadgetMap.keys, next.gadgetMap.keys)
 
         // The next environment should bind all resources in this env.
-        if (oldRes.subsetOf(nextRes) == false) {
+        if oldRes.subsetOf(nextRes) == false then
           throw Impossible(
             "New environment is missing resources bound in old env." +
               s"\n\nOld Env: ${oldRes}" +
               s"\n\nNew Env: ${nextRes}" +
               s"\n\nMissing: ${oldRes diff nextRes}"
           )
-        }
-        if (oldRes.subsetOf(nextRes) == false) {
+        if oldRes.subsetOf(nextRes) == false then
           throw Impossible(
             "New environment is missing gadgets bound in old env." +
               s"\n\nOld Env: ${oldGads}" +
               s"\n\nNew Env: ${nextGads}" +
               s"\n\nMissing: ${oldGads diff nextGads}.\n"
           )
-        }
 
         /**
           * For each bound id, set consumed banks to the union of consumed bank
@@ -188,39 +180,29 @@ object AffineEnv {
               env.phyRes.update(id, env.phyRes(id) merge this.phyRes(id))
             )
         })
-    }
 
     /** Helper functions for ScopeManager */
-    def addScope(resources: Int): Env = {
+    def addScope(resources: Int): Env =
       Env(phyRes.addScope, gadgetMap.addScope)(res * resources)
-    }
-    def endScope(resources: Int): (Env, Map[Id,ArrayInfo], Map[Id,Gadget]) = {
-      val scopes = for {
+    def endScope(resources: Int): (Env, Map[Id,ArrayInfo], Map[Id,Gadget]) =
+      val scopes = for
         (pDefs, pMap) <- phyRes.endScope
         (gDefs, gMap) <- gadgetMap.endScope
-      } yield (Env(pMap, gMap)(res / resources), pDefs, gDefs)
+      yield (Env(pMap, gMap)(res / resources), pDefs, gDefs)
 
       scopes.getOrThrow(Impossible("Removed topmost scope"))
-    }
     def withScope(
         resources: Int
-    )(inScope: Environment => Environment): (Environment, Map[Id,ArrayInfo], Map[Id,Gadget]) = {
-      inScope(this.addScope(resources)) match {
+    )(inScope: Environment => Environment): (Environment, Map[Id,ArrayInfo], Map[Id,Gadget]) =
+      inScope(this.addScope(resources)) match
         case env: Env => env.endScope(resources)
-      }
-    }
     override def withScopeAndRet[R](
         inScope: Environment => (R, Environment)
-    ): (R, Environment) = {
-      inScope(this.addScope(1)) match {
+    ): (R, Environment) =
+      inScope(this.addScope(1)) match
         case (r, env: Env) => (r, env.endScope(1)._1)
-      }
-    }
 
-    override def withScope(inScope: Environment => Environment): Environment = {
+    override def withScope(inScope: Environment => Environment): Environment =
       this.withScope(1)(inScope)._1
-    }
 
     val getResources = res
-  }
-}

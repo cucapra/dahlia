@@ -16,7 +16,7 @@ lazy val root = (project in file("."))
   .dependsOn(parser,shared)
   .settings(
     scalaVersion := "3.1.1",
-    /* scalacOptions ++= Seq("-Ytasty-reader") */
+    scalacOptions ++= Seq("-new-syntax", "-indent")
   )
 
 // Libraries

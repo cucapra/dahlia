@@ -10,29 +10,27 @@ import Errors._
 import Checker._
 import EnvHelpers._
 
-object WellFormedChecker {
+object WellFormedChecker:
 
   def check(p: Prog): Unit = WFCheck.check(p)
 
   private case class WFEnv(
       insideUnroll: Boolean = false,
       insideFunc: Boolean = false
-  ) extends ScopeManager[WFEnv] {
+  ) extends ScopeManager[WFEnv]:
     def merge(that: WFEnv): WFEnv = this
-  }
 
-  private case object WFCheck extends PartialChecker {
+  private case object WFCheck extends PartialChecker:
 
     type Env = WFEnv
     val emptyEnv: WFEnv = WFEnv()
 
-    override def checkDef(defi: Definition)(implicit env: Env): Env = defi match {
+    override def checkDef(defi: Definition)(implicit env: Env): Env = defi match
       case FuncDef(_, _, _, bodyOpt) =>
         bodyOpt.map(checkC(_)(env.copy(insideFunc = true))).getOrElse(env)
       case _: RecordDef => env
-    }
 
-    def myCheckE: PF[(Expr, Env), Env] = {
+    def myCheckE: PF[(Expr, Env), Env] =
       case (expr: EPhysAccess, _) =>
         throw CompilerError.PassError(
           "Physical accesses should be removed up the lowering passes.",
@@ -46,9 +44,8 @@ object WellFormedChecker {
         assertOrThrow(env.insideUnroll == false, FuncInUnroll(expr.pos))
         env
       }
-    }
 
-    def myCheckC: PF[(Command, Env), Env] = {
+    def myCheckC: PF[(Command, Env), Env] =
       case (cmd @ CReduce(op, l, r), e) => {
         assertOrThrow(e.insideUnroll == false, ReduceInsideUnroll(op, cmd.pos))
         checkE(r)(checkE(l)(e))
@@ -56,14 +53,13 @@ object WellFormedChecker {
       case (l @ CLet(id, typ, Some(EArrLiteral(_))), e) => {
         val expTyp = typ
           .getOrThrow(ExplicitTypeMissing(l.pos, "Array literal", id))
-        expTyp match {
+        expTyp match
           case TArray(_, dims, _) =>
             assertOrThrow(
               dims.length == 1,
               Unsupported(l.pos, "Multidimensional array literals")
             )
           case _ => ()
-        }
         e
       }
       case (l @ CLet(id, typ, Some(ERecLiteral(_))), e) => {
@@ -94,11 +90,8 @@ object WellFormedChecker {
         assertOrThrow(env.insideFunc, ReturnNotInFunc(cmd.pos))
         env
       }
-    }
 
     override def checkE(expr: Expr)(implicit env: Env): Env =
       mergeCheckE(myCheckE)(expr, env)
     override def checkC(cmd: Command)(implicit env: Env): Env =
       mergeCheckC(myCheckC)(cmd, env)
-  }
-}

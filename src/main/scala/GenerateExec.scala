@@ -11,7 +11,7 @@ import common.CompilerError.HeaderMissing
   * Provides utilities to compile a program and link it with headers required
   * by the CppRunnable backend.
   */
-object GenerateExec {
+object GenerateExec:
   // TODO(rachit): Move this to build.sbt
   val headers: List[String] = List("parser.cpp", "json.hpp")
 
@@ -20,18 +20,18 @@ object GenerateExec {
 
 
   // Not the compiler directory, check if the fallback directory has been setup.
-  if (Files.exists(headerLocation) == false) {
+  if Files.exists(headerLocation) == false then
     // Fallback for headers not setup. Unpack headers from JAR file.
     headerLocation = headerFallbackLocation
 
-    if (Files.exists(headerFallbackLocation) == false) {
+    if Files.exists(headerFallbackLocation) == false then
       /* scribe.warn(
         s"Missing headers required for `fuse run`." +
           s" Unpacking from JAR file into $headerFallbackLocation."
       ) */
 
       val dir = Files.createDirectory(headerFallbackLocation)
-      for (header <- headers) {
+      for header <- headers do
         val stream = getClass.getResourceAsStream(s"/headers/$header")
         val hdrSource = Source.fromInputStream(stream).toArray.map(_.toByte)
         Files.write(
@@ -40,9 +40,6 @@ object GenerateExec {
           StandardOpenOption.CREATE_NEW,
           StandardOpenOption.WRITE
         )
-      }
-    }
-  }
 
   /**
     * Generates an executable object [[out]]. Assumes that [[src]] is a valid
@@ -55,14 +52,12 @@ object GenerateExec {
       src: Path,
       out: String,
       compilerOpts: List[String]
-  ): Either[String, Int] = {
+  ): Either[String, Int] =
 
     // Make sure all headers are downloaded.
-    for (header <- headers) {
-      if (Files.exists(headerLocation.resolve(header)) == false) {
+    for header <- headers do
+      if Files.exists(headerLocation.resolve(header)) == false then
         throw HeaderMissing(header, headerLocation.toString)
-      }
-    }
 
     val CXX =
       Seq("g++", "-g", "--std=c++14", "-Wall", "-I", headerLocation.toString) ++ compilerOpts
@@ -76,10 +71,7 @@ object GenerateExec {
     // scribe.info(cmd.mkString(" "))
     val status = cmd ! logger
 
-    if (status != 0) {
+    if status != 0 then
       Left(s"Failed to generate the executable $out.\n${stderr}")
-    } else {
+    else
       Right(status)
-    }
-  }
-}

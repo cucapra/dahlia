@@ -8,11 +8,11 @@ import EnvHelpers._
 import Syntax._
 import CompilerError._
 
-object Sequentialize extends PartialTransformer {
+object Sequentialize extends PartialTransformer:
 
   case class SeqEnv(uses: Set[Id], defines: Set[Id], useLHS: Boolean)
-      extends ScopeManager[SeqEnv] {
-    def merge(that: SeqEnv): SeqEnv = {
+      extends ScopeManager[SeqEnv]:
+    def merge(that: SeqEnv): SeqEnv =
       assert(
         this.useLHS == that.useLHS,
         "Attempting to merge environment with different useLHS"
@@ -22,19 +22,17 @@ object Sequentialize extends PartialTransformer {
         this.defines union that.defines,
         this.useLHS
       )
-    }
     def addUse(x: Id): SeqEnv =
       this.copy(uses = this.uses + x)
     def addDefine(x: Id): SeqEnv =
       this.copy(defines = this.defines + x)
     def setUseLHS(useLHS: Boolean): SeqEnv =
       this.copy(useLHS = useLHS)
-  }
 
   type Env = SeqEnv
   val emptyEnv: SeqEnv = SeqEnv(Set(), Set(), false)
 
-  def myRewriteE: PF[(Expr, Env), (Expr, Env)] = {
+  def myRewriteE: PF[(Expr, Env), (Expr, Env)] =
     case (e @ EVar(id), env) => e -> env.addUse(id)
     case (e @ EArrAccess(id, idxs), env) => {
       val (nIdxs, e1) = rewriteESeq(idxs)(env)
@@ -42,16 +40,15 @@ object Sequentialize extends PartialTransformer {
     }
     case (e: EPhysAccess, _) =>
       throw NotImplemented("Physical accesses in sequentialize", e.pos)
-  }
 
   override def rewriteLVal(e: Expr)(implicit env: SeqEnv): (Expr, SeqEnv) =
-    e match {
+    e match
       case EVar(id) => {
-        val env1 = if (env.useLHS) env.addUse(id) else env
+        val env1 = if env.useLHS then env.addUse(id) else env
         e -> env1.addDefine(id)
       }
       case e @ EArrAccess(id, idxs) => {
-        val env1 = if (env.useLHS) env.addUse(id) else env
+        val env1 = if env.useLHS then env.addUse(id) else env
         val (nIdxs, e1) = rewriteESeq(idxs)(env1)
         e.copy(idxs = nIdxs.toSeq) -> e1.addDefine(id)
       }
@@ -59,9 +56,8 @@ object Sequentialize extends PartialTransformer {
         throw NotImplemented("Physical accesses in sequentialize", e.pos)
       case e =>
         throw Impossible(s"Not an LVal: ${Pretty.emitExpr(e)(false).pretty}")
-    }
 
-  def myRewriteC: PF[(Command, Env), (Command, Env)] = {
+  def myRewriteC: PF[(Command, Env), (Command, Env)] =
     case (CUpdate(lhs, rhs), env) => {
       val (nRhs, e1) = rewriteE(rhs)(env)
       val (nLhs, e2) = rewriteLVal(lhs)(e1)
@@ -83,7 +79,7 @@ object Sequentialize extends PartialTransformer {
       var curUses: SetM[Id] = SetM()
       val newSeq: Buffer[Buffer[Command]] = Buffer(Buffer())
 
-      for (cmd <- cmds) {
+      for cmd <- cmds do
         val (nCmd, e1) = rewriteC(cmd)(emptyEnv)
         /* System.err.println(Pretty.emitCmd(cmd)(false).pretty)
         System.err.println(s"""
@@ -98,30 +94,26 @@ object Sequentialize extends PartialTransformer {
         """) */
         // If there are no conflicts, add this to the current parallel
         // block.
-        if (curDefines.intersect(e1.uses).isEmpty &&
-            curUses.intersect(e1.defines).isEmpty) {
+        if curDefines.intersect(e1.uses).isEmpty &&
+            curUses.intersect(e1.defines).isEmpty then
           newSeq.last += nCmd
-        } else {
+        else
           curUses = SetM()
           curDefines = SetM()
           newSeq += Buffer(nCmd)
-        }
         curUses ++= e1.uses
         curDefines ++= e1.defines
         allDefines ++= e1.defines
         allUses ++= e1.uses
-      }
 
       // Add all the uses and defines from this loop into the summary.
       val allEnv = SeqEnv(allUses.toSet, allDefines.toSet, false).merge(env)
 
       CSeq.smart(newSeq.map(ps => CPar.smart(ps.toSeq)).toSeq) -> allEnv
     }
-  }
 
   override def rewriteC(cmd: Command)(implicit env: Env): (Command, Env) =
     mergeRewriteC(myRewriteC)(cmd, env)
   // No need to traverse expressions
   override def rewriteE(expr: Expr)(implicit env: Env): (Expr, Env) =
     mergeRewriteE(myRewriteE)(expr, env)
-}

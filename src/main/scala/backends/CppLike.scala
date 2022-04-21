@@ -6,13 +6,13 @@ import CompilerError._
 import PrettyPrint.Doc._
 import PrettyPrint.Doc
 
-object Cpp {
+object Cpp:
 
   /**
     * A C++ backend that only emits one dimensionals arrays and one dimensional
     * array accesses.
     */
-  trait CppLike {
+  trait CppLike:
 
     /**
       * This class aggressively uses Scala's implicitConversions. Make sure
@@ -27,17 +27,15 @@ object Cpp {
     /**
       * Helper to generate a variable declaration with an initial value.
       */
-    def cBind(id: String, rhs: Doc): Doc = {
+    def cBind(id: String, rhs: Doc): Doc =
       text("auto") <+> text(id) <+> text("=") <+> rhs <> semi
-    }
 
     /**
       * Helper to generate a function call that might have a type parameter
       */
-    def cCall(f: String, tParam: Option[Doc], args: Seq[Doc]): Doc = {
-      text(f) <> (if (tParam.isDefined) angles(tParam.get) else emptyDoc) <>
+    def cCall(f: String, tParam: Option[Doc], args: Seq[Doc]): Doc =
+      text(f) <> (if tParam.isDefined then angles(tParam.get) else emptyDoc) <>
         parens(commaSep(args))
-    }
 
     /**
       * Function used for converting types from Fuse to C++.
@@ -76,24 +74,23 @@ object Cpp {
       */
     def emitLet(let: CLet): Doc =
       emitDecl(let.id, let.typ.get) <>
-        (if (let.e.isDefined) space <> equal <+> emitExpr(let.e.get)
+        (if let.e.isDefined then space <> equal <+> emitExpr(let.e.get)
          else emptyDoc) <>
         semi
 
     implicit def IdToString(id: Id): Doc = value(id.v)
 
-    def emitBaseInt(v: Int, base: Int): String = base match {
+    def emitBaseInt(v: Int, base: Int): String = base match
       case 8 => s"0${Integer.toString(v, 8)}"
       case 10 => v.toString
       case 16 => s"0x${Integer.toString(v, 16)}"
-    }
 
-    implicit def emitExpr(e: Expr): Doc = e match {
+    implicit def emitExpr(e: Expr): Doc = e match
       case ECast(e, typ) => parens(emitType(typ)) <> emitExpr(e)
       case EApp(fn, args) => fn <> parens(commaSep(args.map(emitExpr)))
       case EInt(v, base) => value(emitBaseInt(v, base))
       case ERational(d) => value(d)
-      case EBool(b) => value(if (b) 1 else 0)
+      case EBool(b) => value(if b then 1 else 0)
       case EVar(id) => value(id)
       case EBinop(op, e1, e2) => parens(e1 <+> text(op.toString) <+> e2)
       case EArrAccess(id, idxs) =>
@@ -108,7 +105,6 @@ object Cpp {
             case (id, expr) => dot <> id <+> equal <+> expr
           }))
         }
-    }
 
     /**
       * Turns a range object into the parameter of a `for` loop.
@@ -116,18 +112,17 @@ object Cpp {
       */
     def emitRange(range: CRange): Doc = parens {
       val CRange(id, _, rev, s, e, _) = range
-      if (rev) {
+      if rev then
         text("int") <+> id <+> equal <+> value(e - 1) <> semi <+>
         id <+> text(">=") <+> value(s) <> semi <+>
         id <> text("--")
-      } else {
+      else
         text("int") <+> id <+> equal <+> value(s) <> semi <+>
         id <+> text("<") <+> value(e) <> semi <+>
         id <> text("++")
-      }
     }
 
-    implicit def emitCmd(c: Command): Doc = c match {
+    implicit def emitCmd(c: Command): Doc = c match
       case CPar(cmds) => vsep(cmds.map(emitCmd))
       case CSeq(cmds) => vsep(cmds.map(emitCmd), text("//---"))
       case l: CLet => emitLet(l)
@@ -149,14 +144,12 @@ object Cpp {
       case _: CView | _: CSplit =>
         throw Impossible("Views should not exist during codegen.")
       case CBlock(cmd) => scope(cmd)
-    }
 
-    def emitDecl(id: Id, typ: Type): Doc = typ match {
+    def emitDecl(id: Id, typ: Type): Doc = typ match
       case ta: TArray => emitArrayDecl(ta, id)
       case _ => emitType(typ) <+> id
-    }
 
-    def emitFunc(func: FuncDef, entry: Boolean = false): Doc = func match {
+    def emitFunc(func: FuncDef, entry: Boolean = false): Doc = func match
       case func @ FuncDef(id, args, ret, bodyOpt) =>
         val as = commaSep(args.map(decl => emitDecl(decl.id, decl.typ)))
         // If body is not defined, this is an extern. Elide the definition.
@@ -167,11 +160,10 @@ object Cpp {
           )
           .getOrElse(emptyDoc)
 
-        if (entry) text("extern") <+> quote(text("C")) <+> scope(body)
+        if entry then text("extern") <+> quote(text("C")) <+> scope(body)
         else body
-    }
 
-    def emitDef(defi: Definition): Doc = defi match {
+    def emitDef(defi: Definition): Doc = defi match
       case func: FuncDef => emitFunc(func)
       case RecordDef(name, fields) =>
         text("typedef struct") <+> scope {
@@ -179,11 +171,8 @@ object Cpp {
             case (id, typ) => emitType(typ) <+> id <> semi
           }))
         } <+> name <> semi
-    }
 
     def emitInclude(incl: String): Doc =
       text("#include") <+> quote(text(incl))
 
-  }
 
-}
