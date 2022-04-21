@@ -7,7 +7,6 @@ import Info._
 
 import fuselang.common._
 import Syntax._
-import Annotations._
 import Errors._
 import Checker._
 import CompilerError._
@@ -185,7 +184,7 @@ object AffineChecker {
         // This only triggers for l-values.
         val TArray(_, dims, _) = id.typ.get
         acc.consumable match {
-          case Some(Consumable.ShouldConsume) => {
+          case Some(Annotations.ShouldConsume) => {
             val (bres, consumeList) = getConsumeList(idxs, dims)(id)
             // Check if the accessors generated enough copies for the context.
             if (bres != env.getResources)
@@ -284,8 +283,8 @@ object AffineChecker {
             throw Impossible(
               s"$expr in read position has no consumable annotation"
             )
-          case Some(Consumable.SkipConsume) => env
-          case Some(Consumable.ShouldConsume) => {
+          case Some(Annotations.SkipConsume) => env
+          case Some(Annotations.ShouldConsume) => {
             val (_, consumeList) = getConsumeList(idxs, dims)(id)
             // Consume the resources required by this gadget.
             env.consumeWithGadget(id, consumeList)(expr.pos)
