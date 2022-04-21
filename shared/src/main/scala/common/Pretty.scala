@@ -42,8 +42,8 @@ object Pretty:
   def emitDecl(d: Decl): Doc = emitId(d.id)(false) <> colon <+> emitTyp(d.typ)
 
   def emitConsume(ann: Annotations.Consumable): Doc = ann match
-    case Annotations.ShouldConsume => text("consume")
-    case Annotations.SkipConsume => text("skip")
+    case Annotations.Consumable.ShouldConsume => text("consume")
+    case Annotations.Consumable.SkipConsume => text("skip")
 
   implicit def emitId(id: Id)(implicit debug: Boolean): Doc =
     val idv = value(id.v)

@@ -9,12 +9,11 @@ import Configuration.BackendOption
 object Syntax:
 
   /**
-    * Annotations added by the various passes of the type checker.
-    */
+   * Annotations added by the various passes of the type checker.
+   */
   object Annotations:
-    sealed trait Consumable
-    case object ShouldConsume extends Consumable
-    case object SkipConsume extends Consumable
+    enum Consumable:
+      case ShouldConsume, SkipConsume
 
     sealed trait ConsumableAnnotation:
       var consumable: Option[Consumable] = None
@@ -35,9 +34,8 @@ object Syntax:
     override def toString: String = s"$v"
 
   // Capabilities for read/write
-  sealed trait Capability
-  case object Read extends Capability
-  case object Write extends Capability
+  enum Capability:
+    case Read, Write
 
   sealed trait Type extends Positional:
     override def toString: String = this match

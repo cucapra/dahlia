@@ -29,8 +29,8 @@ object CapabilityChecker {
     def myCheckE: PF[(Expr, Env), Env] = {
       case (acc @ EArrAccess(_, idxs), env) => {
         val (nEnv, consumableAnn, cap) = env.get(acc) match {
-          case Some(Read) => (env, SkipConsume, Read)
-          case Some(Write) | None => (checkESeq(idxs)(env), ShouldConsume, Read)
+          case Some(Capability.Read) => (env, Consumable.SkipConsume, Capability.Read)
+          case Some(Capability.Write) | None => (checkESeq(idxs)(env), Consumable.ShouldConsume, Capability.Read)
         }
         acc.consumable = Some(consumableAnn)
         nEnv.add(acc, cap)
@@ -58,8 +58,8 @@ object CapabilityChecker {
     override def checkLVal(e: Expr)(implicit env: Env): Env = e match {
       case acc @ EArrAccess(_, idxs) => {
         val (nEnv, consumableAnn, cap) = env.get(e) match {
-          case Some(Write) => throw AlreadyWrite(e)
-          case Some(Read) | None => (checkESeq(idxs), ShouldConsume, Write)
+          case Some(Capability.Write) => throw AlreadyWrite(e)
+          case Some(Capability.Read) | None => (checkESeq(idxs), Consumable.ShouldConsume, Capability.Write)
         }
 
         acc.consumable = Some(consumableAnn)

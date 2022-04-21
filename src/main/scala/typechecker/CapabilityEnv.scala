@@ -21,13 +21,13 @@ object CapabilityEnv {
   ) extends CapabilityEnv {
 
     def get(e: Expr): Option[Capability] =
-      if (readSet.contains(e)) Some(Read)
-      else if (writeSet.contains(e)) Some(Write)
+      if (readSet.contains(e)) Some(Capability.Read)
+      else if (writeSet.contains(e)) Some(Capability.Write)
       else None
 
     def add(e: Expr, cap: Capability): CapabilityEnv = cap match {
-      case Read => this.copy(readSet = readSet.add(e))
-      case Write => this.copy(writeSet = writeSet.add(e))
+      case Capability.Read => this.copy(readSet = readSet.add(e))
+      case Capability.Write => this.copy(writeSet = writeSet.add(e))
     }
 
     def endScope: Env = {
