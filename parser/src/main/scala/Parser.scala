@@ -5,7 +5,7 @@ import scala.util.parsing.input.{Positional, OffsetPosition}
 import fastparse._
 import fastparse.JavaWhitespace._
 
-import fuselang.common._
+import fuselang.common.{Syntax, Configuration, CompilerError, Errors}
 import Syntax._
 import Configuration.stringToBackend
 import Utils.RichOption
@@ -262,10 +262,6 @@ case class Parser(input: String) {
           CFor(range, pl.isDefined, par, c)
         case (range, pl, CBlock(par), None) =>
           CFor(range, pl.isDefined, par, CEmpty)
-        case _ =>
-          throw CompilerError.Impossible(
-            "Result of parsing a block command was not CBlock"
-          )
       })
     )
 
@@ -274,10 +270,6 @@ case class Parser(input: String) {
     positioned(
       P(kw("while") ~/ parens(expr) ~ kw("pipeline").!.? ~/ block).map({
         case (cond, pl, CBlock(body)) => CWhile(cond, pl.isDefined, body)
-        case _ =>
-          throw CompilerError.Impossible(
-            "Result of parsing a block command was not CBlock"
-          )
       })
     )
 
@@ -289,10 +281,6 @@ case class Parser(input: String) {
           CIf(cond, cons, alt)
         case (cond, CBlock(cons), None) =>
           CIf(cond, cons, CEmpty)
-        case _ =>
-          throw CompilerError.Impossible(
-            "Result of parsing a block command was not CBlock"
-          )
       })
     )
 
@@ -357,7 +345,7 @@ case class Parser(input: String) {
   )
 
   // Block commands
-  def block[K: P]: P[Command] = positioned(P(braces(cmd)).map(c => CBlock(c)))
+  def block[K: P]: P[CBlock] = positioned(P(braces(cmd)).map(c => CBlock(c)))
   def blockCmd[K: P]: P[Command] = P(cfor | ifElse | whLoop | block | decor)
 
   def parCmd[K: P]: P[Command] =
@@ -396,10 +384,6 @@ case class Parser(input: String) {
         .map({
           case (fn, args, ret, CBlock(body)) =>
             FuncDef(fn, args.toList, ret, Some(body))
-          case _ =>
-            throw CompilerError.Impossible(
-              "Result of parsing a block command was not CBlock"
-            )
         })
     )
 
