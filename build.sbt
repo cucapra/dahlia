@@ -22,7 +22,6 @@ lazy val root = (project in file("."))
 // Libraries
 shared / libraryDependencies := Seq(
   "com.outr" %% "scribe" % "3.8.2",
-  "com.lihaoyi" %% "sourcecode" % "0.2.7",
   "org.scala-lang.modules" %% "scala-parser-combinators" % "2.0.0",
 ).map(_.cross(CrossVersion.for3Use2_13))
 parser / libraryDependencies := Seq(
