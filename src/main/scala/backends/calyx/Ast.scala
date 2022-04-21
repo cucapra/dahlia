@@ -1,6 +1,7 @@
 package fuselang.backend.calyx
 
 import scala.math.BigInt
+import BigInt.int2bigInt
 import fuselang.common.PrettyPrint.Doc
 import fuselang.common.CompilerError._
 import fuselang.Utils.RichOption

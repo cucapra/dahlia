@@ -15,13 +15,13 @@ lazy val parser = (project in file("parser/"))
 lazy val root = (project in file("."))
   .dependsOn(parser,shared)
   .settings(
-    scalaVersion := "2.13.7",
-    scalacOptions += "-Ytasty-reader"
+    scalaVersion := "3.1.1",
+    /* scalacOptions ++= Seq("-Ytasty-reader") */
   )
 
 // Libraries
 shared / libraryDependencies := Seq(
-  "com.outr" %% "scribe" % "3.5.5",
+  "com.outr" %% "scribe" % "3.8.2",
   "com.lihaoyi" %% "sourcecode" % "0.2.7",
   "org.scala-lang.modules" %% "scala-parser-combinators" % "2.0.0",
 ).map(_.cross(CrossVersion.for3Use2_13))
@@ -41,8 +41,8 @@ ThisBuild / scalacOptions ++= Seq(
   "-Xfatal-warnings"
 )
 root / scalacOptions ++= Seq(
-  "-Ywarn-unused",
-  "-Ywarn-value-discard",
+  /* "-Ywarn-unused", */
+  /* "-Ywarn-value-discard", */
 )
 
 

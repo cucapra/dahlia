@@ -25,7 +25,7 @@ object DependentLoops {
     }
   }
 
-  private final case object UseCheck extends PartialChecker {
+  private case object UseCheck extends PartialChecker {
 
     type Env = UseEnv
     val emptyEnv: UseEnv = UseEnv(Set())
@@ -69,7 +69,7 @@ object DependentLoops {
     }
   }
 
-  private final case object DepCheck extends PartialChecker {
+  private case object DepCheck extends PartialChecker {
 
     type Env = DepEnv
     val emptyEnv: DepEnv = DepEnv(Set(), Set())

@@ -1,6 +1,7 @@
 package fuselang.common
 
 import scala.math.log10
+import sourcecode.Pkg
 
 object CodeGenHelpers {
   import Syntax._
@@ -44,7 +45,7 @@ object CodeGenHelpers {
     case (EInt(n, b), EInt(m, _)) => EInt(n / m, b)
     case (_, EInt(n, _)) if (isPowerOfTwo(n)) => l >> EInt(log2(n).toInt, 10)
     case _ => {
-      scribe.warn(s"Cannot generate fast division for denominator $r")
+      // scribe.warn(s"Cannot generate fast division for denominator $r")
       l div r
     }
   }
@@ -54,7 +55,7 @@ object CodeGenHelpers {
     case (EInt(n, b), EInt(m, _)) => EInt(n % m, b)
     case (_, EInt(n, _)) if (isPowerOfTwo(n)) => l & EInt(n - 1, 10)
     case _ => {
-      scribe.warn(s"Cannot generate fast division for denominator $r")
+      // scribe.warn(s"Cannot generate fast division for denominator $r")
       l mod r
     }
   }

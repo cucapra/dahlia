@@ -155,7 +155,7 @@ object LoopChecker {
     }
   }
 
-  private final case object LCheck extends PartialChecker {
+  private case object LCheck extends PartialChecker {
 
     type Env = LEnv
 

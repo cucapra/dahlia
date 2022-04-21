@@ -25,9 +25,9 @@ object Main {
     "axi" -> Axi
   )
 
-  val version: InputStream = getClass.getResourceAsStream("/version.properties")
+  val ver: InputStream = getClass.getResourceAsStream("/version.properties")
   val meta: Map[String,String] = Source
-    .fromInputStream(version)
+    .fromInputStream(ver)
     .getLines()
     .filter(l => l.trim != "")
     .map(d => {

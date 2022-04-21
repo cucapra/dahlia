@@ -1,6 +1,7 @@
 package fuselang.backend.calyx
 
 import scala.math.{BigDecimal, BigInt}
+import BigInt.int2bigInt
 
 import fuselang.backend.calyx.Calyx._
 import fuselang.Utils._
@@ -167,7 +168,7 @@ private class CalyxBackendHelper {
     val addressIndices = (dims + 1 to dims << 1).toList
 
     addressIndices.zipWithIndex.map({
-      case (n: Int, i: Int) => (s"addr${i}", arrayArgs(n))
+      case (n, i) => (s"addr${i}", arrayArgs(n.toInt))
     })
   }
 
@@ -1001,7 +1002,6 @@ private class CalyxBackendHelper {
           case FuncDef(id, params, retTy, bodyOpt) => {
             definitions + (id -> FuncDef(id, params, retTy, bodyOpt))
           }
-          case _ => definitions
         }
       )
 

@@ -31,5 +31,5 @@ object Logger:
       .withHandler(formatter = format, minimumLevel = Some(level))
       .replace()
 
-  val format: Formatter = formatter"[$levelColored] $message$newLine"
+  val format: Formatter = formatter"[$levelColored] $messages$newLine"
 

@@ -76,7 +76,7 @@ object AffineChecker {
 
   def check(p: Prog): Unit = AffineChecker.check(p)
 
-  private final case object AffineChecker extends PartialChecker {
+  private case object AffineChecker extends PartialChecker {
 
     type Env = AffineEnv.Environment
 

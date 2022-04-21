@@ -14,7 +14,7 @@ object CapabilityChecker {
 
   def check(p: Prog): Unit = CapChecker.check(p)
 
-  private final case object CapChecker extends PartialChecker {
+  private case object CapChecker extends PartialChecker {
 
     type Env = CapabilityEnv
 

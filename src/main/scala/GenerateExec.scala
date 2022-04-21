@@ -3,6 +3,7 @@ package fuselang
 import sys.process._
 import scala.io.Source
 import java.nio.file.{Files, Paths, Path, StandardOpenOption}
+import sourcecode.given
 
 import common.CompilerError.HeaderMissing
 
@@ -24,10 +25,10 @@ object GenerateExec {
     headerLocation = headerFallbackLocation
 
     if (Files.exists(headerFallbackLocation) == false) {
-      scribe.warn(
+      /* scribe.warn(
         s"Missing headers required for `fuse run`." +
           s" Unpacking from JAR file into $headerFallbackLocation."
-      )
+      ) */
 
       val dir = Files.createDirectory(headerFallbackLocation)
       for (header <- headers) {
@@ -67,12 +68,12 @@ object GenerateExec {
       Seq("g++", "-g", "--std=c++14", "-Wall", "-I", headerLocation.toString) ++ compilerOpts
 
     val stderr = new StringBuilder
-    val logger = ProcessLogger(l => scribe.info(l), l => stderr ++= (l + "\n"))
+    val logger = ProcessLogger(l => println(l), l => stderr ++= (l + "\n"))
 
     // Generate [[out]]. `!` is defined by sys.process:
     // https://www.scala-lang.org/api/2.12.8/scala/sys/process/index.html
     val cmd = CXX ++ Seq(src.toString, "-o", out)
-    scribe.info(cmd.mkString(" "))
+    // scribe.info(cmd.mkString(" "))
     val status = cmd ! logger
 
     if (status != 0) {

@@ -21,7 +21,7 @@ object WellFormedChecker {
     def merge(that: WFEnv): WFEnv = this
   }
 
-  private final case object WFCheck extends PartialChecker {
+  private case object WFCheck extends PartialChecker {
 
     type Env = WFEnv
     val emptyEnv: WFEnv = WFEnv()

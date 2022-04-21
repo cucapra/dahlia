@@ -1,6 +1,7 @@
 package fuselang.backend.calyx
 
 import scala.math.{max, BigInt}
+import BigInt.int2bigInt
 import scala.util.parsing.input.{Position}
 
 import fuselang.common._
@@ -11,29 +12,31 @@ object Helpers {
 
   val slowBinops: List[String] = List("*", "/", "%")
 
-  /** Given a binary string, returns the negated
-    * two's complement representation.
+  /** Given a binary string, returns the negated two's complement
+    * representation.
     */
   def negateTwosComplement(bitString: String): String = {
     if (bitString.forall(_ == '0')) {
       bitString
+    } else {
+      val t = bitString
+        .replaceAll("0", "_")
+        .replaceAll("1", "0")
+        .replaceAll("_", "1")
+      (BigInt(t, 2) + 1).toString(2)
     }
-    val t = bitString
-      .replaceAll("0", "_")
-      .replaceAll("1", "0")
-      .replaceAll("_", "1")
-    (BigInt(t, 2) + 1).toString(2)
   }
 
-  /** Given an integer, returns the corresponding
-    * zero-padded string of size `width`. */
+  /** Given an integer, returns the corresponding zero-padded string of size
+    * `width`.
+    */
   def binaryString(value: BigInt, width: Int): String = {
     val s = value.toString(2)
     "0" * max(width - s.length(), 0) + s
   }
 
-  /** Extracts the bits needed from an optional type annotation.
-    *  Returns (total size, Option[integral]) bits for the computation.
+  /** Extracts the bits needed from an optional type annotation. Returns (total
+    * size, Option[integral]) bits for the computation.
     */
   def bitsForType(t: Option[Type], pos: Position): (Int, Option[Int]) = {
     t match {
@@ -46,7 +49,10 @@ object Helpers {
           s"Calyx cannot infer bitwidth for type $x. Please manually annotate it using a cast expression.",
           pos
         )
-      case None => throw Impossible(s"Explicit type missing. Try running with `--lower` or report an error with a reproducible program.")
+      case None =>
+        throw Impossible(
+          s"Explicit type missing. Try running with `--lower` or report an error with a reproducible program."
+        )
     }
   }
 

@@ -296,15 +296,9 @@ object CompilerError:
       extends RuntimeException(s"Header $hdr is missing from location $hdrLoc.")
 
   // Used when a branch should be impossible at runtime.
-  case class Impossible(msg: String)(
-      implicit func: sourcecode.Enclosing,
-      line: sourcecode.Line
-  ) extends RuntimeException(s"[$func:$line] $msg")
+  case class Impossible(msg: String) extends RuntimeException(s"$msg")
   object Impossible:
-    def apply(msg: String, pos: Position)(
-        implicit func: sourcecode.Enclosing,
-        line: sourcecode.Line
-    ): Impossible =
+    def apply(msg: String, pos: Position): Impossible =
       this(Errors.withPos(msg, pos))
 
   // Used when a feature is not yet implemented
