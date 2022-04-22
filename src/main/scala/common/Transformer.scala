@@ -245,6 +245,9 @@ object Transformer {
     private val partialRewriteE: PF[(Expr, Env), (Expr, Env)] =
       asPartial(super.rewriteE(_: Expr)(_: Env))
 
+    private val partialRewriteC: PF[(Command, Env), (Command, Env)] =
+      asPartial(super.rewriteC(_: Command)(_: Env))
+
     /** Public wrapper for [[rewriteE]] that transfers type annotations
       * from the input [[expr]] to the expression resulting from [[rewriteE]].
       * Any subclasses that overwrite `rewriteE` should call this function.
@@ -257,6 +260,14 @@ object Transformer {
       (e1, env1)
     }
 
+    def transferPos(cmd: Command, f: PF[(Command, Env), (Command, Env)])(
+        implicit env: Env
+    ): (Command, Env) = {
+      val (c1, env1) = f(cmd, env)
+      c1.pos = cmd.pos
+      (c1, env1)
+    }
+
     override def mergeRewriteE(
         myRewriteE: PF[(Expr, Env), (Expr, Env)]
     ): PF[(Expr, Env), (Expr, Env)] = {
@@ -264,6 +275,15 @@ object Transformer {
         transferType(expr, myRewriteE.orElse(partialRewriteE))(env)
       }
       asPartial(func(_: Expr, _: Env))
+    }
+
+    override def mergeRewriteC(
+        myRewriteC: PF[(Command, Env), (Command, Env)]
+    ): PF[(Command, Env), (Command, Env)] = {
+      val func = (cmd: Command, env: Env) => {
+        transferPos(cmd, myRewriteC.orElse(partialRewriteC))(env)
+      }
+      asPartial(func(_: Command, _: Env))
     }
   }
 }

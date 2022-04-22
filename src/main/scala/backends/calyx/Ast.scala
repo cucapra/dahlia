@@ -284,8 +284,9 @@ object Calyx {
             scope(body.doc())
         case Enable(id, pos) => {
           text("@line") <> parens(text(pos.line.toString())) <+>
-          text("@col") <> parens(text(pos.line.toString())) <+>
-          id.doc() <> semi
+            text("@col") <> parens(text(pos.column.toString())) <>
+            space <>
+            id.doc() <> semi
         }
         case Invoke(id, inConnects, outConnects) => {
           val inputDefs = inConnects.map({
