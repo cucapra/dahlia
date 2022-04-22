@@ -5,6 +5,7 @@ import fuselang.common.PrettyPrint.Doc
 import fuselang.common.CompilerError._
 import fuselang.Utils.RichOption
 import Doc._
+import scala.util.parsing.input.Position
 
 object Calyx {
   def emitCompStructure(structs: List[Structure]): Doc = {
@@ -281,7 +282,11 @@ object Calyx {
           text("while") <+> port.doc() <+> text("with") <+>
             cond.doc() <+>
             scope(body.doc())
-        case Enable(id) => id.doc() <> semi
+        case Enable(id, pos) => {
+          text("@line") <> parens(text(pos.line.toString())) <+>
+          text("@col") <> parens(text(pos.line.toString())) <+>
+          id.doc() <> semi
+        }
         case Invoke(id, inConnects, outConnects) => {
           val inputDefs = inConnects.map({
             case (param, arg) => text(param) <> equal <> arg.doc()
@@ -303,7 +308,7 @@ object Calyx {
   case class If(port: Port, cond: CompVar, trueBr: Control, falseBr: Control)
       extends Control
   case class While(port: Port, cond: CompVar, body: Control) extends Control
-  case class Enable(id: CompVar) extends Control
+  case class Enable(id: CompVar, pos: Position) extends Control
   case class Invoke(
       id: CompVar,
       inConnects: List[(String, Port)],

@@ -797,7 +797,7 @@ private class CalyxBackendHelper {
         val control = SeqComp(
           List(
             invokeControl,
-            Enable(group.id)
+            Enable(group.id, c.pos)
           )
         )
         (
@@ -833,7 +833,7 @@ private class CalyxBackendHelper {
           Group.fromStructure(groupName, struct, delay)
         (
           reg :: group :: st,
-          Enable(group.id),
+          Enable(group.id, c.pos),
           store + (CompVar(s"$id") -> (reg.id, LocalVar))
         )
       }
@@ -857,7 +857,7 @@ private class CalyxBackendHelper {
           Group.fromStructure(groupName, struct, delay.map(_ + 1))
         (
           reg :: group :: st,
-          Enable(group.id),
+          Enable(group.id, c.pos),
           store + (CompVar(s"$id") -> (reg.id, LocalVar))
         )
       }
@@ -894,7 +894,7 @@ private class CalyxBackendHelper {
           )
         val (group, other_st) =
           Group.fromStructure(groupName, struct, lOut.delay)
-        (group :: other_st, Enable(group.id), store)
+        (group :: other_st, Enable(group.id, c.pos), store)
       }
       case CIf(cond, tbranch, fbranch) => {
         val condOut = emitExpr(cond)

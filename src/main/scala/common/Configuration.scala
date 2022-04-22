@@ -11,7 +11,7 @@ object Configuration {
   def stringToBackend(name: String): Option[BackendOption] = name match {
     case "vivado" => Some(Vivado)
     case "c++" => Some(Cpp)
-    case "futil" => Some(Calyx)
+    case "futil" | "calyx" => Some(Calyx)
     case _ => None
   }
 
