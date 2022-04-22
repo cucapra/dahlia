@@ -8,6 +8,17 @@ import Doc._
 import scala.util.parsing.input.Position
 
 object Calyx {
+
+  private def emitPos(pos: Position): Doc = {
+    if (pos.line == 0 && pos.column == 0) {
+      emptyDoc
+    } else {
+      text("@line") <> parens(text(pos.line.toString())) <+>
+        text("@col") <> parens(text(pos.column.toString())) <>
+        space
+    }
+  }
+
   def emitCompStructure(structs: List[Structure]): Doc = {
     val (cells, connections) = structs.partition(st =>
       st match {
@@ -283,19 +294,16 @@ object Calyx {
             cond.doc() <+>
             scope(body.doc())
         case Enable(id, pos) => {
-          text("@line") <> parens(text(pos.line.toString())) <+>
-            text("@col") <> parens(text(pos.column.toString())) <>
-            space <>
-            id.doc() <> semi
+          emitPos(pos) <> id.doc() <> semi
         }
-        case Invoke(id, inConnects, outConnects) => {
+        case Invoke(id, inConnects, outConnects, pos) => {
           val inputDefs = inConnects.map({
             case (param, arg) => text(param) <> equal <> arg.doc()
           })
           val outputDefs = outConnects.map({
             case (param, arg) => text(param) <> equal <> arg.doc()
           })
-          text("invoke") <+> id.doc() <>
+          emitPos(pos) <> text("invoke") <+> id.doc() <>
             parens(commaSep(inputDefs)) <>
             parens(commaSep(outputDefs)) <> semi
         }
@@ -313,7 +321,8 @@ object Calyx {
   case class Invoke(
       id: CompVar,
       inConnects: List[(String, Port)],
-      outConnects: List[(String, Port)]
+      outConnects: List[(String, Port)],
+      pos: Position
   ) extends Control
   case object Empty extends Control
 }

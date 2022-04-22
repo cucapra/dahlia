@@ -276,7 +276,7 @@ private class CalyxBackendHelper {
     (
       decl,
       argSt.flatten,
-      Invoke(declName, inConnects, outConnects)
+      Invoke(declName, inConnects, outConnects, app.pos)
     )
   }
 
