@@ -9,7 +9,7 @@ lazy val shared = (project in file("shared/"))
 lazy val parser = (project in file("parser/"))
   .dependsOn(shared)
   .settings(
-    scalaVersion := "2.13.7",
+    scalaVersion := "2.13.8",
     scalacOptions += "-Ytasty-reader"
   )
 lazy val root = (project in file("."))
@@ -37,11 +37,7 @@ ThisBuild / scalacOptions ++= Seq(
   "-deprecation",
   "-unchecked",
   "-feature",
-  "-Xfatal-warnings"
-)
-root / scalacOptions ++= Seq(
-  /* "-Ywarn-unused", */
-  /* "-Ywarn-value-discard", */
+  "-Xfatal-warnings",
 )
 
 
