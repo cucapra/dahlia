@@ -8,6 +8,20 @@ import Configuration.BackendOption
 
 object Syntax {
 
+  trait PositionalWithSpan extends Positional {
+    var span: Int = 0
+
+    def setSpan(span: Int): this.type = {
+      this.span = span
+      this
+    }
+
+    def withPos[T <: PositionalWithSpan](other: T): this.type = {
+      this.setPos(other.pos).setSpan(other.span)
+      this
+    }
+  }
+
   /**
     * Annotations added by the various passes of the type checker.
     */
@@ -35,7 +49,7 @@ object Syntax {
 
   import Annotations._
 
-  case class Id(v: String) extends Positional with TypeAnnotation {
+  case class Id(v: String) extends PositionalWithSpan with TypeAnnotation {
     override def toString = s"$v"
   }
 
@@ -44,7 +58,7 @@ object Syntax {
   final case object Read extends Capability
   final case object Write extends Capability
 
-  sealed trait Type extends Positional {
+  sealed trait Type extends PositionalWithSpan {
     override def toString = this match {
       case _: TVoid => "void"
       case _: TBool => "bool"
@@ -100,7 +114,7 @@ object Syntax {
     })
   }
 
-  sealed trait BOp extends Positional {
+  sealed trait BOp extends PositionalWithSpan {
     val op: String;
     override def toString = this.op
     def toFun: Option[(Double, Double) => Double] = this match {
@@ -115,7 +129,7 @@ object Syntax {
   case class NumOp(op: String, fun: (Double, Double) => Double) extends BOp
   case class BitOp(op: String) extends BOp
 
-  sealed trait Expr extends Positional with TypeAnnotation {
+  sealed trait Expr extends PositionalWithSpan with TypeAnnotation {
     def isLVal = this match {
       case _: EVar | _: EArrAccess | _: EPhysAccess => true
       case _ => false
@@ -145,7 +159,7 @@ object Syntax {
       s: Int,
       e: Int,
       u: Int
-  ) extends Positional {
+  ) extends PositionalWithSpan {
     def idxType: TIndex = {
       if (abs(e - s) % u != 0) {
         throw UnrollRangeError(this.pos, e - s, u)
@@ -155,12 +169,12 @@ object Syntax {
     }
   }
 
-  case class ROp(op: String) extends Positional {
+  case class ROp(op: String) extends PositionalWithSpan {
     override def toString = this.op
   }
 
   /** Views **/
-  sealed trait Suffix extends Positional
+  sealed trait Suffix extends PositionalWithSpan
   case class Aligned(factor: Int, e: Expr) extends Suffix
   case class Rotation(e: Expr) extends Suffix
 
@@ -173,9 +187,9 @@ object Syntax {
     * retained.
     */
   case class View(suffix: Suffix, prefix: Option[Int], shrink: Option[Int])
-      extends Positional
+      extends PositionalWithSpan
 
-  sealed trait Command extends Positional {
+  sealed trait Command extends PositionalWithSpan {
     var attributes: Map[String, Int] = Map()
   }
   case class CPar(cmds: Seq[Command]) extends Command
@@ -261,7 +275,7 @@ object Syntax {
     }
   }
 
-  sealed trait Definition extends Positional
+  sealed trait Definition extends PositionalWithSpan
 
   /**
     * Represents function definitions. A missing function body implies that
@@ -289,16 +303,16 @@ object Syntax {
   case class Include(
       backends: Map[BackendOption, String],
       defs: Seq[FuncDef]
-  ) extends Positional
+  ) extends PositionalWithSpan
 
-  case class Decl(id: Id, typ: Type) extends Positional
+  case class Decl(id: Id, typ: Type) extends PositionalWithSpan
   case class Prog(
       includes: Seq[Include],
       defs: Seq[Definition],
       decors: Seq[CDecorate],
       decls: Seq[Decl],
       cmd: Command
-  ) extends Positional
+  ) extends PositionalWithSpan
 
   /**
     * Define common helper methods implicit classes.

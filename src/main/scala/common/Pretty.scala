@@ -149,7 +149,7 @@ object Pretty {
       else
         text("/*") <+>
         emitAttributes(c.attributes) <+> text("*/") <> space
-      val pos = text("/*") <> text(c.pos.toString()) <> text("*/")
+      val pos = text("/*") <> text(c.pos.toString()) <> text(".") <> text(c.span.toString()) <> text("*/")
 
     (c match {
       case _: CPar | _: CSeq | _: CBlock => attr

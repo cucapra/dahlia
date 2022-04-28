@@ -1,6 +1,6 @@
 package fuselang
 
-import scala.util.parsing.input.{Positional, OffsetPosition}
+import scala.util.parsing.input.OffsetPosition
 
 import fastparse._
 import fastparse.JavaWhitespace._
@@ -19,9 +19,17 @@ case class Parser(input: String) {
   def angular[K: P, T](p: => P[T]): P[T] = P("<" ~/ p ~ ">")
   def parens[K: P, T](p: => P[T]): P[T] = P("(" ~/ p ~ ")")
 
-  def positioned[K: P, T <: Positional](p: => P[T]): P[T] = {
-    P(Index ~ p).map({
-      case (index, t) => t.setPos(OffsetPosition(input, index))
+  def positioned[K: P, T <: PositionalWithSpan](p: => P[T]): P[T] = {
+    P(Index ~ p ~ Index).map({
+      case (index, t, end) => {
+        val startPos = OffsetPosition(input, index)
+        val out = t.setPos(startPos)
+        val endPos = OffsetPosition(input, end)
+        if (startPos.line == endPos.line) {
+          out.setSpan(end - index)
+        }
+        out
+      }
     })
   }
 

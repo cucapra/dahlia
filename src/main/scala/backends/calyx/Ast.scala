@@ -6,17 +6,23 @@ import fuselang.common.CompilerError._
 import fuselang.Utils.RichOption
 import Doc._
 import scala.util.parsing.input.Position
+import fuselang.common.Syntax
 
 object Calyx {
 
-  private def emitPos(pos: Position): Doc = {
-    if (pos.line == 0 && pos.column == 0) {
+  private def emitPos(pos: Position, span: Int): Doc = {
+    (if (pos.line == 0 && pos.column == 0) {
       emptyDoc
     } else {
       text("@line") <> parens(text(pos.line.toString())) <+>
-        text("@col") <> parens(text(pos.column.toString())) <>
+      text("@col") <> parens(text(pos.column.toString())) <>
         space
-    }
+    }) <>
+    (if (span != 0) {
+      text("@span") <> parens(text(span.toString())) <> space
+    } else {
+      emptyDoc
+    })
   }
 
   def emitCompStructure(structs: List[Structure]): Doc = {
@@ -293,17 +299,17 @@ object Calyx {
           text("while") <+> port.doc() <+> text("with") <+>
             cond.doc() <+>
             scope(body.doc())
-        case Enable(id, pos) => {
-          emitPos(pos) <> id.doc() <> semi
+        case e @ Enable(id) => {
+          emitPos(e.pos, e.span) <> id.doc() <> semi
         }
-        case Invoke(id, inConnects, outConnects, pos) => {
+        case i @ Invoke(id, inConnects, outConnects) => {
           val inputDefs = inConnects.map({
             case (param, arg) => text(param) <> equal <> arg.doc()
           })
           val outputDefs = outConnects.map({
             case (param, arg) => text(param) <> equal <> arg.doc()
           })
-          emitPos(pos) <> text("invoke") <+> id.doc() <>
+          emitPos(i.pos, i.span) <> text("invoke") <+> id.doc() <>
             parens(commaSep(inputDefs)) <>
             parens(commaSep(outputDefs)) <> semi
         }
@@ -317,13 +323,12 @@ object Calyx {
   case class If(port: Port, cond: CompVar, trueBr: Control, falseBr: Control)
       extends Control
   case class While(port: Port, cond: CompVar, body: Control) extends Control
-  case class Enable(id: CompVar, pos: Position) extends Control
+  case class Enable(id: CompVar) extends Control with Syntax.PositionalWithSpan
   case class Invoke(
       id: CompVar,
       inConnects: List[(String, Port)],
       outConnects: List[(String, Port)],
-      pos: Position
-  ) extends Control
+  ) extends Control with Syntax.PositionalWithSpan
   case object Empty extends Control
 }
 

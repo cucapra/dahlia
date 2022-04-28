@@ -24,7 +24,7 @@ object Transformer {
         case _: CPar | _: CSeq | _: CBlock => ()
         case _ =>  {
           if (c1.pos.line == 0 && c1.pos.column == 0) {
-            c1.pos = cmd.pos
+            c1.withPos(cmd)
           }
         }
       }
