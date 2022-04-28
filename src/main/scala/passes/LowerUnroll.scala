@@ -450,7 +450,11 @@ object LowerUnroll extends PartialTransformer {
         // We generate update expressions for the variable.
         val updCmd = CUpdate(EVar(bind), acc)
         val (newCmd, nEnv) =
-          condCmd(allExprs, idxs, arrDims, (e) => updCmd.copy(rhs = e))(env)
+          condCmd(allExprs, idxs, arrDims, (e) => {
+            val out = updCmd.copy(rhs = e)
+            out.pos = c.pos
+            out
+          })(env)
         rewriteC(CPar.smart(CLet(bind, Some(typ), None), newCmd))(nEnv)
       } else {
         c -> env
@@ -480,12 +484,15 @@ object LowerUnroll extends PartialTransformer {
       // rewrite map.
       val rewriteVal = env.rewriteGet(id)
       val (cmd, nEnv) = if (rewriteVal.isDefined) {
-        c.copy(e = nInit) -> env
+        val out = c.copy(e = nInit)
+        out.pos = c.pos
+        out -> env
       } else {
         val suf = env.idxMap.toList.sortBy(_._1.v).map(_._2).mkString("_")
         val newName = id.copy(s"${id.v}_${suf}")
-        c.copy(id = newName, e = nInit) -> env
-          .rewriteAdd(id, newName)
+        val out = c.copy(id = newName, e = nInit)
+        out.pos = c.pos
+        out -> env.rewriteAdd(id, newName)
       }
       (cmd, nEnv)
     }

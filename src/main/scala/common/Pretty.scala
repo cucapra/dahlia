@@ -151,7 +151,10 @@ object Pretty {
         emitAttributes(c.attributes) <+> text("*/") <> space
       val pos = text("/*") <> text(c.pos.toString()) <> text("*/")
 
-    pos <+> attr <> emitCmdBare(c)(debug)
+    (c match {
+      case _: CPar | _: CSeq | _: CBlock => attr
+      case _ => pos <+> attr
+    }) <> emitCmdBare(c)(debug)
   }
 
   def emitCmdBare(c: Command)(implicit debug: Boolean): Doc = c match {

@@ -51,6 +51,8 @@ object LowerForLoops extends PartialTransformer {
       val t = typ.get
       val init =
         CLet(it, typ, Some(ECast(if (rev) EInt(e - 1) else EInt(s), t)))
+      // Init will act as the first loop position
+      init.pos = cfor.pos
       val op = if (rev) {
         NumOp("-", OpConstructor.sub)
       } else {
@@ -58,6 +60,8 @@ object LowerForLoops extends PartialTransformer {
       }
       val upd =
         CUpdate(itVar.copy(), EBinop(op, itVar.copy(), ECast(EInt(1), t)))
+      // The increment will act as the starting position of the next loop iteration
+      upd.pos = cfor.pos
       val cond =
         if (rev) {
           EBinop(CmpOp(">="), itVar.copy(), ECast(EInt(s), t))

@@ -46,6 +46,8 @@ object Compiler {
   def checkStringWithError(prog: String, c: Config = emptyConf) = {
     val preAst = Parser(prog).parse()
 
+    showDebug(preAst, "Original", c)
+
     // Run pre transformers if lowering is enabled
     val ast = if (c.enableLowering) {
       preTransformers.foldLeft(preAst)({
