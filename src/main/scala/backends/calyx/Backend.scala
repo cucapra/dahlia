@@ -1108,11 +1108,11 @@ private class CalyxBackendHelper {
       List()
     }
 
-    Namespace(
+    (Namespace(
       "prog",
       imports
         ++ functionDefinitions ++ main
-    ).emit
+    ).doc <@> meta.doc()).pretty
   }
 }
 

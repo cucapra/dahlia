@@ -7,26 +7,65 @@ import fuselang.Utils.RichOption
 import Doc._
 import scala.util.parsing.input.Position
 import fuselang.common.Syntax
+import scala.collection.mutable.{Map => MutableMap}
 
 object Calyx {
 
   // Track metadata while generating Calyx code.
-  case class Metadata(map: Map[Int, Position] = Map())
+  case class Metadata(
+      // Mapping from position to the value of the counter
+      map: MutableMap[Position, Int] = MutableMap(),
+      var counter: Int = 0
+  ) extends Emitable {
+    def addPos(pos: Position): Int = {
+      val key = pos
+      if (!this.map.contains(key)) {
+        this.map.update(key, this.counter)
+        this.counter = this.counter + 1
+      }
+      this.map(key)
+    }
 
-  private def emitPos(pos: Position, span: Int)(implicit meta: Metadata): Doc = {
-    println(meta)
-    (if (pos.line == 0 && pos.column == 0) {
-      emptyDoc
+    override def doc(): Doc = {
+      text("metadata") <+> scope(
+        vsep(
+          this.map.toSeq
+            .sortBy(_._2)
+            .map({
+              case (pos, c) =>
+                text(c.toString()) <> text(":") <+> text(
+                  pos.longString.split("\n")(0)
+                )
+            })
+        ),
+        left = text("#") <> lbrace,
+        right = rbrace <> text("#")
+      )
+    }
+  }
+
+  private def emitPos(pos: Position, @annotation.unused span: Int)(
+      implicit meta: Metadata
+  ): Doc = {
+    // Add position information to the metadata.
+    if (pos.line != 0 && pos.column != 0) {
+      val count = meta.addPos(pos)
+      text("@pos") <> parens(text(count.toString)) <> space
     } else {
-      text("@line") <> parens(text(pos.line.toString())) <+>
-      text("@col") <> parens(text(pos.column.toString())) <>
-        space
-    }) <>
-    (if (span != 0) {
-      text("@span") <> parens(text(span.toString())) <> space
-    } else {
       emptyDoc
-    })
+    }
+    /* (if (pos.line == 0 && pos.column == 0) {
+       emptyDoc
+     } else {
+       text("@line") <> parens(text(pos.line.toString())) <+>
+         text("@col") <> parens(text(pos.column.toString())) <>
+         space
+     }) <>
+      (if (span != 0) {
+         text("@span") <> parens(text(span.toString())) <> space
+       } else {
+         emptyDoc
+       }) */
   }
 
   def emitCompStructure(structs: List[Structure]): Doc = {
@@ -331,8 +370,9 @@ object Calyx {
   case class Invoke(
       id: CompVar,
       inConnects: List[(String, Port)],
-      outConnects: List[(String, Port)],
-  ) extends Control with Syntax.PositionalWithSpan
+      outConnects: List[(String, Port)]
+  ) extends Control
+      with Syntax.PositionalWithSpan
   case object Empty extends Control
 }
 
