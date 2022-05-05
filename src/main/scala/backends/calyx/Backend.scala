@@ -990,6 +990,8 @@ private class CalyxBackendHelper {
 
   def emitProg(p: Prog, c: Config): String = {
 
+    implicit val meta = Metadata()
+
     val importDefinitions = p.includes.flatMap(_.defs).toList
     val definitions =
       p.defs.map(definition => emitDefinition(definition)) ++ importDefinitions
@@ -1110,7 +1112,7 @@ private class CalyxBackendHelper {
       "prog",
       imports
         ++ functionDefinitions ++ main
-    ).emit()
+    ).emit
   }
 }
 

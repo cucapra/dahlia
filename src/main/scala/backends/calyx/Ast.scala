@@ -10,7 +10,11 @@ import fuselang.common.Syntax
 
 object Calyx {
 
-  private def emitPos(pos: Position, span: Int): Doc = {
+  // Track metadata while generating Calyx code.
+  case class Metadata(map: Map[Int, Position] = Map())
+
+  private def emitPos(pos: Position, span: Int)(implicit meta: Metadata): Doc = {
+    println(meta)
     (if (pos.line == 0 && pos.column == 0) {
       emptyDoc
     } else {
@@ -64,15 +68,15 @@ object Calyx {
   }
 
   /**** definition statements *****/
-  case class Namespace(name: String, comps: List[NamespaceStatement])
-      extends Emitable {
-    override def doc(): Doc =
-      vsep(comps.map(_.doc()))
+  case class Namespace(name: String, comps: List[NamespaceStatement]) {
+    def doc(implicit meta: Metadata): Doc =
+      vsep(comps.map(_.doc))
+    def emit(implicit meta: Metadata) = this.doc.pretty
   }
 
   /** The statements that can appear at the top-level. */
-  sealed trait NamespaceStatement extends Emitable {
-    override def doc(): Doc = this match {
+  sealed trait NamespaceStatement {
+    def doc(implicit meta: Metadata): Doc = this match {
       case Import(filename) => text("import") <+> quote(text(filename)) <> semi
       case Component(name, inputs, outputs, structure, control) => {
         text("component") <+>
@@ -82,7 +86,7 @@ object Calyx {
           parens(commaSep(outputs.map(_.doc()))) <+>
           scope(
             emitCompStructure(structure) <@>
-              text("control") <+> scope(control.doc())
+              text("control") <+> scope(control.doc)
           )
       }
     }
@@ -249,7 +253,7 @@ object Calyx {
   case object True extends GuardExpr
 
   /***** control *****/
-  sealed trait Control extends Emitable {
+  sealed trait Control {
     var attributes = Map[String, Int]()
 
     def seq(c: Control): Control = (this, c) match {
@@ -280,25 +284,25 @@ object Calyx {
         })) <> space
       }
 
-    override def doc(): Doc = {
+    def doc(implicit meta: Metadata): Doc = {
       val controlDoc = this match {
         case SeqComp(stmts) =>
-          text("seq") <+> scope(vsep(stmts.map(_.doc())))
+          text("seq") <+> scope(vsep(stmts.map(_.doc)))
         case ParComp(stmts) =>
-          text("par") <+> scope(vsep(stmts.map(_.doc())))
+          text("par") <+> scope(vsep(stmts.map(_.doc)))
         case If(port, cond, trueBr, falseBr) =>
           text("if") <+> port.doc() <+> text("with") <+>
             cond.doc() <+>
-            scope(trueBr.doc()) <> (
+            scope(trueBr.doc) <> (
             if (falseBr == Empty)
               emptyDoc
             else
-              space <> text("else") <+> scope(falseBr.doc())
+              space <> text("else") <+> scope(falseBr.doc)
           )
         case While(port, cond, body) =>
           text("while") <+> port.doc() <+> text("with") <+>
             cond.doc() <+>
-            scope(body.doc())
+            scope(body.doc)
         case e @ Enable(id) => {
           emitPos(e.pos, e.span) <> id.doc() <> semi
         }
