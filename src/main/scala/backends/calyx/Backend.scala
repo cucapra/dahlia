@@ -467,10 +467,9 @@ private class CalyxBackendHelper {
 
   /** `emitExpr(expr, rhsInfo)(implicit store)` calculates the necessary structure
     *  to compute `expr`.
-    *  - If `rhsInfo = None`, then `Port` is the port that will hold the output
-    *    of computing this expression.
-    *  - If `rhsInfo = Some(...)`, then `Port` represents the port that can be
-    *    used to put a value into the location represented by `expr`.
+    *  - If rhsInfo is defined then this expression is an LHS. rhsInfo contains
+    *    (done, delay) information for the RHS being written to this LHS.
+    *  - Otherwise, this is an RHS expression.
     */
   def emitExpr(expr: Expr, rhsInfo: Option[(Port, Option[Int])] = None)(
       implicit store: Store
@@ -523,7 +522,7 @@ private class CalyxBackendHelper {
               e1,
               e2,
               "out_quotient",
-              None,
+              None
             )
           case "%" =>
             emitMultiCycleBinop(
@@ -531,32 +530,38 @@ private class CalyxBackendHelper {
               e1,
               e2,
               "out_remainder",
-              None,
+              None
             )
           case _ => emitBinop(compName, e1, e2)
         }
       }
       case EVar(id) =>
-        val portName = if (rhsInfo.isDefined) "in" else "out"
-        val (varName, calyxVarType) = store
+        val (cell, calyxVarType) = store
           .get(CompVar(s"$id"))
           .getOrThrow(BackendError(s"`$id' was not in store", expr.pos))
-        val struct =
+
+        val (struct, port, done, delay) =
           rhsInfo match {
-            case Some((port, _)) =>
-              List(Assign(port, varName.port("write_en")))
-            case None => List()
+            case Some((port, delay)) =>
+              (
+                List(Assign(port, cell.port("write_en"))),
+                "in",
+                cell.port("done"),
+                delay.map(_ + 1) /* writing takes one cycle */
+              )
+            case None =>
+              (
+                List(),
+                "out",
+                ConstantPort(1, 1),
+                Some(0) /* reading from a register is combinational */
+              )
           }
-        // calculate static delay, rhsDelay + 1 for writes, 0 for reads
-        val delay =
-          rhsInfo match {
-            case Some((_, delay)) => delay.map(_ + 1)
-            case None => Some(0)
-          }
+
         EmitOutput(
-          if (calyxVarType == LocalVar) varName.port(portName)
-          else ThisPort(varName),
-          if (rhsInfo.isDefined) varName.port("done") else ConstantPort(1, 1),
+          if (calyxVarType == LocalVar) cell.port(port)
+          else ThisPort(cell),
+          done,
           struct,
           delay,
           None
@@ -899,7 +904,7 @@ private class CalyxBackendHelper {
         val doneHole =
           Assign(
             lOut.done,
-            HolePort(groupName, "done"),
+            HolePort(groupName, "done")
           )
         val struct =
           lOut.structure ++ rOut.structure ++ List(
