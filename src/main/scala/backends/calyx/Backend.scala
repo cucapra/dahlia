@@ -214,75 +214,27 @@ private class CalyxBackendHelper {
     val decl =
       Cell(declName, CompInst(functionName, compInstArgs), false, List())
 
+    // Compile all arguments to the function and get the relevant ports
     val (argPorts, argSt) = app.args
       .map(inp => {
         val out = emitExpr(inp)
         (out.port, out.structure)
       })
       .unzip
-    val argToParam = argPorts.zip(id2FuncDef(app.func).args)
 
-    val inConnects = argToParam.foldLeft(List[(String, Port)]())(
-      {
-        case (inConnects, (inputPort, paramArg)) =>
-          paramArg.typ match {
-            // If the parameter is an array, pass in all involved ports
-            case _: TArray => {
-              val argId = getPortName(inputPort)
-              val paramId = paramArg.id.toString()
-              inConnects ++ List(
-                (
-                  s"${paramId}_read_data",
-                  CompPort(CompVar(s"$argId"), "read_data")
-                ),
-                (s"${paramId}_done", CompPort(CompVar(s"$argId"), "done"))
-              )
-            }
-            case _ => inConnects :+ (paramArg.id.toString(), inputPort)
-          }
+    val (refCells, inConnects) = id2FuncDef(app.func).args.zip(argPorts).partitionMap({
+      case (param, v) => param.typ match {
+        case _: TArray => {
+          Left((param.id.v, CompVar(getPortName(v))))
+        }
+        case _ => Right((param.id.v, v))
       }
-    )
-
-    val outConnects = argToParam.foldLeft(List[(String, Port)]())(
-      {
-        case (outConnects, (inputPort, paramArg)) =>
-          paramArg.typ match {
-            // If the parameter is an array, pass in all involved ports
-            case tarr: TArray => {
-              val paramId = paramArg.id.toString()
-              val argId = getPortName(inputPort)
-
-              // Connect address ports.
-              val addrPortToWidth = getAddrPortToWidths(tarr, paramArg.id)
-              val addressPorts =
-                addrPortToWidth.map({
-                  case (name, _) =>
-                    (
-                      s"${paramId}_${name}",
-                      CompPort(CompVar(s"$argId"), s"$name")
-                    )
-                })
-
-              outConnects ++ List(
-                (
-                  s"${paramId}_write_data",
-                  CompPort(CompVar(s"$argId"), "write_data")
-                ),
-                (
-                  s"${paramId}_write_en",
-                  CompPort(CompVar(s"$argId"), "write_en")
-                )
-              ) ++ addressPorts
-            }
-            case _ => outConnects
-          }
-      }
-    )
+    })
 
     (
       decl,
       argSt.flatten,
-      Invoke(declName, List(), inConnects, outConnects)
+      Invoke(declName, refCells.toList, inConnects.toList, List())
     )
   }
 
