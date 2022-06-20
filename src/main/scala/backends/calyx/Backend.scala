@@ -895,11 +895,11 @@ private class CalyxBackendHelper {
         val rOut = emitExpr(rhs)(store)
         val lOut = emitExpr(lhs, Some((rOut.done, rOut.delay)))(store)
         val groupName = genName("upd")
+        // The group is done when the left register commits the write.
         val doneHole =
           Assign(
-            ConstantPort(1, 1),
+            lOut.done,
             HolePort(groupName, "done"),
-            Atom(lOut.done)
           )
         val struct =
           lOut.structure ++ rOut.structure ++ List(
