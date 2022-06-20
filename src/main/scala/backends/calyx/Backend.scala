@@ -29,10 +29,15 @@ import Helpers._
   *    None, then the emitted output has no multi-cycle ops.
   */
 private case class EmitOutput(
+    // The port that contains the output from the operation
     val port: Port,
+    // The done condition returned by the operation
     val done: Port,
+    // The structure defined by the operation
     val structure: List[Structure],
+    // The statically known delay of the operation, if any
     val delay: Option[Int],
+    // TODO(rachit): ???
     val multiCycleInfo: Option[(CompVar, Option[Int])]
 )
 
@@ -89,10 +94,6 @@ private class CalyxBackendHelper {
   /** Mappings from Function Id to Function Definition. */
   type FunctionMapping = Map[Id, FuncDef]
 
-  /** `external` is a flag that differentiates between generating
-    *  external memories and internal memories. This is so that
-    *  we can generate external memories for `decl`s and internal
-    *  memories for local arrays. */
   def emitArrayDecl(
       arr: TArray,
       id: Id,
@@ -130,6 +131,7 @@ private class CalyxBackendHelper {
         s"std_mem_d${dims}",
         ((width +: dimSizes) ++ idxSizes).toList.map(i => BigInt(i))
       ),
+      false,
       attrs
     )
   }
@@ -151,7 +153,7 @@ private class CalyxBackendHelper {
     */
   def getAddrPortToWidths(typ: TArray, id: Id): List[(String, BigInt)] = {
     // Emit the array to determine the port widths.
-    val Cell(_, CompInst(_, arrayArgs), _) = emitArrayDecl(typ, id)
+    val Cell(_, CompInst(_, arrayArgs), _, _) = emitArrayDecl(typ, id)
 
     // A memory's arguments follow a similar pattern:
     // (bitwidth, size0, ..., sizeX, addr0, ..., addrX),
@@ -208,20 +210,23 @@ private class CalyxBackendHelper {
     val functionName = app.func.toString()
     val declName = genName(functionName)
     val compInstArgs = getCompInstArgs(app.func)
+    // Define a new cell for the function instance
     val decl =
-      Cell(declName, CompInst(functionName, compInstArgs), List())
+      Cell(declName, CompInst(functionName, compInstArgs), false, List())
+
     val (argPorts, argSt) = app.args
       .map(inp => {
         val out = emitExpr(inp)
         (out.port, out.structure)
       })
       .unzip
-    val argToParam = argPorts zip id2FuncDef(app.func).args
+    val argToParam = argPorts.zip(id2FuncDef(app.func).args)
 
     val inConnects = argToParam.foldLeft(List[(String, Port)]())(
       {
         case (inConnects, (inputPort, paramArg)) =>
           paramArg.typ match {
+            // If the parameter is an array, pass in all involved ports
             case _: TArray => {
               val argId = getPortName(inputPort)
               val paramId = paramArg.id.toString()
@@ -233,7 +238,7 @@ private class CalyxBackendHelper {
                 (s"${paramId}_done", CompPort(CompVar(s"$argId"), "done"))
               )
             }
-            case _ => inConnects ++ List((paramArg.id.toString(), inputPort))
+            case _ => inConnects :+ (paramArg.id.toString(), inputPort)
           }
       }
     )
@@ -242,6 +247,7 @@ private class CalyxBackendHelper {
       {
         case (outConnects, (inputPort, paramArg)) =>
           paramArg.typ match {
+            // If the parameter is an array, pass in all involved ports
             case tarr: TArray => {
               val paramId = paramArg.id.toString()
               val argId = getPortName(inputPort)
@@ -276,7 +282,7 @@ private class CalyxBackendHelper {
     (
       decl,
       argSt.flatten,
-      Invoke(declName, inConnects, outConnects)
+      Invoke(declName, List(), inConnects, outConnects)
     )
   }
 
@@ -327,7 +333,7 @@ private class CalyxBackendHelper {
       case (e1Bits, None) => {
         val isSigned = signed(e1.typ)
         val binOp = Stdlib.binop(s"$compName", e1Bits, isSigned)
-        val comp = Cell(genName(compName), binOp, List())
+        val comp = Cell(genName(compName), binOp, false, List())
         val struct = List(
           comp,
           Assign(e1Out.port, comp.id.port("left")),
@@ -364,7 +370,7 @@ private class CalyxBackendHelper {
             fracBit1,
             isSigned
           );
-        val comp = Cell(genName(compName), binOp, List())
+        val comp = Cell(genName(compName), binOp, false, List())
         val struct = List(
           comp,
           Assign(e1Out.port, comp.id.port("left")),
@@ -438,7 +444,7 @@ private class CalyxBackendHelper {
         throw NotImplemented(s"Multi-cycle binary operation with type: $e1.typ")
     }
     val compVar = genName(compName)
-    val comp = Cell(compVar, binOp, List())
+    val comp = Cell(compVar, binOp, false, List())
     val struct = List(
       comp,
       Assign(e1Out.port, comp.id.port("left")),
@@ -460,11 +466,11 @@ private class CalyxBackendHelper {
   }
 
   /** `emitExpr(expr, rhsInfo)(implicit store)` calculates the necessary structure
-    *  to compute `expr`. It return the pair (Port, List[Structure]).
-    *  If `rhsInfo = None`, then `Port` is the port that will hold the output
-    *  of computing this expression. If `rhsInfo = Some(...)`, then `Port` represents
-    *  the port that can be used to put a value into the location represented by
-    *  `expr`.
+    *  to compute `expr`.
+    *  - If `rhsInfo = None`, then `Port` is the port that will hold the output
+    *    of computing this expression.
+    *  - If `rhsInfo = Some(...)`, then `Port` represents the port that can be
+    *    used to put a value into the location represented by `expr`.
     */
   def emitExpr(expr: Expr, rhsInfo: Option[(Port, Option[Int])] = None)(
       implicit store: Store
@@ -517,7 +523,7 @@ private class CalyxBackendHelper {
               e1,
               e2,
               "out_quotient",
-              Stdlib.staticTimingMap.get("div")
+              None,
             )
           case "%" =>
             emitMultiCycleBinop(
@@ -525,7 +531,7 @@ private class CalyxBackendHelper {
               e1,
               e2,
               "out_remainder",
-              Stdlib.staticTimingMap.get("mod")
+              None,
             )
           case _ => emitBinop(compName, e1, e2)
         }
@@ -563,6 +569,7 @@ private class CalyxBackendHelper {
           Cell(
             genName("const"),
             Stdlib.constant(typ_b, v),
+            false,
             List()
           )
         EmitOutput(
@@ -575,7 +582,12 @@ private class CalyxBackendHelper {
       }
       case EBool(v) => {
         val const =
-          Cell(genName("bool"), Stdlib.constant(1, if (v) 1 else 0), List())
+          Cell(
+            genName("bool"),
+            Stdlib.constant(1, if (v) 1 else 0),
+            false,
+            List()
+          )
         EmitOutput(
           const.id.port("out"),
           ConstantPort(1, 1),
@@ -618,6 +630,7 @@ private class CalyxBackendHelper {
           Cell(
             genName("fp_const"),
             Stdlib.constant(width, BigInt(bits, 2)),
+            false,
             List()
           )
         EmitOutput(
@@ -643,9 +656,9 @@ private class CalyxBackendHelper {
           )
         } else {
           val comp = if (cBits > vBits) {
-            Cell(genName("pad"), Stdlib.pad(vBits, cBits), List())
+            Cell(genName("pad"), Stdlib.pad(vBits, cBits), false, List())
           } else {
-            Cell(genName("slice"), Stdlib.slice(vBits, cBits), List())
+            Cell(genName("slice"), Stdlib.slice(vBits, cBits), false, List())
           }
           val struct = List(
             comp,
@@ -669,6 +682,7 @@ private class CalyxBackendHelper {
               expr.pos
             )
           )
+
         // The array ports change if the array is a function parameter. We want to access the
         // component ports, e.g. `x_read_data`, rather than the memory ports, `x.read_data`.
         val isParam = (typ == ParameterVar)
@@ -1006,76 +1020,45 @@ private class CalyxBackendHelper {
       )
 
     val functionDefinitions: List[Component] =
-      for ((id, FuncDef(_, params, retType, Some(bodyOpt))) <- id2FuncDef.toList)
+      for ((id, FuncDef(_, params, retType, Some(body))) <- id2FuncDef.toList)
         yield {
-          val inputs = params.map(param => CompVar(param.id.toString()))
-
-          val inputPorts =
-            params.foldLeft(List[PortDef]())((inputPorts, params) =>
-              params.typ match {
-                case tarr: TArray => {
-                  // Currently, we default to exposing all ports for arrays.
-                  val (bits, _) = bitsForType(Some(tarr.typ), tarr.typ.pos)
-                  val id = params.id.toString()
-                  inputPorts ++ List(
-                    PortDef(CompVar(s"${id}_read_data"), bits),
-                    PortDef(CompVar(s"${id}_done"), 1)
-                  )
-                }
-                case _ => {
-                  val (bits, _) = bitsForType(Some(params.typ), params.typ.pos)
-                  inputPorts ++ List(
-                    PortDef(CompVar(params.id.toString()), bits)
-                  )
-                }
+          val (refCells, inputPorts) = params.partitionMap(param =>
+            param.typ match {
+              case tarr: TArray => {
+                Left(emitArrayDecl(tarr, param.id).copy(ref = true))
               }
-            )
-
-          val outputPorts =
-            params.foldLeft(List[PortDef]())((outputPorts, params) =>
-              params.typ match {
-                case tarr: TArray => {
-                  val (bits, _) = bitsForType(Some(tarr.typ), tarr.typ.pos)
-                  val id = params.id.toString()
-                  val addrPortToWidth = getAddrPortToWidths(tarr, params.id)
-                  val addressPortDefs = addrPortToWidth.map(
-                    {
-                      case (name, idxSize) =>
-                        PortDef(CompVar(s"${id}_${name}"), idxSize.toInt)
-                    }
-                  )
-
-                  outputPorts ++ List(
-                    PortDef(CompVar(s"${id}_write_data"), bits),
-                    PortDef(CompVar(s"${id}_write_en"), 1)
-                  ) ++ addressPortDefs
-                }
-                case _ => outputPorts
+              case _ => {
+                val (bits, _) = bitsForType(Some(param.typ), param.typ.pos)
+                Right(PortDef(CompVar(param.id.toString()), bits))
               }
-            )
+            }
+          )
 
-          val functionStore = inputs.foldLeft(Map[CompVar, (CompVar, VType)]())(
-            (functionStore, inputs) =>
-              inputs match {
-                case id: CompVar =>
-                  functionStore + (id -> (id, ParameterVar))
+          val functionStore = params.foldLeft(Map[CompVar, (CompVar, VType)]())(
+            (functionStore, param) => {
+              val id = CompVar(param.id.v)
+              val pv = param.typ match {
+                case _: TArray => LocalVar
+                case _ => ParameterVar
               }
+              functionStore + (id -> (id, pv))
+            }
           )
           val (cmdStructure, controls, _) =
-            emitCmd(bodyOpt)(functionStore, id2FuncDef)
+            emitCmd(body)(functionStore, id2FuncDef)
 
           val (outputBitWidth, _) = bitsForType(Some(retType), retType.pos)
 
           Component(
             id.toString(),
-            inputPorts,
-            if (retType == TVoid()) outputPorts
+            inputPorts.toList,
+            if (retType == TVoid()) List()
             // If the return type of the component is not void, add an `out` wire.
             else
-              outputPorts ++ List(
+              List(
                 PortDef(CompVar("out"), outputBitWidth, List(("stable" -> 1)))
               ),
-            cmdStructure.sorted,
+            refCells.toList ++ cmdStructure.sorted,
             controls
           )
         }
@@ -1090,7 +1073,7 @@ private class CalyxBackendHelper {
       val store =
         declStruct.foldLeft(Map[CompVar, (CompVar, VType)]())((store, struct) =>
           struct match {
-            case Cell(id, _, _) => store + (id -> (id, LocalVar))
+            case Cell(id, _, _, _) => store + (id -> (id, LocalVar))
             case _ => store
           }
         )
@@ -1106,11 +1089,13 @@ private class CalyxBackendHelper {
       List()
     }
 
-    Namespace(
-      "prog",
-      imports
-        ++ functionDefinitions ++ main
-    ).emit()
+    // Emit the program
+    PrettyPrint.Doc
+      .vsep(
+        (imports ++ functionDefinitions ++ main)
+          .map(_.doc())
+      )
+      .pretty
   }
 }
 

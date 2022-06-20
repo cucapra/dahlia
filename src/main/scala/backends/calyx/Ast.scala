@@ -45,13 +45,6 @@ object Calyx {
     }
   }
 
-  /**** definition statements *****/
-  case class Namespace(name: String, comps: List[NamespaceStatement])
-      extends Emitable {
-    override def doc(): Doc =
-      vsep(comps.map(_.doc()))
-  }
-
   /** The statements that can appear at the top-level. */
   sealed trait NamespaceStatement extends Emitable {
     override def doc(): Doc = this match {
@@ -123,7 +116,7 @@ object Calyx {
 
   sealed trait Structure extends Emitable with Ordered[Structure] {
     override def doc(): Doc = this match {
-      case Cell(id, comp, attrs) => {
+      case Cell(id, comp, ref, attrs) => {
         val attrDoc =
           hsep(
             attrs
@@ -133,7 +126,7 @@ object Calyx {
               })
           ) <> (if (attrs.isEmpty) emptyDoc else space)
 
-        attrDoc <>
+        attrDoc <> (if (ref) text("ref") <> space else emptyDoc) <>
           id.doc() <+> equal <+> comp.doc() <> semi
       }
       case Assign(src, dest, True) =>
@@ -151,7 +144,7 @@ object Calyx {
 
     def compare(that: Structure): Int = {
       (this, that) match {
-        case (Cell(thisId, _, _), Cell(thatId, _, _)) =>
+        case (Cell(thisId, _, _, _), Cell(thatId, _, _, _)) =>
           thisId.compare(thatId)
         case (Group(thisId, _, _, _), Group(thatId, _, _, _)) =>
           thisId.compare(thatId)
@@ -169,8 +162,12 @@ object Calyx {
       }
     }
   }
-  case class Cell(id: CompVar, ci: CompInst, attributes: List[(String, Int)])
-      extends Structure
+  case class Cell(
+      id: CompVar,
+      ci: CompInst,
+      ref: Boolean,
+      attributes: List[(String, Int)]
+  ) extends Structure
   case class Group(
       id: CompVar,
       connections: List[Assign],
@@ -282,7 +279,7 @@ object Calyx {
             cond.doc() <+>
             scope(body.doc())
         case Enable(id) => id.doc() <> semi
-        case Invoke(id, inConnects, outConnects) => {
+        case Invoke(id, _, inConnects, outConnects) => {
           val inputDefs = inConnects.map({
             case (param, arg) => text(param) <> equal <> arg.doc()
           })
@@ -306,6 +303,7 @@ object Calyx {
   case class Enable(id: CompVar) extends Control
   case class Invoke(
       id: CompVar,
+      refCells: List[(String, CompVar)],
       inConnects: List[(String, Port)],
       outConnects: List[(String, Port)]
   ) extends Control
@@ -318,6 +316,7 @@ object Stdlib {
     Calyx.Cell(
       name,
       Calyx.CompInst("std_reg", List(width)),
+      false,
       List()
     )
 
