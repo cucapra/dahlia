@@ -39,8 +39,8 @@ component main() -> () {
     group upd0<"static"=1> {
       d0.addr0 = const0.out;
       d0.write_en = 1'd1;
-      d0.write_data = 1'd1 ? bin_read1_0.out;
-      upd0[done] = d0.done ? 1'd1;
+      d0.write_data = bin_read1_0.out;
+      upd0[done] = d0.done;
     }
   }
   control {
