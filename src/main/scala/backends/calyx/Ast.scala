@@ -222,6 +222,12 @@ object Calyx {
     }
   }
   case class Atom(item: Port) extends GuardExpr
+  object Atom {
+    def apply(item: Port): GuardExpr = item match {
+      case ConstantPort(1, v) if v == 1 => True
+      case _ => new Atom(item)
+    }
+  }
   case class And(left: GuardExpr, right: GuardExpr) extends GuardExpr
   case class Or(left: GuardExpr, right: GuardExpr) extends GuardExpr
   case class Not(inner: GuardExpr) extends GuardExpr
