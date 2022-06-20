@@ -285,7 +285,10 @@ object Calyx {
             cond.doc() <+>
             scope(body.doc())
         case Enable(id) => id.doc() <> semi
-        case Invoke(id, _, inConnects, outConnects) => {
+        case Invoke(id, refCells, inConnects, outConnects) => {
+          val cells = refCells.map({
+            case (param, cell) => text(param) <> equal <> cell.doc()
+          })
           val inputDefs = inConnects.map({
             case (param, arg) => text(param) <> equal <> arg.doc()
           })
@@ -293,6 +296,7 @@ object Calyx {
             case (param, arg) => text(param) <> equal <> arg.doc()
           })
           text("invoke") <+> id.doc() <>
+            brackets(commaSep(cells)) <>
             parens(commaSep(inputDefs)) <>
             parens(commaSep(outputDefs)) <> semi
         }
