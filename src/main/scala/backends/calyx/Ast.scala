@@ -2,8 +2,6 @@ package fuselang.backend.calyx
 
 import scala.math.BigInt
 import fuselang.common.PrettyPrint.Doc
-import fuselang.common.CompilerError._
-import fuselang.Utils.RichOption
 import Doc._
 
 object Calyx {
@@ -163,8 +161,8 @@ object Calyx {
     }
   }
   case class Cell(
-      id: CompVar,
-      ci: CompInst,
+      name: CompVar,
+      comp: CompInst,
       ref: Boolean,
       attributes: List[(String, Int)]
   ) extends Structure
@@ -173,7 +171,7 @@ object Calyx {
       connections: List[Assign],
       staticDelay: Option[Int],
       // True if the group is combinational
-      combinationa: Boolean
+      comb: Boolean
   ) extends Structure
   case class Assign(src: Port, dest: Port, guard: GuardExpr = True)
       extends Structure
@@ -182,26 +180,23 @@ object Calyx {
     def fromStructure(
         id: CompVar,
         structure: List[Structure],
-        staticDelay: Option[Int]
+        staticDelay: Option[Int],
+        comb: Boolean
     ): (Group, List[Structure]) = {
+
+      assert(
+        !(comb && staticDelay.isDefined && staticDelay.get != 0),
+        s"Combinational group has delay: ${staticDelay.get}"
+      )
+
       val (connections, st) = structure.partitionMap[Assign, Structure](st =>
         st match {
           case c: Assign => Left(c)
           case s => Right(s)
         }
       )
-      val doneAssign = connections
-        .find(assign => assign.dest.isHole())
-        .getOrThrow(Impossible("Group does not have a done hole"))
 
-      // If this is a combinational group, remove the group done assignment
-      val isComb = doneAssign.guard == True && doneAssign.src.isConstant(1, 1)
-      val conns = if (isComb) {
-        connections.filter(assign => !assign.dest.isHole())
-      } else {
-        connections
-      }
-      (this(id, conns, if (isComb) None else staticDelay, isComb), st)
+      (this(id, connections, if (comb) None else staticDelay, comb), st)
     }
   }
 
