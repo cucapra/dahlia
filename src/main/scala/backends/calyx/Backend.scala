@@ -981,12 +981,19 @@ private class CalyxBackendHelper {
             )
         }
       }
-      case CReturn(expr) => {
+      case CReturn(expr:EVar) => {
         // Hooks the output port of the emitted `expr` to PortDef `out` of the component.
         val condOut = emitExpr(expr)
         val outPort = ThisPort(CompVar("out"))
         val returnConnect = Assign(condOut.port, outPort)
         (returnConnect :: condOut.structure, Empty, store)
+      }
+      case CReturn(e) => {
+        throw NotImplemented(
+          s"Only allowed to return variables. Store the return expression in a variable to return it."
+          + s"e.g. `let _tmp = ${Pretty.emitExpr(e)(false).pretty}; return _tmp`",
+          e.pos
+        )
       }
       case _: CDecorate => (List(), Empty, store)
       case x =>
