@@ -2,8 +2,6 @@ package fuselang.backend.calyx
 
 import scala.math.BigInt
 import fuselang.common.PrettyPrint.Doc
-import fuselang.common.CompilerError._
-import fuselang.Utils.RichOption
 import Doc._
 import scala.util.parsing.input.Position
 import fuselang.common.Syntax
@@ -184,7 +182,7 @@ object Calyx {
 
   sealed trait Structure extends Emitable with Ordered[Structure] {
     override def doc(): Doc = this match {
-      case Cell(id, comp, attrs) => {
+      case Cell(id, comp, ref, attrs) => {
         val attrDoc =
           hsep(
             attrs
@@ -194,7 +192,7 @@ object Calyx {
               })
           ) <> (if (attrs.isEmpty) emptyDoc else space)
 
-        attrDoc <>
+        attrDoc <> (if (ref) text("ref") <> space else emptyDoc) <>
           id.doc() <+> equal <+> comp.doc() <> semi
       }
       case Assign(src, dest, True) =>
@@ -212,7 +210,7 @@ object Calyx {
 
     def compare(that: Structure): Int = {
       (this, that) match {
-        case (Cell(thisId, _, _), Cell(thatId, _, _)) =>
+        case (Cell(thisId, _, _, _), Cell(thatId, _, _, _)) =>
           thisId.compare(thatId)
         case (Group(thisId, _, _, _), Group(thatId, _, _, _)) =>
           thisId.compare(thatId)
@@ -230,14 +228,18 @@ object Calyx {
       }
     }
   }
-  case class Cell(id: CompVar, ci: CompInst, attributes: List[(String, Int)])
-      extends Structure
+  case class Cell(
+      name: CompVar,
+      comp: CompInst,
+      ref: Boolean,
+      attributes: List[(String, Int)]
+  ) extends Structure
   case class Group(
       id: CompVar,
       connections: List[Assign],
       staticDelay: Option[Int],
       // True if the group is combinational
-      combinationa: Boolean
+      comb: Boolean
   ) extends Structure
   case class Assign(src: Port, dest: Port, guard: GuardExpr = True)
       extends Structure
@@ -246,26 +248,23 @@ object Calyx {
     def fromStructure(
         id: CompVar,
         structure: List[Structure],
-        staticDelay: Option[Int]
+        staticDelay: Option[Int],
+        comb: Boolean
     ): (Group, List[Structure]) = {
+
+      assert(
+        !(comb && staticDelay.isDefined && staticDelay.get != 0),
+        s"Combinational group has delay: ${staticDelay.get}"
+      )
+
       val (connections, st) = structure.partitionMap[Assign, Structure](st =>
         st match {
           case c: Assign => Left(c)
           case s => Right(s)
         }
       )
-      val doneAssign = connections
-        .find(assign => assign.dest.isHole())
-        .getOrThrow(Impossible("Group does not have a done hole"))
 
-      // If this is a combinational group, remove the group done assignment
-      val isComb = doneAssign.guard == True && doneAssign.src.isConstant(1, 1)
-      val conns = if (isComb) {
-        connections.filter(assign => !assign.dest.isHole())
-      } else {
-        connections
-      }
-      (this(id, conns, if (isComb) None else staticDelay, isComb), st)
+      (this(id, connections, if (comb) None else staticDelay, comb), st)
     }
   }
 
@@ -286,6 +285,12 @@ object Calyx {
     }
   }
   case class Atom(item: Port) extends GuardExpr
+  object Atom {
+    def apply(item: Port): GuardExpr = item match {
+      case ConstantPort(1, v) if v == 1 => True
+      case _ => new Atom(item)
+    }
+  }
   case class And(left: GuardExpr, right: GuardExpr) extends GuardExpr
   case class Or(left: GuardExpr, right: GuardExpr) extends GuardExpr
   case class Not(inner: GuardExpr) extends GuardExpr
@@ -341,11 +346,18 @@ object Calyx {
         case While(port, cond, body) =>
           text("while") <+> port.doc() <+> text("with") <+>
             cond.doc() <+>
-            scope(body.doc)
+            scope(body.doc(meta))
         case e @ Enable(id) => {
           emitPos(e.pos, e.span) <> id.doc() <> semi
         }
-        case i @ Invoke(id, inConnects, outConnects) => {
+        case i @ Invoke(id, refCells, inConnects, outConnects) => {
+          val cells =
+            if (refCells.isEmpty)
+              emptyDoc
+            else
+              brackets(commaSep(refCells.map({
+                case (param, cell) => text(param) <> equal <> cell.doc()
+              })))
           val inputDefs = inConnects.map({
             case (param, arg) => text(param) <> equal <> arg.doc()
           })
@@ -353,6 +365,7 @@ object Calyx {
             case (param, arg) => text(param) <> equal <> arg.doc()
           })
           emitPos(i.pos, i.span) <> text("invoke") <+> id.doc() <>
+            cells <>
             parens(commaSep(inputDefs)) <>
             parens(commaSep(outputDefs)) <> semi
         }
@@ -369,6 +382,7 @@ object Calyx {
   case class Enable(id: CompVar) extends Control with Syntax.PositionalWithSpan
   case class Invoke(
       id: CompVar,
+      refCells: List[(String, CompVar)],
       inConnects: List[(String, Port)],
       outConnects: List[(String, Port)]
   ) extends Control
@@ -382,6 +396,7 @@ object Stdlib {
     Calyx.Cell(
       name,
       Calyx.CompInst("std_reg", List(width)),
+      false,
       List()
     )
 

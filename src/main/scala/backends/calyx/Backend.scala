@@ -29,10 +29,15 @@ import Helpers._
   *    None, then the emitted output has no multi-cycle ops.
   */
 private case class EmitOutput(
+    // The port that contains the output from the operation
     val port: Port,
-    val done: Port,
+    // The done condition returned by the operation
+    val done: Option[Port],
+    // The structure defined by the operation
     val structure: List[Structure],
+    // The statically known delay of the operation, if any
     val delay: Option[Int],
+    // TODO(rachit): ???
     val multiCycleInfo: Option[(CompVar, Option[Int])]
 )
 
@@ -89,10 +94,6 @@ private class CalyxBackendHelper {
   /** Mappings from Function Id to Function Definition. */
   type FunctionMapping = Map[Id, FuncDef]
 
-  /** `external` is a flag that differentiates between generating
-    *  external memories and internal memories. This is so that
-    *  we can generate external memories for `decl`s and internal
-    *  memories for local arrays. */
   def emitArrayDecl(
       arr: TArray,
       id: Id,
@@ -130,6 +131,7 @@ private class CalyxBackendHelper {
         s"std_mem_d${dims}",
         ((width +: dimSizes) ++ idxSizes).toList.map(i => BigInt(i))
       ),
+      false,
       attrs
     )
   }
@@ -151,7 +153,7 @@ private class CalyxBackendHelper {
     */
   def getAddrPortToWidths(typ: TArray, id: Id): List[(String, BigInt)] = {
     // Emit the array to determine the port widths.
-    val Cell(_, CompInst(_, arrayArgs), _) = emitArrayDecl(typ, id)
+    val Cell(_, CompInst(_, arrayArgs), _, _) = emitArrayDecl(typ, id)
 
     // A memory's arguments follow a similar pattern:
     // (bitwidth, size0, ..., sizeX, addr0, ..., addrX),
@@ -208,75 +210,34 @@ private class CalyxBackendHelper {
     val functionName = app.func.toString()
     val declName = genName(functionName)
     val compInstArgs = getCompInstArgs(app.func)
+    // Define a new cell for the function instance
     val decl =
-      Cell(declName, CompInst(functionName, compInstArgs), List())
+      Cell(declName, CompInst(functionName, compInstArgs), false, List())
+
+    // Compile all arguments to the function and get the relevant ports
     val (argPorts, argSt) = app.args
       .map(inp => {
         val out = emitExpr(inp)
         (out.port, out.structure)
       })
       .unzip
-    val argToParam = argPorts zip id2FuncDef(app.func).args
 
-    val inConnects = argToParam.foldLeft(List[(String, Port)]())(
-      {
-        case (inConnects, (inputPort, paramArg)) =>
-          paramArg.typ match {
+    val (refCells, inConnects) = id2FuncDef(app.func).args
+      .zip(argPorts)
+      .partitionMap({
+        case (param, v) =>
+          param.typ match {
             case _: TArray => {
-              val argId = getPortName(inputPort)
-              val paramId = paramArg.id.toString()
-              inConnects ++ List(
-                (
-                  s"${paramId}_read_data",
-                  CompPort(CompVar(s"$argId"), "read_data")
-                ),
-                (s"${paramId}_done", CompPort(CompVar(s"$argId"), "done"))
-              )
+              Left((param.id.v, CompVar(getPortName(v))))
             }
-            case _ => inConnects ++ List((paramArg.id.toString(), inputPort))
+            case _ => Right((param.id.v, v))
           }
-      }
-    )
-
-    val outConnects = argToParam.foldLeft(List[(String, Port)]())(
-      {
-        case (outConnects, (inputPort, paramArg)) =>
-          paramArg.typ match {
-            case tarr: TArray => {
-              val paramId = paramArg.id.toString()
-              val argId = getPortName(inputPort)
-
-              // Connect address ports.
-              val addrPortToWidth = getAddrPortToWidths(tarr, paramArg.id)
-              val addressPorts =
-                addrPortToWidth.map({
-                  case (name, _) =>
-                    (
-                      s"${paramId}_${name}",
-                      CompPort(CompVar(s"$argId"), s"$name")
-                    )
-                })
-
-              outConnects ++ List(
-                (
-                  s"${paramId}_write_data",
-                  CompPort(CompVar(s"$argId"), "write_data")
-                ),
-                (
-                  s"${paramId}_write_en",
-                  CompPort(CompVar(s"$argId"), "write_en")
-                )
-              ) ++ addressPorts
-            }
-            case _ => outConnects
-          }
-      }
-    )
+      })
 
     (
       decl,
       argSt.flatten,
-      Invoke(declName, inConnects, outConnects).withPos(app)
+      Invoke(declName, refCells.toList, inConnects.toList, List()).withPos(app)
     )
   }
 
@@ -327,15 +288,15 @@ private class CalyxBackendHelper {
       case (e1Bits, None) => {
         val isSigned = signed(e1.typ)
         val binOp = Stdlib.binop(s"$compName", e1Bits, isSigned)
-        val comp = Cell(genName(compName), binOp, List())
+        val comp = Cell(genName(compName), binOp, false, List())
         val struct = List(
           comp,
-          Assign(e1Out.port, comp.id.port("left")),
-          Assign(e2Out.port, comp.id.port("right"))
+          Assign(e1Out.port, comp.name.port("left")),
+          Assign(e2Out.port, comp.name.port("right"))
         )
         EmitOutput(
-          comp.id.port("out"),
-          ConstantPort(1, 1),
+          comp.name.port("out"),
+          None,
           struct ++ e1Out.structure ++ e2Out.structure,
           for (d1 <- e1Out.delay; d2 <- e2Out.delay)
             yield d1 + d2,
@@ -364,15 +325,15 @@ private class CalyxBackendHelper {
             fracBit1,
             isSigned
           );
-        val comp = Cell(genName(compName), binOp, List())
+        val comp = Cell(genName(compName), binOp, false, List())
         val struct = List(
           comp,
-          Assign(e1Out.port, comp.id.port("left")),
-          Assign(e2Out.port, comp.id.port("right"))
+          Assign(e1Out.port, comp.name.port("left")),
+          Assign(e2Out.port, comp.name.port("right"))
         )
         EmitOutput(
-          comp.id.port("out"),
-          ConstantPort(1, 1),
+          comp.name.port("out"),
+          None,
           struct ++ e1Out.structure ++ e2Out.structure,
           for (d1 <- e1Out.delay; d2 <- e2Out.delay)
             yield d1 + d2,
@@ -438,20 +399,20 @@ private class CalyxBackendHelper {
         throw NotImplemented(s"Multi-cycle binary operation with type: $e1.typ")
     }
     val compVar = genName(compName)
-    val comp = Cell(compVar, binOp, List())
+    val comp = Cell(compVar, binOp, false, List())
     val struct = List(
       comp,
-      Assign(e1Out.port, comp.id.port("left")),
-      Assign(e2Out.port, comp.id.port("right")),
+      Assign(e1Out.port, comp.name.port("left")),
+      Assign(e2Out.port, comp.name.port("right")),
       Assign(
         ConstantPort(1, 1),
-        comp.id.port("go"),
-        Not(Atom(comp.id.port("done")))
+        comp.name.port("go"),
+        Not(Atom(comp.name.port("done")))
       )
     )
     EmitOutput(
-      comp.id.port(outPort),
-      comp.id.port("done"),
+      comp.name.port(outPort),
+      Some(comp.name.port("done")),
       struct ++ e1Out.structure ++ e2Out.structure,
       for (d1 <- e1Out.delay; d2 <- e2Out.delay; d3 <- delay)
         yield d1 + d2 + d3,
@@ -460,11 +421,10 @@ private class CalyxBackendHelper {
   }
 
   /** `emitExpr(expr, rhsInfo)(implicit store)` calculates the necessary structure
-    *  to compute `expr`. It return the pair (Port, List[Structure]).
-    *  If `rhsInfo = None`, then `Port` is the port that will hold the output
-    *  of computing this expression. If `rhsInfo = Some(...)`, then `Port` represents
-    *  the port that can be used to put a value into the location represented by
-    *  `expr`.
+    *  to compute `expr`.
+    *  - If rhsInfo is defined then this expression is an LHS. rhsInfo contains
+    *    (done, delay) information for the RHS being written to this LHS.
+    *  - Otherwise, this is an RHS expression.
     */
   def emitExpr(expr: Expr, rhsInfo: Option[(Port, Option[Int])] = None)(
       implicit store: Store
@@ -517,7 +477,7 @@ private class CalyxBackendHelper {
               e1,
               e2,
               "out_quotient",
-              Stdlib.staticTimingMap.get("div")
+              None
             )
           case "%" =>
             emitMultiCycleBinop(
@@ -525,32 +485,38 @@ private class CalyxBackendHelper {
               e1,
               e2,
               "out_remainder",
-              Stdlib.staticTimingMap.get("mod")
+              None
             )
           case _ => emitBinop(compName, e1, e2)
         }
       }
       case EVar(id) =>
-        val portName = if (rhsInfo.isDefined) "in" else "out"
-        val (varName, calyxVarType) = store
+        val (cell, calyxVarType) = store
           .get(CompVar(s"$id"))
           .getOrThrow(BackendError(s"`$id' was not in store", expr.pos))
-        val struct =
+
+        val (struct, port, done, delay) =
           rhsInfo match {
-            case Some((port, _)) =>
-              List(Assign(port, varName.port("write_en")))
-            case None => List()
+            case Some((port, delay)) =>
+              (
+                List(Assign(port, cell.port("write_en"))),
+                "in",
+                Some(cell.port("done")),
+                delay.map(_ + 1) /* writing takes one cycle */
+              )
+            case None =>
+              (
+                List(),
+                "out",
+                None,
+                Some(0) /* reading from a register is combinational */
+              )
           }
-        // calculate static delay, rhsDelay + 1 for writes, 0 for reads
-        val delay =
-          rhsInfo match {
-            case Some((_, delay)) => delay.map(_ + 1)
-            case None => Some(0)
-          }
+
         EmitOutput(
-          if (calyxVarType == LocalVar) varName.port(portName)
-          else ThisPort(varName),
-          if (rhsInfo.isDefined) varName.port("done") else ConstantPort(1, 1),
+          if (calyxVarType == LocalVar) cell.port(port)
+          else ThisPort(cell),
+          done,
           struct,
           delay,
           None
@@ -563,11 +529,12 @@ private class CalyxBackendHelper {
           Cell(
             genName("const"),
             Stdlib.constant(typ_b, v),
+            false,
             List()
           )
         EmitOutput(
-          const.id.port("out"),
-          ConstantPort(1, 1),
+          const.name.port("out"),
+          None,
           List(const),
           Some(0),
           None
@@ -575,10 +542,15 @@ private class CalyxBackendHelper {
       }
       case EBool(v) => {
         val const =
-          Cell(genName("bool"), Stdlib.constant(1, if (v) 1 else 0), List())
+          Cell(
+            genName("bool"),
+            Stdlib.constant(1, if (v) 1 else 0),
+            false,
+            List()
+          )
         EmitOutput(
-          const.id.port("out"),
-          ConstantPort(1, 1),
+          const.name.port("out"),
+          None,
           List(const),
           Some(0),
           None
@@ -618,11 +590,12 @@ private class CalyxBackendHelper {
           Cell(
             genName("fp_const"),
             Stdlib.constant(width, BigInt(bits, 2)),
+            false,
             List()
           )
         EmitOutput(
-          fpconst.id.port("out"),
-          ConstantPort(1, 1),
+          fpconst.name.port("out"),
+          None,
           List(fpconst),
           Some(0),
           None
@@ -636,24 +609,24 @@ private class CalyxBackendHelper {
           // No slicing or padding is necessary.
           EmitOutput(
             res.port,
-            ConstantPort(1, 1),
+            None,
             res.structure,
             Some(0),
             res.multiCycleInfo
           )
         } else {
           val comp = if (cBits > vBits) {
-            Cell(genName("pad"), Stdlib.pad(vBits, cBits), List())
+            Cell(genName("pad"), Stdlib.pad(vBits, cBits), false, List())
           } else {
-            Cell(genName("slice"), Stdlib.slice(vBits, cBits), List())
+            Cell(genName("slice"), Stdlib.slice(vBits, cBits), false, List())
           }
           val struct = List(
             comp,
-            Assign(res.port, comp.id.port("in"))
+            Assign(res.port, comp.name.port("in"))
           )
           EmitOutput(
-            comp.id.port("out"),
-            ConstantPort(1, 1),
+            comp.name.port("out"),
+            None,
             struct ++ res.structure,
             Some(0),
             res.multiCycleInfo
@@ -669,6 +642,7 @@ private class CalyxBackendHelper {
               expr.pos
             )
           )
+
         // The array ports change if the array is a function parameter. We want to access the
         // component ports, e.g. `x_read_data`, rather than the memory ports, `x.read_data`.
         val isParam = (typ == ParameterVar)
@@ -717,7 +691,7 @@ private class CalyxBackendHelper {
           }
         EmitOutput(
           accessPort,
-          if (rhsInfo.isDefined) donePort else ConstantPort(1, 1),
+          if (rhsInfo.isDefined) Some(donePort) else None,
           indexing ++ writeEnStruct,
           delay,
           None
@@ -779,21 +753,23 @@ private class CalyxBackendHelper {
       case CLet(_, Some(_: TArray), Some(_)) =>
         throw NotImplemented(s"Calyx backend cannot initialize memories", c.pos)
       case CLet(id, typ, Some(app: EApp)) => {
+        // Generate the invocation to run this function
         val (invokeDecl, argSt, invokeControl) = emitInvokeDecl(app)
-
         val (typ_b, _) = bitsForType(typ, c.pos)
-        val reg = Stdlib.register(genName(s"$id"), typ_b)
 
+        // Generate a group that reads the value from the function and saves it
+        // into a register.
+        val reg = Stdlib.register(genName(s"$id"), typ_b)
         val groupName = genName("let")
-        val doneHole = Assign(reg.id.port("done"), HolePort(groupName, "done"))
+        val doneHole = Assign(reg.name.port("done"), HolePort(groupName, "done"))
 
         val struct =
           List(
-            Assign(invokeDecl.id.port("out"), reg.id.port("in")),
-            Assign(ConstantPort(1, 1), reg.id.port("write_en")),
+            Assign(invokeDecl.name.port("out"), reg.name.port("in")),
+            Assign(ConstantPort(1, 1), reg.name.port("write_en")),
             doneHole
           )
-        val (group, st) = Group.fromStructure(groupName, struct, None)
+        val (group, st) = Group.fromStructure(groupName, struct, None, false)
         val control = SeqComp(
           List(
             invokeControl,
@@ -803,7 +779,7 @@ private class CalyxBackendHelper {
         (
           argSt.toList ++ (invokeDecl :: reg :: group :: st),
           control,
-          store + (CompVar(s"$id") -> (reg.id, LocalVar))
+          store + (CompVar(s"$id") -> (reg.name, LocalVar))
         )
       }
       // If not clearly specified, Cast the TRational to TFixed.
@@ -812,29 +788,29 @@ private class CalyxBackendHelper {
         val out = emitExpr(ECast(e, TFixed(t, i, un)))(store)
         val groupName = genName("let")
         val doneHole = Assign(
-          reg.id.port("done"),
+          reg.name.port("done"),
           HolePort(groupName, "done")
         )
         // The write enable signal should not be high until
         // the multi-cycle operation is complete, if it exists.
         val (writeEnableSrcPort, delay) = out.multiCycleInfo match {
           case Some((compVar, Some(delay))) =>
-            (CompPort(compVar, "done"), out.delay.map(_ + delay + 1))
+            (Some(CompPort(compVar, "done")), out.delay.map(_ + delay + 1))
           case Some((compVar, None)) =>
-            (CompPort(compVar, "done"), None)
+            (Some(CompPort(compVar, "done")), None)
           case None => (out.done, out.delay.map(_ + 1))
         }
         val struct =
-          Assign(out.port, reg.id.port("in")) :: Assign(
-            writeEnableSrcPort,
-            reg.id.port("write_en")
+          Assign(out.port, reg.name.port("in")) :: Assign(
+            writeEnableSrcPort.getOrElse(ConstantPort(1, 1)),
+            reg.name.port("write_en")
           ) :: doneHole :: out.structure
         val (group, st) =
-          Group.fromStructure(groupName, struct, delay)
+          Group.fromStructure(groupName, struct, delay, false)
         (
           reg :: group :: st,
           Enable(group.id).withPos(c),
-          store + (CompVar(s"$id") -> (reg.id, LocalVar))
+          store + (CompVar(s"$id") -> (reg.name, LocalVar))
         )
       }
       case CLet(id, typ, Some(e)) => {
@@ -845,20 +821,20 @@ private class CalyxBackendHelper {
         val EmitOutput(port, done, structure, delay, _) = emitExpr(e)(store)
         val groupName = genName("let")
         val doneHole = Assign(
-          reg.id.port("done"),
+          reg.name.port("done"),
           HolePort(groupName, "done")
         )
         val struct =
-          Assign(port, reg.id.port("in")) :: Assign(
-            done,
-            reg.id.port("write_en")
+          Assign(port, reg.name.port("in")) :: Assign(
+            done.getOrElse(ConstantPort(1, 1)),
+            reg.name.port("write_en")
           ) :: doneHole :: structure
         val (group, st) =
-          Group.fromStructure(groupName, struct, delay.map(_ + 1))
+          Group.fromStructure(groupName, struct, delay.map(_ + 1), false)
         (
           reg :: group :: st,
           Enable(group.id).withPos(c),
-          store + (CompVar(s"$id") -> (reg.id, LocalVar))
+          store + (CompVar(s"$id") -> (reg.name, LocalVar))
         )
       }
       // A `let` that just defines a register for future use.
@@ -867,7 +843,7 @@ private class CalyxBackendHelper {
         val reg =
           Stdlib.register(genName(s"$id"), typ_b)
         val struct = List(reg)
-        (struct, Empty, store + (CompVar(s"$id") -> (reg.id, LocalVar)))
+        (struct, Empty, store + (CompVar(s"$id") -> (reg.name, LocalVar)))
       }
       case CExpr(app: EApp) => {
         val (invokeDecl, argSt, invokeControl) = emitInvokeDecl(app)
@@ -879,21 +855,36 @@ private class CalyxBackendHelper {
       }
       case CUpdate(lhs, rhs) => {
         val rOut = emitExpr(rhs)(store)
-        val lOut = emitExpr(lhs, Some((rOut.done, rOut.delay)))(store)
+        val lOut = emitExpr(
+          lhs,
+          Some((rOut.done.getOrElse(ConstantPort(1, 1)), rOut.delay))
+        )(store)
         val groupName = genName("upd")
+
+        assertOrThrow(
+          lOut.done.isDefined,
+          BackendError(
+            "Compiling expression generated combination done condition"
+          )
+        )
+
+        // The group is done when the left register commits the write.
         val doneHole =
           Assign(
-            ConstantPort(1, 1),
-            HolePort(groupName, "done"),
-            Atom(lOut.done)
+            lOut.done.get,
+            HolePort(groupName, "done")
           )
         val struct =
           lOut.structure ++ rOut.structure ++ List(
-            Assign(rOut.port, lOut.port, Atom(rOut.done)),
+            Assign(
+              rOut.port,
+              lOut.port,
+              rOut.done.map(p => Atom(p)).getOrElse(True)
+            ),
             doneHole
           )
         val (group, other_st) =
-          Group.fromStructure(groupName, struct, lOut.delay)
+          Group.fromStructure(groupName, struct, lOut.delay, false)
         (group :: other_st, Enable(group.id).withPos(c), store)
       }
       case CIf(cond, tbranch, fbranch) => {
@@ -902,26 +893,50 @@ private class CalyxBackendHelper {
         val (fStruct, fCon, _) = emitCmd(fbranch)
         val struct = tStruct ++ fStruct
         val groupName = genName("cond")
-        val doneHole = Assign(condOut.done, HolePort(groupName, "done"))
-        val (group, st) =
-          Group.fromStructure(
-            groupName,
-            doneHole :: condOut.structure,
-            condOut.delay
-          )
-        val control = If(condOut.port, group.id, tCon, fCon)
-        (group :: st ++ struct, control, store)
+
+        // If the conditional computation is not combinational, generate a group.
+        condOut.done match {
+          case Some(done) => {
+            val doneAssign = Assign(done, HolePort(groupName, "done"))
+            val (group, st) =
+              Group.fromStructure(
+                groupName,
+                condOut.structure :+ doneAssign,
+                condOut.delay,
+                false
+              )
+            val control = SeqComp(
+              List(Enable(group.id), If(condOut.port, group.id, tCon, fCon))
+            )
+            (group :: st ++ struct, control, store)
+          }
+          case None => {
+            val (group, st) =
+              Group.fromStructure(
+                groupName,
+                condOut.structure,
+                condOut.delay,
+                true
+              )
+            val control = If(condOut.port, group.id, tCon, fCon)
+            (group :: st ++ struct, control, store)
+          }
+        }
       }
       case CEmpty => (List(), Empty, store)
       case wh @ CWhile(cond, _, body) => {
         val condOut = emitExpr(cond)
         val groupName = genName("cond")
-        val doneHole = Assign(condOut.done, HolePort(groupName, "done"))
+        assertOrThrow(
+          !condOut.done.isDefined,
+          BackendError("Loop condition is non-combinational")
+        )
         val (condGroup, condDefs) =
           Group.fromStructure(
             groupName,
-            doneHole :: condOut.structure,
-            condOut.delay
+            condOut.structure,
+            condOut.delay,
+            true
           )
         val (bodyStruct, bodyCon, st) = emitCmd(body)
         val control = While(condOut.port, condGroup.id, bodyCon)
@@ -966,12 +981,19 @@ private class CalyxBackendHelper {
             )
         }
       }
-      case CReturn(expr) => {
+      case CReturn(expr:EVar) => {
         // Hooks the output port of the emitted `expr` to PortDef `out` of the component.
         val condOut = emitExpr(expr)
         val outPort = ThisPort(CompVar("out"))
         val returnConnect = Assign(condOut.port, outPort)
         (returnConnect :: condOut.structure, Empty, store)
+      }
+      case CReturn(e) => {
+        throw NotImplemented(
+          s"Only allowed to return variables. Store the return expression in a variable to return it."
+          + s"e.g. `let _tmp = ${Pretty.emitExpr(e)(false).pretty}; return _tmp`",
+          e.pos
+        )
       }
       case _: CDecorate => (List(), Empty, store)
       case x =>
@@ -1008,76 +1030,45 @@ private class CalyxBackendHelper {
       )
 
     val functionDefinitions: List[Component] =
-      for ((id, FuncDef(_, params, retType, Some(bodyOpt))) <- id2FuncDef.toList)
+      for ((id, FuncDef(_, params, retType, Some(body))) <- id2FuncDef.toList)
         yield {
-          val inputs = params.map(param => CompVar(param.id.toString()))
-
-          val inputPorts =
-            params.foldLeft(List[PortDef]())((inputPorts, params) =>
-              params.typ match {
-                case tarr: TArray => {
-                  // Currently, we default to exposing all ports for arrays.
-                  val (bits, _) = bitsForType(Some(tarr.typ), tarr.typ.pos)
-                  val id = params.id.toString()
-                  inputPorts ++ List(
-                    PortDef(CompVar(s"${id}_read_data"), bits),
-                    PortDef(CompVar(s"${id}_done"), 1)
-                  )
-                }
-                case _ => {
-                  val (bits, _) = bitsForType(Some(params.typ), params.typ.pos)
-                  inputPorts ++ List(
-                    PortDef(CompVar(params.id.toString()), bits)
-                  )
-                }
+          val (refCells, inputPorts) = params.partitionMap(param =>
+            param.typ match {
+              case tarr: TArray => {
+                Left(emitArrayDecl(tarr, param.id).copy(ref = true))
               }
-            )
-
-          val outputPorts =
-            params.foldLeft(List[PortDef]())((outputPorts, params) =>
-              params.typ match {
-                case tarr: TArray => {
-                  val (bits, _) = bitsForType(Some(tarr.typ), tarr.typ.pos)
-                  val id = params.id.toString()
-                  val addrPortToWidth = getAddrPortToWidths(tarr, params.id)
-                  val addressPortDefs = addrPortToWidth.map(
-                    {
-                      case (name, idxSize) =>
-                        PortDef(CompVar(s"${id}_${name}"), idxSize.toInt)
-                    }
-                  )
-
-                  outputPorts ++ List(
-                    PortDef(CompVar(s"${id}_write_data"), bits),
-                    PortDef(CompVar(s"${id}_write_en"), 1)
-                  ) ++ addressPortDefs
-                }
-                case _ => outputPorts
+              case _ => {
+                val (bits, _) = bitsForType(Some(param.typ), param.typ.pos)
+                Right(PortDef(CompVar(param.id.toString()), bits))
               }
-            )
+            }
+          )
 
-          val functionStore = inputs.foldLeft(Map[CompVar, (CompVar, VType)]())(
-            (functionStore, inputs) =>
-              inputs match {
-                case id: CompVar =>
-                  functionStore + (id -> (id, ParameterVar))
+          val functionStore = params.foldLeft(Map[CompVar, (CompVar, VType)]())(
+            (functionStore, param) => {
+              val id = CompVar(param.id.v)
+              val pv = param.typ match {
+                case _: TArray => LocalVar
+                case _ => ParameterVar
               }
+              functionStore + (id -> (id, pv))
+            }
           )
           val (cmdStructure, controls, _) =
-            emitCmd(bodyOpt)(functionStore, id2FuncDef)
+            emitCmd(body)(functionStore, id2FuncDef)
 
           val (outputBitWidth, _) = bitsForType(Some(retType), retType.pos)
 
           Component(
             id.toString(),
-            inputPorts,
-            if (retType == TVoid()) outputPorts
+            inputPorts.toList,
+            if (retType == TVoid()) List()
             // If the return type of the component is not void, add an `out` wire.
             else
-              outputPorts ++ List(
+              List(
                 PortDef(CompVar("out"), outputBitWidth, List(("stable" -> 1)))
               ),
-            cmdStructure.sorted,
+            refCells.toList ++ cmdStructure.sorted,
             controls
           )
         }
@@ -1092,7 +1083,7 @@ private class CalyxBackendHelper {
       val store =
         declStruct.foldLeft(Map[CompVar, (CompVar, VType)]())((store, struct) =>
           struct match {
-            case Cell(id, _, _) => store + (id -> (id, LocalVar))
+            case Cell(id, _, _, _) => store + (id -> (id, LocalVar))
             case _ => store
           }
         )
@@ -1108,11 +1099,12 @@ private class CalyxBackendHelper {
       List()
     }
 
-    (Namespace(
-      "prog",
-      imports
-        ++ functionDefinitions ++ main
-    ).doc <@> meta.doc()).pretty
+    // Emit the program
+    (PrettyPrint.Doc
+      .vsep(
+        (imports ++ functionDefinitions ++ main)
+          .map(_.doc(meta))
+      ) <@> meta.doc()).pretty
   }
 }
 
