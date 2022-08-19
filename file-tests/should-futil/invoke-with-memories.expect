@@ -29,9 +29,9 @@ component mem_copy() -> () {
   }
   control {
     seq {
-      let0;
-      upd0;
-      upd1;
+      @pos(0) let0;
+      @pos(1) upd0;
+      @pos(2) upd1;
     }
   }
 }
@@ -49,3 +49,8 @@ component main() -> () {
     }
   }
 }
+metadata #{
+  0:   let zero = (0 as ubit<1>);
+  1:   dest[zero] := src[zero];
+  2:   dest[zero] := src[zero];
+}#

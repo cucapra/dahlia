@@ -237,7 +237,7 @@ private class CalyxBackendHelper {
     (
       decl,
       argSt.flatten,
-      Invoke(declName, refCells.toList, inConnects.toList, List())
+      Invoke(declName, refCells.toList, inConnects.toList, List()).withPos(app)
     )
   }
 
@@ -773,7 +773,7 @@ private class CalyxBackendHelper {
         val control = SeqComp(
           List(
             invokeControl,
-            Enable(group.id)
+            Enable(group.id).withPos(c)
           )
         )
         (
@@ -809,7 +809,7 @@ private class CalyxBackendHelper {
           Group.fromStructure(groupName, struct, delay, false)
         (
           reg :: group :: st,
-          Enable(group.id),
+          Enable(group.id).withPos(c),
           store + (CompVar(s"$id") -> (reg.name, LocalVar))
         )
       }
@@ -833,7 +833,7 @@ private class CalyxBackendHelper {
           Group.fromStructure(groupName, struct, delay.map(_ + 1), false)
         (
           reg :: group :: st,
-          Enable(group.id),
+          Enable(group.id).withPos(c),
           store + (CompVar(s"$id") -> (reg.name, LocalVar))
         )
       }
@@ -885,7 +885,7 @@ private class CalyxBackendHelper {
           )
         val (group, other_st) =
           Group.fromStructure(groupName, struct, lOut.delay, false)
-        (group :: other_st, Enable(group.id), store)
+        (group :: other_st, Enable(group.id).withPos(c), store)
       }
       case CIf(cond, tbranch, fbranch) => {
         val condOut = emitExpr(cond)
@@ -1012,6 +1012,8 @@ private class CalyxBackendHelper {
 
   def emitProg(p: Prog, c: Config): String = {
 
+    implicit val meta = Metadata()
+
     val importDefinitions = p.includes.flatMap(_.defs).toList
     val definitions =
       p.defs.map(definition => emitDefinition(definition)) ++ importDefinitions
@@ -1098,12 +1100,11 @@ private class CalyxBackendHelper {
     }
 
     // Emit the program
-    PrettyPrint.Doc
+    (PrettyPrint.Doc
       .vsep(
         (imports ++ functionDefinitions ++ main)
-          .map(_.doc())
-      )
-      .pretty
+          .map(_.doc(meta))
+      ) <@> meta.doc()).pretty
   }
 }
 

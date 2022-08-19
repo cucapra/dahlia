@@ -14,7 +14,7 @@ component foo(a: 32) -> (@stable(1) out: 32) {
     out = temp_0.out;
   }
   control {
-    let0;
+    @pos(0) let0;
   }
 }
 component main() -> () {
@@ -45,11 +45,17 @@ component main() -> () {
   }
   control {
     seq {
-      let1;
+      @pos(1) let1;
       invoke foo0(a=b_0.out)();
-      let2;
+      @pos(2) let2;
       invoke sqrt0(in=c_0.out)();
-      let3;
+      @pos(3) let3;
     }
   }
 }
+metadata #{
+  0:   let temp: ubit<32> = a;
+  1: let b: ubit<32> = (1 as ubit<32>);
+  2: let c: ubit<32> = foo(b);
+  3: let d: ubit<32> = sqrt(c);
+}#

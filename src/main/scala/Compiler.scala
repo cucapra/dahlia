@@ -46,13 +46,16 @@ object Compiler {
   def checkStringWithError(prog: String, c: Config = emptyConf) = {
     val preAst = Parser(prog).parse()
 
+    showDebug(preAst, "Original", c)
+
     // Run pre transformers if lowering is enabled
     val ast = if (c.enableLowering) {
       preTransformers.foldLeft(preAst)({
         case (ast, (name, pass)) => {
           val newAst = pass.rewrite(ast)
           showDebug(newAst, name, c)
-          if (c.passDebug) {
+          newAst
+          /* if (c.passDebug) {
             try {
               // Print and re-parse program with pass debug
               Parser(Pretty.emitProg(newAst)(false)).parse()
@@ -64,7 +67,7 @@ object Compiler {
             }
           } else {
             newAst
-          }
+          } */
         }
       })
     } else {

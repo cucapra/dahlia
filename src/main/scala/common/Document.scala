@@ -127,8 +127,13 @@ object PrettyPrint {
 
     def commaSep(docs: Seq[Doc]) = hsep(docs, comma <> space)
 
-    def scope(doc: Doc, indent: Int = 2): Doc =
-      lbrace <> nest(emptyDoc <@> doc, indent) <@> rbrace
+    def scope(
+        doc: Doc,
+        left: Doc = lbrace,
+        right: Doc = rbrace,
+        indent: Int = 2,
+    ): Doc =
+      left <> nest(emptyDoc <@> doc, indent) <@> right
 
     /** Common functions **/
     def quote(d: Doc) = surround(d, text("\""))

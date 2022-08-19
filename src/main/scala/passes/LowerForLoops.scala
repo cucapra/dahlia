@@ -50,14 +50,14 @@ object LowerForLoops extends PartialTransformer {
 
       val t = typ.get
       val init =
-        CLet(it, typ, Some(ECast(if (rev) EInt(e - 1) else EInt(s), t)))
+        CLet(it, typ, Some(ECast(if (rev) EInt(e - 1) else EInt(s), t))).withPos(range)
       val op = if (rev) {
         NumOp("-", OpConstructor.sub)
       } else {
         NumOp("+", OpConstructor.add)
       }
       val upd =
-        CUpdate(itVar.copy(), EBinop(op, itVar.copy(), ECast(EInt(1), t)))
+        CUpdate(itVar.copy(), EBinop(op, itVar.copy(), ECast(EInt(1), t))).withPos(range)
       val cond =
         if (rev) {
           EBinop(CmpOp(">="), itVar.copy(), ECast(EInt(s), t))

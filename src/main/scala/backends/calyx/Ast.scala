@@ -3,8 +3,69 @@ package fuselang.backend.calyx
 import scala.math.BigInt
 import fuselang.common.PrettyPrint.Doc
 import Doc._
+import scala.util.parsing.input.Position
+import fuselang.common.Syntax
+import scala.collection.mutable.{Map => MutableMap}
 
 object Calyx {
+
+  // Track metadata while generating Calyx code.
+  case class Metadata(
+      // Mapping from position to the value of the counter
+      map: MutableMap[Position, Int] = MutableMap(),
+      var counter: Int = 0
+  ) extends Emitable {
+    def addPos(pos: Position): Int = {
+      val key = pos
+      if (!this.map.contains(key)) {
+        this.map.update(key, this.counter)
+        this.counter = this.counter + 1
+      }
+      this.map(key)
+    }
+
+    override def doc(): Doc = {
+      text("metadata") <+> scope(
+        vsep(
+          this.map.toSeq
+            .sortBy(_._2)
+            .map({
+              case (pos, c) =>
+                text(c.toString()) <> text(":") <+> text(
+                  pos.longString.split("\n")(0)
+                )
+            })
+        ),
+        left = text("#") <> lbrace,
+        right = rbrace <> text("#")
+      )
+    }
+  }
+
+  private def emitPos(pos: Position, @annotation.unused span: Int)(
+      implicit meta: Metadata
+  ): Doc = {
+    // Add position information to the metadata.
+    if (pos.line != 0 && pos.column != 0) {
+      val count = meta.addPos(pos)
+      text("@pos") <> parens(text(count.toString)) <> space
+    } else {
+      emptyDoc
+    }
+    /* (if (pos.line == 0 && pos.column == 0) {
+       emptyDoc
+     } else {
+       text("@line") <> parens(text(pos.line.toString())) <+>
+         text("@col") <> parens(text(pos.column.toString())) <>
+         space
+     }) <>
+      (if (span != 0) {
+         text("@span") <> parens(text(span.toString())) <> space
+       } else {
+         emptyDoc
+       }) */
+  }
+
   def emitCompStructure(structs: List[Structure]): Doc = {
     val (cells, connections) = structs.partition(st =>
       st match {
@@ -43,9 +104,16 @@ object Calyx {
     }
   }
 
+  /**** definition statements *****/
+  case class Namespace(name: String, comps: List[NamespaceStatement]) {
+    def doc(implicit meta: Metadata): Doc =
+      vsep(comps.map(_.doc))
+    def emit(implicit meta: Metadata) = this.doc.pretty
+  }
+
   /** The statements that can appear at the top-level. */
-  sealed trait NamespaceStatement extends Emitable {
-    override def doc(): Doc = this match {
+  sealed trait NamespaceStatement {
+    def doc(implicit meta: Metadata): Doc = this match {
       case Import(filename) => text("import") <+> quote(text(filename)) <> semi
       case Component(name, inputs, outputs, structure, control) => {
         text("component") <+>
@@ -55,7 +123,7 @@ object Calyx {
           parens(commaSep(outputs.map(_.doc()))) <+>
           scope(
             emitCompStructure(structure) <@>
-              text("control") <+> scope(control.doc())
+              text("control") <+> scope(control.doc)
           )
       }
     }
@@ -229,7 +297,7 @@ object Calyx {
   case object True extends GuardExpr
 
   /***** control *****/
-  sealed trait Control extends Emitable {
+  sealed trait Control {
     var attributes = Map[String, Int]()
 
     def seq(c: Control): Control = (this, c) match {
@@ -260,27 +328,29 @@ object Calyx {
         })) <> space
       }
 
-    override def doc(): Doc = {
+    def doc(implicit meta: Metadata): Doc = {
       val controlDoc = this match {
         case SeqComp(stmts) =>
-          text("seq") <+> scope(vsep(stmts.map(_.doc())))
+          text("seq") <+> scope(vsep(stmts.map(_.doc)))
         case ParComp(stmts) =>
-          text("par") <+> scope(vsep(stmts.map(_.doc())))
+          text("par") <+> scope(vsep(stmts.map(_.doc)))
         case If(port, cond, trueBr, falseBr) =>
           text("if") <+> port.doc() <+> text("with") <+>
             cond.doc() <+>
-            scope(trueBr.doc()) <> (
+            scope(trueBr.doc) <> (
             if (falseBr == Empty)
               emptyDoc
             else
-              space <> text("else") <+> scope(falseBr.doc())
+              space <> text("else") <+> scope(falseBr.doc)
           )
         case While(port, cond, body) =>
           text("while") <+> port.doc() <+> text("with") <+>
             cond.doc() <+>
-            scope(body.doc())
-        case Enable(id) => id.doc() <> semi
-        case Invoke(id, refCells, inConnects, outConnects) => {
+            scope(body.doc(meta))
+        case e @ Enable(id) => {
+          emitPos(e.pos, e.span) <> id.doc() <> semi
+        }
+        case i @ Invoke(id, refCells, inConnects, outConnects) => {
           val cells =
             if (refCells.isEmpty)
               emptyDoc
@@ -294,7 +364,7 @@ object Calyx {
           val outputDefs = outConnects.map({
             case (param, arg) => text(param) <> equal <> arg.doc()
           })
-          text("invoke") <+> id.doc() <>
+          emitPos(i.pos, i.span) <> text("invoke") <+> id.doc() <>
             cells <>
             parens(commaSep(inputDefs)) <>
             parens(commaSep(outputDefs)) <> semi
@@ -309,13 +379,14 @@ object Calyx {
   case class If(port: Port, cond: CompVar, trueBr: Control, falseBr: Control)
       extends Control
   case class While(port: Port, cond: CompVar, body: Control) extends Control
-  case class Enable(id: CompVar) extends Control
+  case class Enable(id: CompVar) extends Control with Syntax.PositionalWithSpan
   case class Invoke(
       id: CompVar,
       refCells: List[(String, CompVar)],
       inConnects: List[(String, Port)],
       outConnects: List[(String, Port)]
   ) extends Control
+      with Syntax.PositionalWithSpan
   case object Empty extends Control
 }
 

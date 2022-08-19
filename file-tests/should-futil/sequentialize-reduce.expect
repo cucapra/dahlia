@@ -66,20 +66,25 @@ component main() -> () {
   }
   control {
     seq {
-      let0;
+      @pos(0) let0;
       @bound(10) while le0.out with cond0 {
         seq {
-          let1;
-          let2;
+          @pos(1) let1;
+          @pos(2) let2;
           @bound(10) while le1.out with cond1 {
             seq {
               upd0;
-              upd1;
+              @pos(2) upd1;
             }
           }
-          upd2;
+          @pos(0) upd2;
         }
       }
     }
   }
 }
+metadata #{
+  0: for (let i: ubit<4> = 0..10) {
+  1:   let x: ubit<4> = 0;
+  2:   for (let j: ubit<4> = 0..10) {
+}#

@@ -14,6 +14,25 @@ object Transformer {
     val emptyEnv: Env
 
     /**
+     * Transfer comments from one command to another.
+     */
+    def transferPos(cmd: Command, f: PF[(Command, Env), (Command, Env)])(
+        implicit env: Env
+    ): (Command, Env) = {
+      val (c1, env1) = f(cmd, env)
+      c1 match {
+        case _: CPar | _: CSeq | _: CBlock => ()
+        case _ =>  {
+          if (c1.pos.line == 0 && c1.pos.column == 0) {
+            c1.withPos(cmd)
+          }
+        }
+      }
+      // If the position for the command is undefined, add the previous position
+      (c1, env1)
+    }
+
+    /**
       * Top level function called on the AST.
       */
     def rewrite(p: Prog): Prog = {
@@ -226,10 +245,14 @@ object Transformer {
     ): PF[(Expr, Env), (Expr, Env)] = {
       myRewriteE.orElse(partialRewriteE)
     }
+
     def mergeRewriteC(
         myRewriteC: PF[(Command, Env), (Command, Env)]
     ): PF[(Command, Env), (Command, Env)] = {
-      myRewriteC.orElse(partialRewriteC)
+      val func = (cmd: Command, env: Env) => {
+        transferPos(cmd, myRewriteC.orElse(partialRewriteC))(env)
+      }
+      asPartial(func(_: Command, _: Env))
     }
   }
 
@@ -265,5 +288,6 @@ object Transformer {
       }
       asPartial(func(_: Expr, _: Env))
     }
+
   }
 }
