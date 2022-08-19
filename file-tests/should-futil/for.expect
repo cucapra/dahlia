@@ -48,14 +48,19 @@ component main() -> () {
   }
   control {
     seq {
-      let0;
+      @pos(0) let0;
       @bound(10) while le0.out with cond0 {
         seq {
-          upd0;
-          upd1;
-          upd2;
+          @pos(1) upd0;
+          @pos(2) upd1;
+          @pos(0) upd2;
         }
       }
     }
   }
 }
+metadata #{
+  0: for (let i: ubit<4> = 0..10) {
+  1:   B[i] := A[i] + 1;
+  2:   B[i] := A[i] + 1;
+}#
