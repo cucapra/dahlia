@@ -125,10 +125,16 @@ private class CalyxBackendHelper {
     // std_mem_d$n(WIDTH, DIM_1_SIZE, .., DIM_$n_SIZE, IDX_1_SIZE, IDX_$n_SIZE)
     val dimSizes = arr.dims.map(_._1)
     val idxSizes = dimSizes.map(bitsNeeded)
+    val mem_type = if (dimSizes.length == 1){
+      "seq_mem_d"
+    }
+    else{
+      "std_mem_d"
+    }
     Cell(
       name,
       CompInst(
-        s"std_mem_d${dims}",
+        s"${mem_type}${dims}",
         ((width +: dimSizes) ++ idxSizes).toList.map(i => BigInt(i))
       ),
       false,
@@ -643,24 +649,37 @@ private class CalyxBackendHelper {
             )
           )
 
+        val useSeqMem = (accessors.length == 1)
+
+        val donePortName = if (useSeqMem){
+          if (rhsInfo.isDefined) "write_done" else "read_done"
+        }
+        else{
+          "done"
+        }
+
+        // The value is generated on `read_data` and written on `write_data`.
+        val portName = if (useSeqMem){ 
+          if (rhsInfo.isDefined) "in" else "out"
+        }else{
+          if (rhsInfo.isDefined) "write_data" else "read_data"
+        }
+
         // The array ports change if the array is a function parameter. We want to access the
         // component ports, e.g. `x_read_data`, rather than the memory ports, `x.read_data`.
         val isParam = (typ == ParameterVar)
-
-        // The value is generated on `read_data` and written on `write_data`.
-        val portName = if (rhsInfo.isDefined) "write_data" else "read_data"
 
         val (writeEnPort, donePort, accessPort) =
           if (isParam) {
             (
               ThisPort(CompVar(s"${id}_write_en")),
-              ThisPort(CompVar(s"${id}_done")),
+              ThisPort(CompVar(s"${id}_${donePortName}")),
               ThisPort(CompVar(s"${id}_${portName}"))
             )
           } else {
             (
               arr.port("write_en"),
-              arr.port("done"),
+              arr.port(donePortName),
               arr.port(portName)
             )
           }
@@ -677,22 +696,37 @@ private class CalyxBackendHelper {
             con :: result.structure ++ structs
           }
         })
+        
+        val readEnPort = if (isParam) {
+              ThisPort(CompVar(s"${id}_read_en"))
+          } else {
+              arr.port("read_en")
+          }
+
+        // always assign 1 to read_en port if we want to read from seq mem 
+        val readEnStruct =  
+        (rhsInfo,useSeqMem) match {
+            case (None, true) => List(Assign(ConstantPort(1,1), readEnPort))
+            case _ => List()
+          }
+        
 
         val writeEnStruct =
           rhsInfo match {
             case Some((port, _)) => List(Assign(port, writeEnPort))
             case None => List()
           }
-        // calculate static delay, rhsDelay + 1 for writes, 0 for reads
-        val delay =
-          rhsInfo match {
-            case Some((_, delay)) => delay.map(_ + 1)
-            case None => Some(0)
-          }
+
+        val delay = (rhsInfo, useSeqMem) match {
+          case (None, true) => Some(1) 
+          case (None, false) => Some (0)
+          case (Some((_, delay)), _) => delay.map(_ + 1)
+        }
+        
         EmitOutput(
           accessPort,
-          if (rhsInfo.isDefined) Some(donePort) else None,
-          indexing ++ writeEnStruct,
+          if (rhsInfo.isDefined || useSeqMem) Some(donePort) else None,
+          (indexing ++ writeEnStruct) ++ readEnStruct,
           delay,
           None
         )
@@ -859,7 +893,7 @@ private class CalyxBackendHelper {
           lhs,
           Some((rOut.done.getOrElse(ConstantPort(1, 1)), rOut.delay))
         )(store)
-        val groupName = genName("upd")
+        val groupName = genName("upd") 
 
         assertOrThrow(
           lOut.done.isDefined,
@@ -874,15 +908,18 @@ private class CalyxBackendHelper {
             lOut.done.get,
             HolePort(groupName, "done")
           )
+        // can assign guard as true for lOut.port = rOut.port since the write_en
+        // signal is what actually determines what is written into 
         val struct =
           lOut.structure ++ rOut.structure ++ List(
             Assign(
               rOut.port,
               lOut.port,
-              rOut.done.map(p => Atom(p)).getOrElse(True)
+              True
             ),
             doneHole
           )
+
         val (group, other_st) =
           Group.fromStructure(groupName, struct, lOut.delay, false)
         (group :: other_st, Enable(group.id).withPos(c), store)
@@ -1075,6 +1112,7 @@ private class CalyxBackendHelper {
 
     val imports =
       Import("primitives/core.futil") ::
+      Import("primitives/memories.futil") ::
         Import("primitives/binary_operators.futil") ::
         p.includes.flatMap(_.backends.get(C.Calyx)).map(i => Import(i)).toList
 
