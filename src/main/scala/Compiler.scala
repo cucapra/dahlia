@@ -116,7 +116,7 @@ object Compiler {
           case _: Errors.TypeError => {
             s"[${red("Type error")}] ${err.getMessage}" +
               (if (c.enableLowering)
-                 "\nDoes this program type check without the `--lower` flag? If it does, please report this as an error."
+                 "\nDoes this program type check without the `--lower` flag? If it does, please report this as a bug: https://github.com/cucapra/dahlia/issues/new"
                else "")
           }
           case _: Errors.ParserError =>

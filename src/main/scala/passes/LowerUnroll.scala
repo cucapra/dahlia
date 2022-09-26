@@ -217,6 +217,8 @@ object LowerUnroll extends PartialTransformer {
   type Env = ForEnv
   val emptyEnv = ForEnv(Map(), ScopedMap(), Map(), Map())
 
+  // Given a logically banked memory type, generate several physical memories
+  // corresponding to it.
   def unbankedDecls(id: Id, ta: TArray): Seq[(Id, Type)] = {
     val TArray(typ, dims, ports) = ta
     cartesianProduct(dims.map({
@@ -229,21 +231,15 @@ object LowerUnroll extends PartialTransformer {
   }
 
   override def rewriteDeclSeq(ds: Seq[Decl])(implicit env: Env) = {
-    ds.flatMap(d =>
-      d.typ match {
-        case ta: TArray => {
-          unbankedDecls(d.id, ta).map((x: (Id, Type)) => Decl(x._1, x._2))
-        }
-        case _ => List(d)
-      }
-    ) -> ds.foldLeft[Env](env)({
-      case (env, Decl(id, typ)) =>
-        typ match {
-          case ta: TArray =>
-            env.viewAdd(id, ViewTransformer.fromArray(id, ta)).dimsAdd(id, ta)
-          case _ => env
-        }
+    // Memory decls cannot be banked
+    ds.foreach(d => d.typ match {
+      case ta: TArray => ta.dims.foreach({
+        case (_, b) => if (b > 1) throw Malformed(d.id.pos, "Banked `decl` cannot be lowered")
+      })
+      case _ => ()
     })
+
+    ds -> env
   }
 
   private def getBanks(arr: Id, idxs: Seq[Expr])(implicit env: Env) =
@@ -440,7 +436,7 @@ object LowerUnroll extends PartialTransformer {
 
   def myRewriteC: PF[(Command, Env), (Command, Env)] = {
     // Transform reads from memories
-    case (c @ CLet(bind, _, Some(acc @ EArrAccess(arrId, idxs))), env) => {
+    case (c @ CLet(bind, typ, Some(acc @ EArrAccess(arrId, idxs))), env) => {
       val transformer = env.viewGet(arrId)
       if (transformer.isDefined) {
         val allExprs =
@@ -455,7 +451,10 @@ object LowerUnroll extends PartialTransformer {
           })(env)
         rewriteC(CPar.smart(CLet(bind, Some(typ), None), newCmd))(nEnv)
       } else {
-        c -> env
+        // Rewrite the idxs
+        val (nIdxs, nEnv) = rewriteESeq(idxs)(env)
+        val c = CLet(bind, typ, Some(EArrAccess(arrId, nIdxs.toSeq)))
+        c -> nEnv
       }
     }
     // Rewrite banked let bound memories
