@@ -3,16 +3,16 @@ record point {
   y: bit<32>
 }
 
-decl shape10: point[2];
-decl shape20: point[2];
+decl shape1: point[2];
+decl shape2: point[2];
 decl result: point;
 
 let X: bit<32> = 0;
 let Y: bit<32> = 0;
 
 for (let i = 0..2) {
-  let x = shape10[i].x + shape20[i].x;
-  let y = shape10[i].y + shape20[i].y;
+  let x = shape1[i].x + shape2[i].x;
+  let y = shape1[i].y + shape2[i].y;
 } combine {
   X += x;
   Y += y;

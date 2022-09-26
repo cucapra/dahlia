@@ -1,30 +1,26 @@
 #include "parser.cpp"
 /***************** Parse helpers  ******************/
 /***************************************************/
-void kernel(vector<int> &a0, vector<int> &b0) {
+void kernel(vector<int> &a, vector<int> &b) {
   
-  int b_read0_;
-  b_read0_ = b0[(unsigned int)0];
+  int b_read0 = b[(unsigned int)0];
   //---
-  int x_;
-  x_ = a0[(unsigned int)b_read0_];
+  int x = a[(unsigned int)b_read0];
   //---
-  int a_read0_;
-  a_read0_ = a0[(unsigned int)0];
+  int a_read0 = a[(unsigned int)0];
   //---
-  int y_ = ((int)10 + a_read0_);
+  int y_ = ((int)10 + a_read0);
   //---
-  int bin_read0_ = (x_ * (int)10);
+  int bin_read0_ = (x * (int)10);
   //---
   int bin_read1_ = (y_ * (int)20);
   //---
   int bin_read2_ = (bin_read0_ / (bin_read1_ - (int)15));
   //---
   int z_ = bin_read2_;
-  int w_;
   int bin_read3_ = ((int)10 * (int)12);
   //---
-  w_ = b0[(unsigned int)bin_read3_];
+  int w = b[(unsigned int)bin_read3_];
   int bin_read4_ = (((int)0 - (int)1) * (int)1);
   //---
   int bin_read5_ = ((int)2 * (int)2);
@@ -37,15 +33,15 @@ void kernel(vector<int> &a0, vector<int> &b0) {
   //---
   unsigned int k_ = (unsigned int)(((bin_read4_ + bin_read6_) - bin_read7_) - bin_read8_);
   json_t __;
-  __["a0"] = a0;
-  __["b0"] = b0;
+  __["a"] = a;
+  __["b"] = b;
   std::cout << __.dump(2) << std::endl;
 }
 int main(int argc, char** argv) {
   using namespace flattening;
   auto v = parse_data(argc, argv);;
-  auto a0 = get_arg<n_dim_vec_t<int, 1>>("a0", "bit<32>[]", v);
-  auto b0 = get_arg<n_dim_vec_t<int, 1>>("b0", "bit<32>[]", v);
-  kernel(a0, b0);
+  auto a = get_arg<n_dim_vec_t<int, 1>>("a", "bit<32>[]", v);
+  auto b = get_arg<n_dim_vec_t<int, 1>>("b", "bit<32>[]", v);
+  kernel(a, b);
   return 0;
 }

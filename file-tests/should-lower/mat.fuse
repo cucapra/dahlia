@@ -1,6 +1,6 @@
-decl A: float[4 bank 2][4 bank 2];
-decl B: float[4 bank 2][4 bank 2];
-decl C: float[4 bank 2][4 bank 2];
+let A: float[4 bank 2][4 bank 2];
+let B: float[4 bank 2][4 bank 2];
+let C: float[4 bank 2][4 bank 2];
 
 for (let i: bit<3> = 0..4) unroll 2 {
   for (let j: bit<3> = 0..4) unroll 2 {

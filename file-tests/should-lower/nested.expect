@@ -1,8 +1,14 @@
 #include "parser.cpp"
 /***************** Parse helpers  ******************/
 /***************************************************/
-void kernel(vector<float> &A0, vector<float> &A1, vector<vector<float>> &B0_0, vector<vector<float>> &B0_1, vector<vector<float>> &B1_0, vector<vector<float>> &B1_1) {
+void kernel() {
   
+  float A0[4];
+  float A1[4];
+  float B0_0[4] [4];
+  float B0_1[4] [4];
+  float B1_0[4] [4];
+  float B1_1[4] [4];
   float R0[4];
   float R1[4];
   float inp_;
@@ -50,23 +56,11 @@ void kernel(vector<float> &A0, vector<float> &A1, vector<vector<float>> &B0_0, v
     }
   }
   json_t __;
-  __["A0"] = A0;
-  __["A1"] = A1;
-  __["B0_0"] = B0_0;
-  __["B0_1"] = B0_1;
-  __["B1_0"] = B1_0;
-  __["B1_1"] = B1_1;
   std::cout << __.dump(2) << std::endl;
 }
 int main(int argc, char** argv) {
   using namespace flattening;
   auto v = parse_data(argc, argv);;
-  auto A0 = get_arg<n_dim_vec_t<float, 1>>("A0", "float[]", v);
-  auto A1 = get_arg<n_dim_vec_t<float, 1>>("A1", "float[]", v);
-  auto B0_0 = get_arg<n_dim_vec_t<float, 2>>("B0_0", "float[][]", v);
-  auto B0_1 = get_arg<n_dim_vec_t<float, 2>>("B0_1", "float[][]", v);
-  auto B1_0 = get_arg<n_dim_vec_t<float, 2>>("B1_0", "float[][]", v);
-  auto B1_1 = get_arg<n_dim_vec_t<float, 2>>("B1_1", "float[][]", v);
-  kernel(A0, A1, B0_0, B0_1, B1_0, B1_1);
+  kernel();
   return 0;
 }
