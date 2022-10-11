@@ -125,12 +125,7 @@ private class CalyxBackendHelper {
     // std_mem_d$n(WIDTH, DIM_1_SIZE, .., DIM_$n_SIZE, IDX_1_SIZE, IDX_$n_SIZE)
     val dimSizes = arr.dims.map(_._1)
     val idxSizes = dimSizes.map(bitsNeeded)
-    val mem_type = if (dimSizes.length == 1){
-      "seq_mem_d"
-    }
-    else{
-      "std_mem_d"
-    }
+    val mem_type = "seq_mem_d"
     Cell(
       name,
       CompInst(
@@ -649,21 +644,13 @@ private class CalyxBackendHelper {
             )
           )
 
-        val useSeqMem = (accessors.length == 1)
-
-        val donePortName = if (useSeqMem){
+        val donePortName = 
           if (rhsInfo.isDefined) "write_done" else "read_done"
-        }
-        else{
-          "done"
-        }
 
         // The value is generated on `read_data` and written on `write_data`.
-        val portName = if (useSeqMem){ 
+        val portName =
           if (rhsInfo.isDefined) "in" else "out"
-        }else{
-          if (rhsInfo.isDefined) "write_data" else "read_data"
-        }
+        
 
         // The array ports change if the array is a function parameter. We want to access the
         // component ports, e.g. `x_read_data`, rather than the memory ports, `x.read_data`.
@@ -704,12 +691,7 @@ private class CalyxBackendHelper {
           }
 
         // always assign 1 to read_en port if we want to read from seq mem 
-        val readEnStruct =  
-        (rhsInfo,useSeqMem) match {
-            case (None, true) => List(Assign(ConstantPort(1,1), readEnPort))
-            case _ => List()
-          }
-        
+        val readEnStruct =  if (rhsInfo.isDefined) List() else List(Assign(ConstantPort(1,1), readEnPort))
 
         val writeEnStruct =
           rhsInfo match {
@@ -717,15 +699,14 @@ private class CalyxBackendHelper {
             case None => List()
           }
 
-        val delay = (rhsInfo, useSeqMem) match {
-          case (None, true) => Some(1) 
-          case (None, false) => Some (0)
-          case (Some((_, delay)), _) => delay.map(_ + 1)
+        val delay = (rhsInfo) match {
+          case (None) => Some(1) 
+          case (Some((_, delay))) => delay.map(_ + 1)
         }
         
         EmitOutput(
           accessPort,
-          if (rhsInfo.isDefined || useSeqMem) Some(donePort) else None,
+          Some(donePort),
           (indexing ++ writeEnStruct) ++ readEnStruct,
           delay,
           None

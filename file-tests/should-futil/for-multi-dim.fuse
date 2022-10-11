@@ -1,0 +1,8 @@
+decl A: bit<32>[10][2];
+decl B: bit<32>[10][2];
+
+for (let i: ubit<4> = 0..10) {
+  for (let j: ubit<2> = 0..2){
+    B[i][j] := A[i][j] + 1;
+  }
+}
