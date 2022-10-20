@@ -1,0 +1,11 @@
+def use_plus_equals(x2: fix<32, 16>[1][2]) = {
+  for (let __i: ubit<1> = 0..1) {
+    let __x: fix<32,16> = (2.0 as fix<32,16>);
+    for (let __j: ubit<2> = 0..2) {
+      x2[__i][__j] += __x;
+    } 
+  }
+}
+
+decl A: fix<32,16>[1][2];
+use_plus_equals(A);
