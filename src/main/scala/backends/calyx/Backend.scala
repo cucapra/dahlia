@@ -38,7 +38,7 @@ private case class EmitOutput(
     // The statically known delay of the operation, if any
     val delay: Option[Int],
     // TODO(rachit): ???
-    val multiCycleInfo: Option[(CompVar, Option[Int])]
+    val multiCycleInfo: Option[(Port, Option[Int])]
 )
 
 /**
@@ -417,7 +417,7 @@ private class CalyxBackendHelper {
       struct ++ e1Out.structure ++ e2Out.structure,
       for (d1 <- e1Out.delay; d2 <- e2Out.delay; d3 <- delay)
         yield d1 + d2 + d3,
-      Some((compVar, delay))
+      Some((comp.name.port("done"), delay))
     )
   }
 
@@ -709,7 +709,7 @@ private class CalyxBackendHelper {
           Some(donePort),
           (indexing ++ writeEnStruct) ++ readEnStruct,
           delay,
-          None
+          Some((donePort, delay))
         )
       }
       case EApp(functionId, _) =>
@@ -809,10 +809,10 @@ private class CalyxBackendHelper {
         // The write enable signal should not be high until
         // the multi-cycle operation is complete, if it exists.
         val (writeEnableSrcPort, delay) = out.multiCycleInfo match {
-          case Some((compVar, Some(delay))) =>
-            (Some(CompPort(compVar, "done")), out.delay.map(_ + delay + 1))
-          case Some((compVar, None)) =>
-            (Some(CompPort(compVar, "done")), None)
+          case Some((port, Some(delay))) =>
+            (Some(port), out.delay.map(_ + delay + 1))
+          case Some((port, None)) =>
+            (Some(port), None)
           case None => (out.done, out.delay.map(_ + 1))
         }
         val struct =
