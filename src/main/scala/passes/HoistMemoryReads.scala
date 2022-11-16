@@ -78,7 +78,7 @@ object HoistMemoryReads extends PartialTransformer {
   }
 
   def myRewriteC: PF[(Command, Env), (Command, Env)] = {
-    // Don't rewrite directly bound array reads. Rewrite access expressions
+    // Don't rewrite directly-bound array reads. Rewrite access expressions
     // if any.
     case (c @ CLet(_, _, Some(arr @ EArrAccess(_, exprs))), env) => {
       val (nexprs, nEnv) =

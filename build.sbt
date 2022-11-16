@@ -40,22 +40,27 @@ resourceGenerators in Compile += Def.task {
   val gitDiff = "git diff --stat".!!
   val status = if (gitDiff.trim() != "") "dirty" else "clean"
   println(gitDiff)
-  IO.writeLines(file, Seq(
-    s"git.status = $status",
-    s"build.date = ${new java.util.Date()}",
-    s"git.hash = $gitHash"))
+  IO.writeLines(
+    file,
+    Seq(
+      s"git.status = $status",
+      s"build.date = ${new java.util.Date()}",
+      s"git.hash = $gitHash"
+    )
+  )
   Seq(file)
 }
 
 /* sbt-assembly configuration: build an executable jar. */
 assemblyOption in assembly := (assemblyOption in assembly).value.copy(
-    prependShellScript = Some(sbtassembly.AssemblyPlugin.defaultShellScript)
+  prependShellScript = Some(sbtassembly.AssemblyPlugin.defaultShellScript)
 )
 assemblyJarName in assembly := "fuse.jar"
 test in assembly := {}
 
 /* Define task to download picojson headers */
-val getHeaders = taskKey[Unit]("Download header dependencies for runnable backend.")
+val getHeaders =
+  taskKey[Unit]("Download header dependencies for runnable backend.")
 getHeaders := {
   import sys.process._
   import java.io.File
@@ -65,7 +70,8 @@ getHeaders := {
 
   if (!jsonHppLoc.exists()) {
     val jsonHpp = new URL(
-      "https://raw.githubusercontent.com/nlohmann/json/develop/single_include/nlohmann/json.hpp")
+      "https://raw.githubusercontent.com/nlohmann/json/develop/single_include/nlohmann/json.hpp"
+    )
     val cmd = Seq("wget", jsonHpp, "--directory-prefix", jsonHppLoc.toString)
     // sys.process DSL magic!
     jsonHpp #> jsonHppLoc !!

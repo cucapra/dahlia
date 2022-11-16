@@ -57,8 +57,10 @@ object HoistSlowBinop extends TypedPartialTransformer {
   }
 
   def myRewriteE: PF[(Expr, Env), (Expr, Env)] = {
-    case (e @ EBinop(op, left, right), env) if calyx.slowBinops.contains(op.op) => {
+    case (e @ EBinop(op, left, right), env)
+        if calyx.slowBinops.contains(op.op) => {
       env.get(e) match {
+        // The expression has already been hoisted.
         case Some(let) => (EVar(let.id), env)
         case None => {
           val (leftRead, leftEnv) = binopRecur(left, env)
@@ -75,6 +77,12 @@ object HoistSlowBinop extends TypedPartialTransformer {
   }
 
   def myRewriteC: PF[(Command, Env), (Command, Env)] = {
+    case (CLet(id, typ, Some(EBinop(op, left, right))), _) => {
+      val (leftRead, leftEnv) = binopRecur(left, emptyEnv)
+      val (rightRead, rightEnv) = binopRecur(right, leftEnv)
+      val bin = EBinop(op, leftRead, rightRead)
+      construct(CLet(id, typ, Some(bin)), rightEnv)
+    }
     case (CLet(id, typ, Some(e)), _) => {
       val (expr, env) = rewriteE(e)(emptyEnv)
       construct(CLet(id, typ, Some(expr)), env)
