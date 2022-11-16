@@ -48,30 +48,14 @@ void kernel(vector<vector<float>> &A0_0, vector<vector<float>> &A0_1, vector<vec
               B_read0_0_1_1 = B1_1[(unsigned int)k][(unsigned int)j];
               B_read0_1_1_1 = B1_1[(unsigned int)k][(unsigned int)j];
               //---
-              float bin_read0_ = (A_read0_0_0_0 * B_read0_0_0_0);
-              //---
-              float x_0_0_0 = bin_read0_;
-              float bin_read1_ = (A_read0_1_0_0 * B_read0_1_0_0);
-              //---
-              float x_1_0_0 = bin_read1_;
-              float bin_read2_ = (A_read0_0_1_0 * B_read0_0_1_0);
-              //---
-              float x_0_1_0 = bin_read2_;
-              float bin_read3_ = (A_read0_1_1_0 * B_read0_1_1_0);
-              //---
-              float x_1_1_0 = bin_read3_;
-              float bin_read4_ = (A_read0_0_0_1 * B_read0_0_0_1);
-              //---
-              float x_0_0_1 = bin_read4_;
-              float bin_read5_ = (A_read0_1_0_1 * B_read0_1_0_1);
-              //---
-              float x_1_0_1 = bin_read5_;
-              float bin_read6_ = (A_read0_0_1_1 * B_read0_0_1_1);
-              //---
-              float x_0_1_1 = bin_read6_;
-              float bin_read7_ = (A_read0_1_1_1 * B_read0_1_1_1);
-              //---
-              float x_1_1_1 = bin_read7_;
+              float x_0_0_0 = (A_read0_0_0_0 * B_read0_0_0_0);
+              float x_1_0_0 = (A_read0_1_0_0 * B_read0_1_0_0);
+              float x_0_1_0 = (A_read0_0_1_0 * B_read0_0_1_0);
+              float x_1_1_0 = (A_read0_1_1_0 * B_read0_1_1_0);
+              float x_0_0_1 = (A_read0_0_0_1 * B_read0_0_0_1);
+              float x_1_0_1 = (A_read0_1_0_1 * B_read0_1_0_1);
+              float x_0_1_1 = (A_read0_0_1_1 * B_read0_0_1_1);
+              float x_1_1_1 = (A_read0_1_1_1 * B_read0_1_1_1);
               //---
               C0_0[(unsigned int)i][(unsigned int)j] += (x_0_0_0 + x_0_0_1);
               C1_1[(unsigned int)i][(unsigned int)j] += (x_1_1_0 + x_1_1_1);

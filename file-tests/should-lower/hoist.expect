@@ -18,24 +18,22 @@ void kernel(vector<int> &a0, vector<int> &b0) {
   //---
   int bin_read1_ = (y_ * (int)20);
   //---
-  int bin_read2_ = (bin_read0_ / (bin_read1_ - (int)15));
-  //---
-  int z_ = bin_read2_;
+  int z_ = (bin_read0_ / (bin_read1_ - (int)15));
   int w_;
-  int bin_read3_ = ((int)10 * (int)12);
+  int bin_read2_ = ((int)10 * (int)12);
   //---
-  w_ = b0[(unsigned int)bin_read3_];
-  int bin_read4_ = (((int)0 - (int)1) * (int)1);
+  w_ = b0[(unsigned int)bin_read2_];
+  int bin_read3_ = (((int)0 - (int)1) * (int)1);
   //---
-  int bin_read5_ = ((int)2 * (int)2);
+  int bin_read4_ = ((int)2 * (int)2);
   //---
-  int bin_read6_ = (bin_read5_ * (int)2);
+  int bin_read5_ = (bin_read4_ * (int)2);
   //---
-  int bin_read7_ = ((int)1 * (int)1);
+  int bin_read6_ = ((int)1 * (int)1);
   //---
-  int bin_read8_ = ((int)1 * (int)2);
+  int bin_read7_ = ((int)1 * (int)2);
   //---
-  unsigned int k_ = (unsigned int)(((bin_read4_ + bin_read6_) - bin_read7_) - bin_read8_);
+  unsigned int k_ = (unsigned int)(((bin_read3_ + bin_read5_) - bin_read6_) - bin_read7_);
   json_t __;
   __["a0"] = a0;
   __["b0"] = b0;
