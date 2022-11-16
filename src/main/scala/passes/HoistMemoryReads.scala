@@ -63,7 +63,8 @@ object HoistMemoryReads extends PartialTransformer {
         case Some(let) => EVar(let.id) -> env1
         case None => {
           val readTmp = genName(s"${id}_read")
-          val read = CLet(readTmp, None, Some(EArrAccess(id, nexprs.toSeq))).withPos(e)
+          val read =
+            CLet(readTmp, None, Some(EArrAccess(id, nexprs.toSeq))).withPos(e)
           val nEnv = env.add(e, read)
           EVar(readTmp) -> nEnv
         }
@@ -124,7 +125,7 @@ object HoistMemoryReads extends PartialTransformer {
 
     case (c @ CUpdate(_, rhs), _) => {
       val (rewrite, env) = rewriteE(rhs)(emptyEnv)
-      val nC = c.copy(rhs=rewrite).withPos(c)
+      val nC = c.copy(rhs = rewrite).withPos(c)
       construct(nC, env) -> emptyEnv
     }
 

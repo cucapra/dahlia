@@ -134,6 +134,22 @@ object Syntax {
       case _: EVar | _: EArrAccess | _: EPhysAccess => true
       case _ => false
     }
+
+    // Return all variables used in the expression
+    def all_vars: Seq[Id] = this match {
+      case _: EInt | _: ERational | _: EBool => Seq()
+      case EVar(id) => Seq(id)
+      case EBinop(_, e1, e2) => e1.all_vars ++ e2.all_vars
+      case EArrAccess(arr, idx) => arr +: idx.flatMap(_.all_vars)
+      case EPhysAccess(id, bankIdxs) => id +: bankIdxs.flatMap(_._2.all_vars)
+      case EArrLiteral(elems) => elems.flatMap(_.all_vars)
+      case ERecAccess(rec, field) => rec.all_vars :+ field
+      case ERecLiteral(fields) =>
+        fields.toSeq.flatMap({ case (_, expr) => expr.all_vars })
+      case EApp(fun, args) => fun +: args.flatMap(_.all_vars)
+      case ECast(e, _) => e.all_vars
+    }
+
   }
   case class EInt(v: Int, base: Int = 10) extends Expr
   case class ERational(d: String) extends Expr
