@@ -10,22 +10,78 @@ import Syntax._
 object HoistMemoryReads extends PartialTransformer {
 
   // Env for storing the assignments for reads to replace
-  case class BufferEnv(map: ListMap[Expr, CLet] = ListMap())
-      extends ScopeManager[BufferEnv]
-      with Tracker[Expr, CLet, BufferEnv] {
-    def merge(that: BufferEnv) = {
-      BufferEnv(this.map ++ that.map)
+  case class BufferEnv(
+      map: Seq[(Id, ListMap[Expr, CLet])],
+      top: ListMap[Expr, CLet]
+  ) extends ScopeManager[BufferEnv] {
+
+    def addIdx(idx: Id) = {
+      BufferEnv(this.map :+ (idx -> ListMap()), ListMap())
     }
 
-    def get(key: Expr) = this.map.get(key)
-
+    // Given a set of loop idxs, add the expr -> let map to the shallowest scope, i.e., hoist the expression as far as possible
     def add(key: Expr, value: CLet) = {
-      BufferEnv(this.map + (key -> value))
+      val idxs = key.all_vars.toSet & this.map.map(_._1).toSet
+      // If the expression is not dependent on any loop idxs, add it to the top level
+      if (idxs.isEmpty) {
+        BufferEnv(this.map, this.top + (key -> value))
+      } else {
+        // Otherwise, add it to the shallowest scope
+        val (out, _) = map.reverse
+          .foldLeft[
+            (Seq[(Id, ListMap[Expr, CLet])], Option[(Expr, CLet)])
+          ](
+            (Seq(), Some(key -> value))
+          ) {
+            case ((env, kv), (id, m)) =>
+              if (kv.isDefined && idxs.contains(id)) {
+                (env :+ (id, m + kv.get), None)
+              } else {
+                (env :+ (id, m), kv)
+              }
+          }
+        BufferEnv(out.reverse, this.top)
+      }
     }
+
+    def get(e: Expr): Option[CLet] = {
+      // Find the shallowest scope that contains the expression
+      map.reverse.find(_._2.contains(e)).map(_._2(e)) match {
+        case Some(let) => Some(let)
+        case None => this.top.get(e)
+      }
+    }
+
+    def merge(other: BufferEnv) = {
+      val map = this.map
+        .zip(other.map)
+        .map({
+          case ((id1, m1), (id2, m2)) =>
+            assert(id1 == id2)
+            id1 -> (m1 ++ m2)
+        })
+      BufferEnv(map, this.top ++ other.top)
+    }
+
+    // Pretty print map
+    override def toString = {
+      val fmt = (m: ListMap[Expr, CLet]) => {
+        m.map({
+            case (e, _) =>
+              s"${Pretty.emitExpr(e)(false).pretty}"
+          })
+          .mkString(", ")
+      }
+      val m = map
+        .map({ case (id, m) => s"$id -> [${fmt(m)}]" })
+        .mkString(", ")
+      s"TOP -> [${fmt(top)}], $m"
+    }
+
   }
 
   type Env = BufferEnv
-  val emptyEnv = BufferEnv()
+  val emptyEnv = BufferEnv(Seq(), ListMap())
 
   /** Helper for generating unique names. */
   var idx: Map[String, Int] = Map();
@@ -38,17 +94,16 @@ object HoistMemoryReads extends PartialTransformer {
     Id(s"$base${idx(base)}")
   }
 
-  /** Constructs a (Command, Env) tuple from a command
-    * and an environment containing new let bindings. */
+  /** Constructs a (Command, Env) tuple from a commands in the last element of the sequence of the environment. */
   def construct(
-      cmd: Command,
-      env: Env,
-      acc: Command = CEmpty
+      env: ListMap[Expr, CLet],
+      last: Command,
+      first: Command = CEmpty
   ): Command = {
-    if (env.map.values.isEmpty && acc == CEmpty) {
-      cmd
+    if (env.values.isEmpty && first == CEmpty) {
+      last
     } else {
-      CPar.smart(env.map.values.toSeq :+ acc :+ cmd)
+      CPar.smart(first +: env.values.toSeq :+ last)
     }
   }
 
@@ -79,66 +134,39 @@ object HoistMemoryReads extends PartialTransformer {
   }
 
   def myRewriteC: PF[(Command, Env), (Command, Env)] = {
-    // Don't rewrite directly-bound array reads. Rewrite access expressions
-    // if any.
-    case (c @ CLet(_, _, Some(arr @ EArrAccess(_, exprs))), env) => {
-      val (nexprs, nEnv) =
-        rewriteSeqWith[Expr](rewriteE(_: Expr)(_: Env))(exprs)(env)
-      val nC = c.copy(e = Some(arr.copy(idxs = nexprs.toSeq))).withPos(c)
-      construct(nC, nEnv) -> emptyEnv
+    case (CFor(range, pipe, par, combine), env) => {
+      val (nPar, parEnv) = rewriteC(par)(env.addIdx(range.iter))
+      System.err.println(s"PAR: ${parEnv.toString}")
+      // Construct all expression bound in the body
+      val (_, binds) = parEnv.map.last
+      val rest = BufferEnv(parEnv.map.dropRight(1), parEnv.top)
+      System.err.println(s"REST: ${rest.toString}")
+      val body = construct(binds, nPar)
+      // Expression in the combine statement use variables in outer scope.
+      val (nCombine, combineEnv) = rewriteC(combine)(rest)
+      System.err.println(s"COMB: ${parEnv.toString}")
+      val nFor =
+        CFor(range, pipe, body, nCombine).withPos(par)
+      // If this is the outermost loop, add the top level bindings
+      if (rest.map.isEmpty) {
+        System.err.println(s"IDX: Index ${range.iter} is outermost")
+        val binds = combineEnv.top ++ rest.top
+        construct(binds, nFor) -> emptyEnv
+      } else {
+        nFor -> combineEnv
+      }
     }
 
-    case (CLet(id, typ, Some(e)), _) => {
-      val (expr, env) = rewriteE(e)(emptyEnv)
-      construct(CLet(id, typ, Some(expr)), env) -> emptyEnv
-    }
-
-    case (CIf(cond, cons, alt), _) => {
-      val (expr, env) = rewriteE(cond)(emptyEnv)
-      construct(
-        CIf(expr, rewrC(cons), rewrC(alt)),
-        env
-      ) -> emptyEnv
-    }
-
-    case (CWhile(cond, pipeline, body), _) => {
-      val (expr, env) = rewriteE(cond)(emptyEnv)
-      construct(CWhile(expr, pipeline, rewrC(body)), env) -> emptyEnv
-    }
-
-    case (CReturn(expr), _) => {
-      val (rewriteExpr, env) = rewriteE(expr)(emptyEnv)
-      construct(CReturn(rewriteExpr), env) -> emptyEnv
-    }
-
-    case (CExpr(expr), _) => {
-      val (rewrite, env) = rewriteE(expr)(emptyEnv)
-      construct(CExpr(rewrite), env) -> emptyEnv
-    }
-
-    /*case (CUpdate(e @ EArrAccess(id, _), rhs), _) => {
-      val (rhsRewrite, env) = rewriteE(rhs)(emptyEnv)
-      val writeTmp = genName(s"${id}_write")
-      val writeLet = CLet(writeTmp, e.typ, Some(rhsRewrite))
-      construct(CUpdate(e, EVar(writeTmp)), env, writeLet)
-    }*/
-
-    case (c @ CUpdate(_, rhs), _) => {
-      val (rewrite, env) = rewriteE(rhs)(emptyEnv)
+    case (c @ CUpdate(_, rhs), env) => {
+      val (rewrite, nEnv) = rewriteE(rhs)(env)
       val nC = c.copy(rhs = rewrite).withPos(c)
-      construct(nC, env) -> emptyEnv
+      nC -> nEnv
     }
 
-    /*case (CReduce(rop, e @ EArrAccess(id, _), rhs), _) => {
-      val writeTmp = genName(s"${id}_write")
-      val (rewrite, env) = rewriteE(rhs)(emptyEnv)
-      val writeLet = CLet(writeTmp, e.typ, Some(rewrite))
-      construct(CReduce(rop, e, EVar(writeTmp)), env, writeLet)
-    }*/
-
-    case (CReduce(rop, e, rhs), _) => {
-      val (rewrite, env) = rewriteE(rhs)(emptyEnv)
-      construct(CReduce(rop, e, rewrite), env) -> emptyEnv
+    case (c @ CReduce(_, _, rhs), env) => {
+      val (rewrite, nEnv) = rewriteE(rhs)(env)
+      val nC = c.copy(rhs = rewrite).withPos(c)
+      nC -> nEnv
     }
   }
 
