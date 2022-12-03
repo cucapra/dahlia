@@ -3,7 +3,7 @@ import "primitives/memories.futil";
 import "primitives/binary_operators.futil";
 component use_plus_equals() -> () {
   cells {
-    ref x20_0 = seq_mem_d2(32,1,2,1,2);
+    ref x2 = seq_mem_d2(32,1,2,1,2);
     __i0 = std_reg(1);
     __j0 = std_reg(2);
     __x_0 = std_reg(32);
@@ -46,21 +46,21 @@ component use_plus_equals() -> () {
       let2[done] = __j0.done;
     }
     group let3<"static"=2> {
-      red_read00.in = x20_0.out;
-      red_read00.write_en = x20_0.read_done;
+      red_read00.in = x2.out;
+      red_read00.write_en = x2.read_done;
       let3[done] = red_read00.done;
-      x20_0.addr1 = __j0.out;
-      x20_0.addr0 = __i0.out;
-      x20_0.read_en = 1'd1;
+      x2.addr1 = __j0.out;
+      x2.addr0 = __i0.out;
+      x2.read_en = 1'd1;
     }
     group upd0<"static"=1> {
-      x20_0.addr1 = __j0.out;
-      x20_0.addr0 = __i0.out;
-      x20_0.write_en = 1'd1;
+      x2.addr1 = __j0.out;
+      x2.addr0 = __i0.out;
+      x2.write_en = 1'd1;
       add0.left = red_read00.out;
       add0.right = __x_0.out;
-      x20_0.in = add0.out;
-      upd0[done] = x20_0.write_done;
+      x2.in = add0.out;
+      upd0[done] = x2.write_done;
     }
     group upd1<"static"=1> {
       __j0.write_en = 1'd1;
@@ -99,14 +99,14 @@ component use_plus_equals() -> () {
 }
 component main() -> () {
   cells {
-    @external(1) A0_0 = seq_mem_d2(32,1,2,1,2);
+    @external(1) A = seq_mem_d2(32,1,2,1,2);
     use_plus_equals0 = use_plus_equals();
   }
   wires {
   }
   control {
     seq {
-      invoke use_plus_equals0[x20_0=A0_0]()();
+      invoke use_plus_equals0[x2=A]()();
     }
   }
 }

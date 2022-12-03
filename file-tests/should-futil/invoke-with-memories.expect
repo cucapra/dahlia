@@ -15,25 +15,25 @@ component mem_copy() -> () {
       zero_0.write_en = 1'd1;
       let0[done] = zero_0.done;
     }
-    group let1<"static"=2> {
-      src_read00.in = src.out;
+    group upd0<"static"=2> {
       src_read00.write_en = src.read_done;
-      let1[done] = src_read00.done;
       src.addr0 = zero_0.out;
       src.read_en = 1'd1;
+      src_read00.in = src.out;
+      upd0[done] = src_read00.done;
     }
-    group upd0<"static"=1> {
+    group upd1<"static"=1> {
       dest.addr0 = zero_0.out;
       dest.write_en = 1'd1;
       dest.in = src_read00.out;
-      upd0[done] = dest.write_done;
+      upd1[done] = dest.write_done;
     }
   }
   control {
     seq {
       @pos(0) let0;
-      @pos(1) let1;
-      @pos(2) upd0;
+      @pos(1) upd0;
+      @pos(2) upd1;
     }
   }
 }

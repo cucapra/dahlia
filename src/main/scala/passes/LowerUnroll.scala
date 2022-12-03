@@ -436,8 +436,10 @@ object LowerUnroll extends PartialTransformer {
     // expression corresponds exactly to the input bank. In this case,
     // don't generate a condition.
     if (allExprs.size == 1) {
-      val elem = allExprs.toArray
-      return (newCommand(elem(0)._2), env)
+      val elems = allExprs.toArray
+      val elem = elems(0)._2
+      val (nE, nEnv) = rewriteE(elem)(env)
+      return (newCommand(nE), nEnv)
     }
     val condAssigns = allExprs.map({
       case (bankVals, accExpr) => {
@@ -462,7 +464,7 @@ object LowerUnroll extends PartialTransformer {
 
   def myRewriteC: PF[(Command, Env), (Command, Env)] = {
     // Transform reads from memories
-    case (c @ CLet(bind, typ, Some(acc @ EArrAccess(arrId, idxs))), env) => {
+    case (c @ CLet(bind, typ, Some(EArrAccess(arrId, idxs))), env) => {
       val transformer = env.viewGet(arrId)
       if (transformer.isDefined) {
         val t = transformer.get
@@ -471,11 +473,9 @@ object LowerUnroll extends PartialTransformer {
         // Calculate the value for all indices and let-bind them.
         val TArray(typ, arrDims, _) = env.dimsGet(arrId)
         // We generate update expressions for the variable.
-        val updCmd = CUpdate(EVar(bind), acc)
+        val updCmd = (e: Expr) => { CUpdate(EVar(bind), e).withPos(c) }
         val (newCmd, nEnv) =
-          condCmd(allExprs, idxs, arrDims, (e) => {
-            updCmd.copy(rhs = e).withPos(c)
-          })(env)
+          condCmd(allExprs, idxs, arrDims, updCmd)(env)
         val cmd = CPar.smart(CLet(bind, Some(typ), None), newCmd)
         if (t.physical) {
           cmd -> nEnv
