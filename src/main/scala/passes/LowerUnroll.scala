@@ -1,7 +1,7 @@
 package fuselang.passes
 
 import scala.{PartialFunction => PF}
-import fuselang.Utils.{RichOption, cartesianProduct, assertOrThrow}
+import fuselang.Utils.{RichOption, cartesianProduct}
 import fuselang.common._
 import Syntax.{OpConstructor => OC}
 import Transformer._
@@ -66,10 +66,11 @@ object LowerUnroll extends PartialTransformer {
     def fromDecl(id: Id, ta: TArray) = {
       val t = (idxs: TKey) => {
         // Unbanked arrays should never be accessed using an index type
-        assertOrThrow(
-          idxs.length == 1,
-          Impossible("Unbanked array accessed with index type")
-        )
+        idxs.foreach(_._2 match {
+          case Some(n) if n != 0 =>
+            throw Impossible(s"Unbanked decl array accessed at bank `$n")
+          case _ => ()
+        })
         Map(ta.dims.map(_ => 0) -> EArrAccess(id, idxs.map(_._1)))
       }
       ViewTransformer(t, true)
@@ -464,8 +465,9 @@ object LowerUnroll extends PartialTransformer {
     case (c @ CLet(bind, typ, Some(acc @ EArrAccess(arrId, idxs))), env) => {
       val transformer = env.viewGet(arrId)
       if (transformer.isDefined) {
+        val t = transformer.get
         val allExprs =
-          (transformer.get)(idxs.zip(getBanks(arrId, idxs)(env)))
+          t(idxs.zip(getBanks(arrId, idxs)(env)))
         // Calculate the value for all indices and let-bind them.
         val TArray(typ, arrDims, _) = env.dimsGet(arrId)
         // We generate update expressions for the variable.
@@ -474,7 +476,12 @@ object LowerUnroll extends PartialTransformer {
           condCmd(allExprs, idxs, arrDims, (e) => {
             updCmd.copy(rhs = e).withPos(c)
           })(env)
-        rewriteC(CPar.smart(CLet(bind, Some(typ), None), newCmd))(nEnv)
+        val cmd = CPar.smart(CLet(bind, Some(typ), None), newCmd)
+        if (t.physical) {
+          cmd -> nEnv
+        } else {
+          rewriteC(cmd)(nEnv)
+        }
       } else {
         // Rewrite the idxs
         val (nIdxs, nEnv) = rewriteESeq(idxs)(env)
@@ -560,13 +567,18 @@ object LowerUnroll extends PartialTransformer {
       val nCmd = c.copy(rhs = nR)
       l match {
         case EArrAccess(id, idxs) if env.viewGet(id).isDefined => {
+          val t = env.viewGet(id).get
           val allExprs =
-            (env.viewGet(id).get)(idxs.zip(getBanks(id, idxs)(env)))
+            t(idxs.zip(getBanks(id, idxs)(env)))
           // Calculate the value for all indices and let-bind them.
           val arrDims = env.dimsGet(id).dims
           val (newCmd, nEnv) =
             condCmd(allExprs, idxs, arrDims, (e) => nCmd.copy(lhs = e))(env)
-          rewriteC(newCmd)(nEnv)
+          if (t.physical) {
+            newCmd -> nEnv
+          } else {
+            rewriteC(newCmd)(nEnv)
+          }
         }
         case _ => nCmd.copy(lhs = rewriteE(l)(nEnv)._1) -> env
       }
@@ -582,13 +594,18 @@ object LowerUnroll extends PartialTransformer {
           val nCmd = c.copy(lhs = e.copy(idxs = nIdxs))
           val transformer = env.viewGet(id)
           if (transformer.isDefined) {
+            val t = transformer.get
             val allExprs =
-              (transformer.get)(idxs.zip(getBanks(id, idxs)(env)))
+              t(idxs.zip(getBanks(id, idxs)(env)))
             // Calculate the value for all indices and let-bind them.
             val arrDims = env.dimsGet(id).dims
             val (newCmd, nEnv) =
               condCmd(allExprs, idxs, arrDims, (e) => nCmd.copy(lhs = e))(env)
-            rewriteC(newCmd)(nEnv)
+            if (t.physical) {
+              newCmd -> nEnv
+            } else {
+              rewriteC(newCmd)(nEnv)
+            }
           } else {
             nCmd -> env
           }
@@ -632,13 +649,20 @@ object LowerUnroll extends PartialTransformer {
       } else if (arrRewrite.isDefined) {
         val TArray(_, dims, _) = env.dimsGet(id)
         // Construct a fake access expression
-        val map = (arrRewrite.get)(dims.map(_ => EInt(0) -> None))
+        val t = arrRewrite.get
+        val map = t(dims.map(_ => EInt(0) -> None))
         if (map.size != 1) {
           throw Impossible(s"Memory parameter is banked: $id.", e.pos)
         }
         val List((_, acc)) = map.toList
         acc match {
-          case EArrAccess(id, _) => rewriteE(EVar(id))(env)
+          case EArrAccess(id, _) => {
+            if (t.physical) {
+              EVar(id) -> env
+            } else {
+              rewriteE(EVar(id))(env)
+            }
+          }
           case e =>
             throw Impossible(
               s"Memory parameter returned unexpected access expression: ${Pretty
