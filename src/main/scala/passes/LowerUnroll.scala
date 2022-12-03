@@ -50,9 +50,9 @@ object LowerUnroll extends PartialTransformer {
     * The function returns a map from a Seq[Int] (bank numbers) to the
     * access expression that corresponds to it.
     *
-    * physical: True if this transformer is associated with a physical array.
+    * isDecl: True if this transformer is associated with a `decl` memory
     */
-  case class ViewTransformer(t: TKey => TVal, physical: Boolean) {
+  case class ViewTransformer(t: TKey => TVal, isDecl: Boolean) {
     // Apply method for accesses
     def apply(key: TKey): TVal = {
       t(key)
@@ -63,15 +63,9 @@ object LowerUnroll extends PartialTransformer {
     /**
       * Define a transformer from a unbanked declaration
       */
-    def fromDecl(id: Id, ta: TArray) = {
-      val t = (idxs: TKey) => {
-        // Unbanked arrays should never be accessed using an index type
-        idxs.foreach(_._2 match {
-          case Some(n) if n != 0 =>
-            throw Impossible(s"Unbanked decl array accessed at bank `$n")
-          case _ => ()
-        })
-        Map(ta.dims.map(_ => 0) -> EArrAccess(id, idxs.map(_._1)))
+    def fromDecl(@annotation.unused id: Id, @annotation.unused ta: TArray) = {
+      val t = (_: TKey) => {
+        throw Impossible("Transformer on `decl` memory should not be called")
       }
       ViewTransformer(t, true)
     }
@@ -121,7 +115,7 @@ object LowerUnroll extends PartialTransformer {
           })
           .toMap
       }
-      ViewTransformer(t, true)
+      ViewTransformer(t, false)
     }
 
     /**
@@ -466,7 +460,7 @@ object LowerUnroll extends PartialTransformer {
     // Transform reads from memories
     case (c @ CLet(bind, typ, Some(EArrAccess(arrId, idxs))), env) => {
       val transformer = env.viewGet(arrId)
-      if (transformer.isDefined) {
+      if (transformer.isDefined && !transformer.get.isDecl) {
         val t = transformer.get
         val allExprs =
           t(idxs.zip(getBanks(arrId, idxs)(env)))
@@ -477,16 +471,26 @@ object LowerUnroll extends PartialTransformer {
         val (newCmd, nEnv) =
           condCmd(allExprs, idxs, arrDims, updCmd)(env)
         val cmd = CPar.smart(CLet(bind, Some(typ), None), newCmd)
-        if (t.physical) {
-          cmd -> nEnv
-        } else {
-          rewriteC(cmd)(nEnv)
-        }
+        rewriteC(cmd)(nEnv)
       } else {
         // Rewrite the idxs
         val (nIdxs, nEnv) = rewriteESeq(idxs)(env)
-        val c = CLet(bind, typ, Some(EArrAccess(arrId, nIdxs.toSeq)))
-        c -> nEnv
+        // If there is a rewrite for the LHS, use it
+        env.rewriteGet(bind) match {
+          case Some(lhs) =>
+            CLet(lhs, typ, Some(EArrAccess(arrId, nIdxs.toSeq))) -> nEnv
+          case None => {
+            // Generate a new name as implied by the current unroll context.
+            // Same a the CLet case without arrays
+            val suf = env.idxMap.toList.sortBy(_._1.v).map(_._2).mkString("_")
+            val lhs = bind.copy(s"${bind.v}_${suf}")
+            CLet(lhs, typ, Some(EArrAccess(arrId, nIdxs.toSeq))) -> env
+              .rewriteAdd(
+                bind,
+                lhs
+              )
+          }
+        }
       }
     }
     // Rewrite banked let bound memories
@@ -550,6 +554,7 @@ object LowerUnroll extends PartialTransformer {
         cfor.attributes = cfor.attributes + ("bound" -> (range.e - range.s))
         cfor -> env
       } else {
+        // Create duplicates of the loop bodies and merge them together.
         mergePar((0 until range.u).map(idx => {
           val nRange = range.copy(e = range.e / range.u, u = 1)
           val nEnv = env.add(range.iter, idx)
@@ -566,18 +571,19 @@ object LowerUnroll extends PartialTransformer {
       }
       val nCmd = c.copy(rhs = nR)
       l match {
-        case EArrAccess(id, idxs) if env.viewGet(id).isDefined => {
-          val t = env.viewGet(id).get
-          val allExprs =
-            t(idxs.zip(getBanks(id, idxs)(env)))
-          // Calculate the value for all indices and let-bind them.
-          val arrDims = env.dimsGet(id).dims
-          val (newCmd, nEnv) =
-            condCmd(allExprs, idxs, arrDims, (e) => nCmd.copy(lhs = e))(env)
-          if (t.physical) {
-            newCmd -> nEnv
-          } else {
+        case EArrAccess(id, idxs) => {
+          val transformer = env.viewGet(id)
+          if (transformer.isDefined && !transformer.get.isDecl) {
+            val t = transformer.get
+            val allExprs =
+              t(idxs.zip(getBanks(id, idxs)(env)))
+            // Calculate the value for all indices and let-bind them.
+            val arrDims = env.dimsGet(id).dims
+            val (newCmd, nEnv) =
+              condCmd(allExprs, idxs, arrDims, (e) => nCmd.copy(lhs = e))(env)
             rewriteC(newCmd)(nEnv)
+          } else {
+            nCmd.copy(lhs = rewriteE(l)(nEnv)._1) -> env
           }
         }
         case _ => nCmd.copy(lhs = rewriteE(l)(nEnv)._1) -> env
@@ -593,7 +599,7 @@ object LowerUnroll extends PartialTransformer {
           val nIdxs = idxs.map(rewriteE(_)(env)._1)
           val nCmd = c.copy(lhs = e.copy(idxs = nIdxs))
           val transformer = env.viewGet(id)
-          if (transformer.isDefined) {
+          if (transformer.isDefined && !transformer.get.isDecl) {
             val t = transformer.get
             val allExprs =
               t(idxs.zip(getBanks(id, idxs)(env)))
@@ -601,11 +607,7 @@ object LowerUnroll extends PartialTransformer {
             val arrDims = env.dimsGet(id).dims
             val (newCmd, nEnv) =
               condCmd(allExprs, idxs, arrDims, (e) => nCmd.copy(lhs = e))(env)
-            if (t.physical) {
-              newCmd -> nEnv
-            } else {
-              rewriteC(newCmd)(nEnv)
-            }
+            rewriteC(newCmd)(nEnv)
           } else {
             nCmd -> env
           }
@@ -646,7 +648,7 @@ object LowerUnroll extends PartialTransformer {
       val arrRewrite = env.viewGet(id)
       if (varRewrite.isDefined) {
         EVar(varRewrite.get) -> env
-      } else if (arrRewrite.isDefined) {
+      } else if (arrRewrite.isDefined && !arrRewrite.get.isDecl) {
         val TArray(_, dims, _) = env.dimsGet(id)
         // Construct a fake access expression
         val t = arrRewrite.get
@@ -657,11 +659,7 @@ object LowerUnroll extends PartialTransformer {
         val List((_, acc)) = map.toList
         acc match {
           case EArrAccess(id, _) => {
-            if (t.physical) {
-              EVar(id) -> env
-            } else {
-              rewriteE(EVar(id))(env)
-            }
+            rewriteE(EVar(id))(env)
           }
           case e =>
             throw Impossible(

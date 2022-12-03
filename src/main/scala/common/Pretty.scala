@@ -148,12 +148,12 @@ object Pretty {
       if (c.attributes.isEmpty) emptyDoc
       else
         text("/*") <+>
-        emitAttributes(c.attributes) <+> text("*/") <> space
-      val pos = text("/*") <> text(c.pos.toString()) <> text(".") <> text(c.span.toString()) <> text("*/")
+          emitAttributes(c.attributes) <+> text("*/") <> space
+    // val pos = text("/*") <> text(c.pos.toString()) <> text(".") <> text(c.span.toString()) <> text("*/")
 
     (c match {
       case _: CPar | _: CSeq | _: CBlock => attr
-      case _ => pos <+> attr
+      case _ => attr
     }) <> emitCmdBare(c)(debug)
   }
 
