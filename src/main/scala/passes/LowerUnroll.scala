@@ -1,7 +1,7 @@
 package fuselang.passes
 
 import scala.{PartialFunction => PF}
-import fuselang.Utils.{RichOption, cartesianProduct}
+import fuselang.Utils.{RichOption, cartesianProduct, assertOrThrow}
 import fuselang.common._
 import Syntax.{OpConstructor => OC}
 import Transformer._
@@ -61,10 +61,25 @@ object LowerUnroll extends PartialTransformer {
   object ViewTransformer {
 
     /**
+      * Define a transformer from a unbanked declaration
+      */
+    def fromDecl(id: Id, ta: TArray) = {
+      val t = (idxs: TKey) => {
+        // Unbanked arrays should never be accessed using an index type
+        assertOrThrow(
+          idxs.length == 1,
+          Impossible("Unbanked array accessed with index type")
+        )
+        Map(ta.dims.map(_ => 0) -> EArrAccess(id, idxs.map(_._1)))
+      }
+      ViewTransformer(t, true)
+    }
+
+    /**
       * Define a transformer for a base memory.
       */
     def fromArray(id: Id, ta: TArray) = {
-      val t = (idxs: Seq[(Expr, Option[Int])]) => {
+      val t = (idxs: TKey) => {
         // If any of the indices are constants, scale them to the index in the
         // bank.
         // Morally, accesses like A[2] (where A: float[4 bank 2]) implicitly
@@ -232,14 +247,24 @@ object LowerUnroll extends PartialTransformer {
 
   override def rewriteDeclSeq(ds: Seq[Decl])(implicit env: Env) = {
     // Memory decls cannot be banked
-    ds.foreach(d => d.typ match {
-      case ta: TArray => ta.dims.foreach({
-        case (_, b) => if (b > 1) throw Malformed(d.id.pos, "Banked `decl` cannot be lowered")
-      })
-      case _ => ()
+    val nEnv = ds.foldLeft(env)({
+      case (env, Decl(id, typ)) =>
+        typ match {
+          case ta: TArray => {
+            ta.dims.foreach({
+              case (_, b) =>
+                if (b > 1)
+                  throw Malformed(id.pos, "Banked `decl` cannot be lowered")
+            })
+            env
+              .dimsAdd(id, ta)
+              .viewAdd(id, ViewTransformer.fromDecl(id, ta))
+          }
+          case _ => env
+        }
     })
 
-    ds -> env
+    ds -> nEnv
   }
 
   private def getBanks(arr: Id, idxs: Seq[Expr])(implicit env: Env) =
@@ -485,7 +510,10 @@ object LowerUnroll extends PartialTransformer {
       } else {
         val suf = env.idxMap.toList.sortBy(_._1.v).map(_._2).mkString("_")
         val newName = id.copy(s"${id.v}_${suf}")
-        c.copy(id = newName, e = nInit).withPos(c) -> env.rewriteAdd(id, newName)
+        c.copy(id = newName, e = nInit).withPos(c) -> env.rewriteAdd(
+          id,
+          newName
+        )
       }
       (cmd, nEnv)
     }
