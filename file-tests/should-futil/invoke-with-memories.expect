@@ -6,7 +6,7 @@ component mem_copy() -> () {
     ref dest = seq_mem_d1(32,1,1);
     ref src = seq_mem_d1(32,1,1);
     const0 = std_const(1,0);
-    src_read00 = std_reg(32);
+    src_read0_0 = std_reg(32);
     zero_0 = std_reg(1);
   }
   wires {
@@ -15,25 +15,25 @@ component mem_copy() -> () {
       zero_0.write_en = 1'd1;
       let0[done] = zero_0.done;
     }
-    group upd0<"static"=2> {
-      src_read00.write_en = src.read_done;
+    group let1<"static"=2> {
+      src_read0_0.in = src.out;
+      src_read0_0.write_en = src.read_done;
+      let1[done] = src_read0_0.done;
       src.addr0 = zero_0.out;
       src.read_en = 1'd1;
-      src_read00.in = src.out;
-      upd0[done] = src_read00.done;
     }
-    group upd1<"static"=1> {
+    group upd0<"static"=1> {
       dest.addr0 = zero_0.out;
       dest.write_en = 1'd1;
-      dest.in = src_read00.out;
-      upd1[done] = dest.write_done;
+      dest.in = src_read0_0.out;
+      upd0[done] = dest.write_done;
     }
   }
   control {
     seq {
       @pos(0) let0;
-      @pos(1) upd0;
-      @pos(2) upd1;
+      @pos(1) let1;
+      @pos(2) upd0;
     }
   }
 }
