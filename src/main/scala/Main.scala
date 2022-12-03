@@ -31,7 +31,7 @@ object Main {
     .map(d => {
       val Array(key, v) = d.split("=")
       (key.trim, v.trim)
-     })
+    })
     .toMap
 
   val parser = new scopt.OptionParser[Config]("fuse") {
@@ -98,7 +98,6 @@ object Main {
       .action((m, c) => c.copy(memoryInterface = memoryInterfaces(m)))
       .text("The memory interface to use for the Vivado backend. Default `axi`")
 
-
     opt[String]('x', "compiler-opt")
       .optional()
       .unbounded()
@@ -114,7 +113,7 @@ object Main {
         opt[String]('o', "outfile")
           .required()
           .action((f, c) => c.copy(output = Some(f)))
-          .text("Name of the output artifact."),
+          .text("Name of the output artifact.")
       )
   }
 

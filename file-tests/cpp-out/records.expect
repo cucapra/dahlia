@@ -12,13 +12,13 @@ void from_json(const nlohmann::json& j, point& r) {
   j.at("y").get_to(r.y);
 }
 /***************************************************/
-void kernel(vector<point> &shape10, vector<point> &shape20, point result) {
+void kernel(vector<point> &shape1, vector<point> &shape2, point result) {
   
   int X = 0;
   int Y = 0;
   for(int i = 0; i < 2; i++) {
-    int x = (shape10[i].x + shape20[i].x);
-    int y = (shape10[i].y + shape20[i].y);
+    int x = (shape1[i].x + shape2[i].x);
+    int y = (shape1[i].y + shape2[i].y);
     // combiner:
     X += x;
     Y += y;
@@ -28,17 +28,17 @@ void kernel(vector<point> &shape10, vector<point> &shape20, point result) {
   };
   result = out;
   json_t __;
-  __["shape10"] = shape10;
-  __["shape20"] = shape20;
+  __["shape1"] = shape1;
+  __["shape2"] = shape2;
   __["result"] = result;
   std::cout << __.dump(2) << std::endl;
 }
 int main(int argc, char** argv) {
   using namespace flattening;
   auto v = parse_data(argc, argv);;
-  auto shape10 = get_arg<n_dim_vec_t<point, 1>>("shape10", "point[]", v);
-  auto shape20 = get_arg<n_dim_vec_t<point, 1>>("shape20", "point[]", v);
+  auto shape1 = get_arg<n_dim_vec_t<point, 1>>("shape1", "point[]", v);
+  auto shape2 = get_arg<n_dim_vec_t<point, 1>>("shape2", "point[]", v);
   auto result = get_arg<point>("result", "point", v);
-  kernel(shape10, shape20, result);
+  kernel(shape1, shape2, result);
   return 0;
 }

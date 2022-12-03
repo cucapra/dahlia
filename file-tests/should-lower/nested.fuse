@@ -1,5 +1,5 @@
-decl A: float[8 bank 2];
-decl B: float[8 bank 2][8 bank 2];
+let A: float[8 bank 2];
+let B: float[8 bank 2][8 bank 2];
 let R: float[8 bank 2];
 let inp: float;
 
