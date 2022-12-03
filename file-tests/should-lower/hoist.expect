@@ -3,15 +3,15 @@
 /***************************************************/
 void kernel(vector<int> &a, vector<int> &b) {
   
-  int b_read0 = b[(unsigned int)0];
+  int b_read0_ = b[(unsigned int)0];
   //---
-  int x = a[(unsigned int)b_read0];
+  int x_ = a[(unsigned int)b_read0_];
   //---
-  int a_read0 = a[(unsigned int)0];
+  int a_read0_ = a[(unsigned int)0];
   //---
-  int y_ = ((int)10 + a_read0);
+  int y_ = ((int)10 + a_read0_);
   //---
-  int bin_read0_ = (x * (int)10);
+  int bin_read0_ = (x_ * (int)10);
   //---
   int bin_read1_ = (y_ * (int)20);
   //---
@@ -20,7 +20,7 @@ void kernel(vector<int> &a, vector<int> &b) {
   int z_ = bin_read2_;
   int bin_read3_ = ((int)10 * (int)12);
   //---
-  int w = b[(unsigned int)bin_read3_];
+  int w_ = b[(unsigned int)bin_read3_];
   int bin_read4_ = (((int)0 - (int)1) * (int)1);
   //---
   int bin_read5_ = ((int)2 * (int)2);
