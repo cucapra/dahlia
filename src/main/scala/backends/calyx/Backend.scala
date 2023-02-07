@@ -649,7 +649,7 @@ private class CalyxBackendHelper {
 
         // The value is generated on `read_data` and written on `write_data`.
         val portName =
-          if (rhsInfo.isDefined) "in" else "out"
+          if (rhsInfo.isDefined) "write_data" else "read_data"
         
 
         // The array ports change if the array is a function parameter. We want to access the

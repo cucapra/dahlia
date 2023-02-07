@@ -16,7 +16,7 @@ component mem_copy() -> () {
       let0[done] = zero_0.done;
     }
     group let1<"static"=2> {
-      src_read0_0.in = src.out;
+      src_read0_0.in = src.read_data;
       src_read0_0.write_en = src.read_done;
       let1[done] = src_read0_0.done;
       src.addr0 = zero_0.out;
@@ -25,7 +25,7 @@ component mem_copy() -> () {
     group upd0<"static"=1> {
       dest.addr0 = zero_0.out;
       dest.write_en = 1'd1;
-      dest.in = src_read0_0.out;
+      dest.write_data = src_read0_0.out;
       upd0[done] = dest.write_done;
     }
   }
