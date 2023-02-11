@@ -26,7 +26,7 @@ component main() -> () {
       let0[done] = i0.done;
     }
     group let1<"static"=2> {
-      A_read0_0.in = A.out;
+      A_read0_0.in = A.read_data;
       A_read0_0.write_en = A.read_done;
       let1[done] = A_read0_0.done;
       A.addr0 = i0.out;
@@ -37,7 +37,7 @@ component main() -> () {
       B.write_en = 1'd1;
       add0.left = A_read0_0.out;
       add0.right = const2.out;
-      B.in = add0.out;
+      B.write_data = add0.out;
       upd0[done] = B.write_done;
     }
     group upd1<"static"=1> {
