@@ -7,10 +7,9 @@ component foo(a: 32) -> (@stable(1) out: 32) {
     temp_0 = std_reg(32);
   }
   wires {
-    group let0<"static"=1> {
+    static group <1> let0 {
       temp_0.in = a;
       temp_0.write_en = 1'd1;
-      let0[done] = temp_0.done;
     }
     out = temp_0.out;
   }
@@ -28,10 +27,9 @@ component main() -> () {
     sqrt0 = sqrt(32);
   }
   wires {
-    group let1<"static"=1> {
+    static group <1> let1 {
       b_0.in = const0.out;
       b_0.write_en = 1'd1;
-      let1[done] = b_0.done;
     }
     group let2 {
       c_0.in = foo0.out;

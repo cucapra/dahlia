@@ -10,23 +10,20 @@ component mem_copy() -> () {
     zero_0 = std_reg(1);
   }
   wires {
-    group let0<"static"=1> {
+    static group <1> let0 {
       zero_0.in = const0.out;
       zero_0.write_en = 1'd1;
-      let0[done] = zero_0.done;
     }
-    group let1<"static"=2> {
+    static group <2> let1 {
       src_read0_0.in = src.read_data;
       src_read0_0.write_en = src.read_done;
-      let1[done] = src_read0_0.done;
       src.addr0 = zero_0.out;
       src.read_en = 1'd1;
     }
-    group upd0<"static"=1> {
+    static group <1> upd0 {
       dest.addr0 = zero_0.out;
       dest.write_en = 1'd1;
       dest.write_data = src_read0_0.out;
-      upd0[done] = dest.write_done;
     }
   }
   control {

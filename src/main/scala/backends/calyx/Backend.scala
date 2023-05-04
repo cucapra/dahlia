@@ -411,12 +411,12 @@ private class CalyxBackendHelper {
         Not(Atom(comp.name.port("done")))
       )
     )
+    val e = for (d1 <- e1Out.delay; d2 <- e2Out.delay; d3 <- delay) yield d1 + d2 + d3
     EmitOutput(
       comp.name.port(outPort),
       Some(comp.name.port("done")),
       struct ++ e1Out.structure ++ e2Out.structure,
-      for (d1 <- e1Out.delay; d2 <- e2Out.delay; d3 <- delay)
-        yield d1 + d2 + d3,
+      e,
       Some((comp.name.port("done"), delay))
     )
   }
@@ -802,10 +802,6 @@ private class CalyxBackendHelper {
         val reg = Stdlib.register(genName(s"$id"), t)
         val out = emitExpr(ECast(e, TFixed(t, i, un)))(store)
         val groupName = genName("let")
-        val doneHole = Assign(
-          reg.name.port("done"),
-          HolePort(groupName, "done")
-        )
         // The write enable signal should not be high until
         // the multi-cycle operation is complete, if it exists.
         val (writeEnableSrcPort, delay) = out.multiCycleInfo match {
@@ -815,11 +811,19 @@ private class CalyxBackendHelper {
             (Some(port), None)
           case None => (out.done, out.delay.map(_ + 1))
         }
-        val struct =
+        var struct =
           Assign(out.port, reg.name.port("in")) :: Assign(
             writeEnableSrcPort.getOrElse(ConstantPort(1, 1)),
             reg.name.port("write_en")
-          ) :: doneHole :: out.structure
+          ) :: out.structure
+        // we only need a done hole if we don't have static/delay information 
+        if (delay.isEmpty) {
+          val doneHole = Assign(
+            reg.name.port("done"),
+            HolePort(groupName, "done")
+          )
+          struct = doneHole :: struct 
+        }
         val (group, st) =
           Group.fromStructure(groupName, struct, delay, false)
         (
@@ -835,15 +839,19 @@ private class CalyxBackendHelper {
         // XXX(rachit): Why is multiCycleInfo ignored here?
         val EmitOutput(port, done, structure, delay, _) = emitExpr(e)(store)
         val groupName = genName("let")
-        val doneHole = Assign(
-          reg.name.port("done"),
-          HolePort(groupName, "done")
-        )
-        val struct =
+        var struct =
           Assign(port, reg.name.port("in")) :: Assign(
             done.getOrElse(ConstantPort(1, 1)),
             reg.name.port("write_en")
-          ) :: doneHole :: structure
+          ) :: structure
+        // we only need a done hole if we don't have static/delay information 
+        if (delay.isEmpty) {
+          val doneHole = Assign(
+            reg.name.port("done"),
+            HolePort(groupName, "done")
+          )
+          struct = doneHole :: struct 
+        }
         val (group, st) =
           Group.fromStructure(groupName, struct, delay.map(_ + 1), false)
         (
@@ -882,25 +890,26 @@ private class CalyxBackendHelper {
             "Compiling expression generated combination done condition"
           )
         )
-
-        // The group is done when the left register commits the write.
-        val doneHole =
-          Assign(
-            lOut.done.get,
-            HolePort(groupName, "done")
-          )
         // can assign guard as true for lOut.port = rOut.port since the write_en
         // signal is what actually determines what is written into 
-        val struct =
+        var struct =
           lOut.structure ++ rOut.structure ++ List(
             Assign(
               rOut.port,
               lOut.port,
               True
-            ),
-            doneHole
+            )
           )
-
+        // we only need done hole if we don't have delay/static information
+        if (lOut.delay.isEmpty) {
+          // The group is done when the left register commits the write.
+          val doneHole =
+            Assign(
+              lOut.done.get,
+              HolePort(groupName, "done")
+            )
+          struct = doneHole::struct
+        }
         val (group, other_st) =
           Group.fromStructure(groupName, struct, lOut.delay, false)
         (group :: other_st, Enable(group.id).withPos(c), store)
@@ -915,11 +924,18 @@ private class CalyxBackendHelper {
         // If the conditional computation is not combinational, generate a group.
         condOut.done match {
           case Some(done) => {
-            val doneAssign = Assign(done, HolePort(groupName, "done"))
+            val struct = condOut.delay match {
+              case Some(_) => condOut.structure
+              case None => {
+                  // we only need doneAssign if we don't have any delay/static information 
+                  val doneAssign = Assign(done, HolePort(groupName, "done"))
+                  condOut.structure :+ doneAssign
+                }
+            }
             val (group, st) =
               Group.fromStructure(
                 groupName,
-                condOut.structure :+ doneAssign,
+                struct,
                 condOut.delay,
                 false
               )

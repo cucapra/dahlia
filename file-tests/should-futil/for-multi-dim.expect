@@ -30,46 +30,40 @@ component main() -> () {
       le1.left = j0.out;
       le1.right = const3.out;
     }
-    group let0<"static"=1> {
+    static group <1> let0 {
       i0.in = const0.out;
       i0.write_en = 1'd1;
-      let0[done] = i0.done;
     }
-    group let1<"static"=1> {
+    static group <1> let1 {
       j0.in = const2.out;
       j0.write_en = 1'd1;
-      let1[done] = j0.done;
     }
-    group let2<"static"=2> {
+    static group <2> let2 {
       A_read0_0.in = A.read_data;
       A_read0_0.write_en = A.read_done;
-      let2[done] = A_read0_0.done;
       A.addr1 = j0.out;
       A.addr0 = i0.out;
       A.read_en = 1'd1;
     }
-    group upd0<"static"=1> {
+    static group <1> upd0 {
       B.addr1 = j0.out;
       B.addr0 = i0.out;
       B.write_en = 1'd1;
       add0.left = A_read0_0.out;
       add0.right = const4.out;
       B.write_data = add0.out;
-      upd0[done] = B.write_done;
     }
-    group upd1<"static"=1> {
+    static group <1> upd1 {
       j0.write_en = 1'd1;
       add1.left = j0.out;
       add1.right = const5.out;
       j0.in = add1.out;
-      upd1[done] = j0.done;
     }
-    group upd2<"static"=1> {
+    static group <1> upd2 {
       i0.write_en = 1'd1;
       add2.left = i0.out;
       add2.right = const6.out;
       i0.in = add2.out;
-      upd2[done] = i0.done;
     }
   }
   control {

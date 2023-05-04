@@ -6,10 +6,9 @@ component foo(x: 8) -> (@stable(1) out: 8) {
     y_0 = std_reg(8);
   }
   wires {
-    group let0<"static"=1> {
+    static group <1> let0 {
       y_0.in = x;
       y_0.write_en = 1'd1;
-      let0[done] = y_0.done;
     }
     out = y_0.out;
   }
@@ -25,10 +24,9 @@ component main() -> () {
     x_0 = std_reg(8);
   }
   wires {
-    group let1<"static"=1> {
+    static group <1> let1 {
       x_0.in = fp_const0.out;
       x_0.write_en = 1'd1;
-      let1[done] = x_0.done;
     }
     group let2 {
       tmp_0.in = foo0.out;
