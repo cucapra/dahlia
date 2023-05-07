@@ -201,9 +201,8 @@ object Calyx {
         dest.doc() <+> equal <+> guard.doc() <+> text("?") <+> src.doc() <> semi
       case Group(id, conns, delay, comb) =>
         (if (comb) text("comb ") else emptyDoc) <>
-          (if (delay.isDefined) text("static ") else emptyDoc) <>
+          (if (delay.isDefined) text("static") <> angles(text(delay.get.toString())) <> text(" ") else emptyDoc) <>
           text("group") <+> 
-          (if (delay.isDefined) angles(text(delay.get.toString())) <> text(" ") else emptyDoc) <>
           id.doc() <+>
           scope(vsep(conns.map(_.doc())))
     }

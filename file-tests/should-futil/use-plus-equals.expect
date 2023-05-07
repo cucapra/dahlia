@@ -30,26 +30,26 @@ component use_plus_equals() -> () {
       le1.left = __j0.out;
       le1.right = const3.out;
     }
-    static group <1> let0 {
+    static<1> group let0 {
       __i0.in = const0.out;
       __i0.write_en = 1'd1;
     }
-    static group <1> let1 {
+    static<1> group let1 {
       __x_0.in = fp_const0.out;
       __x_0.write_en = 1'd1;
     }
-    static group <1> let2 {
+    static<1> group let2 {
       __j0.in = const2.out;
       __j0.write_en = 1'd1;
     }
-    static group <2> let3 {
+    static<2> group let3 {
       red_read00.in = x2.read_data;
       red_read00.write_en = x2.read_done;
       x2.addr1 = __j0.out;
       x2.addr0 = __i0.out;
       x2.read_en = 1'd1;
     }
-    static group <1> upd0 {
+    static<1> group upd0 {
       x2.addr1 = __j0.out;
       x2.addr0 = __i0.out;
       x2.write_en = 1'd1;
@@ -57,13 +57,13 @@ component use_plus_equals() -> () {
       add0.right = __x_0.out;
       x2.write_data = add0.out;
     }
-    static group <1> upd1 {
+    static<1> group upd1 {
       __j0.write_en = 1'd1;
       add1.left = __j0.out;
       add1.right = const4.out;
       __j0.in = add1.out;
     }
-    static group <1> upd2 {
+    static<1> group upd2 {
       __i0.write_en = 1'd1;
       add2.left = __i0.out;
       add2.right = const5.out;

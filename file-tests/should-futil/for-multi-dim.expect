@@ -30,22 +30,22 @@ component main() -> () {
       le1.left = j0.out;
       le1.right = const3.out;
     }
-    static group <1> let0 {
+    static<1> group let0 {
       i0.in = const0.out;
       i0.write_en = 1'd1;
     }
-    static group <1> let1 {
+    static<1> group let1 {
       j0.in = const2.out;
       j0.write_en = 1'd1;
     }
-    static group <2> let2 {
+    static<2> group let2 {
       A_read0_0.in = A.read_data;
       A_read0_0.write_en = A.read_done;
       A.addr1 = j0.out;
       A.addr0 = i0.out;
       A.read_en = 1'd1;
     }
-    static group <1> upd0 {
+    static<1> group upd0 {
       B.addr1 = j0.out;
       B.addr0 = i0.out;
       B.write_en = 1'd1;
@@ -53,13 +53,13 @@ component main() -> () {
       add0.right = const4.out;
       B.write_data = add0.out;
     }
-    static group <1> upd1 {
+    static<1> group upd1 {
       j0.write_en = 1'd1;
       add1.left = j0.out;
       add1.right = const5.out;
       j0.in = add1.out;
     }
-    static group <1> upd2 {
+    static<1> group upd2 {
       i0.write_en = 1'd1;
       add2.left = i0.out;
       add2.right = const6.out;
