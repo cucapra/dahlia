@@ -17,16 +17,18 @@ component mem_copy() -> () {
     }
     group let1<"static"=2> {
       src_read0_0.in = src.read_data;
-      src_read0_0.write_en = src.read_done;
+      src_read0_0.write_en = src.done;
       let1[done] = src_read0_0.done;
       src.addr0 = zero_0.out;
-      src.read_en = 1'd1;
+      src.write_en = 1'd0;
+      src.content_en = 1'd1;
     }
     group upd0<"static"=1> {
       dest.addr0 = zero_0.out;
       dest.write_en = 1'd1;
+      dest.content_en = 1'd1;
       dest.write_data = src_read0_0.out;
-      upd0[done] = dest.write_done;
+      upd0[done] = dest.done;
     }
   }
   control {

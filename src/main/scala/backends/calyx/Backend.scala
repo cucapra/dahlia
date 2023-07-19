@@ -644,30 +644,28 @@ private class CalyxBackendHelper {
             )
           )
 
-        val donePortName = 
-          if (rhsInfo.isDefined) "write_done" else "read_done"
-
         // The value is generated on `read_data` and written on `write_data`.
         val portName =
           if (rhsInfo.isDefined) "write_data" else "read_data"
         
-
         // The array ports change if the array is a function parameter. We want to access the
         // component ports, e.g. `x_read_data`, rather than the memory ports, `x.read_data`.
         val isParam = (typ == ParameterVar)
 
-        val (writeEnPort, donePort, accessPort) =
+        val (writeEnPort, donePort, accessPort, contentEnPort) =
           if (isParam) {
             (
               ThisPort(CompVar(s"${id}_write_en")),
-              ThisPort(CompVar(s"${id}_${donePortName}")),
-              ThisPort(CompVar(s"${id}_${portName}"))
+              ThisPort(CompVar(s"${id}_done")),
+              ThisPort(CompVar(s"${id}_${portName}")), 
+              ThisPort(CompVar(s"${id}_content_en"))
             )
           } else {
             (
               arr.port("write_en"),
-              arr.port(donePortName),
-              arr.port(portName)
+              arr.port("done"),
+              arr.port(portName),
+              arr.port("content_en")
             )
           }
 
@@ -683,20 +681,15 @@ private class CalyxBackendHelper {
             con :: result.structure ++ structs
           }
         })
-        
-        val readEnPort = if (isParam) {
-              ThisPort(CompVar(s"${id}_read_en"))
-          } else {
-              arr.port("read_en")
-          }
 
-        // always assign 1 to read_en port if we want to read from seq mem 
-        val readEnStruct =  if (rhsInfo.isDefined) List() else List(Assign(ConstantPort(1,1), readEnPort))
+        // set ContentEn to 1'd1  
+        val contentEnStruct =  List(Assign(ConstantPort(1,1), contentEnPort))
 
+        // Set write_en to 1'd0 for reads, to port for writes.
         val writeEnStruct =
           rhsInfo match {
             case Some((port, _)) => List(Assign(port, writeEnPort))
-            case None => List()
+            case None => List(Assign(ConstantPort(1,0), writeEnPort))
           }
 
         val delay = (rhsInfo) match {
@@ -707,7 +700,7 @@ private class CalyxBackendHelper {
         EmitOutput(
           accessPort,
           Some(donePort),
-          (indexing ++ writeEnStruct) ++ readEnStruct,
+          (indexing ++ writeEnStruct) ++ contentEnStruct,
           delay,
           Some((donePort, delay))
         )
