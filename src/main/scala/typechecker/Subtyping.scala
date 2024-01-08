@@ -45,6 +45,8 @@ object Subtyping {
     case (TStaticInt(v1), TStaticInt(v2)) => v1 == v2
     case (_: TIndex, _: TIndex) => true
     case (_: TFloat, _: TFloat) => true
+    case (TAlias(r1), t) => r1.toString == t.toString
+    case (t, TAlias(r1)) => t.toString == r1.toString
     case _ => t1 == t2
   }
 
