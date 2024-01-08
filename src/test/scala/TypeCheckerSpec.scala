@@ -971,6 +971,16 @@ class TypeCheckerSpec extends FunSpec {
        """)
     }
 
+    it("allow record as return value") {
+      typeCheck("""
+        record point { x: bit<32> }
+        def f(p: point): point = {
+            let np: point = { x=p.x + 1 };
+            return np;
+        }
+        """)
+    }
+
     it("disallow ill-typed return values") {
       assertThrows[UnexpectedSubtype] {
         typeCheck("""
@@ -1501,6 +1511,13 @@ class TypeCheckerSpec extends FunSpec {
         decl k: foo;
         let x = k.p.x + 1;
         """)
+    }
+    it("should not throw error on casting") {
+      typeCheck("""
+        record point { x: ubit<32> }
+        let a: point = {x=10};
+        let b: point = (a as point);
+      """)
     }
   }
 
