@@ -6,6 +6,18 @@ title: Cheatsheet
 The next few sections will cover these in details. Feel free to skip this if
 nothing makes sense yet!
 
+## Program Structure
+
+A Dahlia program has the following structure:
+```
+<includes>
+<func defs or record defs>
+<decls>
+<commands>
+```
+
+Any one of these may be omitted but the order between them must be maintained.
+
 ## Constants
 
 ```dahlia
@@ -83,7 +95,7 @@ record rect {
 Record literals can only defined in a let binder and need an explicit type.
 
 ```dahlia
-let p: point = { x = 1; y = 2 }
+let p: point = { x = 1; y = 2 };
 ```
 
 > Note the missing semicolon after `y = 2`
@@ -162,7 +174,6 @@ a[1] := 10;
 
 ## Functions
 
-Functions cannot return values. They can only modify buffers.
 
 ### Definitions
 
@@ -199,13 +210,14 @@ Once created, they are accessed transparently as arrays and can be used to
 define other views.
 
 ### Shrink Views
+
 A shrink view reduces the banking of a memory by a integer factor.
 
 ```dahlia
 let A: float[16 bank 8];
 view sh = A[_: bank 4];
-for (let i = 0..8) unroll 2 {
-  sh[i]; // OK: sh has 2 banks (8 / 4 = 2)
+for (let i = 0..8) unroll 4 {
+  sh[i]; // OK: sh has 4 banks (8 / 2 = 4)
 }
 ```
 
@@ -213,14 +225,29 @@ The leading `_` tells the compiler that this view is only reducing the banking
 factor without affecting the indexing logic.
 
 ### Suffix Views
+
 These views let you take a suffix of a memory as long as the banking factor of a memory
 is a factor of the suffix. To enforce this restriction, the syntax of suffix/prefix is
 `M[k * e: bank b]` where `k` must be an integer factor of `b`.
 
 ```dahlia
-let A: float[6 bank 4];
+let B: float[16 bank 4];
 for (let i = 0..4) {
-  view s = A[2 * i: bank 4];
+  view s = B[4 * i: bank 4];
+  for (let j = 0..4) unroll 4 {
+    s[j] := 0.0;
+  }
+}
+```
+
+The above is equivalent to the following HLS code
+
+```
+for(int i = 0; i < 4; i++) {
+  for(int j = 0; j < 4; j++) {
+    #pragma HLS UNROLL factor=4
+    B[((4 * i) + j)] = 0.0;
+  }
 }
 ```
 
@@ -228,14 +255,34 @@ The `bank 4` refers to a possible shrink view. This allows for terse
 expressions of combined suffix and shrink views.
 
 ### Shift Views
+
 These are generalized suffix/prefix views that lift the restriction that the banking factor
-is a factor of the shifting factor. The syntax for this view is `shfit M[by e]` where `e` can be
+is a factor of the shifting factor. The syntax for this view is `M[e! : bank b]` where `e` can be
 any expression.
 
 ```dahlia
-let A: float[6 bank 4];
+let C: float[32 bank 4];
 for (let i = 0..4) {
-  view s = A[i * i: bank 4];
+  view s = C[i * i!: bank 4];
+  for (let j=0..4) unroll 4 {
+    s[j];
+  }
+}
+```
+
+```
+let arr: bit<32>[8 bank 4];
+let filter: bit<32>[2 bank 2];
+let result: bit<32>[8];
+
+for(let j = 0..7) {
+  view v_a = arr[j!: +2 bank 2];
+
+  for (let i = 0 .. 2) unroll 2 {
+    let v = v_a[i] * filter[i];
+  } combine {
+    result[j] += v;
+  }
 }
 ```
 
@@ -244,18 +291,11 @@ Split views transform one dimension of a memory into multiple dimensions.
 The split factor must divide the size of the dimension that is being split.
 
 ```dahlia
-let A: float[8];
-split split_A = A[by 2]; // split_A has type float[4 bank 2][2 bank 2]
+let D: float[32 bank 4];
+split split_D = D[by 2]; // split_D has type float[2 bank 2][16 bank 2];
+for (let i=0..2) unroll 2 {
+    for (let j=0..16) unroll 2 {
+        split_D[i][j];
+    }
+}
 ```
-
-## Program Structure
-
-A Dahlia program has the following structure:
-```
-<includes>
-<func defs or record defs>
-<decls>
-<commands>
-```
-
-Any one of these may be omitted but the order between them must be maintained.
