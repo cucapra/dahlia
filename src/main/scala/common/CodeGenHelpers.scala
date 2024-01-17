@@ -1,5 +1,7 @@
 package fuselang.common
 
+import fuselang.Utils.Big
+
 import scala.math.log10
 
 object CodeGenHelpers {
@@ -35,10 +37,10 @@ object CodeGenHelpers {
   }
 
   // Using the trick defined here: https://www.geeksforgeeks.org/program-to-find-whether-a-no-is-power-of-two/
-  def isPowerOfTwo(x: Int) =
+  def isPowerOfTwo(x: BigInt) =
     x != 0 && ((x & (x - 1)) == 0)
 
-  def log2(n: Int) = log10(n) / log10(2)
+  def log2(n: BigInt) = log10(n.toDouble) / log10(2)
 
   def fastDiv(l: Expr, r: Expr) = (l, r) match {
     case (EInt(n, b), EInt(m, _)) => EInt(n / m, b)
@@ -68,14 +70,14 @@ object CodeGenHelpers {
 
   // Simple peephole optimization to turn: 1 * x => x, 0 + x => x, 0 * x => 0
   def binop(op: BOp, l: Expr, r: Expr) = (op, l, r) match {
-    case (NumOp("*", _), EInt(1, _), r) => r
-    case (NumOp("*", _), l, EInt(1, _)) => l
-    case (NumOp("*", _), EInt(0, b), _) => EInt(0, b)
-    case (NumOp("*", _), _, EInt(0, b)) => EInt(0, b)
-    case (NumOp("+", _), l, EInt(0, _)) => l
-    case (NumOp("+", _), EInt(0, _), r) => r
-    case (BitOp("<<"), l, EInt(0, _)) => l
-    case (BitOp(">>"), l, EInt(0, _)) => l
+    case (NumOp("*", _), EInt(Big(1), _), r) => r
+    case (NumOp("*", _), l, EInt(Big(1), _)) => l
+    case (NumOp("*", _), EInt(Big(0), b), _) => EInt(0, b)
+    case (NumOp("*", _), _, EInt(Big(0), b)) => EInt(0, b)
+    case (NumOp("+", _), l, EInt(Big(0), _)) => l
+    case (NumOp("+", _), EInt(Big(0), _), r) => r
+    case (BitOp("<<"), l, EInt(Big(0), _)) => l
+    case (BitOp(">>"), l, EInt(Big(0), _)) => l
     case _ => EBinop(op, l, r)
   }
 

@@ -99,7 +99,7 @@ object Subtyping {
         Some(TSizedInt(max(s, bitsNeeded(v)), un))
       case (st: TStaticInt, idx: TIndex) =>
         // Infer unsigned
-        Some(TSizedInt(bitsNeeded(max(idx.maxVal, st.v)), false))
+        Some(TSizedInt(bitsNeeded(st.v.max(idx.maxVal)), false))
       case (t2: TSizedInt, _: TIndex) => Some(t2)
       case (_: TFloat, _: TDouble) => Some(TDouble())
       case (_: TRational, _: TFloat) => Some(TFloat())

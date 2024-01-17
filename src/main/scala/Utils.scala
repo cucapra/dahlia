@@ -1,6 +1,6 @@
 package fuselang
 import scala.{PartialFunction => PF}
-import scala.math.{log10, ceil, abs}
+import scala.math.{log10, ceil}
 
 object Utils {
 
@@ -11,10 +11,22 @@ object Utils {
     }
   }
 
+  // https://codereview.stackexchange.com/questions/14561/matching-bigints-in-scala
+  // TODO: This can overflow and result in an runtime exception
+  object Big {
+    def unapply(n: BigInt) = Some(n.toInt)
+  }
+
   def bitsNeeded(n: Int): Int = n match {
     case 0 => 1
     case n if n > 0 => ceil(log10(n + 1) / log10(2)).toInt
-    case n if n < 0 => bitsNeeded(abs(n)) + 1
+    case n if n < 0 => bitsNeeded(n.abs) + 1
+  }
+
+  def bitsNeeded(n: BigInt): Int = n match {
+    case Big(0) => 1
+    case n if n > 0 => ceil(log10((n + 1).toDouble) / log10(2)).toInt
+    case n if n < 0 => bitsNeeded(n.abs) + 1
   }
 
   def cartesianProduct[T](llst: Seq[Seq[T]]): Seq[Seq[T]] = {
