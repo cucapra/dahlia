@@ -9,6 +9,7 @@ class ParsingTests extends org.scalatest.FunSuite {
     parseAst("0.25;")
     parseAst("0x19;")
     parseAst("014;")
+    parseAst("0x9e3779b9;")
   }
 
   test("atoms") {

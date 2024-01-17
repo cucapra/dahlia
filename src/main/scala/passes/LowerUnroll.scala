@@ -270,7 +270,7 @@ object LowerUnroll extends PartialTransformer {
       .map({
         case ((_, bank), idx) =>
           idx match {
-            case EInt(n, 10) => Some(n % bank)
+            case EInt(n, 10) => Some((n % bank).toInt)
             case EInt(_, _) =>
               throw NotImplemented(
                 "Indexing using non decimal integers",

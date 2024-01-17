@@ -35,7 +35,7 @@ object BoundsChecker {
           case Rotation(e) => (e, 1)
         }
 
-        val maxVal: Int =
+        val maxVal: BigInt =
           sufExpr.typ
             .getOrThrow(Impossible(s"$sufExpr is missing type"))
             .matchOrError(viewId.pos, "view", "Integer Type") {

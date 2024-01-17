@@ -144,7 +144,7 @@ object AffineChecker {
                 (bres * (e - s), Range(s, e) +: consume)
             // Index is a statically known number.
             case TStaticInt(v) =>
-              (bres * 1, Seq(v % dims(dim)._2) +: consume)
+              (bres * 1, Seq((v % dims(dim)._2).toInt) +: consume)
             // Index is a dynamic number.
             case _: TSizedInt =>
               if (dims(dim)._2 != 1)
