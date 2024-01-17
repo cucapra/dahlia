@@ -97,7 +97,7 @@ object Errors {
         pos
       )
 
-  case class IndexOutOfBounds(id: Id, size: Int, mv: Int, pos: Position)
+  case class IndexOutOfBounds(id: Id, size: BigInt, mv: BigInt, pos: Position)
       extends TypeError(
         s"Index out of bounds for `$id'. Memory size is $size, iterator max val is $mv",
         pos

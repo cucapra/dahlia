@@ -98,18 +98,18 @@ case class Parser(input: String) {
     positioned(
       P(
         "0" | "-".? ~ (CharIn("1-9") ~ CharsWhileIn("0-9").?)
-      ).!.map((n: String) => EInt(n.toInt)).opaque("integer")
+      ).!.map((n: String) => EInt(BigInt(n))).opaque("integer")
     )
   def hex[K: P]: P[Expr] =
     positioned(
       P("0x" ~/ CharIn("0-9a-fA-F").rep(1)).!.map((n: String) =>
-        EInt(Integer.parseInt(n.substring(2), 16), 16)
+        EInt(BigInt(n.substring(2), 16), 16)
       ).opaque("hexademical")
     )
   def octal[K: P]: P[Expr] =
     positioned(
       P("0" ~ CharsWhileIn("0-7")).!.map((n: String) =>
-        EInt(Integer.parseInt(n.substring(1), 8), 8)
+        EInt(BigInt(n.substring(1), 8), 8)
       ).opaque("ocatal")
     )
   def rational[K: P]: P[Expr] =

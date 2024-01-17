@@ -59,10 +59,10 @@ object Pretty {
 
   def emitTyp(t: Type): Doc = text(t.toString)
 
-  def emitBaseInt(v: Int, base: Int): String = base match {
-    case 8 => s"0${Integer.toString(v, 8)}"
+  def emitBaseInt(v: BigInt, base: Int): String = base match {
+    case 8 => s"0${v.toString(8)}"
     case 10 => v.toString
-    case 16 => s"0x${Integer.toString(v, 16)}"
+    case 16 => s"0x${v.toString(16)}"
   }
 
   implicit def emitExpr(e: Expr)(implicit debug: Boolean): Doc = e match {

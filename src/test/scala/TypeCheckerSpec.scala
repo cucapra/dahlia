@@ -31,6 +31,12 @@ class TypeCheckerSpec extends FunSpec {
           typeCheck("let x: fix<2,2> = 2+2.1;")
         }
       }
+      it("should allow large unsigned literals") {
+        typeCheck("let x: ubit<32> = 0x9e3779b9;")
+        typeCheck("let x: ubit<64> = 0xffffffffffffffff;")
+        typeCheck("let x: bit<64> = 0x7fffffffffffffff;")
+        typeCheck("let x: ubit<128> = 0xffffffffffffffffffffffffffffffff;")
+      }
     }
 
     describe("with explicit type and without initializer") {
@@ -230,6 +236,9 @@ class TypeCheckerSpec extends FunSpec {
     }
     it("result of fix type addition upcast to subtype join") {
       typeCheck("decl x: fix<32,16>; decl y: fix<16,8>; let z = x + y;")
+    }
+    it("result of peephole optimization on large unsigned int should be valid") {
+      typeCheck("let x: ubit<32> = 0x9e3779b9; let y = x + 0;")
     }
   }
 
