@@ -102,7 +102,7 @@ case class Parser(input: String) {
     )
   def hex[K: P]: P[Expr] =
     positioned(
-      P("0x" ~/ CharIn("0-9a-fA-F").rep(1)).!.map((n: String) =>
+      P("0x" ~/ CharsWhileIn("0-9a-fA-F")).!.map((n: String) =>
         EInt(BigInt(n.substring(2), 16), 16)
       ).opaque("hexademical")
     )
