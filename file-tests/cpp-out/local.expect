@@ -3,7 +3,7 @@
 /***************************************************/
 void kernel(vector<float> &ext, float out) {
   
-  float internal[4];
+  vector<float> internal(4, 0);
   internal[2] = ext[2];
   //---
   out = internal[2];

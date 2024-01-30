@@ -3,18 +3,18 @@
 /***************************************************/
 void kernel() {
   
-  float A0_0[2] [2];
-  float A0_1[2] [2];
-  float A1_0[2] [2];
-  float A1_1[2] [2];
-  float B0_0[2] [2];
-  float B0_1[2] [2];
-  float B1_0[2] [2];
-  float B1_1[2] [2];
-  float C0_0[2] [2];
-  float C0_1[2] [2];
-  float C1_0[2] [2];
-  float C1_1[2] [2];
+  vector<vector<float>> A0_0(2, vector<float>(2, 0));
+  vector<vector<float>> A0_1(2, vector<float>(2, 0));
+  vector<vector<float>> A1_0(2, vector<float>(2, 0));
+  vector<vector<float>> A1_1(2, vector<float>(2, 0));
+  vector<vector<float>> B0_0(2, vector<float>(2, 0));
+  vector<vector<float>> B0_1(2, vector<float>(2, 0));
+  vector<vector<float>> B1_0(2, vector<float>(2, 0));
+  vector<vector<float>> B1_1(2, vector<float>(2, 0));
+  vector<vector<float>> C0_0(2, vector<float>(2, 0));
+  vector<vector<float>> C0_1(2, vector<float>(2, 0));
+  vector<vector<float>> C1_0(2, vector<float>(2, 0));
+  vector<vector<float>> C1_1(2, vector<float>(2, 0));
   {
     int i = (int)0;
     //---

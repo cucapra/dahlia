@@ -3,14 +3,14 @@
 /***************************************************/
 void kernel() {
   
-  float A0[4];
-  float A1[4];
-  float B0_0[4] [4];
-  float B0_1[4] [4];
-  float B1_0[4] [4];
-  float B1_1[4] [4];
-  float R0[4];
-  float R1[4];
+  vector<float> A0(4, 0);
+  vector<float> A1(4, 0);
+  vector<vector<float>> B0_0(4, vector<float>(4, 0));
+  vector<vector<float>> B0_1(4, vector<float>(4, 0));
+  vector<vector<float>> B1_0(4, vector<float>(4, 0));
+  vector<vector<float>> B1_1(4, vector<float>(4, 0));
+  vector<float> R0(4, 0);
+  vector<float> R1(4, 0);
   float inp_;
   {
     int i = (int)0;
