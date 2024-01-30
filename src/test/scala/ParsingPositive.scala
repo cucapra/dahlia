@@ -240,5 +240,9 @@ class ParsingTests extends org.scalatest.FunSuite {
     parseAst("""
       let x = (y as float);
       """)
+    parseAst("""
+      let x = (0x9e3779b9 as ubit<32>);
+      let y = (023615674671 as ubit<32>);
+      """)
   }
 }
