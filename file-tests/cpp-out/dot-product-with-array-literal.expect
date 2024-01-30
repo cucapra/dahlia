@@ -3,7 +3,7 @@
 /***************************************************/
 void kernel(vector<int> &a0, int result) {
   
-  int b0[4] {3, 5, 7, 11};
+  vector<int> b0{3, 5, 7, 11};
   int res = 0;
   for(int i = 0; i < 4; i++) {
     int v = (a0[i] * b0[i]);

@@ -3,8 +3,8 @@
 /***************************************************/
 void kernel() {
   
-  float A0[2];
-  float A1[2];
+  vector<float> A0(2, 0);
+  vector<float> A1(2, 0);
   float x_;
   x_ = A0[(unsigned int)1];
   float y_;

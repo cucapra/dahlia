@@ -1,0 +1,47 @@
+def fn(xs: ubit<32>[2][2][2][2][2]) = {
+  for (let i=0..2) {
+    for (let j=0..2) {
+      for (let k=0..2) {
+        for (let l=0..2) {
+          for (let m=0..2) {
+            xs[i][j][k][l][m] += 1;
+          }
+        }
+      }
+    }
+  }
+}
+
+decl arr_int: ubit<32>[2][2][2][2][2];
+
+let arr: ubit<32>[2][2][2][2][2];
+
+for (let i=0..2) {
+  for (let j=0..2) {
+    for (let k=0..2) {
+      for (let l=0..2) {
+        for (let m=0..2) {
+          arr[i][j][k][l][m] := arr_int[i][j][k][l][m];
+        }
+      }
+    }
+  }
+}
+
+---
+
+fn(arr);
+
+---
+
+for (let i=0..2) {
+  for (let j=0..2) {
+    for (let k=0..2) {
+      for (let l=0..2) {
+        for (let m=0..2) {
+          arr_int[i][j][k][l][m] := arr[i][j][k][l][m];
+        }
+      }
+    }
+  }
+}

@@ -44,9 +44,34 @@ private class CppRunnable extends CppLike {
 
   override def emitLet(l: CLet) = l match {
     case CLet(id, Some(TArray(typ, dims, _)), init) => {
-      emitType(typ) <+> id <> hsep(dims.map({
-        case (size, _) => brackets(text(size.toString))
-      })) <> init.map(i => space <> emitExpr(i)).getOrElse(emptyDoc) <> semi
+
+      /*
+        1D array with initializers - let b0: bit<32>[4] = {3, 5, 7, 11};
+          vector<int> b0{3, 5, 7, 11};
+        1D array - let arr: ubit<32>[16];
+          vector<unsigned int> arr(16, 0);
+        2D array - let arr: ubit<32>[16][16];
+          vector<vector<unsigned int>> arr(16, vector<unsigned int>(16, 0));
+        nD array - let arr: ubit<32>[16][8][4][5][3];
+          vector<vector<vector<vector<vector<unsigned int>>>>> arr(16,
+            vector<vector<vector<vector<unsigned int>>>>(8,
+              vector<vector<vector<unsigned int>>>(4,
+                vector<vector<unsigned int>>(5,
+                  vector<unsigned int>(3, 0)))));
+       */
+      val initVal = init match {
+        case Some(expr) => emitExpr(expr)
+        case None =>
+          parens(value(dims.head._1) <> comma <+> dims.tail.foldRight((text("vector") <> angles(emitType(typ)), value(0)))({
+            case ((len, _), acc) => (text("vector") <> angles(acc._1), acc._1 <> parens(value(len) <> comma <+> acc._2))
+          })._2)
+      }
+
+
+      dims.foldLeft(emitType(typ))({
+        case (acc, _) => text("vector") <> angles(acc)
+      }) <+> id <> initVal <> semi
+
     }
     case _ => super.emitLet(l)
   }
