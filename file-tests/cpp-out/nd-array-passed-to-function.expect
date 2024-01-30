@@ -1,0 +1,56 @@
+#include "parser.cpp"
+void fn(vector<vector<vector<vector<vector<unsigned int>>>>> &xs) {
+  
+  for(int i = 0; i < 2; i++) {
+    for(int j = 0; j < 2; j++) {
+      for(int k = 0; k < 2; k++) {
+        for(int l = 0; l < 2; l++) {
+          for(int m = 0; m < 2; m++) {
+            xs[i][j][k][l][m] += 1;
+          }
+        }
+      }
+    }
+  }
+}
+/***************** Parse helpers  ******************/
+/***************************************************/
+void kernel(vector<vector<vector<vector<vector<unsigned int>>>>> &arr_int) {
+  
+  vector<vector<vector<vector<vector<unsigned int>>>>> arr(2, vector<vector<vector<vector<unsigned int>>>>(2, vector<vector<vector<unsigned int>>>(2, vector<vector<unsigned int>>(2, vector<unsigned int>(2, 0)))));
+  for(int i = 0; i < 2; i++) {
+    for(int j = 0; j < 2; j++) {
+      for(int k = 0; k < 2; k++) {
+        for(int l = 0; l < 2; l++) {
+          for(int m = 0; m < 2; m++) {
+            arr[i][j][k][l][m] = arr_int[i][j][k][l][m];
+          }
+        }
+      }
+    }
+  }
+  //---
+  fn(arr);
+  //---
+  for(int i = 0; i < 2; i++) {
+    for(int j = 0; j < 2; j++) {
+      for(int k = 0; k < 2; k++) {
+        for(int l = 0; l < 2; l++) {
+          for(int m = 0; m < 2; m++) {
+            arr_int[i][j][k][l][m] = arr[i][j][k][l][m];
+          }
+        }
+      }
+    }
+  }
+  json_t __;
+  __["arr_int"] = arr_int;
+  std::cout << __.dump(2) << std::endl;
+}
+int main(int argc, char** argv) {
+  using namespace flattening;
+  auto v = parse_data(argc, argv);;
+  auto arr_int = get_arg<n_dim_vec_t<unsigned int, 5>>("arr_int", "ubit<32>[][][][][]", v);
+  kernel(arr_int);
+  return 0;
+}
