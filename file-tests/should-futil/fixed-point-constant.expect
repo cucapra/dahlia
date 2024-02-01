@@ -13,22 +13,22 @@ component main() -> () {
     fp_const3 = std_const(15,19968);
   }
   wires {
-    group let0<"static"=1> {
+    group let0<"promotable"=1> {
       a_0.in = fp_const0.out;
       a_0.write_en = 1'd1;
       let0[done] = a_0.done;
     }
-    group let1<"static"=1> {
+    group let1<"promotable"=1> {
       b_0.in = fp_const1.out;
       b_0.write_en = 1'd1;
       let1[done] = b_0.done;
     }
-    group let2<"static"=1> {
+    group let2<"promotable"=1> {
       c_0.in = fp_const2.out;
       c_0.write_en = 1'd1;
       let2[done] = c_0.done;
     }
-    group let3<"static"=1> {
+    group let3<"promotable"=1> {
       d_0.in = fp_const3.out;
       d_0.write_en = 1'd1;
       let3[done] = d_0.done;
