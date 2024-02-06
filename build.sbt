@@ -1,7 +1,7 @@
 name := "Dahlia"
 version := "0.0.2"
 
-scalaVersion := "2.13.8"
+scalaVersion := "2.13.12"
 
 libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.0.8" % "test",
