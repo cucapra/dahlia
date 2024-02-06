@@ -38,7 +38,7 @@ object Main {
 
     head(s"Dahlia (sha = ${meta("git.hash")}, status = ${meta("git.status")})")
 
-    version('V', "version")
+    this.version('V', "version")
 
     arg[File]("<srcfile>")
       .required()
