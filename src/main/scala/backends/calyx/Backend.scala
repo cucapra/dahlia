@@ -647,7 +647,7 @@ private class CalyxBackendHelper {
         // The value is generated on `read_data` and written on `write_data`.
         val portName =
           if (rhsInfo.isDefined) "write_data" else "read_data"
-        
+
         // The array ports change if the array is a function parameter. We want to access the
         // component ports, e.g. `x_read_data`, rather than the memory ports, `x.read_data`.
         val isParam = (typ == ParameterVar)
@@ -657,7 +657,7 @@ private class CalyxBackendHelper {
             (
               ThisPort(CompVar(s"${id}_write_en")),
               ThisPort(CompVar(s"${id}_done")),
-              ThisPort(CompVar(s"${id}_${portName}")), 
+              ThisPort(CompVar(s"${id}_${portName}")),
               ThisPort(CompVar(s"${id}_content_en"))
             )
           } else {
@@ -682,7 +682,7 @@ private class CalyxBackendHelper {
           }
         })
 
-        // set ContentEn to 1'd1  
+        // set ContentEn to 1'd1
         val contentEnStruct =  List(Assign(ConstantPort(1,1), contentEnPort))
 
         // Set write_en to 1'd0 for reads, to port for writes.
@@ -693,10 +693,10 @@ private class CalyxBackendHelper {
           }
 
         val delay = (rhsInfo) match {
-          case (None) => Some(1) 
+          case (None) => Some(1)
           case (Some((_, delay))) => delay.map(_ + 1)
         }
-        
+
         EmitOutput(
           accessPort,
           Some(donePort),
@@ -867,7 +867,7 @@ private class CalyxBackendHelper {
           lhs,
           Some((rOut.done.getOrElse(ConstantPort(1, 1)), rOut.delay))
         )(store)
-        val groupName = genName("upd") 
+        val groupName = genName("upd")
 
         assertOrThrow(
           lOut.done.isDefined,
@@ -883,7 +883,7 @@ private class CalyxBackendHelper {
             HolePort(groupName, "done")
           )
         // can assign guard as true for lOut.port = rOut.port since the write_en
-        // signal is what actually determines what is written into 
+        // signal is what actually determines what is written into
         val struct =
           lOut.structure ++ rOut.structure ++ List(
             Assign(
@@ -1086,7 +1086,7 @@ private class CalyxBackendHelper {
 
     val imports =
       Import("primitives/core.futil") ::
-      Import("primitives/memories.futil") ::
+      Import("primitives/memories/seq.futil") ::
         Import("primitives/binary_operators.futil") ::
         p.includes.flatMap(_.backends.get(C.Calyx)).map(i => Import(i)).toList
 
