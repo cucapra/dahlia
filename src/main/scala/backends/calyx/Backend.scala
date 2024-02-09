@@ -768,7 +768,7 @@ private class CalyxBackendHelper {
       case CLet(_, Some(_: TArray), Some(_)) =>
         throw NotImplemented(s"Calyx backend cannot initialize memories", c.pos)
       case CLet(id, typ, Some(app: EApp)) => {
-        // Generate the invocation to run this function
+        // Generate the invocation to run this function.
         val (invokeDecl, argSt, invokeControl) = emitInvokeDecl(app)
         val (typ_b, _) = bitsForType(typ, c.pos)
 
