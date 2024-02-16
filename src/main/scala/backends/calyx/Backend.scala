@@ -700,7 +700,7 @@ private class CalyxBackendHelper {
         EmitOutput(
           accessPort,
           Some(donePort),
-          (indexing ++ writeEnStruct) ++ contentEnStruct,
+          contentEnStruct ++ (indexing ++ (if (rhsInfo.isDefined) writeEnStruct else List())),
           delay,
           Some((donePort, delay))
         )

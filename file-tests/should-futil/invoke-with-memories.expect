@@ -19,14 +19,13 @@ component mem_copy() -> () {
       src_read0_0.in = src.read_data;
       src_read0_0.write_en = src.done;
       let1[done] = src_read0_0.done;
-      src.addr0 = zero_0.out;
-      src.write_en = 1'd0;
       src.content_en = 1'd1;
+      src.addr0 = zero_0.out;
     }
     group upd0<"promotable"=1> {
+      dest.content_en = 1'd1;
       dest.addr0 = zero_0.out;
       dest.write_en = 1'd1;
-      dest.content_en = 1'd1;
       dest.write_data = src_read0_0.out;
       upd0[done] = dest.done;
     }
