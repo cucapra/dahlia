@@ -644,19 +644,9 @@ private class CalyxBackendHelper {
             )
           )
 
-<<<<<<< HEAD
         // The value is generated on `read_data` and written on `write_data`.
         val portName =
           if (rhsInfo.isDefined) "write_data" else "read_data"
-=======
-        val donePortName =
-          if (rhsInfo.isDefined) "write_done" else "read_done"
-
-        // The value is generated on `read_data` and written on `write_data`.
-        val portName =
-          if (rhsInfo.isDefined) "write_data" else "read_data"
-
->>>>>>> master
 
         // The array ports change if the array is a function parameter. We want to access the
         // component ports, e.g. `x_read_data`, rather than the memory ports, `x.read_data`.
@@ -691,21 +681,9 @@ private class CalyxBackendHelper {
             con :: result.structure ++ structs
           }
         })
-<<<<<<< HEAD
 
         // set ContentEn to 1'd1
         val contentEnStruct =  List(Assign(ConstantPort(1,1), contentEnPort))
-=======
-
-        val readEnPort = if (isParam) {
-              ThisPort(CompVar(s"${id}_read_en"))
-          } else {
-              arr.port("read_en")
-          }
-
-        // always assign 1 to read_en port if we want to read from seq mem
-        val readEnStruct =  if (rhsInfo.isDefined) List() else List(Assign(ConstantPort(1,1), readEnPort))
->>>>>>> master
 
         // Set write_en to 1'd0 for reads, to port for writes.
         val writeEnStruct =
