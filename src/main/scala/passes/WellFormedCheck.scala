@@ -15,10 +15,37 @@ object WellFormedChecker {
   def check(p: Prog) = WFCheck.check(p)
 
   private case class WFEnv(
+      map: Map[Id, FuncDef] = Map(),
       insideUnroll: Boolean = false,
       insideFunc: Boolean = false
-  ) extends ScopeManager[WFEnv] {
+  ) extends ScopeManager[WFEnv]
+    with Tracker[Id, FuncDef, WFEnv] {
     def merge(that: WFEnv): WFEnv = this
+
+    override def add(k: Id, v: FuncDef): WFEnv =
+      WFEnv(
+        insideUnroll=insideUnroll,
+        insideFunc=insideFunc,
+        map=this.map + (k -> v)
+      )
+
+    override def get(k: Id): Option[FuncDef] = this.map.get(k)
+
+    def canHaveFunctionInUnroll(k: Id): Boolean = {
+      this.get(k) match {
+        case Some(FuncDef(_, args, _, _)) =>
+          if (this.insideUnroll) {
+            args.foldLeft(true)({
+              (r, arg) => arg.typ match {
+                case TArray(_, _, _) => false
+                case _ => r
+              }
+            })
+          } else
+            true
+        case None => true // This is supposed to be unreachable
+      }
+    }
   }
 
   private final case object WFCheck extends PartialChecker {
@@ -27,8 +54,9 @@ object WellFormedChecker {
     val emptyEnv = WFEnv()
 
     override def checkDef(defi: Definition)(implicit env: Env) = defi match {
-      case FuncDef(_, _, _, bodyOpt) =>
-        bodyOpt.map(checkC(_)(env.copy(insideFunc = true))).getOrElse(env)
+      case fndef @ FuncDef(id, _, _, bodyOpt) =>
+        val nenv = env.add(id, fndef)
+        bodyOpt.map(checkC(_)(nenv.copy(insideFunc = true))).getOrElse(nenv)
       case _: RecordDef => env
     }
 
@@ -42,8 +70,8 @@ object WellFormedChecker {
         throw NotInBinder(expr.pos, "Record Literal")
       case (expr: EArrLiteral, _) =>
         throw NotInBinder(expr.pos, "Array Literal")
-      case (expr: EApp, env) => {
-        assertOrThrow(env.insideUnroll == false, FuncInUnroll(expr.pos))
+      case (expr @ EApp(id, _), env) => {
+        assertOrThrow(env.canHaveFunctionInUnroll(id) == true, FuncInUnroll(expr.pos))
         env
       }
     }

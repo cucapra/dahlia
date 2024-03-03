@@ -88,7 +88,7 @@ object Errors {
       extends TypeError(s"$op cannot be inside an unrolled loop", pos)
 
   case class FuncInUnroll(pos: Position)
-      extends TypeError("Cannot call function inside unrolled loop.", pos)
+      extends TypeError("Cannot call function with non scalar arguments (like arrays) inside unrolled loop.", pos)
 
   // Unrolling and banking errors
   case class UnrollRangeError(pos: Position, rSize: Int, uFactor: Int)
