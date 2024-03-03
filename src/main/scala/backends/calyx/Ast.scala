@@ -203,7 +203,7 @@ object Calyx {
         (if (comb) text("comb ") else emptyDoc) <>
           text("group") <+> id.doc() <>
           (if (delay.isDefined)
-             angles(text("\"static\"") <> equal <> text(delay.get.toString()))
+             angles(text("\"promotable\"") <> equal <> text(delay.get.toString()))
            else emptyDoc) <+>
           scope(vsep(conns.map(_.doc())))
     }
