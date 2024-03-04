@@ -35,7 +35,7 @@ object Cpp {
       * Helper to generate a function call that might have a type parameter
       */
     def cCall(f: String, tParam: Option[Doc], args: Seq[Doc]): Doc = {
-      text(f) <> (if (tParam.isDefined) angles(tParam.get) else emptyDoc) <>
+      text(f) <> (if tParam.isDefined then angles(tParam.get) else emptyDoc) <>
         parens(commaSep(args))
     }
 
@@ -76,7 +76,7 @@ object Cpp {
       */
     def emitLet(let: CLet): Doc =
       emitDecl(let.id, let.typ.get) <>
-        (if (let.e.isDefined) space <> equal <+> emitExpr(let.e.get)
+        (if let.e.isDefined then space <> equal <+> emitExpr(let.e.get)
          else emptyDoc) <>
         semi
 
@@ -93,7 +93,7 @@ object Cpp {
       case EApp(fn, args) => fn <> parens(commaSep(args.map(emitExpr)))
       case EInt(v, base) => value(emitBaseInt(v, base))
       case ERational(d) => value(d)
-      case EBool(b) => value(if (b) 1 else 0)
+      case EBool(b) => value(if b then 1 else 0)
       case EVar(id) => value(id)
       case EBinop(op, e1, e2) => parens(e1 <+> text(op.toString) <+> e2)
       case EArrAccess(id, idxs) =>
@@ -116,7 +116,7 @@ object Cpp {
       */
     def emitRange(range: CRange): Doc = parens {
       val CRange(id, _, rev, s, e, _) = range
-      if (rev) {
+      if rev then {
         text("int") <+> id <+> equal <+> value(e - 1) <> semi <+>
         id <+> text(">=") <+> value(s) <> semi <+>
         id <> text("--")
@@ -167,7 +167,7 @@ object Cpp {
           )
           .getOrElse(emptyDoc)
 
-        if (entry) text("extern") <+> quote(text("C")) <+> scope(body)
+        if entry then text("extern") <+> quote(text("C")) <+> scope(body)
         else body
     }
 

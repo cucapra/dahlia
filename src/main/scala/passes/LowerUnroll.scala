@@ -123,7 +123,7 @@ object LowerUnroll extends PartialTransformer {
       */
     def fromView(dims: Seq[DimSpec], v: CView): ViewTransformer = {
       val t = (idxs: Seq[(Expr, Option[Int])]) => {
-        if (idxs.length != dims.length) {
+        if idxs.length != dims.length then {
           throw PassError("LowerUnroll: Incorrect access dimensions")
         }
 
@@ -248,7 +248,7 @@ object LowerUnroll extends PartialTransformer {
           case ta: TArray => {
             ta.dims.foreach({
               case (_, b) =>
-                if (b > 1)
+                if b > 1 then
                   throw Malformed(id.pos, "Banked `decl` cannot be lowered")
             })
             env
@@ -296,15 +296,15 @@ object LowerUnroll extends PartialTransformer {
     * Read https://github.com/cucapra/dahlia/issues/311 for details.
     */
   private def mergePar(cmds: Seq[Command]): Command = {
-    if (cmds.isEmpty) {
+    if cmds.isEmpty then {
       CEmpty
-    } else if (cmds.length == 1) {
+    } else if cmds.length == 1 then {
       cmds(0)
     }
     // [{ a0 -- b0 -- ...}, {a1 -- b1 -- ..}]
     // =>
     // { merge([a0, a1]) -- merge([b0, b1]) }
-    else if (cmds.forall(_.isInstanceOf[CSeq])) {
+    else if cmds.forall(_.isInstanceOf[CSeq]) then {
       CSeq.smart(
         cmds.collect({ case CSeq(cs) => cs }).transpose.map(mergePar(_))
       )
@@ -312,7 +312,7 @@ object LowerUnroll extends PartialTransformer {
     // [for (r) { b0 } combine { c0 }, for (r) { b1 } combine { c1 }, ...]
     // =>
     // for (r) { merge([b0, b1, ...]) } combine { merge(c0, c1, ...) }
-    else if (cmds.forall(_.isInstanceOf[CFor])) {
+    else if cmds.forall(_.isInstanceOf[CFor]) then {
       val fors = cmds.map[CFor](_.asInstanceOf[CFor])
       val merged = fors
         .groupBy(f => f.range)
@@ -332,7 +332,7 @@ object LowerUnroll extends PartialTransformer {
     // [while (c) { b0 }, while (c) { b1 }, ...]
     // =>
     // while (c) { merge([b0, b1]) }
-    else if (cmds.forall(_.isInstanceOf[CWhile])) {
+    else if cmds.forall(_.isInstanceOf[CWhile]) then {
       val whiles = cmds.map[CWhile](_.asInstanceOf[CWhile])
       val merged = whiles
         .groupBy(w => w.cond)
@@ -347,7 +347,7 @@ object LowerUnroll extends PartialTransformer {
     // [if (c) { t0 } else { f0 }, if (c) { t1 } else { f1 }, ...]
     // =>
     // if (c) { merge([t0, t1]) } else { merge([f0, f1]) }
-    else if (cmds.forall(_.isInstanceOf[CIf])) {
+    else if cmds.forall(_.isInstanceOf[CIf]) then {
       val ifs = cmds.map[CIf](_.asInstanceOf[CIf])
       val merged = ifs
         .groupBy(i => i.cond)
@@ -366,7 +366,7 @@ object LowerUnroll extends PartialTransformer {
     // [ {a0; b0, ...}, {a1; b1, ...} ]
     // =>
     // merge([a0, a1, ...]); merge([b0, b1, ...]) ...
-    else if (cmds.forall(_.isInstanceOf[CPar])) {
+    else if cmds.forall(_.isInstanceOf[CPar]) then {
       CPar(
         cmds.collect({ case CPar(cs) => cs }).transpose.map(mergePar(_))
       )
@@ -374,13 +374,13 @@ object LowerUnroll extends PartialTransformer {
     // [ { b0 }, { b1 } ...]
     // =>
     // { merge([b0, b1 ...]) }
-    else if (cmds.forall(_.isInstanceOf[CBlock])) {
+    else if cmds.forall(_.isInstanceOf[CBlock]) then {
       CBlock(mergePar(cmds.collect({ case CBlock(cmd) => cmd })))
     }
     // [ r0 += l1, r0 += l2, r1 += l3, r1 += l4 ... ]
     // =>
     // [ r1 += l1 + l2 + ...; r1 += l3 + l4 ]
-    else if (cmds.forall(_.isInstanceOf[CReduce])) {
+    else if cmds.forall(_.isInstanceOf[CReduce]) then {
       val creds = cmds.collect[CReduce]({ case c: CReduce => c })
       val merged = creds
         .groupBy(c => c.lhs)
@@ -429,7 +429,7 @@ object LowerUnroll extends PartialTransformer {
     // If we got exactly one value in TVal, that means that the returned
     // expression corresponds exactly to the input bank. In this case,
     // don't generate a condition.
-    if (allExprs.size == 1) {
+    if allExprs.size == 1 then {
       val elems = allExprs.toArray
       val elem = elems(0)._2
       val (nE, nEnv) = rewriteE(elem)(env)
@@ -460,7 +460,7 @@ object LowerUnroll extends PartialTransformer {
     // Transform reads from memories
     case (c @ CLet(bind, typ, Some(EArrAccess(arrId, idxs))), env) => {
       val transformer = env.viewGet(arrId)
-      if (transformer.isDefined && !transformer.get.isDecl) {
+      if transformer.isDefined && !transformer.get.isDecl then {
         val t = transformer.get
         val allExprs =
           t(idxs.zip(getBanks(arrId, idxs)(env)))
@@ -505,7 +505,7 @@ object LowerUnroll extends PartialTransformer {
     }
     // Handle case for initialized, unbanked memories.
     case (c @ CLet(_, Some(ta: TArray), _), env) => {
-      if (ta.dims.exists({ case (_, bank) => bank > 1 })) {
+      if ta.dims.exists({ case (_, bank) => bank > 1 }) then {
         throw NotImplemented("Banked local arrays with initial values")
       }
       c -> env
@@ -516,7 +516,7 @@ object LowerUnroll extends PartialTransformer {
       // Don't rewrite this name if there is already a binding in
       // rewrite map.
       val rewriteVal = env.rewriteGet(id)
-      val (cmd, nEnv) = if (rewriteVal.isDefined) {
+      val (cmd, nEnv) = if rewriteVal.isDefined then {
         c.copy(e = nInit).withPos(c) -> env
       } else {
         val suf = env.idxMap.toList.sortBy(_._1.v).map(_._2).mkString("_")
@@ -543,7 +543,7 @@ object LowerUnroll extends PartialTransformer {
       (CEmpty, nEnv)
     }
     case (c @ CFor(range, _, par, combine), env) => {
-      if (range.u == 1) {
+      if range.u == 1 then {
         val ((nPar, nComb), _) = env.withScopeAndRet(env => {
           val (p, e1) = rewriteC(par)(env)
           val (c, _) = rewriteC(combine)(e1)
@@ -573,7 +573,7 @@ object LowerUnroll extends PartialTransformer {
       l match {
         case EArrAccess(id, idxs) => {
           val transformer = env.viewGet(id)
-          if (transformer.isDefined && !transformer.get.isDecl) {
+          if transformer.isDefined && !transformer.get.isDecl then {
             val t = transformer.get
             val allExprs =
               t(idxs.zip(getBanks(id, idxs)(env)))
@@ -599,7 +599,7 @@ object LowerUnroll extends PartialTransformer {
           val nIdxs = idxs.map(rewriteE(_)(env)._1)
           val nCmd = c.copy(lhs = e.copy(idxs = nIdxs))
           val transformer = env.viewGet(id)
-          if (transformer.isDefined && !transformer.get.isDecl) {
+          if transformer.isDefined && !transformer.get.isDecl then {
             val t = transformer.get
             val allExprs =
               t(idxs.zip(getBanks(id, idxs)(env)))
@@ -646,14 +646,14 @@ object LowerUnroll extends PartialTransformer {
     case (e @ EVar(id), env) => {
       val varRewrite = env.rewriteGet(id)
       val arrRewrite = env.viewGet(id)
-      if (varRewrite.isDefined) {
+      if varRewrite.isDefined then {
         EVar(varRewrite.get) -> env
-      } else if (arrRewrite.isDefined && !arrRewrite.get.isDecl) {
+      } else if arrRewrite.isDefined && !arrRewrite.get.isDecl then {
         val TArray(_, dims, _) = env.dimsGet(id)
         // Construct a fake access expression
         val t = arrRewrite.get
         val map = t(dims.map(_ => EInt(0) -> None))
-        if (map.size != 1) {
+        if map.size != 1 then {
           throw Impossible(s"Memory parameter is banked: $id.", e.pos)
         }
         val List((_, acc)) = map.toList

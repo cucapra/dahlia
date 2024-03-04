@@ -45,7 +45,7 @@ object HoistMemoryReads extends PartialTransformer {
       env: Env,
       acc: Command = CEmpty
   ): Command = {
-    if (env.map.values.isEmpty && acc == CEmpty) {
+    if env.map.values.isEmpty && acc == CEmpty then {
       cmd
     } else {
       CPar.smart(env.map.values.toSeq :+ acc :+ cmd)

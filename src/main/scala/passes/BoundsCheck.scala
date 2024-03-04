@@ -16,7 +16,7 @@ object BoundsChecker {
 
   def check(p: Prog) = BCheck.check(p)
 
-  private final case object BCheck extends PartialChecker {
+  private case object BCheck extends PartialChecker {
 
     type Env = UnitEnv
 
@@ -27,8 +27,8 @@ object BoundsChecker {
       * out of bound access when accessed.
       */
     private def checkView(arrLen: Int, viewId: Id, view: View) = {
-      if (view.prefix.isDefined) {
-        val View(suf, Some(pre), _) = view
+      if view.prefix.isDefined then {
+        val View(suf, Some(pre), _) = view : @unchecked
 
         val (sufExpr, fac) = suf match {
           case Aligned(fac, e) => (e, fac)
@@ -51,7 +51,7 @@ object BoundsChecker {
                 1
             }
 
-        if (maxVal + pre > arrLen) {
+        if maxVal + pre > arrLen then {
           throw IndexOutOfBounds(viewId, arrLen, maxVal + pre, viewId.pos)
         }
       }
@@ -70,7 +70,7 @@ object BoundsChecker {
                   case ((idx, t), (size, _)) =>
                     t.foreach({
                       case idxt @ TSizedInt(n, _) =>
-                        if ((math.pow(2, n) - 1) >= size) {
+                        if (math.pow(2, n) - 1) >= size then {
                           scribe.warn(
                             (
                               s"$idxt is used for an array access. " +
@@ -80,10 +80,10 @@ object BoundsChecker {
                           )
                         }
                       case TStaticInt(v) =>
-                        if (v >= size)
+                        if v >= size then
                           throw IndexOutOfBounds(id, size, v, idx.pos)
                       case t @ TIndex(_, _) =>
-                        if (t.maxVal >= size)
+                        if t.maxVal >= size then
                           throw IndexOutOfBounds(id, size, t.maxVal, idx.pos)
                       case t =>
                         throw UnexpectedType(id.pos, "array access", s"[$t]", t)

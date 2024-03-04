@@ -19,18 +19,18 @@ object GenerateExec {
 
 
   // Not the compiler directory, check if the fallback directory has been setup.
-  if (Files.exists(headerLocation) == false) {
+  if Files.exists(headerLocation) == false then {
     // Fallback for headers not setup. Unpack headers from JAR file.
     headerLocation = headerFallbackLocation
 
-    if (Files.exists(headerFallbackLocation) == false) {
+    if Files.exists(headerFallbackLocation) == false then {
       scribe.warn(
         s"Missing headers required for `fuse run`." +
           s" Unpacking from JAR file into $headerFallbackLocation."
       )
 
       val dir = Files.createDirectory(headerFallbackLocation)
-      for (header <- headers) {
+      for header <- headers do {
         val stream = getClass.getResourceAsStream(s"/headers/$header")
         val hdrSource = Source.fromInputStream(stream).toArray.map(_.toByte)
         Files.write(
@@ -57,8 +57,8 @@ object GenerateExec {
   ): Either[String, Int] = {
 
     // Make sure all headers are downloaded.
-    for (header <- headers) {
-      if (Files.exists(headerLocation.resolve(header)) == false) {
+    for header <- headers do {
+      if Files.exists(headerLocation.resolve(header)) == false then {
         throw HeaderMissing(header, headerLocation.toString)
       }
     }
@@ -75,7 +75,7 @@ object GenerateExec {
     scribe.info(cmd.mkString(" "))
     val status = cmd ! logger
 
-    if (status != 0) {
+    if status != 0 then {
       Left(s"Failed to generate the executable $out.\n${stderr}")
     } else {
       Right(status)

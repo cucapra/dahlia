@@ -1,8 +1,9 @@
 package fuselang
 
 import TestUtils._
+import org.scalatest.funsuite.AnyFunSuite
 
-class ParsingTests extends org.scalatest.FunSuite {
+class ParsingTests extends AnyFunSuite {
   test("numbers") {
     parseAst("1;")
     parseAst("1.25;")

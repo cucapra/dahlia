@@ -118,7 +118,7 @@ object AffineEnv {
 
     override def toString = {
       val lst =
-        for { (ps, gs) <- phyRes.iterator.zip(gadgetMap.iterator) } yield (
+        for  (ps, gs) <- phyRes.iterator.zip(gadgetMap.iterator)  yield (
           ps.map({ case (k, v) => s"$k -> $v" }).mkString(", "),
           gs.keys.mkString("{", ", ", "}")
         )
@@ -161,7 +161,7 @@ object AffineEnv {
         val (oldGads, nextGads) = (this.gadgetMap.keys, next.gadgetMap.keys)
 
         // The next environment should bind all resources in this env.
-        if (oldRes.subsetOf(nextRes) == false) {
+        if oldRes.subsetOf(nextRes) == false then {
           throw Impossible(
             "New environment is missing resources bound in old env." +
               s"\n\nOld Env: ${oldRes}" +
@@ -169,7 +169,7 @@ object AffineEnv {
               s"\n\nMissing: ${oldRes diff nextRes}"
           )
         }
-        if (oldRes.subsetOf(nextRes) == false) {
+        if oldRes.subsetOf(nextRes) == false then {
           throw Impossible(
             "New environment is missing gadgets bound in old env." +
               s"\n\nOld Env: ${oldGads}" +
@@ -195,10 +195,10 @@ object AffineEnv {
       Env(phyRes.addScope, gadgetMap.addScope)(res * resources)
     }
     def endScope(resources: Int) = {
-      val scopes = for {
+      val scopes = for
         (pDefs, pMap) <- phyRes.endScope
         (gDefs, gMap) <- gadgetMap.endScope
-      } yield (Env(pMap, gMap)(res / resources), pDefs, gDefs)
+      yield (Env(pMap, gMap)(res / resources), pDefs, gDefs)
 
       scopes.getOrThrow(Impossible("Removed topmost scope"))
     }

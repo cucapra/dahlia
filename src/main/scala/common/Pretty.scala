@@ -52,7 +52,7 @@ object Pretty {
 
   implicit def emitId(id: Id)(implicit debug: Boolean): Doc = {
     val idv = value(id.v)
-    if (debug)
+    if debug then
       id.typ.map(t => idv <> text("@") <> emitTyp(t)).getOrElse(idv)
     else idv
   }
@@ -70,12 +70,12 @@ object Pretty {
     case EApp(fn, args) => fn <> parens(commaSep(args.map(emitExpr)))
     case EInt(v, base) => value(emitBaseInt(v, base))
     case ERational(d) => value(d)
-    case EBool(b) => value(if (b) "true" else "false")
+    case EBool(b) => value(if b then "true" else "false")
     case EVar(id) => emitId(id)
     case EBinop(op, e1, e2) => parens(e1 <+> text(op.toString) <+> e2)
     case acc @ EArrAccess(id, idxs) => {
       val doc = id <> ssep(idxs.map(idx => brackets(emitExpr(idx))), emptyDoc)
-      if (debug)
+      if debug then
         acc.consumable
           .map(ann => brackets(doc <> colon <+> emitConsume(ann)))
           .getOrElse(doc)
@@ -91,7 +91,7 @@ object Pretty {
           emptyDoc
         )
 
-      if (debug)
+      if debug then
         brackets(
           doc <> colon <+> acc.consumable.map(emitConsume).getOrElse(emptyDoc)
         )
@@ -114,12 +114,12 @@ object Pretty {
       t.map(x => text(":") <+> text(x.toString)).getOrElse(emptyDoc)
     parens(
       text("let") <+> id <> typAnnot <+> equal <+>
-        (if (rev) text("rev") <+> emptyDoc else emptyDoc) <>
+        (if rev then text("rev") <+> emptyDoc else emptyDoc) <>
         value(s) <+> text("..") <+> value(
         e
       )
     ) <>
-      (if (u > 1) space <> text("unroll") <+> value(u) else emptyDoc)
+      (if u > 1 then space <> text("unroll") <+> value(u) else emptyDoc)
   }
 
   def emitView(view: View)(implicit debug: Boolean): Doc = {
@@ -145,7 +145,7 @@ object Pretty {
       implicit debug: Boolean
   ): Doc = {
     val attr =
-      if (c.attributes.isEmpty) emptyDoc
+      if c.attributes.isEmpty then emptyDoc
       else
         text("/*") <+>
           emitAttributes(c.attributes) <+> text("*/") <> space
@@ -173,15 +173,15 @@ object Pretty {
     }
     case CFor(r, pipe, par, com) =>
       text("for") <+> emitRange(r) <>
-        (if (pipe) space <> text("pipeline") else emptyDoc) <+>
+        (if pipe then space <> text("pipeline") else emptyDoc) <+>
         scope(emitCmd(par)) <>
-        (if (com != CEmpty)
+        (if com != CEmpty then
            space <> text("combine") <+> scope(emitCmd(com))
          else
            emptyDoc)
     case CWhile(cond, pipe, body) =>
       text("while") <+> parens(cond) <>
-        (if (pipe) space <> text("pipeline") else emptyDoc) <+> scope(
+        (if pipe then space <> text("pipeline") else emptyDoc) <+> scope(
         emitCmd(body)
       )
     case CDecorate(dec) => text("decor") <+> quote(value(dec))

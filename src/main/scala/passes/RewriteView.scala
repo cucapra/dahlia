@@ -26,7 +26,7 @@ object RewriteView extends TypedPartialTransformer {
       extends ScopeManager[ViewEnv]
       with Tracker[Id, Seq[Expr] => Expr, ViewEnv] {
     def merge(that: ViewEnv) = {
-      if (this.map.keys != that.map.keys)
+      if this.map.keys != that.map.keys then
         throw Impossible("Tried to merge ViewEnvs with different keys.")
       this
     }
@@ -62,7 +62,7 @@ object RewriteView extends TypedPartialTransformer {
       // Rewrite the indexing expressions
       val (nIdxs, nEnv) = super.rewriteESeq(idxs)(env)
       val rewrite = nEnv.get(arrId)
-      if (rewrite.isDefined) {
+      if rewrite.isDefined then {
         rewriteE((rewrite.get)(nIdxs.toSeq))(nEnv)
       } else {
         acc.copy(idxs = nIdxs.toSeq) -> nEnv
@@ -76,7 +76,7 @@ object RewriteView extends TypedPartialTransformer {
           (bank, nIdx) -> env1
       }: ((Int, Expr), Env) => ((Int, Expr), Env))(bankIdxs)(env)
 
-      if (nEnv.get(arrId).isDefined) {
+      if nEnv.get(arrId).isDefined then {
         throw NotImplemented("Rewriting physical accesses on views.")
       }
       acc.copy(bankIdxs = nBankIdxs.toSeq) -> nEnv

@@ -21,8 +21,8 @@ object CapabilityEnv {
   ) extends CapabilityEnv {
 
     def get(e: Expr) =
-      if (readSet.contains(e)) Some(Read)
-      else if (writeSet.contains(e)) Some(Write)
+      if readSet.contains(e) then Some(Read)
+      else if writeSet.contains(e) then Some(Write)
       else None
 
     def add(e: Expr, cap: Capability) = cap match {
@@ -31,10 +31,10 @@ object CapabilityEnv {
     }
 
     def endScope = {
-      val scopes = for {
+      val scopes = for
         (_, rSet) <- readSet.endScope;
         (_, wSet) <- writeSet.endScope
-      } yield this.copy(readSet = rSet, writeSet = wSet)
+      yield this.copy(readSet = rSet, writeSet = wSet)
 
       scopes.getOrThrow(Impossible("Removed topmost scope"))
     }

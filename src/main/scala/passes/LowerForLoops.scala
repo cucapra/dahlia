@@ -30,10 +30,10 @@ object LowerForLoops extends PartialTransformer {
 
   def myRewriteC: PF[(Command, Env), (Command, Env)] = {
     case (cfor @ CFor(range, pipeline, par, combine), env) => {
-      if (pipeline) throw NotImplemented("Lowering pipelined for loops.")
+      if pipeline then throw NotImplemented("Lowering pipelined for loops.")
 
       val CRange(it, typ, rev, s, e, u) = range
-      if (u != 1) throw NotImplemented("Lowering unrolled for loops.")
+      if u != 1 then throw NotImplemented("Lowering unrolled for loops.")
 
       // Generate a let bound variable sequenced with a while loop that
       // updates the iterator value.
@@ -41,7 +41,7 @@ object LowerForLoops extends PartialTransformer {
       itVar.typ = typ
 
       // Refuse lowering without explicit type on iterator.
-      if (typ.isDefined == false) {
+      if typ.isDefined == false then {
         throw NotImplemented(
           "Cannot lower `for` loop without iterator type. Add explicit type for the iterator",
           it.pos
@@ -50,8 +50,8 @@ object LowerForLoops extends PartialTransformer {
 
       val t = typ.get
       val init =
-        CLet(it, typ, Some(ECast(if (rev) EInt(e - 1) else EInt(s), t))).withPos(range)
-      val op = if (rev) {
+        CLet(it, typ, Some(ECast(if rev then EInt(e - 1) else EInt(s), t))).withPos(range)
+      val op = if rev then {
         NumOp("-", OpConstructor.sub)
       } else {
         NumOp("+", OpConstructor.add)
@@ -59,7 +59,7 @@ object LowerForLoops extends PartialTransformer {
       val upd =
         CUpdate(itVar.copy(), EBinop(op, itVar.copy(), ECast(EInt(1), t))).withPos(range)
       val cond =
-        if (rev) {
+        if rev then {
           EBinop(CmpOp(">="), itVar.copy(), ECast(EInt(s), t))
         } else {
           EBinop(CmpOp("<="), itVar.copy(), ECast(EInt(e - 1), t))
