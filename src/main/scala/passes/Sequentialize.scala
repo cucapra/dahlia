@@ -47,11 +47,11 @@ object Sequentialize extends PartialTransformer {
   override def rewriteLVal(e: Expr)(implicit env: SeqEnv): (Expr, SeqEnv) =
     e match {
       case EVar(id) => {
-        val env1 = if (env.useLHS) env.addUse(id) else env
+        val env1 = if env.useLHS then env.addUse(id) else env
         e -> env1.addDefine(id)
       }
       case e @ EArrAccess(id, idxs) => {
-        val env1 = if (env.useLHS) env.addUse(id) else env
+        val env1 = if env.useLHS then env.addUse(id) else env
         val (nIdxs, e1) = rewriteESeq(idxs)(env1)
         e.copy(idxs = nIdxs.toSeq) -> e1.addDefine(id)
       }
@@ -83,7 +83,7 @@ object Sequentialize extends PartialTransformer {
       var curUses: SetM[Id] = SetM()
       val newSeq: Buffer[Buffer[Command]] = Buffer(Buffer())
 
-      for (cmd <- cmds) {
+      for cmd <- cmds do {
         val (nCmd, e1) = rewriteC(cmd)(emptyEnv)
         /* System.err.println(Pretty.emitCmd(cmd)(false).pretty)
         System.err.println(s"""
@@ -98,8 +98,8 @@ object Sequentialize extends PartialTransformer {
         """) */
         // If there are no conflicts, add this to the current parallel
         // block.
-        if (curDefines.intersect(e1.uses).isEmpty &&
-            curUses.intersect(e1.defines).isEmpty) {
+        if curDefines.intersect(e1.uses).isEmpty &&
+            curUses.intersect(e1.defines).isEmpty then {
           newSeq.last += nCmd
         } else {
           curUses = SetM()

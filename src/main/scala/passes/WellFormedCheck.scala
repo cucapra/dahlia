@@ -34,7 +34,7 @@ object WellFormedChecker {
     def canHaveFunctionInUnroll(k: Id): Boolean = {
       this.get(k) match {
         case Some(FuncDef(_, args, _, _)) =>
-          if (this.insideUnroll) {
+          if this.insideUnroll then {
             args.foldLeft(true)({
               (r, arg) => arg.typ match {
                 case TArray(_, _, _) => false
@@ -48,7 +48,7 @@ object WellFormedChecker {
     }
   }
 
-  private final case object WFCheck extends PartialChecker {
+  private case object WFCheck extends PartialChecker {
 
     type Env = WFEnv
     val emptyEnv = WFEnv()

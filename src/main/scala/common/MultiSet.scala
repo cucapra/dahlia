@@ -9,7 +9,7 @@ object MultiSet {
   def fromSeq[K](seq: Seq[K]): MultiSet[K] =
     MultiSet(seq.foldLeft(Map[K, Int]())({
       case (ms, v) =>
-        if (ms.contains(v)) ms + (v -> (ms(v) + 1))
+        if ms.contains(v) then ms + (v -> (ms(v) + 1))
         else ms + (v -> 1)
     }))
 
@@ -33,7 +33,7 @@ object MultiSet {
     def zipWith(that: MultiSet[K], op: (Int, Int) => Int): MultiSet[K] = {
       val thatMap = that.setMap
       val (thisKeys, thatKeys) = (setMap.keys.toSet, thatMap.keys.toSet)
-      if (thisKeys != thatKeys) {
+      if thisKeys != thatKeys then {
         throw new NoSuchElementException(
           s"Element ${thisKeys.diff(thatKeys).head} not in both multisets.\nThis: ${setMap}\nThat: ${thatMap}."
         )
@@ -45,7 +45,7 @@ object MultiSet {
     def diff(that: MultiSet[K]) =
       MultiSet(setMap.map({
         case (k, v) => {
-          k -> (if (that.setMap.contains(k)) (v - that.setMap(k)) else v)
+          k -> (if that.setMap.contains(k) then (v - that.setMap(k)) else v)
         }
       }))
 

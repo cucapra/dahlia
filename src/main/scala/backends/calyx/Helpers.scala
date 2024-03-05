@@ -15,8 +15,8 @@ object Helpers {
     * two's complement representation.
     */
   def negateTwosComplement(bitString: String): String = {
-    if (bitString.forall(_ == '0')) {
-      bitString
+    if bitString.forall(_ == '0') then {
+      return bitString
     }
     val t = bitString
       .replaceAll("0", "_")

@@ -3,9 +3,9 @@ package fuselang
 import fuselang.common._
 import TestUtils._
 import Errors._
-import org.scalatest.FunSpec
+import org.scalatest.funspec.AnyFunSpec
 
-class TypeCheckerSpec extends FunSpec {
+class TypeCheckerSpec extends AnyFunSpec {
   // Suppress logging.
   common.Logger.setLogLevel(scribe.Level.Error)
 

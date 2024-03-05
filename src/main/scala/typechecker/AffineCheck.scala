@@ -76,7 +76,7 @@ object AffineChecker {
 
   def check(p: Prog) = AffineChecker.check(p)
 
-  private final case object AffineChecker extends PartialChecker {
+  private case object AffineChecker extends PartialChecker {
 
     type Env = AffineEnv.Environment
 
@@ -138,7 +138,7 @@ object AffineChecker {
           idx.typ.get match {
             // Index is an index type.
             case TIndex((s, e), _) =>
-              if ((e - s) % dims(dim)._2 != 0)
+              if (e - s) % dims(dim)._2 != 0 then
                 throw BankUnrollInvalid(arrId, dims(dim)._2, e - s)(idx.pos)
               else
                 (bres * (e - s), Range(s, e) +: consume)
@@ -147,7 +147,7 @@ object AffineChecker {
               (bres * 1, Seq((v % dims(dim)._2).toInt) +: consume)
             // Index is a dynamic number.
             case _: TSizedInt =>
-              if (dims(dim)._2 != 1)
+              if dims(dim)._2 != 1 then
                 throw InvalidDynamicIndex(arrId, dims(dim)._2)
               else (bres * 1, Seq(0) +: consume)
 
@@ -182,12 +182,12 @@ object AffineChecker {
     override def checkLVal(e: Expr)(implicit env: Env) = e match {
       case acc @ EArrAccess(id, idxs) => {
         // This only triggers for l-values.
-        val TArray(_, dims, _) = id.typ.get
+        val TArray(_, dims, _) = id.typ.get : @unchecked
         acc.consumable match {
           case Some(Annotations.ShouldConsume) => {
             val (bres, consumeList) = getConsumeList(idxs, dims)(id)
             // Check if the accessors generated enough copies for the context.
-            if (bres != env.getResources)
+            if bres != env.getResources then
               throw InsufficientResourcesInUnrollContext(
                 env.getResources,
                 bres,
@@ -245,14 +245,14 @@ object AffineChecker {
       case (CView(id, arrId, _), env) => {
         // Add gadget for the view and add missing well formedness checks
         // from new type checker
-        val TArray(_, adims, _) = arrId.typ.get
-        val TArray(_, vdims, _) = id.typ.get
+        val TArray(_, adims, _) = arrId.typ.get : @unchecked
+        val TArray(_, vdims, _) = id.typ.get : @unchecked
         val shrinks = vdims.map(_._2)
         env.add(id, viewGadget(env(arrId), shrinks, adims))
       }
       case (CSplit(id, arrId, _), env) => {
-        val TArray(_, adims, _) = arrId.typ.get
-        val TArray(_, vdims, _) = id.typ.get
+        val TArray(_, adims, _) = arrId.typ.get : @unchecked
+        val TArray(_, vdims, _) = id.typ.get : @unchecked
         env.add(id, splitGadget(env(arrId), adims, vdims))
       }
     }
@@ -277,7 +277,7 @@ object AffineChecker {
         })
       }
       case (expr @ EArrAccess(id, idxs), env) => {
-        val TArray(_, dims, _) = id.typ.get
+        val TArray(_, dims, _) = id.typ.get : @unchecked
         expr.consumable match {
           case None =>
             throw Impossible(

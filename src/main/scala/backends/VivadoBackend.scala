@@ -21,13 +21,13 @@ private class VivadoBackend(config: Config) extends CppLike {
   def interfaceValid(decls: Seq[Decl]) =
     decls.collect({
       case Decl(id, typ: TArray) => {
-        if (typ.ports > 1)
+        if typ.ports > 1 then
           throw BackendError(
             s"Multiported array argument `${id}' is disallowed. SDAccel inconsistently fails with RESOURCE pragma on argument arrays."
           )
         typ.dims.foreach({
           case (_, bank) =>
-            if (bank > 1)
+            if bank > 1 then
               throw BackendError(
                 s"Partitioned array argument `${id}' is disallowed. SDAccel generates incorrect hardware for partitioned argument arrays."
               )
@@ -71,7 +71,7 @@ private class VivadoBackend(config: Config) extends CppLike {
   }
 
   def emitPipeline(enabled: Boolean): Doc =
-    if (enabled) value(s"#pragma HLS PIPELINE") <> line else emptyDoc
+    if enabled then value(s"#pragma HLS PIPELINE") <> line else emptyDoc
 
   def emitFor(cmd: CFor): Doc =
     text("for") <> emitRange(cmd.range) <+> scope {
@@ -79,7 +79,7 @@ private class VivadoBackend(config: Config) extends CppLike {
         unroll(cmd.range.u) <@>
         text("#pragma HLS LOOP_FLATTEN off") <@>
         cmd.par <>
-        (if (cmd.combine != CEmpty) line <> text("// combiner:") <@> cmd.combine
+        (if cmd.combine != CEmpty then line <> text("// combiner:") <@> cmd.combine
          else emptyDoc)
     }
 
@@ -123,7 +123,7 @@ private class VivadoBackend(config: Config) extends CppLike {
     // Error if function arguments are partitioned/ported.
     interfaceValid(func.args)
 
-    if (entry) {
+    if entry then {
       val argPragmas = func.args.map(arg =>
         config.memoryInterface match {
           case Axi => axiHeader(arg)
@@ -151,9 +151,9 @@ private class VivadoBackend(config: Config) extends CppLike {
     case _: TFloat => text("float")
     case _: TDouble => text("double")
     case _: TRational => throw Impossible("Rational type should not exist")
-    case TSizedInt(s, un) => text(if (un) s"ap_uint<$s>" else s"ap_int<$s>")
+    case TSizedInt(s, un) => text(if un then s"ap_uint<$s>" else s"ap_int<$s>")
     case TFixed(t, i, un) =>
-      text(if (un) s"ap_ufixed<$t,$i>" else s"ap_fixed<$t,$i>")
+      text(if un then s"ap_ufixed<$t,$i>" else s"ap_fixed<$t,$i>")
     case TArray(typ, _, _) => emitType(typ)
     case TRecType(n, _) => text(n.toString)
     case _: TFun => throw Impossible("Cannot emit function types")

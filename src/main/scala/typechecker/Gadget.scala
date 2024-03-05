@@ -30,13 +30,13 @@ object Gadgets {
 
   case class ResourceGadget(resource: Id, banks: Seq[Int]) extends Gadget {
     private def cross[A](acc: Seq[Seq[A]], l: Seq[A]): Seq[Seq[A]] = {
-      for { a <- acc; el <- l } yield a :+ el
+      for  a <- acc; el <- l  yield a :+ el
     }
 
     override def toString = resource.toString
 
     private def hyperBankToBank(hyperBanks: Seq[Int]) = {
-      if (hyperBanks.length != banks.length)
+      if hyperBanks.length != banks.length then
         throw Impossible("hyperbank size is different from original banking")
 
       hyperBanks

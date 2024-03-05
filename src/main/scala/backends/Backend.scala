@@ -9,7 +9,7 @@ import CompilerError.BackendError
 trait Backend {
 
   def emit(p: Syntax.Prog, c: Configuration.Config): String = {
-    if (c.header && (canGenerateHeader == false)) {
+    if c.header && (canGenerateHeader == false) then {
       throw BackendError(s"Backend $this does not support header generation.")
     }
     emitProg(p, c)

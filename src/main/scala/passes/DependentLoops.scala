@@ -25,7 +25,7 @@ object DependentLoops {
     }
   }
 
-  private final case object UseCheck extends PartialChecker {
+  private case object UseCheck extends PartialChecker {
 
     type Env = UseEnv
     val emptyEnv = UseEnv(Set())
@@ -69,7 +69,7 @@ object DependentLoops {
     }
   }
 
-  private final case object DepCheck extends PartialChecker {
+  private case object DepCheck extends PartialChecker {
 
     type Env = DepEnv
     val emptyEnv = DepEnv(Set(), Set())
@@ -79,7 +79,7 @@ object DependentLoops {
         idxs.foreach(e => {
           val used = UseCheck.checkE(e)(UseCheck.emptyEnv)
           val intersect = env.depVars.intersect(used.used)
-          if (intersect.size != 0) {
+          if intersect.size != 0 then {
             val sourceId = intersect.toList(0)
             throw LoopDynamicAccess(e, sourceId)
           }
@@ -90,7 +90,7 @@ object DependentLoops {
 
     def myCheckC: PF[(Command, Env), Env] = {
       case (CFor(range, _, par, _), env) => {
-        if (range.u > 1) {
+        if range.u > 1 then {
           env.forgetScope(e1 => checkC(par)(e1.addLoopVar(range.iter)))
         } else {
           env.forgetScope(e1 => checkC(par)(e1))
@@ -98,7 +98,7 @@ object DependentLoops {
       }
       case (CLet(id, _, Some(exp)), env) => {
         val used = UseCheck.checkE(exp)(UseCheck.emptyEnv)
-        if (env.intersect(used.used).size != 0) {
+        if env.intersect(used.used).size != 0 then {
           env.addDep(id)
         } else {
           env
@@ -106,7 +106,7 @@ object DependentLoops {
       }
       case (CUpdate(EVar(id), rhs), env) => {
         val used = UseCheck.checkE(rhs)(UseCheck.emptyEnv)
-        if (env.intersect(used.used).size != 0) {
+        if env.intersect(used.used).size != 0 then {
           env.addDep(id)
         } else {
           env.removeDep(id)

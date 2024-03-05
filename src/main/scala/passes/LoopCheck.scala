@@ -72,7 +72,7 @@ object LoopChecker {
         idxs: Option[EArrAccess] = None
     ): LEnv = {
       val (env, check) = checkExprMap(idxs)
-      if (check) {
+      if check then {
         val e2 = state match {
           case DontKnow => env.atDk(env.getName(id))
           case Def => env.atDef(env.getName(id))
@@ -84,7 +84,7 @@ object LoopChecker {
     }
     // Helper functions for ScopeManager
     def withScope(resources: Int)(inScope: LEnv => LEnv): LEnv = {
-      if (resources == 1) {
+      if resources == 1 then {
         inScope(this.addNameScope) match {
           case env: LEnv => env.endNameScope
         }
@@ -114,7 +114,7 @@ object LoopChecker {
       val (innermap, outermap) = stateMap.endScope.get
       var outerenv = LEnv(outermap, nmap, emap)(res / resources)
       val keys = innermap.keys
-      for (k <- keys) {
+      for k <- keys do {
         outerenv = outerenv.updateState(k, innermap(k)) //inner map is a scala map
       }
       outerenv
@@ -141,7 +141,7 @@ object LoopChecker {
         env.copy(stateMap = env.stateMap.addShadow(k, DontKnow))
       case (Some(Def), Some(Use)) => throw LoopDepMerge(k)
       case (Some(DontKnow), Some(Use)) => throw LoopDepMerge(k)
-      case (v1, v2) => if (v1 == v2) env else mergeHelper(k, v2, v1, env)
+      case (v1, v2) => if v1 == v2 then env else mergeHelper(k, v2, v1, env)
     }
 
     // If statement
@@ -155,7 +155,7 @@ object LoopChecker {
     }
   }
 
-  private final case object LCheck extends PartialChecker {
+  private case object LCheck extends PartialChecker {
 
     type Env = LEnv
 

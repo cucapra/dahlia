@@ -11,7 +11,7 @@ import Configuration.stringToBackend
 import Utils.RichOption
 import CompilerError.BackendError
 
-case class Parser(input: String) {
+case class Parser(input: String):
 
   // Common surround expressions
   def braces[K: P, T](p: => P[T]): P[T] = P("{" ~/ p ~ "}")
@@ -19,19 +19,18 @@ case class Parser(input: String) {
   def angular[K: P, T](p: => P[T]): P[T] = P("<" ~/ p ~ ">")
   def parens[K: P, T](p: => P[T]): P[T] = P("(" ~/ p ~ ")")
 
-  def positioned[K: P, T <: PositionalWithSpan](p: => P[T]): P[T] = {
+  def positioned[K: P, T <: PositionalWithSpan](p: => P[T]): P[T] =
     P(Index ~ p ~ Index).map({
       case (index, t, end) => {
         val startPos = OffsetPosition(input, index)
         val out = t.setPos(startPos)
         val endPos = OffsetPosition(input, end)
-        if (startPos.line == endPos.line) {
+        if startPos.line == endPos.line then {
           out.setSpan(end - index)
         }
         out
       }
     })
-  }
 
   /*def notKws[K: P] = {
     import fastparse.NoWhitespace._
@@ -43,18 +42,16 @@ case class Parser(input: String) {
     ) ~ &(" "))).opaque("non reserved keywords")
   }*/
 
-  def kw[K: P](word: String): P[Unit] = {
+  def kw[K: P](word: String): P[Unit] =
     import fastparse.NoWhitespace._
     P(word ~ !CharsWhileIn("a-zA-Z0-9_"))
-  }
 
   // Basic atoms
-  def iden[K: P]: P[Id] = {
+  def iden[K: P]: P[Id] =
     import fastparse.NoWhitespace._
     positioned(P(CharIn("a-zA-Z_") ~ CharsWhileIn("a-zA-Z0-9_").?).!.map({
       case rest => Id(rest)
     }).opaque("Expected valid identifier"))
-  }
 
   def number[K: P]: P[Int] =
     P(CharIn("0-9").rep(1).!.map(_.toInt)).opaque("Expected positive number")
@@ -469,19 +466,12 @@ case class Parser(input: String) {
       })
     )
 
-  def parse(): Prog = {
-    fastparse.parse[Prog](input, prog(_)) match {
+  def parse(): Prog =
+    fastparse.parse[Prog](input, prog(_)) match
       case Parsed.Success(e, _) => e
-      case Parsed.Failure(_, index, extra) => {
+      case Parsed.Failure(_, index, extra) =>
         val traced = extra.trace()
         val loc = OffsetPosition(input, index)
         val msg = Errors.withPos(s"Expected ${traced.failure.label}", loc)
 
         throw Errors.ParserError(msg)
-      }
-      // XXX(rachit): Scala 2.13.4 complains that this pattern is not exhaustive.
-      // This is not true...
-      case _ => ???
-    }
-  }
-}

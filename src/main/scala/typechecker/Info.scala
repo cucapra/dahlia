@@ -44,7 +44,7 @@ object Info {
       val resourceMS = fromSeq(resources)
       val afterConsume = remBanks.diff(resourceMS)
       val hasRequired = afterConsume.forall({ case (_, v) => v >= 0 })
-      if (hasRequired == false) {
+      if hasRequired == false then {
         val bank = afterConsume.find({ case (_, v) => v < 0 }).get._1
         throw AlreadyConsumed(
           id,
@@ -68,7 +68,7 @@ object Info {
 
   object ArrayInfo {
     private def cross[A](acc: Seq[Seq[A]], l: Seq[A]): Seq[Seq[A]] =
-      for { a <- acc; el <- l } yield a :+ el
+      for  a <- acc; el <- l  yield a :+ el
 
     private def hyperBankToBank(maxBanks: Iterable[Int])(hyperBank: Seq[Int]) =
       hyperBank

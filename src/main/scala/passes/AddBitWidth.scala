@@ -26,7 +26,7 @@ object AddBitWidth extends TypedPartialTransformer {
   def myRewriteE: PF[(Expr, Env), (Expr, Env)] = {
     case (e: ECast, env) => e -> env
     case (e @ EArrAccess(arrId, idxs), env) => {
-      val Some(TArray(_, dims, _)) = arrId.typ
+      val Some(TArray(_, dims, _)) = arrId.typ : @unchecked
       val nIdxs = idxs
         .zip(dims)
         .map({
@@ -45,7 +45,7 @@ object AddBitWidth extends TypedPartialTransformer {
       e.copy(idxs = nIdxs) -> env
     }
     case (e: EInt, env) =>
-      if (env.curTyp.isDefined) {
+      if env.curTyp.isDefined then {
         (ECast(e, env.curTyp.get), env)
       } else {
         e -> env
@@ -60,7 +60,7 @@ object AddBitWidth extends TypedPartialTransformer {
       expr.copy(e1 = nl, e2 = nr) -> env
     }
     case (expr @ EBinop(_: NumOp | _: BitOp, l, r), env) => {
-      val nEnv = if (env.curTyp.isDefined) {
+      val nEnv = if env.curTyp.isDefined then {
         env
       } else {
         ABEnv(

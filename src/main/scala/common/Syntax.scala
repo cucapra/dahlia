@@ -27,8 +27,8 @@ object Syntax {
     */
   object Annotations {
     sealed trait Consumable
-    final case object ShouldConsume extends Consumable
-    final case object SkipConsume extends Consumable
+    case object ShouldConsume extends Consumable
+    case object SkipConsume extends Consumable
 
     sealed trait ConsumableAnnotation {
       var consumable: Option[Consumable] = None
@@ -55,8 +55,8 @@ object Syntax {
 
   // Capabilities for read/write
   sealed trait Capability
-  final case object Read extends Capability
-  final case object Write extends Capability
+  case object Read extends Capability
+  case object Write extends Capability
 
   sealed trait Type extends PositionalWithSpan {
     override def toString = this match {
@@ -65,12 +65,12 @@ object Syntax {
       case _: TRational => "rational"
       case _: TFloat => "float"
       case _: TDouble => "double"
-      case TFixed(t, i, un) => s"${if (un) "u" else ""}fix<$t,$i>"
-      case TSizedInt(l, un) => s"${if (un) "u" else ""}bit<$l>"
+      case TFixed(t, i, un) => s"${if un then "u" else ""}fix<$t,$i>"
+      case TSizedInt(l, un) => s"${if un then "u" else ""}bit<$l>"
       case TStaticInt(s) => s"static($s)"
       case TArray(t, dims, p) =>
-        (if (p > 1) s"$t{$p}" else s"$t") + dims.foldLeft("")({
-          case (acc, (d, b)) => s"$acc[$d${if (b > 1) s" bank $b" else ""}]"
+        (if p > 1 then s"$t{$p}" else s"$t") + dims.foldLeft("")({
+          case (acc, (d, b)) => s"$acc[$d${if b > 1 then s" bank $b" else ""}]"
         })
       case TIndex(s, d) => s"idx($s, $d)"
       case TFun(args, ret) => s"${args.mkString("->")} -> ${ret}"
@@ -106,7 +106,7 @@ object Syntax {
   case class TArray(typ: Type, dims: Seq[DimSpec], ports: Int) extends Type {
     dims.zipWithIndex.foreach({
       case ((len, bank), dim) =>
-        if (bank > len || len % bank != 0) {
+        if bank > len || len % bank != 0 then {
           throw MalformedType(
             s"Dimension $dim of TArray is malformed. Full type: $this"
           )
@@ -161,7 +161,7 @@ object Syntax {
       u: Int
   ) extends PositionalWithSpan {
     def idxType: TIndex = {
-      if (abs(e - s) % u != 0) {
+      if abs(e - s) % u != 0 then {
         throw UnrollRangeError(this.pos, e - s, u)
       } else {
         TIndex((0, u), (s / u, e / u))
@@ -209,10 +209,10 @@ object Syntax {
       extends Command
   case class CDecorate(value: String) extends Command
   case class CUpdate(lhs: Expr, rhs: Expr) extends Command {
-    if (lhs.isLVal == false) throw UnexpectedLVal(lhs, "assignment")
+    if lhs.isLVal == false then throw UnexpectedLVal(lhs, "assignment")
   }
   case class CReduce(rop: ROp, lhs: Expr, rhs: Expr) extends Command {
-    if (lhs.isLVal == false) throw UnexpectedLVal(lhs, "reduction")
+    if lhs.isLVal == false then throw UnexpectedLVal(lhs, "reduction")
   }
   case class CReturn(exp: Expr) extends Command
   case class CExpr(exp: Expr) extends Command
@@ -238,9 +238,9 @@ object Syntax {
           case _ => Seq(cmd)
         }
       )
-      if (flat.length == 0) {
+      if flat.length == 0 then {
         CEmpty
-      } else if (flat.length == 1) {
+      } else if flat.length == 1 then {
         flat(0)
       } else {
         CPar(flat)
@@ -265,9 +265,9 @@ object Syntax {
           case _ => Seq(cmd)
         }
       )
-      if (flat.length == 0) {
+      if flat.length == 0 then {
         CEmpty
-      } else if (flat.length == 1) {
+      } else if flat.length == 1 then {
         flat(0)
       } else {
         CSeq(flat)
