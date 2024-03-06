@@ -88,12 +88,12 @@ object Subtyping {
           case Some(fun) =>
             Some(TRational(fun(v1.toDouble, v2.toDouble).toString))
           case None =>
-            if (bitsNeeded(v1.toDouble.toInt) > bitsNeeded(v2.toDouble.toInt))
+            if bitsNeeded(v1.toDouble.toInt) > bitsNeeded(v2.toDouble.toInt) then
               Some(TRational(v1))
             else Some(TRational(v2))
         }
       case (TSizedInt(s1, un1), TSizedInt(s2, un2)) =>
-        if (un1 == un2) Some(TSizedInt(max(s1, s2), un1))
+        if un1 == un2 then Some(TSizedInt(max(s1, s2), un1))
         else None
       case (TSizedInt(s, un), TStaticInt(v)) =>
         Some(TSizedInt(max(s, bitsNeeded(v)), un))
@@ -113,14 +113,14 @@ object Subtyping {
           )
         )
       case (TFixed(t1, i1, un1), TFixed(t2, i2, un2)) =>
-        if (un1 == un2)
+        if un1 == un2 then
           Some(TFixed(max(t1 - i1, t2 - i2) + max(i1, i2), max(i1, i2), un1))
         else None
       case (ti1: TIndex, ti2: TIndex) =>
         Some(
           TSizedInt(max(bitsNeeded(ti1.maxVal), bitsNeeded(ti2.maxVal)), false)
         )
-      case (t1, t2) => if (t1 == t2) Some(t1) else None
+      case (t1, t2) => if t1 == t2 then Some(t1) else None
     }
 
   /**
@@ -128,7 +128,7 @@ object Subtyping {
     */
   def joinOf(t1: Type, t2: Type, op: BOp): Option[Type] = {
     val j1 = joinOfHelper(t1, t2, op)
-    if (j1.isDefined) j1
+    if j1.isDefined then j1
     else joinOfHelper(t2, t1, op)
   }
 

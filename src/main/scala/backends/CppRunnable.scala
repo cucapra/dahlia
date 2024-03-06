@@ -26,7 +26,7 @@ private class CppRunnable extends CppLike {
     case _: TBool => text("bool")
     case _: TIndex => text("int")
     case _: TStaticInt => throw Impossible("TStaticInt type should not exist")
-    case TSizedInt(_, un) => text(if (un) "unsigned int" else "int")
+    case TSizedInt(_, un) => text(if un then "unsigned int" else "int")
     case _: TFloat => text("float")
     case _: TDouble | _: TFixed => text("double")
     case _: TRational => throw Impossible("Rational type should not exist")
@@ -79,7 +79,7 @@ private class CppRunnable extends CppLike {
   def emitFor(cmd: CFor): Doc =
     text("for") <> emitRange(cmd.range) <+> scope {
       cmd.par <> {
-        if (cmd.combine != CEmpty)
+        if cmd.combine != CEmpty then
           line <> text("// combiner:") <@> cmd.combine
         else
           emptyDoc

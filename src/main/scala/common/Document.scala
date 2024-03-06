@@ -22,7 +22,7 @@ object PrettyPrint {
     */
   abstract class Doc {
     def <@>(hd: Doc): Doc = {
-      if (hd == DocNil) this
+      if hd == DocNil then this
       else this <> DocBreak <> hd
     }
     def <>(hd: Doc): Doc = (this, hd) match {
@@ -46,11 +46,11 @@ object PrettyPrint {
 
       def spaces(n: Int): Unit = {
         var rem = n
-        while (rem >= 16) { writer write "                "; rem -= 16 }
-        if (rem >= 8) { writer write "        "; rem -= 8 }
-        if (rem >= 4) { writer write "    "; rem -= 4 }
-        if (rem >= 2) { writer write "  "; rem -= 2 }
-        if (rem == 1) { writer write " " }
+        while rem >= 16 do { writer write "                "; rem -= 16 }
+        if rem >= 8 then { writer write "        "; rem -= 8 }
+        if rem >= 4 then { writer write "    "; rem -= 4 }
+        if rem >= 2 then { writer write "  "; rem -= 2 }
+        if rem == 1 then { writer write " " }
       }
 
       def fmt(state: List[FmtState]): Unit = state match {
@@ -102,7 +102,7 @@ object PrettyPrint {
     def nest(d: Doc, i: Int): Doc = DocNest(i, d)
 
     def folddoc(ds: Iterable[Doc], f: (Doc, Doc) => Doc) =
-      if (ds.isEmpty) emptyDoc
+      if ds.isEmpty then emptyDoc
       else ds.tail.foldLeft(ds.head)(f)
 
     /** Builder functions */

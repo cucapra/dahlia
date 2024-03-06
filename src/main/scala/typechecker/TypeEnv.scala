@@ -114,9 +114,9 @@ object TypeEnv {
       Env(typeMap.addScope, typeDefMap, retType)
     }
     def endScope = {
-      val scopes = for {
+      val scopes = for
         (_, tMap) <- typeMap.endScope
-      } yield Env(tMap, typeDefMap, retType)
+      yield Env(tMap, typeDefMap, retType)
 
       scopes.getOrThrow(Impossible("Removed topmost scope"))
     }

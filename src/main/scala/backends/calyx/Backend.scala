@@ -190,7 +190,7 @@ private class CalyxBackendHelper {
       funcId: Id
   )(implicit id2FuncDef: FunctionMapping): List[BigInt] = {
     val id = funcId.toString()
-    if (!requiresWidthArguments.contains(id)) {
+    if !requiresWidthArguments.contains(id) then {
       List()
     } else {
       val typ = id2FuncDef(funcId).retTy;
@@ -299,7 +299,7 @@ private class CalyxBackendHelper {
           comp.name.port("out"),
           None,
           struct ++ e1Out.structure ++ e2Out.structure,
-          for (d1 <- e1Out.delay; d2 <- e2Out.delay)
+          for d1 <- e1Out.delay; d2 <- e2Out.delay
             yield d1 + d2,
           None
         )
@@ -307,7 +307,7 @@ private class CalyxBackendHelper {
       // if there is additional information about the integer bit,
       // use fixed point binary operation
       case (e1Bits, Some(intBit1)) => {
-        val (e2Bits, Some(intBit2)) = bitsForType(e2.typ, e2.pos)
+        val (e2Bits, Some(intBit2)) = bitsForType(e2.typ, e2.pos) : @unchecked
         val fracBit1 = e1Bits - intBit1
         val fracBit2 = e2Bits - intBit2
         val isSigned = signed(e1.typ)
@@ -336,7 +336,7 @@ private class CalyxBackendHelper {
           comp.name.port("out"),
           None,
           struct ++ e1Out.structure ++ e2Out.structure,
-          for (d1 <- e1Out.delay; d2 <- e2Out.delay)
+          for d1 <- e1Out.delay; d2 <- e2Out.delay
             yield d1 + d2,
           None
         )
@@ -415,7 +415,7 @@ private class CalyxBackendHelper {
       comp.name.port(outPort),
       Some(comp.name.port("done")),
       struct ++ e1Out.structure ++ e2Out.structure,
-      for (d1 <- e1Out.delay; d2 <- e2Out.delay; d3 <- delay)
+      for d1 <- e1Out.delay; d2 <- e2Out.delay; d3 <- delay
         yield d1 + d2 + d3,
       Some((comp.name.port("done"), delay))
     )
@@ -515,7 +515,7 @@ private class CalyxBackendHelper {
           }
 
         EmitOutput(
-          if (calyxVarType == LocalVar) cell.port(port)
+          if calyxVarType == LocalVar then cell.port(port)
           else ThisPort(cell),
           done,
           struct,
@@ -545,7 +545,7 @@ private class CalyxBackendHelper {
         val const =
           Cell(
             genName("bool"),
-            Stdlib.constant(1, if (v) 1 else 0),
+            Stdlib.constant(1, if v then 1 else 0),
             false,
             List()
           )
@@ -560,20 +560,20 @@ private class CalyxBackendHelper {
       // Cast ERational to Fixed Point.
       case ECast(ERational(value), typ) => {
         val _ = rhsInfo
-        val (width, Some(intWidth)) = bitsForType(Some(typ), expr.pos)
+        val (width, Some(intWidth)) = bitsForType(Some(typ), expr.pos) : @unchecked
         val fracWidth = width - intWidth
         // Interpret as an integer.
         val isNegative = value.startsWith("-")
         val partition = value.split('.')
         val sIntPart = partition(0)
-        val intPart = if (isNegative) {
+        val intPart = if isNegative then {
           sIntPart.substring(1, sIntPart.length())
         } else {
           sIntPart
         }
         val bdFracPart = BigDecimal("0." + partition(1))
         val fracValue = (bdFracPart * BigDecimal(2).pow(fracWidth))
-        if (!fracValue.isWhole) {
+        if !fracValue.isWhole then {
           throw BackendError(
             s"The value $value of type $typ is not representable in fixed point",
             expr.pos
@@ -582,7 +582,7 @@ private class CalyxBackendHelper {
 
         val intBits = binaryString(intPart.toInt, intWidth)
         val fracBits = binaryString(fracValue.toBigInt, fracWidth)
-        val bits = if (isNegative) {
+        val bits = if isNegative then {
           negateTwosComplement(intBits + fracBits)
         } else {
           intBits + fracBits
@@ -606,7 +606,7 @@ private class CalyxBackendHelper {
         val (vBits, _) = bitsForType(e.typ, e.pos)
         val (cBits, _) = bitsForType(Some(t), e.pos)
         val res = emitExpr(e)
-        if (vBits == cBits) {
+        if vBits == cBits then {
           // No slicing or padding is necessary.
           EmitOutput(
             res.port,
@@ -616,7 +616,7 @@ private class CalyxBackendHelper {
             res.multiCycleInfo
           )
         } else {
-          val comp = if (cBits > vBits) {
+          val comp = if cBits > vBits then {
             Cell(genName("pad"), Stdlib.pad(vBits, cBits), false, List())
           } else {
             Cell(genName("slice"), Stdlib.slice(vBits, cBits), false, List())
@@ -646,7 +646,7 @@ private class CalyxBackendHelper {
 
         // The value is generated on `read_data` and written on `write_data`.
         val portName =
-          if (rhsInfo.isDefined) "write_data" else "read_data"
+          if rhsInfo.isDefined then "write_data" else "read_data"
 
         // The array ports change if the array is a function parameter. We want to access the
         // component ports, e.g. `x_read_data`, rather than the memory ports, `x.read_data`.
@@ -675,7 +675,7 @@ private class CalyxBackendHelper {
           case (structs, (accessor, idx)) => {
             val result = emitExpr(accessor)
             val addrPort =
-              if (isParam) ThisPort(CompVar(s"${id}_addr${idx}"))
+              if isParam then ThisPort(CompVar(s"${id}_addr${idx}"))
               else arr.port("addr" + idx)
             val con = Assign(result.port, addrPort)
             con :: result.structure ++ structs
@@ -1036,12 +1036,12 @@ private class CalyxBackendHelper {
           case FuncDef(id, params, retTy, bodyOpt) => {
             definitions + (id -> FuncDef(id, params, retTy, bodyOpt))
           }
-          case _ => definitions
+//          case _: RecordDef => definitions
         }
       )
 
     val functionDefinitions: List[Component] =
-      for ((id, FuncDef(_, params, retType, Some(body))) <- id2FuncDef.toList)
+      for ( case (id, FuncDef(_, params, retType, Some(body))) <- id2FuncDef.toList )
         yield {
           val (refCells, inputPorts) = params.partitionMap(param =>
             param.typ match {
@@ -1073,7 +1073,7 @@ private class CalyxBackendHelper {
           Component(
             id.toString(),
             inputPorts.toList,
-            if (retType == TVoid()) List()
+            if retType == TVoid() then List()
             // If the return type of the component is not void, add an `out` wire.
             else
               List(
@@ -1090,7 +1090,7 @@ private class CalyxBackendHelper {
         Import("primitives/binary_operators.futil") ::
         p.includes.flatMap(_.backends.get(C.Calyx)).map(i => Import(i)).toList
 
-    val main = if (!c.compilerOpts.contains("no-main")) {
+    val main = if !c.compilerOpts.contains("no-main") then {
       val declStruct = p.decls.map(emitDecl)
       val store =
         declStruct.foldLeft(Map[CompVar, (CompVar, VType)]())((store, struct) =>
@@ -1103,7 +1103,7 @@ private class CalyxBackendHelper {
 
       val struct = declStruct.toList ++ cmdStruct
       val mainComponentName =
-        if (c.kernelName == "kernel") "main" else c.kernelName
+        if c.kernelName == "kernel" then "main" else c.kernelName
       List(
         Component(mainComponentName, List(), List(), struct.sorted, control)
       )

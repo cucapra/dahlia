@@ -3,9 +3,9 @@ package fuselang
 import fuselang.common._
 import TestUtils._
 import Errors._
-import org.scalatest.FunSpec
+import org.scalatest.funspec.AnyFunSpec
 
-class TypeCheckerSpec extends FunSpec {
+class TypeCheckerSpec extends AnyFunSpec {
   // Suppress logging.
   common.Logger.setLogLevel(scribe.Level.Error)
 
@@ -1009,15 +1009,26 @@ class TypeCheckerSpec extends FunSpec {
       }
     }
 
-    it("disallowed inside unrolled loops") {
+    it("should not allow functions with array arguments inside unrolled loops") {
       assertThrows[FuncInUnroll] {
         typeCheck("""
-          def bar(a: bool) = { }
+          def bar(a: bool[4]) = { }
           for (let i = 0..10) unroll 5 {
             bar(tre);
           }
           """)
       }
+    }
+
+    it("should allow functions with scalar args in unrolled loops") {
+      typeCheck(
+        """
+        def bar(a: bool) = { }
+        let tre: bool;
+        for (let i = 0..10) unroll 5 {
+          bar(tre);
+        }
+        """)
     }
 
     it("completely consume array parameters") {

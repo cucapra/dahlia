@@ -65,9 +65,9 @@ object TypeChecker {
 
   private def checkB(t1: Type, t2: Type, op: BOp) = op match {
     case _: EqOp => {
-      if (t1.isInstanceOf[TArray])
+      if t1.isInstanceOf[TArray] then
         throw UnexpectedType(op.pos, op.toString, "primitive types", t1)
-      else if (joinOf(t1, t2, op).isDefined)
+      else if joinOf(t1, t2, op).isDefined then
         TBool()
       else
         throw NoJoin(op.pos, op.toString, t1, t2)
@@ -118,7 +118,7 @@ object TypeChecker {
       e: Expr
   )(implicit env: Environment): (Type, Environment) = {
     val (typ, nEnv) = _checkE(e)
-    if (e.typ.isDefined && typ != e.typ.get) {
+    if e.typ.isDefined && typ != e.typ.get then {
       throw Impossible(
         s"$e was type checked multiple times and given different types."
       )
@@ -139,7 +139,7 @@ object TypeChecker {
     case EArrLiteral(_) => throw NotInBinder(expr.pos, "Array Literal")
     case ECast(e, castType) => {
       val (typ, nEnv) = checkE(e)
-      if (safeCast(typ, castType) == false) {
+      if safeCast(typ, castType) == false then {
         scribe.warn {
           (s"Casting $typ to $castType which may lose precision.", expr)
         }
@@ -159,7 +159,7 @@ object TypeChecker {
     case EApp(f, args) =>
       env(f) match {
         case TFun(argTypes, retType) => {
-          if (argTypes.length != args.length) {
+          if argTypes.length != args.length then {
             throw ArgLengthMismatch(expr.pos, argTypes.length, args.length)
           }
 
@@ -168,7 +168,7 @@ object TypeChecker {
             .foldLeft(env)({
               case (e, (arg, expectedTyp)) => {
                 val (typ, e1) = checkE(arg)(e);
-                if (isSubtype(typ, expectedTyp) == false) {
+                if isSubtype(typ, expectedTyp) == false then {
                   throw UnexpectedSubtype(
                     arg.pos,
                     "parameter",
@@ -195,7 +195,7 @@ object TypeChecker {
     case EArrAccess(id, idxs) =>
       env(id).matchOrError(expr.pos, "array access", s"array type") {
         case TArray(typ, dims, _) => {
-          if (dims.length != idxs.length) {
+          if dims.length != idxs.length then {
             throw IncorrectAccessDims(id, dims.length, idxs.length)
           }
           idxs.foldLeft(env)((env, idx) => {
@@ -220,7 +220,7 @@ object TypeChecker {
     case EPhysAccess(id, bankIdxs) =>
       env(id).matchOrError(expr.pos, "array access", s"array type") {
         case TArray(typ, dims, _) => {
-          if (dims.length != bankIdxs.length) {
+          if dims.length != bankIdxs.length then {
             throw IncorrectAccessDims(id, dims.length, bankIdxs.length)
           }
           bankIdxs.foldLeft(env)((env, bankIdx) => {
@@ -248,7 +248,7 @@ object TypeChecker {
     val (len, bank) = arrDim
 
     // Shrinking factor must be a factor of banking for the dimension
-    if (shrink.isDefined && (shrink.get > bank || bank % shrink.get != 0)) {
+    if shrink.isDefined && (shrink.get > bank || bank % shrink.get != 0) then {
       throw InvalidShrinkWidth(view.pos, bank, shrink.get)
     }
 
@@ -257,12 +257,12 @@ object TypeChecker {
     // Get the indexing expression
     val idx = suf match {
       case Aligned(fac, idx) =>
-        if (newBank > fac) {
+        if newBank > fac then {
           throw InvalidAlignFactor(
             suf.pos,
             s"Invalid align factor. Banking factor $newBank is bigger than alignment factor $fac."
           )
-        } else if (fac % newBank != 0) {
+        } else if fac % newBank != 0 then {
           throw InvalidAlignFactor(
             suf.pos,
             s"Invalid align factor. Banking factor $newBank not a factor of the alignment factor $fac."
@@ -285,7 +285,7 @@ object TypeChecker {
     // Only loops without sequencing may be pipelined.
     body match {
       case _: CSeq =>
-        if (enabled) {
+        if enabled then {
           throw PipelineError(loop.pos)
         }
       case _ => {}
@@ -310,7 +310,7 @@ object TypeChecker {
       case CWhile(cond, pipeline, body) => {
         checkPipeline(pipeline, cmd, body)
         val (cTyp, e1) = checkE(cond)(env)
-        if (cTyp != TBool()) {
+        if cTyp != TBool() then {
           throw UnexpectedType(
             cond.pos,
             "while condition",
@@ -323,14 +323,14 @@ object TypeChecker {
       case CUpdate(lhs, rhs) => {
         val (t1, e1) = checkE(lhs)
         val (t2, e2) = checkE(rhs)(e1)
-        if (isSubtype(t2, t1)) e2
+        if isSubtype(t2, t1) then e2
         else throw UnexpectedSubtype(rhs.pos, "assignment", t1, t2)
       }
       case CReduce(_, l, r) => {
         val (t1, e1) = checkE(l)
         val (t2, e2) = checkE(r)(e1)
 
-        if (isSubtype(t2, t1)) e2
+        if isSubtype(t2, t1) then e2
         else throw UnexpectedSubtype(r.pos, "reduction operator", t1, t2)
       }
       case l @ CLet(id, typ, Some(EArrLiteral(idxs))) => {
@@ -383,10 +383,10 @@ object TypeChecker {
             // required fields.
             expTypes.keys.foreach(field => {
               val (eTyp, acTyp) = (expTypes(field), actualTypes.get(field))
-              if (acTyp.isDefined == false) {
+              if acTyp.isDefined == false then {
                 throw MissingField(exp.pos, name, field)
               }
-              if (isSubtype(acTyp.get, eTyp) == false) {
+              if isSubtype(acTyp.get, eTyp) == false then {
                 throw UnexpectedType(
                   fs(field).pos,
                   "record literal",
@@ -422,7 +422,7 @@ object TypeChecker {
         // Check if type of expression is a subtype of the annotated type.
         rTyp match {
           case Some(t2) => {
-            if (isSubtype(t, t2))
+            if isSubtype(t, t2) then
               e1.add(id, t2)
             else
               throw UnexpectedSubtype(exp.pos, "let", t2, t)
@@ -464,7 +464,7 @@ object TypeChecker {
         env(arrId) match {
           case TArray(typ, adims, port) => {
             val (vlen, alen) = (vdims.length, adims.length)
-            if (vlen != alen) {
+            if vlen != alen then {
               throw IncorrectAccessDims(arrId, alen, vlen)
             }
 
@@ -491,7 +491,7 @@ object TypeChecker {
         env(arrId) match {
           case TArray(typ, adims, ports) => {
             val (vlen, alen) = (dims.length, adims.length)
-            if (vlen != alen) {
+            if vlen != alen then {
               throw IncorrectAccessDims(arrId, alen, vlen)
             }
 
@@ -507,7 +507,7 @@ object TypeChecker {
               .zip(dims)
               .flatMap({
                 case ((dim, bank), n) if n > 0 => {
-                  if (bank % n == 0) {
+                  if bank % n == 0 then {
                     List((n, n), (dim / n, bank / n))
                   } else {
                     throw InvalidSplitFactor(id, arrId, n, bank, dim)
@@ -530,7 +530,7 @@ object TypeChecker {
       case CReturn(expr) => {
         val retType = env.getReturn.get
         val (t, e) = checkE(expr)
-        if (isSubtype(t, retType) == false) {
+        if isSubtype(t, retType) == false then {
           throw UnexpectedSubtype(expr.pos, "return", retType, t)
         }
         e

@@ -17,7 +17,7 @@ object Calyx {
   ) extends Emitable {
     def addPos(pos: Position): Int = {
       val key = pos
-      if (!this.map.contains(key)) {
+      if !this.map.contains(key) then {
         this.map.update(key, this.counter)
         this.counter = this.counter + 1
       }
@@ -46,7 +46,7 @@ object Calyx {
       implicit meta: Metadata
   ): Doc = {
     // Add position information to the metadata.
-    if (pos.line != 0 && pos.column != 0) {
+    if pos.line != 0 && pos.column != 0 then {
       val count = meta.addPos(pos)
       text("@pos") <> parens(text(count.toString)) <> space
     } else {
@@ -99,7 +99,7 @@ object Calyx {
     override def doc(): Doc = {
       val attrDoc = hsep(attrs.map({
         case (attr, v) => text(s"@${attr}") <> parens(text(v.toString()))
-      })) <> (if (attrs.isEmpty) emptyDoc else space)
+      })) <> (if attrs.isEmpty then emptyDoc else space)
       attrDoc <> id.doc() <> colon <+> value(width)
     }
   }
@@ -190,9 +190,9 @@ object Calyx {
                 case (attr, v) =>
                   text("@") <> text(attr) <> parens(text(v.toString()))
               })
-          ) <> (if (attrs.isEmpty) emptyDoc else space)
+          ) <> (if attrs.isEmpty then emptyDoc else space)
 
-        attrDoc <> (if (ref) text("ref") <> space else emptyDoc) <>
+        attrDoc <> (if ref then text("ref") <> space else emptyDoc) <>
           id.doc() <+> equal <+> comp.doc() <> semi
       }
       case Assign(src, dest, True) =>
@@ -200,9 +200,9 @@ object Calyx {
       case Assign(src, dest, guard) =>
         dest.doc() <+> equal <+> guard.doc() <+> text("?") <+> src.doc() <> semi
       case Group(id, conns, delay, comb) =>
-        (if (comb) text("comb ") else emptyDoc) <>
+        (if comb then text("comb ") else emptyDoc) <>
           text("group") <+> id.doc() <>
-          (if (delay.isDefined)
+          (if delay.isDefined then
              angles(text("\"promotable\"") <> equal <> text(delay.get.toString()))
            else emptyDoc) <+>
           scope(vsep(conns.map(_.doc())))
@@ -215,7 +215,7 @@ object Calyx {
         case (Group(thisId, _, _, _), Group(thatId, _, _, _)) =>
           thisId.compare(thatId)
         case (Assign(thisSrc, thisDest, _), Assign(thatSrc, thatDest, _)) => {
-          if (thisSrc.compare(thatSrc) == 0) {
+          if thisSrc.compare(thatSrc) == 0 then {
             thisDest.compare(thatDest)
           } else {
             thisSrc.compare(thatSrc)
@@ -264,7 +264,7 @@ object Calyx {
         }
       )
 
-      (this(id, connections, if (comb) None else staticDelay, comb), st)
+      (this(id, connections, if comb then None else staticDelay, comb), st)
     }
   }
 
@@ -319,7 +319,7 @@ object Calyx {
     }
 
     def attributesDoc(): Doc =
-      if (this.attributes.isEmpty) {
+      if this.attributes.isEmpty then {
         emptyDoc
       } else {
         hsep(attributes.map({
@@ -338,7 +338,7 @@ object Calyx {
           text("if") <+> port.doc() <+> text("with") <+>
             cond.doc() <+>
             scope(trueBr.doc) <> (
-            if (falseBr == Empty)
+            if falseBr == Empty then
               emptyDoc
             else
               space <> text("else") <+> scope(falseBr.doc)
@@ -352,7 +352,7 @@ object Calyx {
         }
         case i @ Invoke(id, refCells, inConnects, outConnects) => {
           val cells =
-            if (refCells.isEmpty)
+            if refCells.isEmpty then
               emptyDoc
             else
               brackets(commaSep(refCells.map({
@@ -405,7 +405,7 @@ object Stdlib {
 
   def binop(op: String, bitwidth: Int, signed: Boolean): Calyx.CompInst =
     Calyx.CompInst(
-      s"std_${if (signed) "s" else ""}$op",
+      s"std_${if signed then "s" else ""}$op",
       List(bitwidth)
     )
 
@@ -424,7 +424,7 @@ object Stdlib {
       signed: Boolean
   ): Calyx.CompInst =
     Calyx.CompInst(
-      s"std_fp_${(if (signed) "s" else "")}$op",
+      s"std_fp_${(if signed then "s" else "")}$op",
       List(width, int_width, frac_width)
     )
 

@@ -56,7 +56,7 @@ object Utils {
   }
 
   @inline def assertOrThrow[T <: Throwable](cond: Boolean, except: => T) = {
-    if (!cond) throw except
+    if !cond then throw except
   }
 
   @deprecated(

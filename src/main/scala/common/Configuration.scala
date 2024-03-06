@@ -5,8 +5,8 @@ import java.io.File
 object Configuration {
 
   sealed trait Mode
-  final case object Compile extends Mode
-  final case object Run extends Mode
+  case object Compile extends Mode
+  case object Run extends Mode
 
   def stringToBackend(name: String): Option[BackendOption] = name match {
     case "vivado" => Some(Vivado)
@@ -23,14 +23,14 @@ object Configuration {
       case Calyx => "calyx"
     }
   }
-  final case object Vivado extends BackendOption
-  final case object Cpp extends BackendOption
-  final case object Calyx extends BackendOption
+  case object Vivado extends BackendOption
+  case object Cpp extends BackendOption
+  case object Calyx extends BackendOption
 
   // The type of Vivado memory interface to generate
   sealed trait MemoryInterface
-  final case object ApMemory extends MemoryInterface
-  final case object Axi extends MemoryInterface
+  case object ApMemory extends MemoryInterface
+  case object Axi extends MemoryInterface
 
   val emptyConf = Config(null)
 

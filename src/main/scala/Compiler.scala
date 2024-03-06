@@ -29,7 +29,7 @@ object Compiler {
     )
 
   def showDebug(ast: Prog, pass: String, c: Config): Unit = {
-    if (c.passDebug) {
+    if c.passDebug then {
       val top = ("=" * 15) + pass + ("=" * 15)
       println(top)
       println(Pretty.emitProg(ast)(c.logLevel == scribe.Level.Debug).trim)
@@ -49,7 +49,7 @@ object Compiler {
     showDebug(preAst, "Original", c)
 
     // Run pre transformers if lowering is enabled
-    val ast = if (c.enableLowering) {
+    val ast = if c.enableLowering then {
       preTransformers.foldLeft(preAst)({
         case (ast, (name, pass)) => {
           val newAst = pass.rewrite(ast)
@@ -115,7 +115,7 @@ object Compiler {
         err match {
           case _: Errors.TypeError => {
             s"[${red("Type error")}] ${err.getMessage}" +
-              (if (c.enableLowering)
+              (if c.enableLowering then
                  "\nDoes this program type check without the `--lower` flag? If it does, please report this as a bug: https://github.com/cucapra/dahlia/issues/new"
                else "")
           }
@@ -129,9 +129,7 @@ object Compiler {
       })
       .map(out => {
         // Get metadata about the compiler build.
-        val version = getClass.getResourceAsStream("/version.properties")
-        val meta = Source
-          .fromInputStream(version)
+        val meta = scala.io.Source.fromResource("version.properties")
           .getLines()
           .filter(l => l.trim != "")
           .mkString(", ")

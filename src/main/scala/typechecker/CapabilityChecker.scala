@@ -10,11 +10,11 @@ import CompilerError._
 import CapabilityEnv._
 import Checker._
 
-object CapabilityChecker {
+object CapabilityChecker:
 
   def check(p: Prog) = CapChecker.check(p)
 
-  private final case object CapChecker extends PartialChecker {
+  private case object CapChecker extends PartialChecker:
 
     type Env = CapabilityEnv
 
@@ -72,6 +72,3 @@ object CapabilityChecker {
       mergeCheckE(myCheckE)(expr, env)
     override def checkC(cmd: Command)(implicit env: Env) =
       mergeCheckC(myCheckC)(cmd, env)
-
-  }
-}

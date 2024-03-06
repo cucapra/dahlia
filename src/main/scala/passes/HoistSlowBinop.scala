@@ -41,7 +41,7 @@ object HoistSlowBinop extends TypedPartialTransformer {
       env: Env,
       acc: Command = CEmpty
   ): (Command, Env) = {
-    if (env.map.values.isEmpty && acc == CEmpty) {
+    if env.map.values.isEmpty && acc == CEmpty then {
       cmd -> emptyEnv
     } else {
       CSeq.smart(env.map.values.toSeq :+ acc :+ cmd) -> emptyEnv
