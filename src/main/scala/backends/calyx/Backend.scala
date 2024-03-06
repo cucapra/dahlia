@@ -644,8 +644,8 @@ private class CalyxBackendHelper {
             )
           )
 
-        val donePortName =
-          if rhsInfo.isDefined then "write_done" else "read_done"
+        val donePortName = "done"
+        val contentEnPortName = "content_en"
 
         // The value is generated on `read_data` and written on `write_data`.
         val portName =
@@ -684,6 +684,8 @@ private class CalyxBackendHelper {
           }
         })
 
+        val contentEnableStruct = List(Assign(ConstantPort(1,1), arr.port(contentEnPortName)))
+
         val readEnPort = if isParam then {
               ThisPort(CompVar(s"${id}_read_en"))
           } else {
@@ -707,7 +709,7 @@ private class CalyxBackendHelper {
         EmitOutput(
           accessPort,
           Some(donePort),
-          (indexing ++ writeEnStruct) ++ readEnStruct,
+          (indexing ++ contentEnableStruct ++ writeEnStruct) ++ readEnStruct,
           delay,
           Some((donePort, delay))
         )
