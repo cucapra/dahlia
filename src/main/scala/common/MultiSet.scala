@@ -2,7 +2,7 @@ package fuselang.common
 
 import scala.collection.immutable.Map
 
-object MultiSet {
+object MultiSet:
 
   def emptyMultiSet[K]() = MultiSet[K](Map[K, Int]())
 
@@ -13,7 +13,7 @@ object MultiSet {
         else ms + (v -> 1)
     }))
 
-  case class MultiSet[K](val setMap: Map[K, Int]) extends AnyVal {
+  case class MultiSet[K](val setMap: Map[K, Int]) extends AnyVal:
 
     /**
       * Contains at least [[num]] copies of [[element]]
@@ -30,16 +30,14 @@ object MultiSet {
     /**
       * Apply [[op]] on the values associated with the same key in [[this]] and [[that]].
       */
-    def zipWith(that: MultiSet[K], op: (Int, Int) => Int): MultiSet[K] = {
+    def zipWith(that: MultiSet[K], op: (Int, Int) => Int): MultiSet[K] =
       val thatMap = that.setMap
       val (thisKeys, thatKeys) = (setMap.keys.toSet, thatMap.keys.toSet)
-      if thisKeys != thatKeys then {
+      if thisKeys != thatKeys then
         throw new NoSuchElementException(
           s"Element ${thisKeys.diff(thatKeys).head} not in both multisets.\nThis: ${setMap}\nThat: ${thatMap}."
         )
-      }
       MultiSet(setMap.map({ case (k, v) => k -> op(v, thatMap(k)) }))
-    }
 
     /** Calculate multiset difference */
     def diff(that: MultiSet[K]) =
@@ -62,6 +60,4 @@ object MultiSet {
 
     def getCount(k: K): Int = setMap(k)
 
-  }
 
-}

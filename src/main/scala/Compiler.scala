@@ -9,7 +9,7 @@ import Configuration._
 import Syntax._
 import Transformer.{PartialTransformer, TypedPartialTransformer}
 
-object Compiler {
+object Compiler:
 
   // Transformers to execute *before* type checking.
   val preTransformers: List[(String, PartialTransformer)] = List(
@@ -28,28 +28,25 @@ object Compiler {
       "Add bitwidth" -> (passes.AddBitWidth, true)
     )
 
-  def showDebug(ast: Prog, pass: String, c: Config): Unit = {
-    if c.passDebug then {
+  def showDebug(ast: Prog, pass: String, c: Config): Unit =
+    if c.passDebug then
       val top = ("=" * 15) + pass + ("=" * 15)
       println(top)
       println(Pretty.emitProg(ast)(c.logLevel == scribe.Level.Debug).trim)
       println("=" * top.length)
-    }
-  }
 
-  def toBackend(str: BackendOption): fuselang.backend.Backend = str match {
+  def toBackend(str: BackendOption): fuselang.backend.Backend = str match
     case Vivado => backend.VivadoBackend
     case Cpp => backend.CppRunnable
     case Calyx => backend.calyx.CalyxBackend
-  }
 
-  def checkStringWithError(prog: String, c: Config = emptyConf) = {
+  def checkStringWithError(prog: String, c: Config = emptyConf) =
     val preAst = Parser(prog).parse()
 
     showDebug(preAst, "Original", c)
 
     // Run pre transformers if lowering is enabled
-    val ast = if c.enableLowering then {
+    val ast = if c.enableLowering then
       preTransformers.foldLeft(preAst)({
         case (ast, (name, pass)) => {
           val newAst = pass.rewrite(ast)
@@ -70,9 +67,8 @@ object Compiler {
           } */
         }
       })
-    } else {
+    else
       preAst
-    }
     passes.WellFormedChecker.check(ast)
     typechecker.TypeChecker.typeCheck(ast);
     showDebug(ast, "Type Checking", c)
@@ -83,9 +79,8 @@ object Compiler {
     showDebug(ast, "Capability Checking", c)
     typechecker.AffineChecker.check(ast); // Doesn't modify the AST
     ast
-  }
 
-  def codegen(ast: Prog, c: Config = emptyConf) = {
+  def codegen(ast: Prog, c: Config = emptyConf) =
     // Filter out transformers not running in this mode
     val toRun = postTransformers.filter({
       case (_, (_, onlyLower)) => {
@@ -101,14 +96,12 @@ object Compiler {
       }
     })
     toBackend(c.backend).emit(transformedAst, c)
-  }
 
   // Outputs red text to the console
-  def red(txt: String): String = {
+  def red(txt: String): String =
     Console.RED + txt + Console.RESET
-  }
 
-  def compileString(prog: String, c: Config): Either[String, String] = {
+  def compileString(prog: String, c: Config): Either[String, String] =
     Try(codegen(checkStringWithError(prog, c), c)).toEither.left
       .map(err => {
         scribe.info(err.getStackTrace().take(10).mkString("\n"))
@@ -136,13 +129,12 @@ object Compiler {
         val commentPre = toBackend(c.backend).commentPrefix
         s"$commentPre $meta\n" + out
       })
-  }
 
   def compileStringToFile(
       prog: String,
       c: Config,
       out: String
-  ): Either[String, Path] = {
+  ): Either[String, Path] =
 
     compileString(prog, c).map(p => {
       Files.write(
@@ -153,6 +145,4 @@ object Compiler {
         StandardOpenOption.WRITE
       )
     })
-  }
 
-}

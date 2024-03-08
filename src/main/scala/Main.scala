@@ -31,7 +31,7 @@ object Main:
     })
     .toMap
 
-  val parser = new scopt.OptionParser[Config]("fuse") {
+  val parser = new scopt.OptionParser[Config]("fuse"):
 
     head(s"Dahlia (sha = ${meta("git.hash")}, status = ${meta("git.status")})")
 
@@ -112,16 +112,14 @@ object Main:
           .action((f, c) => c.copy(output = Some(f)))
           .text("Name of the output artifact.")
       )
-  }
 
   def runWithConfig(conf: Config): Either[String, Int] =
     type ErrString = String
 
     val path = conf.srcFile.toPath
-    val prog = Files.exists(path) match {
+    val prog = Files.exists(path) match
       case true => Right(new String(Files.readAllBytes(path)))
       case false => Left(s"$path: No such file in working directory")
-    }
 
     val cppPath: Either[ErrString, Option[Path]] = prog.flatMap(prog =>
       conf.output match {
