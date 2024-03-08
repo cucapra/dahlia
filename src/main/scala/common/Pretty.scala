@@ -6,9 +6,9 @@ import Syntax._
 import PrettyPrint.Doc
 import PrettyPrint.Doc._
 
-object Pretty {
+object Pretty:
 
-  def emitProg(p: Prog)(implicit debug: Boolean): String = {
+  def emitProg(p: Prog)(implicit debug: Boolean): String =
     val layout = vsep(p.includes.map(emitInclude)) <@>
       vsep(p.defs.map(emitDef)) <@>
       vsep(p.decors.map(d => text(d.value))) <@>
@@ -16,23 +16,20 @@ object Pretty {
       emitCmd(p.cmd)
 
     layout.pretty
-  }
 
-  def emitInclude(incl: Include)(implicit debug: Boolean): Doc = {
+  def emitInclude(incl: Include)(implicit debug: Boolean): Doc =
     text("import") <+>
       vsep(incl.backends.map({
         case (b, incl) => text(b.toString) <> parens(quote(text(incl)))
       })) <+> scope(
       vsep(incl.defs.map(emitDef))
     )
-  }
 
-  def emitDef(defi: Definition)(implicit debug: Boolean): Doc = defi match {
+  def emitDef(defi: Definition)(implicit debug: Boolean): Doc = defi match
     case FuncDef(id, args, ret, bodyOpt) => {
-      val retDoc = ret match {
+      val retDoc = ret match
         case _: TVoid => emptyDoc
         case _ => colon <+> emitTyp(ret)
-      }
       text("def") <+> id <> parens(ssep(args.map(emitDecl), comma <> space)) <+>
         retDoc <> bodyOpt.map(c => equal <+> scope(emitCmd(c))).getOrElse(semi)
     }
@@ -41,31 +38,27 @@ object Pretty {
         case (id, typ) => id <> colon <+> emitTyp(typ) <> semi
       })))
     }
-  }
 
   def emitDecl(d: Decl): Doc = emitId(d.id)(false) <> colon <+> emitTyp(d.typ)
 
-  def emitConsume(ann: Annotations.Consumable): Doc = ann match {
+  def emitConsume(ann: Annotations.Consumable): Doc = ann match
     case Annotations.ShouldConsume => text("consume")
     case Annotations.SkipConsume => text("skip")
-  }
 
-  implicit def emitId(id: Id)(implicit debug: Boolean): Doc = {
+  implicit def emitId(id: Id)(implicit debug: Boolean): Doc =
     val idv = value(id.v)
     if debug then
       id.typ.map(t => idv <> text("@") <> emitTyp(t)).getOrElse(idv)
     else idv
-  }
 
   def emitTyp(t: Type): Doc = text(t.toString)
 
-  def emitBaseInt(v: BigInt, base: Int): String = base match {
+  def emitBaseInt(v: BigInt, base: Int): String = base match
     case 8 => s"0${v.toString(8)}"
     case 10 => v.toString
     case 16 => s"0x${v.toString(16)}"
-  }
 
-  implicit def emitExpr(e: Expr)(implicit debug: Boolean): Doc = e match {
+  implicit def emitExpr(e: Expr)(implicit debug: Boolean): Doc = e match
     case ECast(e, typ) => parens(e <+> text("as") <+> emitTyp(typ))
     case EApp(fn, args) => fn <> parens(commaSep(args.map(emitExpr)))
     case EInt(v, base) => value(emitBaseInt(v, base))
@@ -100,14 +93,12 @@ object Pretty {
     case EArrLiteral(idxs) => braces(commaSep(idxs.map(idx => emitExpr(idx))))
     case ERecAccess(rec, field) => rec <> dot <> field
     case ERecLiteral(fs) =>
-      scope {
+      scope:
         hsep(fs.toList.map({
           case (id, expr) => id <+> equal <+> expr <> semi
         }))
-      }
-  }
 
-  def emitRange(range: CRange)(implicit debug: Boolean): Doc = {
+  def emitRange(range: CRange)(implicit debug: Boolean): Doc =
     val CRange(id, t, rev, s, e, u) = range
 
     val typAnnot =
@@ -120,30 +111,26 @@ object Pretty {
       )
     ) <>
       (if u > 1 then space <> text("unroll") <+> value(u) else emptyDoc)
-  }
 
-  def emitView(view: View)(implicit debug: Boolean): Doc = {
+  def emitView(view: View)(implicit debug: Boolean): Doc =
     val View(suf, pre, sh) = view
 
-    val sufDoc = suf match {
+    val sufDoc = suf match
       case Aligned(f, e) => value(f) <+> text("*") <+> e
       case Rotation(e) => e <> text("!")
-    }
 
     sufDoc <+> colon <>
       pre.map(p => space <> text("+") <+> value(p)).getOrElse(emptyDoc) <>
       sh.map(sh => space <> text("bank") <+> value(sh)).getOrElse(emptyDoc)
-  }
 
-  def emitAttributes(attrs: Map[String, Int]): Doc = {
+  def emitAttributes(attrs: Map[String, Int]): Doc =
     hsep(attrs.map({
       case (attr, v) => text(s"@${attr}") <> parens(text(v.toString()))
     }))
-  }
 
   implicit def emitCmd(c: Command)(
       implicit debug: Boolean
-  ): Doc = {
+  ): Doc =
     val attr =
       if c.attributes.isEmpty then emptyDoc
       else
@@ -155,9 +142,8 @@ object Pretty {
       case _: CPar | _: CSeq | _: CBlock => attr
       case _ => attr
     }) <> emitCmdBare(c)(debug)
-  }
 
-  def emitCmdBare(c: Command)(implicit debug: Boolean): Doc = c match {
+  def emitCmdBare(c: Command)(implicit debug: Boolean): Doc = c match
     case CPar(cmds) => vsep(cmds.map(emitCmd))
     case CSeq(cmds) => vsep(cmds.map(emitCmd), text("---"))
     case CLet(id, typ, e) =>
@@ -200,5 +186,3 @@ object Pretty {
           emptyDoc
         ) <> semi
     case CBlock(cmd) => scope(emitCmd(cmd))
-  }
-}

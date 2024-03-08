@@ -6,14 +6,12 @@ import CompilerError.BackendError
 /**
   * Abstract definition of a Fuse backend.
   */
-trait Backend {
+trait Backend:
 
-  def emit(p: Syntax.Prog, c: Configuration.Config): String = {
-    if c.header && (canGenerateHeader == false) then {
+  def emit(p: Syntax.Prog, c: Configuration.Config): String =
+    if c.header && (canGenerateHeader == false) then
       throw BackendError(s"Backend $this does not support header generation.")
-    }
     emitProg(p, c)
-  }
 
   /**
     * Generate a String representation of the Abstract Syntax Tree of the
@@ -32,4 +30,3 @@ trait Backend {
     */
   val commentPrefix: String = "//"
 
-}

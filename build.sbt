@@ -49,9 +49,6 @@ Compile / resourceGenerators += Def.task {
 }
 
 /* sbt-assembly configuration: build an executable jar. */
-//assembly / assemblyOption  := (assembly / assemblyOption).value.copy(
-//    prependShellScript = Some(sbtassembly.AssemblyPlugin.defaultShellScript)
-//)
 ThisBuild / assemblyPrependShellScript := Some(sbtassembly.AssemblyPlugin.defaultShellScript)
 assembly / assemblyJarName := "fuse.jar"
 assembly / test := {}

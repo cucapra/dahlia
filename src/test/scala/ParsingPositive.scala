@@ -3,23 +3,21 @@ package fuselang
 import TestUtils._
 import org.scalatest.funsuite.AnyFunSuite
 
-class ParsingTests extends AnyFunSuite {
-  test("numbers") {
+class ParsingTests extends AnyFunSuite:
+  test("numbers"):
     parseAst("1;")
     parseAst("1.25;")
     parseAst("0.25;")
     parseAst("0x19;")
     parseAst("014;")
     parseAst("0x9e3779b9;")
-  }
 
-  test("atoms") {
+  test("atoms"):
     parseAst("true;")
     parseAst("false;")
     parseAst("true;")
-  }
 
-  test("comments") {
+  test("comments"):
     parseAst("""
       /* this is a comment
        * on
@@ -28,9 +26,8 @@ class ParsingTests extends AnyFunSuite {
       // this is comment
       x;
       """)
-  }
 
-  test("binops") {
+  test("binops"):
     parseAst("1 + 2;")
     parseAst("1 + 2;")
     parseAst("1 + 2.5;")
@@ -41,42 +38,36 @@ class ParsingTests extends AnyFunSuite {
     parseAst("1 % 2;")
     parseAst("true || false;")
     parseAst("true && false;")
-  }
 
-  test("binop precedence order") {
+  test("binop precedence order"):
     parseAst("(1 + 2) * 3;")
     parseAst("1 + 2 * 3 >= 10 - 5 / 7;")
     parseAst("1 >> 2 | 3 ^ 4 & 5;")
     parseAst("1 >= 2 || 4 < 5;")
-  }
 
-  test("if") {
+  test("if"):
     parseAst("if (true) {}")
     parseAst("if (false) { 1 + 2; }")
     parseAst("if (false) { 1 + 2; }")
-  }
 
-  test("decl") {
+  test("decl"):
     parseAst("decl x: bit<64>;")
     parseAst("decl x: bool;")
     parseAst("decl x: bit<64>[10 bank 5];")
-  }
 
-  test("let") {
+  test("let"):
     parseAst("let x = 1; x + 2;")
     parseAst("let force = 1; x + 2;")
     parseAst("let x: bit<32>; x + 2;")
-  }
 
-  test("for loop") {
+  test("for loop"):
     parseAst("""
       for (let i = 0..10) unroll 5 {
         x + 1;
       }
     """)
-  }
 
-  test("while loop") {
+  test("while loop"):
     parseAst("""
       while (false) {
         let x = 1;
@@ -86,9 +77,8 @@ class ParsingTests extends AnyFunSuite {
         }
       }
     """)
-  }
 
-  test("combiner syntax") {
+  test("combiner syntax"):
     parseAst("""
       for (let i = 0..10) {
       } combine {
@@ -102,21 +92,18 @@ class ParsingTests extends AnyFunSuite {
         let x = 1;
       }
     """)
-  }
 
-  test("refresh banks") {
+  test("refresh banks"):
     parseAst("""
       x + 1;
       ---
       x + 2;
     """)
-  }
 
-  test("commands") {
+  test("commands"):
     parseAst("""{ x+1; }""")
-  }
 
-  test("functions") {
+  test("functions"):
     parseAst("""
       def foo(a: bit<32>) = {}
       """)
@@ -130,9 +117,8 @@ class ParsingTests extends AnyFunSuite {
         bar(1, 2, 3);
       }
       """)
-  }
 
-  test("records definitions") {
+  test("records definitions"):
     parseAst("""
       record Point {
         x: bit<32>;
@@ -145,21 +131,18 @@ class ParsingTests extends AnyFunSuite {
         y: bit<32>
       }
       """)
-  }
 
-  test("record literals") {
+  test("record literals"):
     parseAst("""
       let res: point = { x = 10; y = 10 };
       """)
-  }
 
-  test("array literals") {
+  test("array literals"):
     parseAst("""
       let res: bit<32>[10] = { 1, 2, 3 };
       """)
-  }
 
-  test("records access") {
+  test("records access"):
     parseAst("""
       let k = p.x;
       """)
@@ -169,9 +152,8 @@ class ParsingTests extends AnyFunSuite {
     parseAst("""
       let k = rec.po.x;
       """)
-  }
 
-  test("imports") {
+  test("imports"):
     parseAst("""
       import vivado("print.h") {}
       """)
@@ -180,9 +162,8 @@ class ParsingTests extends AnyFunSuite {
         def foo(a: bit<32>);
       }
       """)
-  }
 
-  test("simple views") {
+  test("simple views"):
     parseAst("""
       view v = a[_ :];
       """)
@@ -222,9 +203,8 @@ class ParsingTests extends AnyFunSuite {
     parseAst("""
       view v = a[i + 1! : +3 bank 5];
       """)
-  }
 
-  test("split views") {
+  test("split views"):
     parseAst("""
       split b = a[by 10];
       """)
@@ -232,9 +212,8 @@ class ParsingTests extends AnyFunSuite {
     parseAst("""
       split b = a[by 10][by 20];
       """)
-  }
 
-  test("casting") {
+  test("casting"):
     parseAst("""
       let x = (y as bit<32>);
       """)
@@ -245,5 +224,3 @@ class ParsingTests extends AnyFunSuite {
       let x = (0x9e3779b9 as ubit<32>);
       let y = (023615674671 as ubit<32>);
       """)
-  }
-}

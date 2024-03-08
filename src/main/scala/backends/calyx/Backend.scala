@@ -62,7 +62,7 @@ private case class EmitOutput(
   * by the Calyx compiler to enable such uses:
   * https://github.com/cucapra/Calyx/issues/304
   */
-private class CalyxBackendHelper {
+private class CalyxBackendHelper:
 
   /** A list of function IDs that require width arguments
     * in their SystemVerilog module definition.
@@ -71,14 +71,12 @@ private class CalyxBackendHelper {
 
   /** Helper for generating unique names. */
   var idx: Map[String, Int] = Map();
-  def genName(base: String): CompVar = {
+  def genName(base: String): CompVar =
     // update idx
-    idx get base match {
+    idx get base match
       case Some(n) => idx = idx + (base -> (n + 1))
       case None => idx = idx + (base -> 0)
-    }
     CompVar(s"$base${idx(base)}")
-  }
 
   /** A Calyx variable will either be a
     * local variable (LocalVar) or
@@ -98,7 +96,7 @@ private class CalyxBackendHelper {
       arr: TArray,
       id: Id,
       attrs: List[(String, Int)] = List()
-  ): Cell = {
+  ): Cell =
     // No support for multi-ported memories or banked memories.
     assertOrThrow(
       arr.ports == 1,
@@ -135,24 +133,21 @@ private class CalyxBackendHelper {
       false,
       attrs
     )
-  }
 
   /** Returns the name of `p`, if it has one. */
-  def getPortName(p: Port): String = {
-    p match {
+  def getPortName(p: Port): String =
+    p match
       case CompPort(id, _) => id.name
       case ThisPort(id) => id.name
       case HolePort(id, _) => id.name
       case ConstantPort(_, _) =>
         throw Impossible("Constant Ports do not have names.")
-    }
-  }
 
   /** Returns a list of tuples (name, width) for each address port
         in a memory. For example, a D1 Memory declared as (32, 1, 1)
         would return List[("addr0", 1)].
     */
-  def getAddrPortToWidths(typ: TArray, id: Id): List[(String, BigInt)] = {
+  def getAddrPortToWidths(typ: TArray, id: Id): List[(String, BigInt)] =
     // Emit the array to determine the port widths.
     val Cell(_, CompInst(_, arrayArgs), _, _) = emitArrayDecl(typ, id)
 
@@ -160,19 +155,17 @@ private class CalyxBackendHelper {
     // (bitwidth, size0, ..., sizeX, addr0, ..., addrX),
     // where X is the number of dimensions - 1.
     val dims =
-      arrayArgs.length match {
+      arrayArgs.length match
         case 3 => 1
         case 5 => 2
         case 7 => 3
         case 9 => 4
         case _ => throw NotImplemented(s"Arrays of dimension > 4.")
-      }
     val addressIndices = (dims + 1 to dims << 1).toList
 
     addressIndices.zipWithIndex.map({
       case (n: Int, i: Int) => (s"addr${i}", arrayArgs(n))
     })
-  }
 
   /** Returns the width argument(s) of a given function, based on the return
     * type of the function. This is necessary because some components may
@@ -188,26 +181,23 @@ private class CalyxBackendHelper {
     * `requiresWidthArguments`. */
   def getCompInstArgs(
       funcId: Id
-  )(implicit id2FuncDef: FunctionMapping): List[BigInt] = {
+  )(implicit id2FuncDef: FunctionMapping): List[BigInt] =
     val id = funcId.toString()
-    if !requiresWidthArguments.contains(id) then {
+    if !requiresWidthArguments.contains(id) then
       List()
-    } else {
+    else
       val typ = id2FuncDef(funcId).retTy;
-      typ match {
+      typ match
         case TSizedInt(width, _) => List(width)
         case TFixed(width, intWidth, _) =>
           List(width, intWidth, width - intWidth)
         case _ => throw Impossible(s"Type: $typ for $id is not supported.")
-      }
-    }
-  }
 
   /** `emitInvokeDecl` computes the necessary structure and control for Syntax.EApp. */
   def emitInvokeDecl(app: EApp)(
       implicit store: Store,
       id2FuncDef: FunctionMapping
-  ): (Cell, Seq[Structure], Control) = {
+  ): (Cell, Seq[Structure], Control) =
     val functionName = app.func.toString()
     val declName = genName(functionName)
     val compInstArgs = getCompInstArgs(app.func)
@@ -240,31 +230,29 @@ private class CalyxBackendHelper {
       argSt.flatten,
       Invoke(declName, refCells.toList, inConnects.toList, List()).withPos(app)
     )
-  }
 
   /** `emitDecl(d)` computes the structure that is needed to
     *  represent the declaration `d`. Simply returns a `List[Structure]`.
     */
-  def emitDecl(d: Decl): Structure = d.typ match {
+  def emitDecl(d: Decl): Structure = d.typ match
     case tarr: TArray => emitArrayDecl(tarr, d.id, List("external" -> 1))
     case _: TBool => Stdlib.register(CompVar(s"${d.id}"), 1)
     case TSizedInt(size, _) => Stdlib.register(CompVar(s"${d.id}"), size)
     case TFixed(ltotal, _, _) => Stdlib.register(CompVar(s"${d.id}"), ltotal)
     case x => throw NotImplemented(s"Type $x not implemented for decls.", x.pos)
-  }
 
   /** `emitBinop` is a helper function to generate the structure
     *  for `e1 binop e2`. The return type is described in `emitExpr`.
     */
   def emitBinop(compName: String, e1: Expr, e2: Expr)(
       implicit store: Store
-  ): EmitOutput = {
+  ): EmitOutput =
     val e1Out = emitExpr(e1)
     val e2Out = emitExpr(e2)
     val (e1Bits, e1Int) = bitsForType(e1.typ, e1.pos)
     val (e2Bits, e2Int) = bitsForType(e2.typ, e2.pos)
     // Throw error on numeric or bitwidth mismatch.
-    (e1Int, e2Int) match {
+    (e1Int, e2Int) match
       case (Some(_), Some(_)) => { /* Fixed-points allow this */ }
       case (None, None) => {
         assertOrThrow(
@@ -283,9 +271,8 @@ private class CalyxBackendHelper {
             s"\nright: ${Pretty.emitExpr(e2)(false).pretty}"
         )
       }
-    }
 
-    bitsForType(e1.typ, e1.pos) match {
+    bitsForType(e1.typ, e1.pos) match
       case (e1Bits, None) => {
         val isSigned = signed(e1.typ)
         val binOp = Stdlib.binop(s"$compName", e1Bits, isSigned)
@@ -341,8 +328,6 @@ private class CalyxBackendHelper {
           None
         )
       }
-    }
-  }
 
   def emitMultiCycleBinop(
       compName: String,
@@ -352,13 +337,13 @@ private class CalyxBackendHelper {
       delay: Option[Int]
   )(
       implicit store: Store
-  ): EmitOutput = {
+  ): EmitOutput =
     val e1Out = emitExpr(e1)
     val e2Out = emitExpr(e2)
     val (e1Bits, e1Int) = bitsForType(e1.typ, e1.pos)
     val (e2Bits, e2Int) = bitsForType(e2.typ, e2.pos)
     // Check if we can compile this expression.
-    (e1Int, e2Int) match {
+    (e1Int, e2Int) match
       case (Some(intBit1), Some(intBit2)) => {
         assertOrThrow(
           intBit1 == intBit2,
@@ -384,8 +369,7 @@ private class CalyxBackendHelper {
             s"\nright: ${Pretty.emitExpr(e2)(false).pretty}"
         )
       }
-    }
-    val binOp = e1.typ match {
+    val binOp = e1.typ match
       case Some(TFixed(width, intWidth, unsigned)) =>
         Stdlib.fixed_point_binop(
           s"$compName",
@@ -398,7 +382,6 @@ private class CalyxBackendHelper {
         Stdlib.binop(s"$compName", width, !unsigned)
       case _ =>
         throw NotImplemented(s"Multi-cycle binary operation with type: $e1.typ")
-    }
     val compVar = genName(compName)
     val comp = Cell(compVar, binOp, false, List())
     val struct = List(
@@ -419,7 +402,6 @@ private class CalyxBackendHelper {
         yield d1 + d2 + d3,
       Some((comp.name.port("done"), delay))
     )
-  }
 
   /** `emitExpr(expr, rhsInfo)(implicit store)` calculates the necessary structure
     *  to compute `expr`.
@@ -430,7 +412,7 @@ private class CalyxBackendHelper {
   def emitExpr(expr: Expr, rhsInfo: Option[(Port, Option[Int])] = None)(
       implicit store: Store
   ): EmitOutput =
-    expr match {
+    expr match
       case _: EInt => {
         throw PassError(
           "Cannot compile unannotated constants. Wrap constant in `as` expression",
@@ -438,7 +420,7 @@ private class CalyxBackendHelper {
         )
       }
       case EBinop(op, e1, e2) => {
-        val compName = op.op match {
+        val compName = op.op match
           case "+" => "add"
           case "-" => "sub"
           case "*" => "mult_pipe"
@@ -462,8 +444,7 @@ private class CalyxBackendHelper {
               s"Calyx backend does not support '$x' yet.",
               op.pos
             )
-        }
-        op.op match {
+        op.op match
           case "*" =>
             emitMultiCycleBinop(
               compName,
@@ -489,7 +470,6 @@ private class CalyxBackendHelper {
               None
             )
           case _ => emitBinop(compName, e1, e2)
-        }
       }
       case EVar(id) =>
         val (cell, calyxVarType) = store
@@ -497,7 +477,7 @@ private class CalyxBackendHelper {
           .getOrThrow(BackendError(s"`$id' was not in store", expr.pos))
 
         val (struct, port, done, delay) =
-          rhsInfo match {
+          rhsInfo match
             case Some((port, delay)) =>
               (
                 List(Assign(port, cell.port("write_en"))),
@@ -512,7 +492,6 @@ private class CalyxBackendHelper {
                 None,
                 Some(0) /* reading from a register is combinational */
               )
-          }
 
         EmitOutput(
           if calyxVarType == LocalVar then cell.port(port)
@@ -566,27 +545,24 @@ private class CalyxBackendHelper {
         val isNegative = value.startsWith("-")
         val partition = value.split('.')
         val sIntPart = partition(0)
-        val intPart = if isNegative then {
+        val intPart = if isNegative then
           sIntPart.substring(1, sIntPart.length())
-        } else {
+        else
           sIntPart
-        }
         val bdFracPart = BigDecimal("0." + partition(1))
         val fracValue = (bdFracPart * BigDecimal(2).pow(fracWidth))
-        if !fracValue.isWhole then {
+        if !fracValue.isWhole then
           throw BackendError(
             s"The value $value of type $typ is not representable in fixed point",
             expr.pos
           )
-        }
 
         val intBits = binaryString(intPart.toInt, intWidth)
         val fracBits = binaryString(fracValue.toBigInt, fracWidth)
-        val bits = if isNegative then {
+        val bits = if isNegative then
           negateTwosComplement(intBits + fracBits)
-        } else {
+        else
           intBits + fracBits
-        }
         val fpconst =
           Cell(
             genName("fp_const"),
@@ -606,7 +582,7 @@ private class CalyxBackendHelper {
         val (vBits, _) = bitsForType(e.typ, e.pos)
         val (cBits, _) = bitsForType(Some(t), e.pos)
         val res = emitExpr(e)
-        if vBits == cBits then {
+        if vBits == cBits then
           // No slicing or padding is necessary.
           EmitOutput(
             res.port,
@@ -615,12 +591,11 @@ private class CalyxBackendHelper {
             Some(0),
             res.multiCycleInfo
           )
-        } else {
-          val comp = if cBits > vBits then {
+        else
+          val comp = if cBits > vBits then
             Cell(genName("pad"), Stdlib.pad(vBits, cBits), false, List())
-          } else {
+          else
             Cell(genName("slice"), Stdlib.slice(vBits, cBits), false, List())
-          }
           val struct = List(
             comp,
             Assign(res.port, comp.name.port("in"))
@@ -632,7 +607,6 @@ private class CalyxBackendHelper {
             Some(0),
             res.multiCycleInfo
           )
-        }
       }
       case EArrAccess(id, accessors) => {
         val (arr, typ) = store
@@ -657,19 +631,18 @@ private class CalyxBackendHelper {
         val isParam = (typ == ParameterVar)
 
         val (writeEnPort, donePort, accessPort) =
-          if isParam then {
+          if isParam then
             (
               ThisPort(CompVar(s"${id}_write_en")),
               ThisPort(CompVar(s"${id}_${donePortName}")),
               ThisPort(CompVar(s"${id}_${portName}"))
             )
-          } else {
+          else
             (
               arr.port("write_en"),
               arr.port(donePortName),
               arr.port(portName)
             )
-          }
 
         // We always need to specify and address on the `addr` ports. Generate
         // the additional structure.
@@ -684,25 +657,22 @@ private class CalyxBackendHelper {
           }
         })
 
-        val readEnPort = if isParam then {
+        val readEnPort = if isParam then
               ThisPort(CompVar(s"${id}_read_en"))
-          } else {
+          else
               arr.port("read_en")
-          }
 
         // always assign 1 to read_en port if we want to read from seq mem
         val readEnStruct =  if rhsInfo.isDefined then List() else List(Assign(ConstantPort(1,1), readEnPort))
 
         val writeEnStruct =
-          rhsInfo match {
+          rhsInfo match
             case Some((port, _)) => List(Assign(port, writeEnPort))
             case None => List()
-          }
 
-        val delay = (rhsInfo) match {
+        val delay = (rhsInfo) match
           case (None) => Some(1)
           case (Some((_, delay))) => delay.map(_ + 1)
-        }
 
         EmitOutput(
           accessPort,
@@ -727,15 +697,14 @@ private class CalyxBackendHelper {
       }
       case x =>
         throw NotImplemented(s"Calyx backend does not support $x yet.", x.pos)
-    }
 
   def emitCmd(
       c: Command
   )(
       implicit store: Store,
       id2FuncDef: FunctionMapping
-  ): (List[Structure], Control, Store) = {
-    c match {
+  ): (List[Structure], Control, Store) =
+    c match
       case CBlock(cmd) => emitCmd(cmd)
       case CPar(cmds) => {
         cmds.foldLeft[(List[Structure], Control, Store)](
@@ -808,13 +777,12 @@ private class CalyxBackendHelper {
         )
         // The write enable signal should not be high until
         // the multi-cycle operation is complete, if it exists.
-        val (writeEnableSrcPort, delay) = out.multiCycleInfo match {
+        val (writeEnableSrcPort, delay) = out.multiCycleInfo match
           case Some((port, Some(delay))) =>
             (Some(port), out.delay.map(_ + delay + 1))
           case Some((port, None)) =>
             (Some(port), None)
           case None => (out.done, out.delay.map(_ + 1))
-        }
         val struct =
           Assign(out.port, reg.name.port("in")) :: Assign(
             writeEnableSrcPort.getOrElse(ConstantPort(1, 1)),
@@ -913,7 +881,7 @@ private class CalyxBackendHelper {
         val groupName = genName("cond")
 
         // If the conditional computation is not combinational, generate a group.
-        condOut.done match {
+        condOut.done match
           case Some(done) => {
             val doneAssign = Assign(done, HolePort(groupName, "done"))
             val (group, st) =
@@ -939,7 +907,6 @@ private class CalyxBackendHelper {
             val control = If(condOut.port, group.id, tCon, fCon)
             (group :: st ++ struct, control, store)
           }
-        }
       }
       case CEmpty => (List(), Empty, store)
       case wh @ CWhile(cond, _, body) => {
@@ -971,7 +938,7 @@ private class CalyxBackendHelper {
         // to
         //   lhs = lhs + rhs
         val (op, numOp) =
-          rop.toString match {
+          rop.toString match
             case "+=" => ("+", (x: Double, y: Double) => x + y)
             case "*=" => ("*", (x: Double, y: Double) => x * y)
             case _ =>
@@ -979,9 +946,8 @@ private class CalyxBackendHelper {
                 s"Calyx backend does not support $rop yet",
                 c.pos
               )
-          }
 
-        e1 match {
+        e1 match
           case _: EVar =>
             emitCmd(CUpdate(e1, EBinop(NumOp(op, numOp), e1, e2)))
           case ea: EArrAccess => {
@@ -997,7 +963,6 @@ private class CalyxBackendHelper {
             throw Impossible(
               s"LHS is neither a variable nor a memory access: ${Pretty.emitExpr(e)(false).pretty}"
             )
-        }
       }
       case CReturn(expr:EVar) => {
         // Hooks the output port of the emitted `expr` to PortDef `out` of the component.
@@ -1016,19 +981,15 @@ private class CalyxBackendHelper {
       case _: CDecorate => (List(), Empty, store)
       case x =>
         throw NotImplemented(s"Calyx backend does not support $x yet", x.pos)
-    }
-  }
 
   /** Emits the function definition if a body exists. */
-  def emitDefinition(definition: Definition): FuncDef = {
-    definition match {
+  def emitDefinition(definition: Definition): FuncDef =
+    definition match
       case fd: FuncDef => fd
       case x =>
         throw NotImplemented(s"Calyx backend does not support $x yet", x.pos)
-    }
-  }
 
-  def emitProg(p: Prog, c: Config): String = {
+  def emitProg(p: Prog, c: Config): String =
 
     implicit val meta = Metadata()
 
@@ -1048,8 +1009,8 @@ private class CalyxBackendHelper {
       )
 
     val functionDefinitions: List[Component] =
-      for ( case (id, FuncDef(_, params, retType, Some(body))) <- id2FuncDef.toList )
-        yield {
+      for  case (id, FuncDef(_, params, retType, Some(body))) <- id2FuncDef.toList 
+        yield
           val (refCells, inputPorts) = params.partitionMap(param =>
             param.typ match {
               case tarr: TArray => {
@@ -1089,7 +1050,6 @@ private class CalyxBackendHelper {
             refCells.toList ++ cmdStructure.sorted,
             controls
           )
-        }
 
     val imports =
       Import("primitives/core.futil") ::
@@ -1097,7 +1057,7 @@ private class CalyxBackendHelper {
         Import("primitives/binary_operators.futil") ::
         p.includes.flatMap(_.backends.get(C.Calyx)).map(i => Import(i)).toList
 
-    val main = if !c.compilerOpts.contains("no-main") then {
+    val main = if !c.compilerOpts.contains("no-main") then
       val declStruct = p.decls.map(emitDecl)
       val store =
         declStruct.foldLeft(Map[CompVar, (CompVar, VType)]())((store, struct) =>
@@ -1114,9 +1074,8 @@ private class CalyxBackendHelper {
       List(
         Component(mainComponentName, List(), List(), struct.sorted, control)
       )
-    } else {
+    else
       List()
-    }
 
     // Emit the program
     (PrettyPrint.Doc
@@ -1124,13 +1083,9 @@ private class CalyxBackendHelper {
         (imports ++ functionDefinitions ++ main)
           .map(_.doc(meta))
       ) <@> meta.doc()).pretty
-  }
-}
 
-case object CalyxBackend extends fuselang.backend.Backend {
-  def emitProg(p: Prog, c: Config) = {
+case object CalyxBackend extends fuselang.backend.Backend:
+  def emitProg(p: Prog, c: Config) =
     (new CalyxBackendHelper()).emitProg(p, c)
-  }
   val canGenerateHeader = false
   override val commentPrefix: String = "//"
-}

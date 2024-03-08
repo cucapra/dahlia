@@ -7,36 +7,31 @@ import Transformer._
 import EnvHelpers._
 import Syntax._
 
-object HoistMemoryReads extends PartialTransformer {
+object HoistMemoryReads extends PartialTransformer:
 
   // Env for storing the assignments for reads to replace
   case class BufferEnv(map: ListMap[Expr, CLet] = ListMap())
       extends ScopeManager[BufferEnv]
-      with Tracker[Expr, CLet, BufferEnv] {
-    def merge(that: BufferEnv) = {
+      with Tracker[Expr, CLet, BufferEnv]:
+    def merge(that: BufferEnv) =
       BufferEnv(this.map ++ that.map)
-    }
 
     def get(key: Expr) = this.map.get(key)
 
-    def add(key: Expr, value: CLet) = {
+    def add(key: Expr, value: CLet) =
       BufferEnv(this.map + (key -> value))
-    }
-  }
 
   type Env = BufferEnv
   val emptyEnv = BufferEnv()
 
   /** Helper for generating unique names. */
   var idx: Map[String, Int] = Map();
-  def genName(base: String): Id = {
+  def genName(base: String): Id =
     // update idx
-    idx.get(base) match {
+    idx.get(base) match
       case Some(n) => idx = idx + (base -> (n + 1))
       case None => idx = idx + (base -> 0)
-    }
     Id(s"$base${idx(base)}")
-  }
 
   /** Constructs a (Command, Env) tuple from a command
     * and an environment containing new let bindings. */
@@ -44,22 +39,20 @@ object HoistMemoryReads extends PartialTransformer {
       cmd: Command,
       env: Env,
       acc: Command = CEmpty
-  ): Command = {
-    if env.map.values.isEmpty && acc == CEmpty then {
+  ): Command =
+    if env.map.values.isEmpty && acc == CEmpty then
       cmd
-    } else {
+    else
       CPar.smart(env.map.values.toSeq :+ acc :+ cmd)
-    }
-  }
 
   /** Replaces array accesses with reads from a temporary variable.
     * Inserts a let binding into the Env and relies on the rewriteC.
     * to insert this into the code. */
-  def myRewriteE: PF[(Expr, Env), (Expr, Env)] = {
+  def myRewriteE: PF[(Expr, Env), (Expr, Env)] =
     case (e @ EArrAccess(id, exprs), env) => {
       val (nexprs, env1) =
         rewriteSeqWith[Expr](rewriteE(_: Expr)(_: Env))(exprs)(env)
-      env1.get(e) match {
+      env1.get(e) match
         case Some(let) => EVar(let.id) -> env1
         case None => {
           val readTmp = genName(s"${id}_read")
@@ -67,17 +60,14 @@ object HoistMemoryReads extends PartialTransformer {
           val nEnv = env.add(e, read)
           EVar(readTmp) -> nEnv
         }
-      }
     }
-  }
 
   /** Simple wrapper that calls rewriteC with an emptyEnv
     * and projects the first element of the result. */
-  def rewrC(c: Command): Command = {
+  def rewrC(c: Command): Command =
     rewriteC(c)(emptyEnv)._1
-  }
 
-  def myRewriteC: PF[(Command, Env), (Command, Env)] = {
+  def myRewriteC: PF[(Command, Env), (Command, Env)] =
     // Don't rewrite directly bound array reads. Rewrite access expressions
     // if any.
     case (c @ CLet(_, _, Some(arr @ EArrAccess(_, exprs))), env) => {
@@ -139,11 +129,9 @@ object HoistMemoryReads extends PartialTransformer {
       val (rewrite, env) = rewriteE(rhs)(emptyEnv)
       construct(CReduce(rop, e, rewrite), env) -> emptyEnv
     }
-  }
 
   override def rewriteC(cmd: Command)(implicit env: Env) =
     mergeRewriteC(myRewriteC)(cmd, env)
 
   override def rewriteE(expr: Expr)(implicit env: Env) =
     mergeRewriteE(myRewriteE)(expr, env)
-}

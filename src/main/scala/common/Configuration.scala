@@ -2,27 +2,24 @@ package fuselang.common
 
 import java.io.File
 
-object Configuration {
+object Configuration:
 
   sealed trait Mode
   case object Compile extends Mode
   case object Run extends Mode
 
-  def stringToBackend(name: String): Option[BackendOption] = name match {
+  def stringToBackend(name: String): Option[BackendOption] = name match
     case "vivado" => Some(Vivado)
     case "c++" => Some(Cpp)
     case "futil" | "calyx" => Some(Calyx)
     case _ => None
-  }
 
   // What kind of code to generate.
-  sealed trait BackendOption {
-    override def toString() = this match {
+  sealed trait BackendOption:
+    override def toString() = this match
       case Vivado => "vivado"
       case Cpp => "c++"
       case Calyx => "calyx"
-    }
-  }
   case object Vivado extends BackendOption
   case object Cpp extends BackendOption
   case object Calyx extends BackendOption
@@ -48,4 +45,3 @@ object Configuration {
       memoryInterface: MemoryInterface = Axi, // The memory interface to use for vivado
   )
 
-}
