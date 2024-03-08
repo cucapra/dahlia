@@ -653,7 +653,7 @@ private class CalyxBackendHelper {
         val isParam = (typ == ParameterVar)
 
         val (writeEnPort, donePort, accessPort, contentEnPort) =
-          if (isParam) {
+          if isParam then {
             (
               ThisPort(CompVar(s"${id}_write_en")),
               ThisPort(CompVar(s"${id}_done")),
@@ -700,7 +700,7 @@ private class CalyxBackendHelper {
         EmitOutput(
           accessPort,
           Some(donePort),
-          contentEnStruct ++ (indexing ++ (if (rhsInfo.isDefined) writeEnStruct else List())),
+          contentEnStruct ++ (indexing ++ (if rhsInfo.isDefined then writeEnStruct else List())),
           delay,
           Some((donePort, delay))
         )
