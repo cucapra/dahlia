@@ -9,7 +9,7 @@ import Syntax._
 import Errors._
 import MultiSet._
 
-object Info {
+object Info:
 
   case class ArrayInfo(
       id: Id,
@@ -19,32 +19,31 @@ object Info {
       remBanks: MultiSet[Int],
       // Source code locations that consumed a bank.
       conLocs: Map[Int, MultiSet[Position]] = Map()
-  ) {
+  ):
 
     override def toString = remBanks.toString
 
     def consumeResources(
         resources: Seq[Int]
-    )(implicit pos: Position, trace: Seq[String]) = {
+    )(implicit pos: Position, trace: Seq[String]) =
 
       // Make sure banks exist.
       val missingBank = resources.find(!avBanks.containsAtLeast(_, 1))
       assertOrThrow(missingBank.isEmpty, UnknownBank(id, missingBank.head))
 
       val newConLocs =
-        conLocs ++ resources.foldLeft(conLocs) {
+        conLocs ++ resources.foldLeft(conLocs):
           case (newConLocs, res) =>
             newConLocs + (res -> newConLocs
               .getOrElse(res, emptyMultiSet[Position]())
               .add(pos))
-        }
 
       // Calculate multi-set difference b/w required resource and available
       // resources.
       val resourceMS = fromSeq(resources)
       val afterConsume = remBanks.diff(resourceMS)
       val hasRequired = afterConsume.forall({ case (_, v) => v >= 0 })
-      if hasRequired == false then {
+      if hasRequired == false then
         val bank = afterConsume.find({ case (_, v) => v < 0 }).get._1
         throw AlreadyConsumed(
           id,
@@ -52,21 +51,17 @@ object Info {
           avBanks.getCount(bank),
           newConLocs(bank)
         )
-      }
 
       this.copy(remBanks = afterConsume, conLocs = newConLocs)
-    }
 
     // Return a copy of the physical resource with all the resources available.
     def toFresh = this.copy(remBanks = avBanks, conLocs = Map())
 
-    def merge(that: ArrayInfo) = {
+    def merge(that: ArrayInfo) =
       val remBanks = this.remBanks.zipWith(that.remBanks, Math.min)
       this.copy(remBanks = remBanks, conLocs = this.conLocs ++ that.conLocs)
-    }
-  }
 
-  object ArrayInfo {
+  object ArrayInfo:
     private def cross[A](acc: Seq[Seq[A]], l: Seq[A]): Seq[Seq[A]] =
       for  a <- acc; el <- l  yield a :+ el
 
@@ -77,7 +72,7 @@ object Info {
           case (acc, (hb, maxBank)) => acc * maxBank + hb
         })
 
-    def apply(id: Id, banks: Iterable[Int], ports: Int): ArrayInfo = {
+    def apply(id: Id, banks: Iterable[Int], ports: Int): ArrayInfo =
       val startResources: MultiSet[Int] = fromSeq(
         banks
           .map(b => List.tabulate(b)(identity))
@@ -90,6 +85,3 @@ object Info {
       )
 
       ArrayInfo(id, startResources, startResources)
-    }
-  }
-}

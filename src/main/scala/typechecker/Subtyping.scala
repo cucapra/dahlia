@@ -40,17 +40,16 @@ import fuselang.Utils.bitsNeeded
   *  if there is no type T' statisfying T' < T and is an upper bound for t1 and
   *  t2.
   */
-object Subtyping {
-  def areEqual(t1: Type, t2: Type) = (t1, t2) match {
+object Subtyping:
+  def areEqual(t1: Type, t2: Type) = (t1, t2) match
     case (TStaticInt(v1), TStaticInt(v2)) => v1 == v2
     case (_: TIndex, _: TIndex) => true
     case (_: TFloat, _: TFloat) => true
     case (TAlias(r1), t) => r1.toString == t.toString
     case (t, TAlias(r1)) => t.toString == r1.toString
     case _ => t1 == t2
-  }
 
-  def isSubtype(sub: Type, sup: Type): Boolean = (sub, sup) match {
+  def isSubtype(sub: Type, sup: Type): Boolean = (sub, sup) match
     case (TSizedInt(v1, un1), TSizedInt(v2, un2)) => un1 == un2 && v1 <= v2
     case (TStaticInt(v1), TSizedInt(v2, un2)) =>
       ((v1 < 0 && un2 == false) || (v1 >= 0)) && bitsNeeded(v1) <= v2
@@ -70,20 +69,18 @@ object Subtyping {
     case (TFixed(t1, i1, un1), TFixed(t2, i2, un2)) =>
       (un1 == un2 && i1 <= i2 && (t1 - i1) <= (t2 - i2))
     case _ => areEqual(sub, sup)
-  }
 
   private def joinOfHelper(t1: Type, t2: Type, op: BOp): Option[Type] =
-    (t1, t2) match {
+    (t1, t2) match
       //XXX(Zhijing): what happens for multiplication? Overflow?
       case (TStaticInt(v1), TStaticInt(v2)) =>
-        op.toFun match {
+        op.toFun match
           case Some(fun) =>
             Some(TStaticInt(fun(v1.toDouble, v2.toDouble).toInt))
           case None =>
             Some(TSizedInt(max(bitsNeeded(v1), bitsNeeded(v2)), false))
-        }
       case (TRational(v1), TRational(v2)) =>
-        op.toFun match {
+        op.toFun match
           //XXX(Zhijing):deprecated
           case Some(fun) =>
             Some(TRational(fun(v1.toDouble, v2.toDouble).toString))
@@ -91,7 +88,6 @@ object Subtyping {
             if bitsNeeded(v1.toDouble.toInt) > bitsNeeded(v2.toDouble.toInt) then
               Some(TRational(v1))
             else Some(TRational(v2))
-        }
       case (TSizedInt(s1, un1), TSizedInt(s2, un2)) =>
         if un1 == un2 then Some(TSizedInt(max(s1, s2), un1))
         else None
@@ -121,19 +117,17 @@ object Subtyping {
           TSizedInt(max(bitsNeeded(ti1.maxVal), bitsNeeded(ti2.maxVal)), false)
         )
       case (t1, t2) => if t1 == t2 then Some(t1) else None
-    }
 
   /**
     * Try finding the join of either ordering and use the result.
     */
-  def joinOf(t1: Type, t2: Type, op: BOp): Option[Type] = {
+  def joinOf(t1: Type, t2: Type, op: BOp): Option[Type] =
     val j1 = joinOfHelper(t1, t2, op)
     if j1.isDefined then j1
     else joinOfHelper(t2, t1, op)
-  }
 
   def safeCast(originalType: Type, castType: Type) =
-    (originalType, castType) match {
+    (originalType, castType) match
       case (t1: IntType, t2: TSizedInt) => isSubtype(t1, t2)
       case (_: TFloat, _: TSizedInt) => false
       case (_: TDouble, _: TSizedInt) => false
@@ -144,5 +138,3 @@ object Subtyping {
       case (_: TRational, _: TDouble) => true
       case (TSizedInt(i1, un1), TFixed(_, i2, un2)) => (un1 == un2 && i1 <= i2)
       case (t1, t2) => areEqual(t1, t2)
-    }
-}

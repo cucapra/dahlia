@@ -10,7 +10,7 @@ import Errors._
 import Checker._
 import EnvHelpers._
 
-object WellFormedChecker {
+object WellFormedChecker:
 
   def check(p: Prog) = WFCheck.check(p)
 
@@ -19,7 +19,7 @@ object WellFormedChecker {
       insideUnroll: Boolean = false,
       insideFunc: Boolean = false
   ) extends ScopeManager[WFEnv]
-    with Tracker[Id, FuncDef, WFEnv] {
+    with Tracker[Id, FuncDef, WFEnv]:
     def merge(that: WFEnv): WFEnv = this
 
     override def add(k: Id, v: FuncDef): WFEnv =
@@ -31,36 +31,32 @@ object WellFormedChecker {
 
     override def get(k: Id): Option[FuncDef] = this.map.get(k)
 
-    def canHaveFunctionInUnroll(k: Id): Boolean = {
-      this.get(k) match {
+    def canHaveFunctionInUnroll(k: Id): Boolean =
+      this.get(k) match
         case Some(FuncDef(_, args, _, _)) =>
-          if this.insideUnroll then {
+          if this.insideUnroll then
             args.foldLeft(true)({
               (r, arg) => arg.typ match {
                 case TArray(_, _, _) => false
                 case _ => r
               }
             })
-          } else
+          else
             true
         case None => true // This is supposed to be unreachable
-      }
-    }
-  }
 
-  private case object WFCheck extends PartialChecker {
+  private case object WFCheck extends PartialChecker:
 
     type Env = WFEnv
     val emptyEnv = WFEnv()
 
-    override def checkDef(defi: Definition)(implicit env: Env) = defi match {
+    override def checkDef(defi: Definition)(implicit env: Env) = defi match
       case fndef @ FuncDef(id, _, _, bodyOpt) =>
         val nenv = env.add(id, fndef)
         bodyOpt.map(checkC(_)(nenv.copy(insideFunc = true))).getOrElse(nenv)
       case _: RecordDef => env
-    }
 
-    def myCheckE: PF[(Expr, Env), Env] = {
+    def myCheckE: PF[(Expr, Env), Env] =
       case (expr: EPhysAccess, _) =>
         throw CompilerError.PassError(
           "Physical accesses should be removed up the lowering passes.",
@@ -74,9 +70,8 @@ object WellFormedChecker {
         assertOrThrow(env.canHaveFunctionInUnroll(id) == true, FuncInUnroll(expr.pos))
         env
       }
-    }
 
-    def myCheckC: PF[(Command, Env), Env] = {
+    def myCheckC: PF[(Command, Env), Env] =
       case (cmd @ CReduce(op, l, r), e) => {
         assertOrThrow(e.insideUnroll == false, ReduceInsideUnroll(op, cmd.pos))
         checkE(r)(checkE(l)(e))
@@ -84,14 +79,13 @@ object WellFormedChecker {
       case (l @ CLet(id, typ, Some(EArrLiteral(_))), e) => {
         val expTyp = typ
           .getOrThrow(ExplicitTypeMissing(l.pos, "Array literal", id))
-        expTyp match {
+        expTyp match
           case TArray(_, dims, _) =>
             assertOrThrow(
               dims.length == 1,
               Unsupported(l.pos, "Multidimensional array literals")
             )
           case _ => ()
-        }
         e
       }
       case (l @ CLet(id, typ, Some(ERecLiteral(_))), e) => {
@@ -122,11 +116,8 @@ object WellFormedChecker {
         assertOrThrow(env.insideFunc, ReturnNotInFunc(cmd.pos))
         env
       }
-    }
 
     override def checkE(expr: Expr)(implicit env: Env) =
       mergeCheckE(myCheckE)(expr, env)
     override def checkC(cmd: Command)(implicit env: Env) =
       mergeCheckC(myCheckC)(cmd, env)
-  }
-}

@@ -26,27 +26,24 @@ object CapabilityChecker:
       * - If there are no capabilities or a write capability, add a consume
       *   annotation.
       */
-    def myCheckE: PF[(Expr, Env), Env] = {
+    def myCheckE: PF[(Expr, Env), Env] =
       case (acc @ EArrAccess(_, idxs), env) => {
-        val (nEnv, consumableAnn, cap) = env.get(acc) match {
+        val (nEnv, consumableAnn, cap) = env.get(acc) match
           case Some(Read) => (env, SkipConsume, Read)
           case Some(Write) | None => (checkESeq(idxs)(env), ShouldConsume, Read)
-        }
         acc.consumable = Some(consumableAnn)
         nEnv.add(acc, cap)
       }
       case (_: EPhysAccess, _) => {
         throw NotImplemented("Capability checking for physical accesses.")
       }
-    }
 
-    def myCheckC: PF[(Command, Env), Env] = {
+    def myCheckC: PF[(Command, Env), Env] =
       case (CSeq(cmds), env) => {
         // Check all seq commands under the same environment
         cmds.foreach(c => checkC(c)(env));
         env
       }
-    }
 
     /**
       * Check an array write. If there is already a write capability, error.
@@ -55,18 +52,16 @@ object CapabilityChecker:
       * This doesn't need to be partial function since it deals with all
       * cases in checkLVal.
       */
-    override def checkLVal(e: Expr)(implicit env: Env) = e match {
+    override def checkLVal(e: Expr)(implicit env: Env) = e match
       case acc @ EArrAccess(_, idxs) => {
-        val (nEnv, consumableAnn, cap) = env.get(e) match {
+        val (nEnv, consumableAnn, cap) = env.get(e) match
           case Some(Write) => throw AlreadyWrite(e)
           case Some(Read) | None => (checkESeq(idxs), ShouldConsume, Write)
-        }
 
         acc.consumable = Some(consumableAnn)
         nEnv.add(e, cap)
       }
       case _ => checkE(e)
-    }
 
     override def checkE(expr: Expr)(implicit env: Env) =
       mergeCheckE(myCheckE)(expr, env)

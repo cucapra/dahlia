@@ -5,7 +5,7 @@ package fuselang.common
 
 import java.io.Writer
 
-object PrettyPrint {
+object PrettyPrint:
   case object DocNil extends Doc
   case object DocBreak extends Doc
   case object DocSpace extends Doc
@@ -20,40 +20,36 @@ object PrettyPrint {
     * @author Michel Schinz
     * @version 1.0
     */
-  abstract class Doc {
-    def <@>(hd: Doc): Doc = {
+  abstract class Doc:
+    def <@>(hd: Doc): Doc =
       if hd == DocNil then this
       else this <> DocBreak <> hd
-    }
-    def <>(hd: Doc): Doc = (this, hd) match {
+    def <>(hd: Doc): Doc = (this, hd) match
       case (_, DocNil) => this
       case (DocNil, _) => hd
       case _ => new DocCons(this, hd)
-    }
     def <+>(hd: Doc): Doc = this <> DocSpace <> hd
 
-    def pretty: String = {
+    def pretty: String =
       val writer = new java.io.StringWriter()
       format(writer)
       writer.toString
-    }
 
     /**
       * Format this Doc on `writer`.
       */
-    def format(writer: Writer): Unit = {
+    def format(writer: Writer): Unit =
       type FmtState = (Int, Doc)
 
-      def spaces(n: Int): Unit = {
+      def spaces(n: Int): Unit =
         var rem = n
         while rem >= 16 do { writer write "                "; rem -= 16 }
         if rem >= 8 then { writer write "        "; rem -= 8 }
         if rem >= 4 then { writer write "    "; rem -= 4 }
         if rem >= 2 then { writer write "  "; rem -= 2 }
         if rem == 1 then { writer write " " }
-      }
 
-      def fmt(state: List[FmtState]): Unit = state match {
+      def fmt(state: List[FmtState]): Unit = state match
         case List() => ()
         case (_, DocNil) :: z => fmt(z)
         case (i, DocCons(h, t)) :: z => fmt((i, h) :: (i, t) :: z)
@@ -71,13 +67,10 @@ object PrettyPrint {
           writer.write(" "); fmt(z)
         }
         case _ => ()
-      }
 
       fmt(List((0, this)))
-    }
-  }
 
-  object Doc {
+  object Doc:
 
     /** The empty Doc */
     def emptyDoc = DocNil
@@ -142,5 +135,3 @@ object PrettyPrint {
     def braces(d: Doc) = enclose(text("{"), d, text("}"))
     def brackets(d: Doc) = enclose(text("["), d, text("]"))
     def angles(d: Doc) = enclose(text("<"), d, text(">"))
-  }
-}

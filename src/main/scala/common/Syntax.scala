@@ -6,60 +6,52 @@ import scala.math.abs
 import Errors._
 import Configuration.BackendOption
 
-object Syntax {
+object Syntax:
 
-  trait PositionalWithSpan extends Positional {
+  trait PositionalWithSpan extends Positional:
     var span: Int = 0
 
-    def setSpan(span: Int): this.type = {
+    def setSpan(span: Int): this.type =
       this.span = span
       this
-    }
 
-    def withPos[T <: PositionalWithSpan](other: T): this.type = {
+    def withPos[T <: PositionalWithSpan](other: T): this.type =
       this.setPos(other.pos).setSpan(other.span)
       this
-    }
-  }
 
   /**
     * Annotations added by the various passes of the type checker.
     */
-  object Annotations {
+  object Annotations:
     sealed trait Consumable
     case object ShouldConsume extends Consumable
     case object SkipConsume extends Consumable
 
-    sealed trait ConsumableAnnotation {
+    sealed trait ConsumableAnnotation:
       var consumable: Option[Consumable] = None
-    }
 
-    sealed trait TypeAnnotation {
+    sealed trait TypeAnnotation:
       var typ: Option[Type] = None;
-    }
-  }
 
-  object OpConstructor {
+  object OpConstructor:
     val add: (Double, Double) => Double = (_ + _)
     val mul: (Double, Double) => Double = (_ * _)
     val div: (Double, Double) => Double = (_ / _)
     val sub: (Double, Double) => Double = (_ - _)
     val mod: (Double, Double) => Double = (_ % _)
-  }
 
   import Annotations._
 
-  case class Id(v: String) extends PositionalWithSpan with TypeAnnotation {
+  case class Id(v: String) extends PositionalWithSpan with TypeAnnotation:
     override def toString = s"$v"
-  }
 
   // Capabilities for read/write
   sealed trait Capability
   case object Read extends Capability
   case object Write extends Capability
 
-  sealed trait Type extends PositionalWithSpan {
-    override def toString = this match {
+  sealed trait Type extends PositionalWithSpan:
+    override def toString = this match
       case _: TVoid => "void"
       case _: TBool => "bool"
       case _: TRational => "rational"
@@ -76,19 +68,16 @@ object Syntax {
       case TFun(args, ret) => s"${args.mkString("->")} -> ${ret}"
       case TRecType(n, _) => s"$n"
       case TAlias(n) => n.toString
-    }
-  }
   // Types that can be upcast to Ints
   sealed trait IntType
   case class TSizedInt(len: Int, unsigned: Boolean) extends Type with IntType
   case class TStaticInt(v: BigInt) extends Type with IntType
   case class TIndex(static: (Int, Int), dynamic: (Int, Int))
       extends Type
-      with IntType {
+      with IntType:
     // Our ranges are represented as s..e with e excluded from the range.
     // Therefore, the maximum value is one than the product of the interval ends.
     val maxVal: Int = static._2 * dynamic._2 - 1
-  }
   // Use case class instead of case object to get unique positions
   case class TVoid() extends Type
   case class TBool() extends Type
@@ -103,7 +92,7 @@ object Syntax {
 
   // Each dimension has a length and a bank
   type DimSpec = (Int, Int)
-  case class TArray(typ: Type, dims: Seq[DimSpec], ports: Int) extends Type {
+  case class TArray(typ: Type, dims: Seq[DimSpec], ports: Int) extends Type:
     dims.zipWithIndex.foreach({
       case ((len, bank), dim) =>
         if bank > len || len % bank != 0 then {
@@ -112,16 +101,13 @@ object Syntax {
           )
         }
     })
-  }
 
-  sealed trait BOp extends PositionalWithSpan {
+  sealed trait BOp extends PositionalWithSpan:
     val op: String;
     override def toString = this.op
-    def toFun: Option[(Double, Double) => Double] = this match {
+    def toFun: Option[(Double, Double) => Double] = this match
       case n: NumOp => Some(n.fun)
       case _ => None
-    }
-  }
 
   case class EqOp(op: String) extends BOp
   case class CmpOp(op: String) extends BOp
@@ -129,12 +115,10 @@ object Syntax {
   case class NumOp(op: String, fun: (Double, Double) => Double) extends BOp
   case class BitOp(op: String) extends BOp
 
-  sealed trait Expr extends PositionalWithSpan with TypeAnnotation {
-    def isLVal = this match {
+  sealed trait Expr extends PositionalWithSpan with TypeAnnotation:
+    def isLVal = this match
       case _: EVar | _: EArrAccess | _: EPhysAccess => true
       case _ => false
-    }
-  }
   case class EInt(v: BigInt, base: Int = 10) extends Expr
   case class ERational(d: String) extends Expr
   case class EBool(v: Boolean) extends Expr
@@ -159,19 +143,15 @@ object Syntax {
       s: Int,
       e: Int,
       u: Int
-  ) extends PositionalWithSpan {
-    def idxType: TIndex = {
-      if abs(e - s) % u != 0 then {
+  ) extends PositionalWithSpan:
+    def idxType: TIndex =
+      if abs(e - s) % u != 0 then
         throw UnrollRangeError(this.pos, e - s, u)
-      } else {
+      else
         TIndex((0, u), (s / u, e / u))
-      }
-    }
-  }
 
-  case class ROp(op: String) extends PositionalWithSpan {
+  case class ROp(op: String) extends PositionalWithSpan:
     override def toString = this.op
-  }
 
   /** Views **/
   sealed trait Suffix extends PositionalWithSpan
@@ -189,9 +169,8 @@ object Syntax {
   case class View(suffix: Suffix, prefix: Option[Int], shrink: Option[Int])
       extends PositionalWithSpan
 
-  sealed trait Command extends PositionalWithSpan {
+  sealed trait Command extends PositionalWithSpan:
     var attributes: Map[String, Int] = Map()
-  }
   case class CPar(cmds: Seq[Command]) extends Command
   case class CSeq(cmds: Seq[Command]) extends Command
   case class CLet(id: Id, var typ: Option[Type], e: Option[Expr])
@@ -208,29 +187,26 @@ object Syntax {
   case class CWhile(cond: Expr, pipeline: Boolean, body: Command)
       extends Command
   case class CDecorate(value: String) extends Command
-  case class CUpdate(lhs: Expr, rhs: Expr) extends Command {
+  case class CUpdate(lhs: Expr, rhs: Expr) extends Command:
     if lhs.isLVal == false then throw UnexpectedLVal(lhs, "assignment")
-  }
-  case class CReduce(rop: ROp, lhs: Expr, rhs: Expr) extends Command {
+  case class CReduce(rop: ROp, lhs: Expr, rhs: Expr) extends Command:
     if lhs.isLVal == false then throw UnexpectedLVal(lhs, "reduction")
-  }
   case class CReturn(exp: Expr) extends Command
   case class CExpr(exp: Expr) extends Command
   case class CBlock(cmd: Command) extends Command
   case object CEmpty extends Command
 
   // Smart constructors for composition
-  object CPar {
-    def smart(c1: Command, c2: Command): Command = (c1, c2) match {
+  object CPar:
+    def smart(c1: Command, c2: Command): Command = (c1, c2) match
       case (l: CPar, r: CPar) => l.copy(cmds = l.cmds ++ r.cmds)
       case (l: CPar, r) => l.copy(cmds = l.cmds :+ r)
       case (l, r: CPar) => r.copy(cmds = l +: r.cmds)
       case (CEmpty, r) => r
       case (l, CEmpty) => l
       case _ => CPar(Seq(c1, c2))
-    }
 
-    def smart(cmds: Seq[Command]): Command = {
+    def smart(cmds: Seq[Command]): Command =
       val flat = cmds.flatMap(cmd =>
         cmd match {
           case CPar(cs) => cs
@@ -238,26 +214,22 @@ object Syntax {
           case _ => Seq(cmd)
         }
       )
-      if flat.length == 0 then {
+      if flat.length == 0 then
         CEmpty
-      } else if flat.length == 1 then {
+      else if flat.length == 1 then
         flat(0)
-      } else {
+      else
         CPar(flat)
-      }
-    }
-  }
-  object CSeq {
-    def smart(c1: Command, c2: Command): Command = (c1, c2) match {
+  object CSeq:
+    def smart(c1: Command, c2: Command): Command = (c1, c2) match
       case (l: CSeq, r: CSeq) => l.copy(cmds = l.cmds ++ r.cmds)
       case (l: CSeq, r) => l.copy(cmds = l.cmds :+ r)
       case (l, r: CSeq) => r.copy(cmds = l +: r.cmds)
       case (CEmpty, r) => r
       case (l, CEmpty) => l
       case _ => CSeq(Seq(c1, c2))
-    }
 
-    def smart(cmds: Seq[Command]): Command = {
+    def smart(cmds: Seq[Command]): Command =
       val flat = cmds.flatMap(cmd =>
         cmd match {
           case CSeq(cs) => cs
@@ -265,15 +237,12 @@ object Syntax {
           case _ => Seq(cmd)
         }
       )
-      if flat.length == 0 then {
+      if flat.length == 0 then
         CEmpty
-      } else if flat.length == 1 then {
+      else if flat.length == 1 then
         flat(0)
-      } else {
+      else
         CSeq(flat)
-      }
-    }
-  }
 
   sealed trait Definition extends PositionalWithSpan
 
@@ -287,7 +256,7 @@ object Syntax {
       retTy: Type,
       bodyOpt: Option[Command]
   ) extends Definition
-  case class RecordDef(name: Id, fields: Map[Id, Type]) extends Definition {
+  case class RecordDef(name: Id, fields: Map[Id, Type]) extends Definition:
     fields.foreach({
       case (f, t) =>
         t match {
@@ -295,7 +264,6 @@ object Syntax {
           case _ => ()
         }
     })
-  }
 
   /**
     * An include with the name of the module and function definitions.
@@ -317,14 +285,10 @@ object Syntax {
   /**
     * Define common helper methods implicit classes.
     */
-  implicit class RichType(typ: Type) {
+  implicit class RichType(typ: Type):
     def matchOrError[A](pos: Position, construct: String, exp: String)(
         andThen: PartialFunction[Type, A]
-    ): A = {
-      val mismatchError: PartialFunction[Type, A] = {
+    ): A =
+      val mismatchError: PartialFunction[Type, A] =
         case _ => throw UnexpectedType(pos, construct, exp, typ)
-      }
       andThen.orElse(mismatchError)(typ)
-    }
-  }
-}
