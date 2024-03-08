@@ -38,10 +38,11 @@ component main() -> () {
       mult_pipe1.go = !mult_pipe1.done ? 1'd1;
     }
     group upd0<"promotable"=1> {
+      d0.content_en = 1'd1;
       d0.addr0 = const0.out;
       d0.write_en = 1'd1;
       d0.write_data = bin_read1_0.out;
-      upd0[done] = d0.write_done;
+      upd0[done] = d0.done;
     }
   }
   control {
