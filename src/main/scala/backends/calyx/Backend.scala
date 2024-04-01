@@ -936,23 +936,29 @@ private class CalyxBackendHelper {
       }
       case CEmpty => (List(), Empty, store)
       case wh @ CWhile(cond, _, body) => {
-        val condOut = emitExpr(cond)
-        val groupName = genName("cond")
-        assertOrThrow(
-          !condOut.done.isDefined,
-          BackendError("Loop condition is non-combinational")
-        )
-        val (condGroup, condDefs) =
-          Group.fromStructure(
-            groupName,
-            condOut.structure,
-            condOut.delay,
-            true
+        if wh.attributes.contains("bound") then {
+          val (bodyStruct, bodyCon, st) = emitCmd(body)
+          val control = Repeat(10, bodyCon)
+          (bodyStruct, control, st)
+        } else {
+          val condOut = emitExpr(cond)
+          val groupName = genName("cond")
+          assertOrThrow(
+            !condOut.done.isDefined,
+            BackendError("Loop condition is non-combinational")
           )
-        val (bodyStruct, bodyCon, st) = emitCmd(body)
-        val control = While(condOut.port, condGroup.id, bodyCon)
-        control.attributes = wh.attributes
-        (condGroup :: bodyStruct ++ condDefs, control, st)
+          val (condGroup, condDefs) =
+            Group.fromStructure(
+              groupName,
+              condOut.structure,
+              condOut.delay,
+              true
+            )
+          val (bodyStruct, bodyCon, st) = emitCmd(body)
+          val control = While(condOut.port, condGroup.id, bodyCon)
+          control.attributes = wh.attributes
+          (condGroup :: bodyStruct ++ condDefs, control, st)
+        }
       }
       case _: CFor =>
         throw BackendError(

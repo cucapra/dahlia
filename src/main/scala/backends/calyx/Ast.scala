@@ -307,10 +307,15 @@ object Calyx:
             else
               space <> text("else") <+> scope(falseBr.doc)
           )
-        case While(port, cond, body) =>
+        case While(port, cond, body) => {
           text("while") <+> port.doc() <+> text("with") <+>
             cond.doc() <+>
             scope(body.doc(meta))
+        }
+        case While(count, body) => {
+          text("repeat") <+> count.toString <+>
+            scope(body.doc(meta))
+        }
         case e @ Enable(id) => {
           emitPos(e.pos, e.span) <> id.doc() <> semi
         }
@@ -340,6 +345,7 @@ object Calyx:
   case class If(port: Port, cond: CompVar, trueBr: Control, falseBr: Control)
       extends Control
   case class While(port: Port, cond: CompVar, body: Control) extends Control
+  case class Repeat(count: Int, body: Control) extends Control
   case class Enable(id: CompVar) extends Control with Syntax.PositionalWithSpan
   case class Invoke(
       id: CompVar,
