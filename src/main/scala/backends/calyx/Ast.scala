@@ -27,26 +27,24 @@ object Calyx:
         vsep(
           this.map.toSeq
             .sortBy(_._2)
-            .map({
-              case (pos, c) =>
-                text(c.toString()) <> text(":") <+> text(
-                  pos.longString.split("\n")(0)
-                )
+            .map({ case (pos, c) =>
+              text(c.toString()) <> text(":") <+> text(
+                pos.longString.split("\n")(0)
+              )
             })
         ),
         left = text("#") <> lbrace,
         right = rbrace <> text("#")
       )
 
-  private def emitPos(pos: Position, @annotation.unused span: Int)(
-      implicit meta: Metadata
+  private def emitPos(pos: Position, @annotation.unused span: Int)(implicit
+      meta: Metadata
   ): Doc =
     // Add position information to the metadata.
     if pos.line != 0 && pos.column != 0 then
       val count = meta.addPos(pos)
       text("@pos") <> parens(text(count.toString)) <> space
-    else
-      emptyDoc
+    else emptyDoc
     /* (if (pos.line == 0 && pos.column == 0) {
        emptyDoc
      } else {
@@ -74,7 +72,7 @@ object Calyx:
     def doc(): Doc
     def emit(): String = this.doc().pretty
 
-  /** A variable representing the name of a component. **/
+  /** A variable representing the name of a component. * */
   case class CompVar(name: String) extends Emitable with Ordered[CompVar]:
     override def doc(): Doc = text(name)
     def port(port: String): CompPort = CompPort(this, port)
@@ -87,12 +85,13 @@ object Calyx:
       attrs: List[(String, Int)] = List()
   ) extends Emitable:
     override def doc(): Doc =
-      val attrDoc = hsep(attrs.map({
-        case (attr, v) => text(s"@${attr}") <> parens(text(v.toString()))
+      val attrDoc = hsep(attrs.map({ case (attr, v) =>
+        text(s"@${attr}") <> parens(text(v.toString()))
       })) <> (if attrs.isEmpty then emptyDoc else space)
       attrDoc <> id.doc() <> colon <+> value(width)
 
-  /**** definition statements *****/
+  /** ** definition statements ****
+    */
   case class Namespace(name: String, comps: List[NamespaceStatement]):
     def doc(implicit meta: Metadata): Doc =
       vsep(comps.map(_.doc))
@@ -123,7 +122,8 @@ object Calyx:
       control: Control
   ) extends NamespaceStatement
 
-  /***** structure *****/
+  /** *** structure ****
+    */
   sealed trait Port extends Emitable with Ordered[Port]:
     override def doc(): Doc = this match
       case CompPort(id, name) =>
@@ -166,9 +166,8 @@ object Calyx:
         val attrDoc =
           hsep(
             attrs
-              .map({
-                case (attr, v) =>
-                  text("@") <> text(attr) <> parens(text(v.toString()))
+              .map({ case (attr, v) =>
+                text("@") <> text(attr) <> parens(text(v.toString()))
               })
           ) <> (if attrs.isEmpty then emptyDoc else space)
 
@@ -183,7 +182,9 @@ object Calyx:
         (if comb then text("comb ") else emptyDoc) <>
           text("group") <+> id.doc() <>
           (if delay.isDefined then
-             angles(text("\"promotable\"") <> equal <> text(delay.get.toString()))
+             angles(
+               text("\"promotable\"") <> equal <> text(delay.get.toString())
+             )
            else emptyDoc) <+>
           scope(vsep(conns.map(_.doc())))
 
@@ -194,10 +195,8 @@ object Calyx:
         case (Group(thisId, _, _, _), Group(thatId, _, _, _)) =>
           thisId.compare(thatId)
         case (Assign(thisSrc, thisDest, _), Assign(thatSrc, thatDest, _)) => {
-          if thisSrc.compare(thatSrc) == 0 then
-            thisDest.compare(thatDest)
-          else
-            thisSrc.compare(thatSrc)
+          if thisSrc.compare(thatSrc) == 0 then thisDest.compare(thatDest)
+          else thisSrc.compare(thatSrc)
         }
         case (_: Cell, _) => -1
         case (_, _: Cell) => 1
@@ -263,7 +262,8 @@ object Calyx:
   case class Not(inner: GuardExpr) extends GuardExpr
   case object True extends GuardExpr
 
-  /***** control *****/
+  /** *** control ****
+    */
   sealed trait Control:
     var attributes = Map[String, Int]()
 
@@ -284,12 +284,10 @@ object Calyx:
       case _ => ParComp(List(this, c))
 
     def attributesDoc(): Doc =
-      if this.attributes.isEmpty then
-        emptyDoc
+      if this.attributes.isEmpty then emptyDoc
       else
-        hsep(attributes.map({
-          case (attr, v) =>
-            text(s"@$attr") <> parens(text(v.toString()))
+        hsep(attributes.map({ case (attr, v) =>
+          text(s"@$attr") <> parens(text(v.toString()))
         })) <> space
 
     def doc(implicit meta: Metadata): Doc =
@@ -302,18 +300,16 @@ object Calyx:
           text("if") <+> port.doc() <+> text("with") <+>
             cond.doc() <+>
             scope(trueBr.doc) <> (
-            if falseBr == Empty then
-              emptyDoc
-            else
-              space <> text("else") <+> scope(falseBr.doc)
-          )
+              if falseBr == Empty then emptyDoc
+              else space <> text("else") <+> scope(falseBr.doc)
+            )
         case While(port, cond, body) => {
           text("while") <+> port.doc() <+> text("with") <+>
             cond.doc() <+>
             scope(body.doc(meta))
         }
-        case While(count, body) => {
-          text("repeat") <+> count.toString <+>
+        case Repeat(count, body) => {
+          text("repeat") <+> text(count.toString) <+>
             scope(body.doc(meta))
         }
         case e @ Enable(id) => {
@@ -321,17 +317,16 @@ object Calyx:
         }
         case i @ Invoke(id, refCells, inConnects, outConnects) => {
           val cells =
-            if refCells.isEmpty then
-              emptyDoc
+            if refCells.isEmpty then emptyDoc
             else
-              brackets(commaSep(refCells.map({
-                case (param, cell) => text(param) <> equal <> cell.doc()
+              brackets(commaSep(refCells.map({ case (param, cell) =>
+                text(param) <> equal <> cell.doc()
               })))
-          val inputDefs = inConnects.map({
-            case (param, arg) => text(param) <> equal <> arg.doc()
+          val inputDefs = inConnects.map({ case (param, arg) =>
+            text(param) <> equal <> arg.doc()
           })
-          val outputDefs = outConnects.map({
-            case (param, arg) => text(param) <> equal <> arg.doc()
+          val outputDefs = outConnects.map({ case (param, arg) =>
+            text(param) <> equal <> arg.doc()
           })
           emitPos(i.pos, i.span) <> text("invoke") <+> id.doc() <>
             cells <>
