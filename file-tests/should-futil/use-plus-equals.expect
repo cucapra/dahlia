@@ -11,25 +11,13 @@ component use_plus_equals() -> () {
     add1 = std_add(2);
     add2 = std_add(1);
     const0 = std_const(1,0);
-    const1 = std_const(1,0);
-    const2 = std_const(2,0);
-    const3 = std_const(2,1);
-    const4 = std_const(2,1);
-    const5 = std_const(1,1);
+    const1 = std_const(2,0);
+    const2 = std_const(2,1);
+    const3 = std_const(1,1);
     fp_const0 = std_const(32,131072);
-    le0 = std_le(1);
-    le1 = std_le(2);
     red_read00 = std_reg(32);
   }
   wires {
-    comb group cond0 {
-      le0.left = __i0.out;
-      le0.right = const1.out;
-    }
-    comb group cond1 {
-      le1.left = __j0.out;
-      le1.right = const3.out;
-    }
     group let0<"promotable"=1> {
       __i0.in = const0.out;
       __i0.write_en = 1'd1;
@@ -41,7 +29,7 @@ component use_plus_equals() -> () {
       let1[done] = __x_0.done;
     }
     group let2<"promotable"=1> {
-      __j0.in = const2.out;
+      __j0.in = const1.out;
       __j0.write_en = 1'd1;
       let2[done] = __j0.done;
     }
@@ -66,14 +54,14 @@ component use_plus_equals() -> () {
     group upd1<"promotable"=1> {
       __j0.write_en = 1'd1;
       add1.left = __j0.out;
-      add1.right = const4.out;
+      add1.right = const2.out;
       __j0.in = add1.out;
       upd1[done] = __j0.done;
     }
     group upd2<"promotable"=1> {
       __i0.write_en = 1'd1;
       add2.left = __i0.out;
-      add2.right = const5.out;
+      add2.right = const3.out;
       __i0.in = add2.out;
       upd2[done] = __i0.done;
     }
@@ -81,11 +69,11 @@ component use_plus_equals() -> () {
   control {
     seq {
       @pos(0) let0;
-      @bound(1) while le0.out with cond0 {
+      repeat 1 {
         seq {
           @pos(1) let1;
           @pos(2) let2;
-          @bound(2) while le1.out with cond1 {
+          repeat 2 {
             seq {
               let3;
               upd0;
