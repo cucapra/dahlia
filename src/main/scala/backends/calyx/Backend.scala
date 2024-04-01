@@ -939,9 +939,9 @@ private class CalyxBackendHelper {
       }
       case CEmpty => (List(), Empty, store)
       case wh @ CWhile(cond, _, body) => {
+        val (bodyStruct, bodyCon, st) = emitCmd(body)
         wh.attributes.get("bound") match {
           case Some(count) => {
-            val (bodyStruct, bodyCon, st) = emitCmd(body)
             val control = Repeat(count, bodyCon)
             (bodyStruct, control, st)
           }
@@ -959,7 +959,6 @@ private class CalyxBackendHelper {
                 condOut.delay,
                 true
               )
-            val (bodyStruct, bodyCon, st) = emitCmd(body)
             val control = While(condOut.port, condGroup.id, bodyCon)
             control.attributes = wh.attributes
             (condGroup :: bodyStruct ++ condDefs, control, st)
