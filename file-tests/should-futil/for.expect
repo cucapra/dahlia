@@ -9,17 +9,11 @@ component main() -> () {
     add0 = std_sadd(32);
     add1 = std_add(4);
     const0 = std_const(4,0);
-    const1 = std_const(4,9);
-    const2 = std_const(32,1);
-    const3 = std_const(4,1);
+    const1 = std_const(32,1);
+    const2 = std_const(4,1);
     i0 = std_reg(4);
-    le0 = std_le(4);
   }
   wires {
-    comb group cond0 {
-      le0.left = i0.out;
-      le0.right = const1.out;
-    }
     group let0<"promotable"=1> {
       i0.in = const0.out;
       i0.write_en = 1'd1;
@@ -37,14 +31,14 @@ component main() -> () {
       B.addr0 = i0.out;
       B.write_en = 1'd1;
       add0.left = A_read0_0.out;
-      add0.right = const2.out;
+      add0.right = const1.out;
       B.write_data = add0.out;
       upd0[done] = B.done;
     }
     group upd1<"promotable"=1> {
       i0.write_en = 1'd1;
       add1.left = i0.out;
-      add1.right = const3.out;
+      add1.right = const2.out;
       i0.in = add1.out;
       upd1[done] = i0.done;
     }
@@ -52,7 +46,7 @@ component main() -> () {
   control {
     seq {
       @pos(0) let0;
-      @bound(10) while le0.out with cond0 {
+      repeat 10 {
         seq {
           @pos(1) let1;
           @pos(2) upd0;
