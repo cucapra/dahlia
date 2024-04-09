@@ -1,0 +1,9 @@
+decl a: bit<10>[128];
+decl b: bit<10>[128];
+decl c: bit<10>[128];
+decl d: bit<10>[128];
+
+for (let i:bit<8>=0..128) {
+  c[i] := a[i] & b[i]; // This should not be emit signed Calyx primitive
+  d[i] := a[i] + b[i]; // This should emit a signed Calyx primitive
+}

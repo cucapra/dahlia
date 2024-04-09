@@ -255,7 +255,7 @@ private class CalyxBackendHelper {
   /** `emitBinop` is a helper function to generate the structure for `e1 binop
     * e2`. The return type is described in `emitExpr`.
     */
-  def emitBinop(compName: String, e1: Expr, e2: Expr)(implicit
+  def emitBinop(compName: String, op: BOp, e1: Expr, e2: Expr)(implicit
       store: Store
   ): EmitOutput = {
     val e1Out = emitExpr(e1)
@@ -286,7 +286,7 @@ private class CalyxBackendHelper {
 
     bitsForType(e1.typ, e1.pos) match {
       case (e1Bits, None) => {
-        val isSigned = signed(e1.typ)
+        val isSigned = signed(e1.typ, op)
         val binOp = Stdlib.binop(s"$compName", e1Bits, isSigned)
         val comp = Cell(genName(compName), binOp, false, List())
         val struct = List(
@@ -309,7 +309,7 @@ private class CalyxBackendHelper {
         val (e2Bits, Some(intBit2)) = bitsForType(e2.typ, e2.pos): @unchecked
         val fracBit1 = e1Bits - intBit1
         val fracBit2 = e2Bits - intBit2
-        val isSigned = signed(e1.typ)
+        val isSigned = signed(e1.typ, op)
         assertOrThrow(
           fracBit1 == fracBit2 && intBit1 == intBit2,
           NotImplemented(
@@ -487,7 +487,7 @@ private class CalyxBackendHelper {
               "out_remainder",
               None
             )
-          case _ => emitBinop(compName, e1, e2)
+          case _ => emitBinop(compName, op, e1, e2)
         }
       }
       case EVar(id) =>
