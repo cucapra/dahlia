@@ -47,9 +47,11 @@ object Helpers:
 
   /** Returns true if the given int or fixed point is signed
     */
-  def signed(typ: Option[Type]) =
-    typ match
-      case Some(TSizedInt(_, un)) => un == false
-      case Some(TFixed(_, _, un)) => un == false
-      case _ => false
-
+  def signed(typ: Option[Type], op: BOp) =
+    op match
+      case _@NumOp(_, _) =>
+        typ match
+          case Some(TSizedInt(_, un)) => un == false
+          case Some(TFixed(_, _, un)) => un == false
+          case _ => false
+      case _ => false // bit
