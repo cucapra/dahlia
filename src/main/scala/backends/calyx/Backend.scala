@@ -1034,7 +1034,7 @@ private class CalyxBackendHelper {
 
   def emitProg(p: Prog, c: Config): String = {
 
-    implicit val meta = Metadata()
+    implicit val meta = Metadata(c.srcFile)
 
     val importDefinitions = p.includes.flatMap(_.defs).toList
     val definitions =

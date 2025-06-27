@@ -1,16 +1,20 @@
 package fuselang.backend.calyx
 
+import java.io.File
 import scala.math.BigInt
 import fuselang.common.PrettyPrint.Doc
 import Doc._
 import scala.util.parsing.input.Position
 import fuselang.common.Syntax
 import scala.collection.mutable.{Map => MutableMap}
+import fuselang.common.PrettyPrint.DocBreak
 
 object Calyx:
 
   // Track metadata while generating Calyx code.
   case class Metadata(
+      // the name of the file
+      filename: File,
       // Mapping from position to the value of the counter
       map: MutableMap[Position, Int] = MutableMap(),
       var counter: Int = 0
@@ -36,6 +40,31 @@ object Calyx:
         left = text("#") <> lbrace,
         right = rbrace <> text("#")
       )
+      <>
+      line
+      <>
+      text("sourceinfo") <+> scope(
+        text("FILES")
+        <> line <>
+        text("0:") <+> text(this.filename.toString())
+        <> line <>
+        text("POSITIONS")
+        <>
+        line
+        <>
+        vsep(
+            this.map.toSeq
+            .sortBy(_._2)
+            .map({ case (pos, c) =>
+              text(c.toString()) <> text(":") <+> text("0") <+> text(
+                pos.line.toString()
+              )
+            })
+        ),
+        left = text("#") <> lbrace,
+        right = rbrace <> text("#")
+      )
+  
 
   private def emitPos(pos: Position, @annotation.unused span: Int)(implicit
       meta: Metadata
@@ -43,7 +72,7 @@ object Calyx:
     // Add position information to the metadata.
     if pos.line != 0 && pos.column != 0 then
       val count = meta.addPos(pos)
-      text("@pos") <> parens(text(count.toString)) <> space
+      text("@pos") <> braces(text(count.toString)) <> space
     else emptyDoc
     /* (if (pos.line == 0 && pos.column == 0) {
        emptyDoc
@@ -57,6 +86,12 @@ object Calyx:
        } else {
          emptyDoc
        }) */
+
+  // private def emitPos2(pos: Position, @annotation.unused span: Int)(implicit
+  //  meta: Metadata
+  // ): Doc =
+  //   if pos.line != 0 && pos.column != 0 then
+       
 
   def emitCompStructure(structs: List[Structure]): Doc =
     val (cells, connections) = structs.partition(st =>
