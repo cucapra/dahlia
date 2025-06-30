@@ -87,21 +87,23 @@ object Calyx:
          emptyDoc
        }) */
 
-  // private def emitPos2(pos: Position, @annotation.unused span: Int)(implicit
-  //  meta: Metadata
-  // ): Doc =
-  //   if pos.line != 0 && pos.column != 0 then
-       
+  private def emitPos2(pos: Position, @annotation.unused span: Int)(implicit
+   meta: Metadata
+  ): Doc =
+    if pos.line != 0 && pos.column != 0 then
+      val count = meta.addPos(pos)
+      angles(text("pos=") <> braces(text(count.toString))) <> space
+    else emptyDoc
 
-  def emitCompStructure(structs: List[Structure]): Doc =
+  def emitCompStructure(structs: List[Structure])(using meta: Metadata): Doc =
     val (cells, connections) = structs.partition(st =>
       st match {
         case _: Cell => true
         case _ => false
       }
     )
-    text("cells") <+> scope(vsep(cells.map(_.doc()))) <@>
-      text("wires") <+> scope(vsep(connections.map(_.doc())))
+    text("cells") <+> scope(vsep(cells.map(_.doc(meta)))) <@>
+      text("wires") <+> scope(vsep(connections.map(_.doc(meta))))
 
   sealed trait Emitable:
     def doc(): Doc
@@ -195,9 +197,9 @@ object Calyx:
   case class HolePort(id: CompVar, name: String) extends Port
   case class ConstantPort(width: Int, value: BigInt) extends Port
 
-  sealed trait Structure extends Emitable with Ordered[Structure]:
-    override def doc(): Doc = this match
-      case Cell(id, comp, ref, attrs) => {
+  sealed trait Structure extends Ordered[Structure]:
+    def doc(implicit meta: Metadata): Doc = this match
+      case c @ Cell(id, comp, ref, attrs) => {
         val attrDoc =
           hsep(
             attrs
@@ -206,22 +208,22 @@ object Calyx:
               })
           ) <> (if attrs.isEmpty then emptyDoc else space)
 
-        attrDoc <> (if ref then text("ref") <> space else emptyDoc) <>
+        emitPos(c.pos, c.span) <> attrDoc <> (if ref then text("ref") <> space else emptyDoc) <>
           id.doc() <+> equal <+> comp.doc() <> semi
       }
       case Assign(src, dest, True) =>
         dest.doc() <+> equal <+> src.doc() <> semi
       case Assign(src, dest, guard) =>
         dest.doc() <+> equal <+> guard.doc() <+> text("?") <+> src.doc() <> semi
-      case Group(id, conns, delay, comb) =>
+      case g @ Group(id, conns, delay, comb) =>
         (if comb then text("comb ") else emptyDoc) <>
-          text("group") <+> id.doc() <>
+          text("group") <+> id.doc() <> emitPos2(g.pos, g.span) <>
           (if delay.isDefined then
              angles(
                text("\"promotable\"") <> equal <> text(delay.get.toString())
              )
            else emptyDoc) <+>
-          scope(vsep(conns.map(_.doc())))
+          scope(vsep(conns.map(_.doc(meta))))
 
     def compare(that: Structure): Int =
       (this, that) match
@@ -242,18 +244,18 @@ object Calyx:
       comp: CompInst,
       ref: Boolean,
       attributes: List[(String, Int)]
-  ) extends Structure
+  ) extends Structure with Syntax.PositionalWithSpan
   case class Group(
       id: CompVar,
       connections: List[Assign],
       staticDelay: Option[Int],
       // True if the group is combinational
       comb: Boolean
-  ) extends Structure
+  ) extends Structure with Syntax.PositionalWithSpan
   case class Assign(src: Port, dest: Port, guard: GuardExpr = True)
       extends Structure
 
-  object Group:
+  object Group extends Syntax.PositionalWithSpan:
     def fromStructure(
         id: CompVar,
         structure: List[Structure],
@@ -261,6 +263,7 @@ object Calyx:
         comb: Boolean
     ): (Group, List[Structure]) =
 
+      println(structure)
       assert(
         !(comb && staticDelay.isDefined && staticDelay.get != 0),
         s"Combinational group has delay: ${staticDelay.get}"

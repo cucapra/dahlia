@@ -212,8 +212,9 @@ private class CalyxBackendHelper {
     val declName = genName(functionName)
     val compInstArgs = getCompInstArgs(app.func)
     // Define a new cell for the function instance
+    println("emitInvokeDecl")
     val decl =
-      Cell(declName, CompInst(functionName, compInstArgs), false, List())
+      Cell(declName, CompInst(functionName, compInstArgs), false, List()).withPos(app)
 
     // Compile all arguments to the function and get the relevant ports
     val (argPorts, argSt) = app.args
@@ -244,7 +245,9 @@ private class CalyxBackendHelper {
   /** `emitDecl(d)` computes the structure that is needed to represent the
     * declaration `d`. Simply returns a `List[Structure]`.
     */
-  def emitDecl(d: Decl): Structure = d.typ match {
+  def emitDecl(d: Decl): Structure =
+    println("emitDecl!")
+    d.typ match {
     case tarr: TArray => emitArrayDecl(tarr, d.id, List("external" -> 1))
     case _: TBool => Stdlib.register(CompVar(s"${d.id}"), 1)
     case TSizedInt(size, _) => Stdlib.register(CompVar(s"${d.id}"), size)
@@ -289,6 +292,7 @@ private class CalyxBackendHelper {
         val isSigned = signed(e1.typ, op)
         val binOp = Stdlib.binop(s"$compName", e1Bits, isSigned)
         val comp = Cell(genName(compName), binOp, false, List())
+        println("compName: " + comp.name)
         val struct = List(
           comp,
           Assign(e1Out.port, comp.name.port("left")),
@@ -771,6 +775,7 @@ private class CalyxBackendHelper {
         // into a register.
         val reg = Stdlib.register(genName(s"$id"), typ_b)
         val groupName = genName("let")
+        println(groupName)
         val doneHole =
           Assign(reg.name.port("done"), HolePort(groupName, "done"))
 
@@ -781,6 +786,8 @@ private class CalyxBackendHelper {
             doneHole
           )
         val (group, st) = Group.fromStructure(groupName, struct, None, false)
+        group.withPos(c)
+        println("GROUP " + groupName + " pos: " + group.pos.line)
         val control = SeqComp(
           List(
             invokeControl,
@@ -798,6 +805,7 @@ private class CalyxBackendHelper {
         val reg = Stdlib.register(genName(s"$id"), t)
         val out = emitExpr(ECast(e, TFixed(t, i, un)))(store)
         val groupName = genName("let")
+        println(groupName)
         val doneHole = Assign(
           reg.name.port("done"),
           HolePort(groupName, "done")
@@ -816,8 +824,11 @@ private class CalyxBackendHelper {
             writeEnableSrcPort.getOrElse(ConstantPort(1, 1)),
             reg.name.port("write_en")
           ) :: doneHole :: out.structure
-        val (group, st) =
+        val (group, st) = {
           Group.fromStructure(groupName, struct, delay, false)
+        }
+        group.withPos(c)
+        println("AYAKA CLet")
         (
           reg :: group :: st,
           Enable(group.id).withPos(c),
@@ -828,9 +839,12 @@ private class CalyxBackendHelper {
         val (typ_b, _) = bitsForType(typ, c.pos)
         val reg =
           Stdlib.register(genName(s"$id"), typ_b)
+
+        reg.withPos(c)
         // XXX(rachit): Why is multiCycleInfo ignored here?
         val EmitOutput(port, done, structure, delay, _) = emitExpr(e)(store)
         val groupName = genName("let")
+        println(groupName)
         val doneHole = Assign(
           reg.name.port("done"),
           HolePort(groupName, "done")
@@ -842,6 +856,8 @@ private class CalyxBackendHelper {
           ) :: doneHole :: structure
         val (group, st) =
           Group.fromStructure(groupName, struct, delay.map(_ + 1), false)
+        group.withPos(c)
+        println("AAAAAAAAAAAAAAAAAAAAAAAA")
         (
           reg :: group :: st,
           Enable(group.id).withPos(c),
@@ -850,6 +866,7 @@ private class CalyxBackendHelper {
       }
       // A `let` that just defines a register for future use.
       case CLet(id, typ, None) => {
+        println("let for future use")
         val (typ_b, _) = bitsForType(typ, c.pos)
         val reg =
           Stdlib.register(genName(s"$id"), typ_b)
