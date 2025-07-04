@@ -70,7 +70,7 @@ object Calyx:
       meta: Metadata
   ): Doc =
     // Add position information to the metadata.
-    if pos.line != 0 && pos.column != 0 then
+    if isValidPos(pos) then
       val count = meta.addPos(pos)
       text("@pos") <> braces(text(count.toString)) <> space
     else emptyDoc
@@ -87,12 +87,16 @@ object Calyx:
          emptyDoc
        }) */
 
-  private def emitPos2(pos: Position, @annotation.unused span: Int)(implicit
+  private def isValidPos(pos: Position): Boolean = {
+    pos.line != 0 && pos.column != 0
+  }
+
+  private def emitGroupComponentPos(pos: Position, @annotation.unused span: Int)(implicit
    meta: Metadata
   ): Doc =
-    if pos.line != 0 && pos.column != 0 then
+    if isValidPos(pos) then
       val count = meta.addPos(pos)
-      angles(text("pos=") <> braces(text(count.toString))) <> space
+      text("\"pos\"=") <> braces(text(count.toString))
     else emptyDoc
 
   def emitCompStructure(structs: List[Structure])(using meta: Metadata): Doc =
@@ -217,12 +221,17 @@ object Calyx:
         dest.doc() <+> equal <+> guard.doc() <+> text("?") <+> src.doc() <> semi
       case g @ Group(id, conns, delay, comb) =>
         (if comb then text("comb ") else emptyDoc) <>
-          text("group") <+> id.doc() <> emitPos2(g.pos, g.span) <>
-          (if delay.isDefined then
+          text("group") <+> id.doc() <>
+          (if delay.isDefined && isValidPos(g.pos) then
              angles(
-               text("\"promotable\"") <> equal <> text(delay.get.toString())
+               commaSep(List(text("\"promotable\"") <> equal <> text(delay.get.toString()),
+                 emitGroupComponentPos(g.pos, g.span)))
              )
-           else emptyDoc) <+>
+          else if delay.isDefined then
+            angles(
+              text("\"promotable\"") <> equal <> text(delay.get.toString())
+            )
+          else angles(emitGroupComponentPos(g.pos, g.span))) <+>
           scope(vsep(conns.map(_.doc(meta))))
 
     def compare(that: Structure): Int =
@@ -263,7 +272,6 @@ object Calyx:
         comb: Boolean
     ): (Group, List[Structure]) =
 
-      println(structure)
       assert(
         !(comb && staticDelay.isDefined && staticDelay.get != 0),
         s"Combinational group has delay: ${staticDelay.get}"
