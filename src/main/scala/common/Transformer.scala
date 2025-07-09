@@ -20,13 +20,26 @@ object Transformer:
         implicit env: Env
     ): (Command, Env) =
       val (c1, env1) = f(cmd, env)
+
+      def updatePosIfEmpty(c: Command) = {
+        // If the position for the command is undefined, add the previous position
+        if c.pos.line == 0 && c.pos.column == 0 then
+          c.withPos(cmd)
+      }
+
+      // if inner commands (inside a seq/par/block) are "empty", update positions
       c1 match
-        case _: CPar | _: CSeq | _: CBlock => ()
-        case _ =>  {
-          if c1.pos.line == 0 && c1.pos.column == 0 then
-            c1.withPos(cmd)
+        case p: CPar  => {
+          p.cmds.foreach(c => updatePosIfEmpty(c))
         }
-      // If the position for the command is undefined, add the previous position
+        case s: CSeq => {
+          s.cmds.foreach(c => updatePosIfEmpty(c))
+        }
+        case b: CBlock => {
+          updatePosIfEmpty(b.cmd)
+        }
+        case _ => ()
+      updatePosIfEmpty(c1) // update the outermost command.
       (c1, env1)
 
     /**
