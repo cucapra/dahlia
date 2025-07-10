@@ -22,7 +22,7 @@ jobs:
     # Don't rebuild Dahlia if HEAD hash hasn't changed.
     - name: Cache Dahlia
       id: dahlia-cache
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       with:
         path: |
           ./target
@@ -36,7 +36,7 @@ jobs:
 
     - name: Cache runt
       id: runt-cache
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       with:
         path: ~/.cargo/bin/runt
         key: runt-bin-${{ runner.os }}-${{ steps.versions.outputs.runt }}
