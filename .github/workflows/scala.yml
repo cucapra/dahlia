@@ -14,6 +14,12 @@ jobs:
       with:
         java-version: 1.8
 
+    - name: Setup sbt launcher
+      uses: sbt/setup-sbt@v1
+
+    - name: Build and Test
+      run: sbt +test
+
     - name: Tool versions
       id: versions
       run: |
