@@ -1140,7 +1140,6 @@ private class CalyxBackendHelper {
 
 case object CalyxBackend extends fuselang.backend.Backend {
   def emitProg(p: Prog, c: Config) = {
-    println("CALYX!!! " + p)
     (new CalyxBackendHelper()).emitProg(p, c)
   }
   val canGenerateHeader = false
