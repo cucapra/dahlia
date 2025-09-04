@@ -62,7 +62,7 @@ component main() -> () {
           @pos(2) let2;
           repeat 10 {
             seq {
-              upd0;
+              @pos(3) upd0;
               @pos(2) upd1;
             }
           }
@@ -76,4 +76,5 @@ metadata #{
   0: for (let i: ubit<4> = 0..10) {
   1:   let x: ubit<4> = 0;
   2:   for (let j: ubit<4> = 0..10) {
+  3:     x += j;
 }#

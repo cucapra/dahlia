@@ -14,19 +14,51 @@ object Transformer:
     val emptyEnv: Env
 
     /**
+     * Helper function that copies the position of oldCmd to newCmd if
+     * newCmd does not have a non-zero position.
+     */
+    def updatePosIfEmpty(oldCmd: Command, newCmd: Command) = {
+      // If the position for the command is undefined, add the previous position
+      if newCmd.pos.line == 0 && newCmd.pos.column == 0 then
+        newCmd.withPos(oldCmd)
+    }
+
+    /**
+     * Recursive helper function to transfer positions onto commands and
+     * their child commands when commands are nested.
+     */
+    def transferPosHelper(oldCmd: Command, newCmd: Command): Unit = {
+      updatePosIfEmpty(oldCmd, newCmd)
+      // recurse on our new command if we need to.
+      newCmd match {
+        case CBlock(cmd) => transferPosHelper(oldCmd, cmd)
+        case CPar(cmds) => cmds.foreach(cmd => transferPosHelper(oldCmd, cmd))
+        case CSeq(cmds) => cmds.foreach(cmd => transferPosHelper(oldCmd, cmd))
+        case CFor(_, _, par: Command, combine: Command) => {
+          transferPosHelper(oldCmd, par)
+          transferPosHelper(oldCmd, combine)
+        }
+        case CIf(_, cons: Command, alt: Command) => {
+          transferPosHelper(oldCmd, cons)
+          transferPosHelper(oldCmd, alt)
+        }
+        case CWhile(_, _, body: Command) => {
+          transferPosHelper(oldCmd, body)
+        }
+        case _ => ()
+      }
+
+    }
+
+    /**
      * Transfer comments from one command to another.
      */
     def transferPos(cmd: Command, f: PF[(Command, Env), (Command, Env)])(
         implicit env: Env
     ): (Command, Env) =
       val (c1, env1) = f(cmd, env)
-      c1 match
-        case _: CPar | _: CSeq | _: CBlock => ()
-        case _ =>  {
-          if c1.pos.line == 0 && c1.pos.column == 0 then
-            c1.withPos(cmd)
-        }
-      // If the position for the command is undefined, add the previous position
+      // recursive helper function to transfer positions over if empty
+      transferPosHelper(cmd, c1)
       (c1, env1)
 
     /**
