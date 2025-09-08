@@ -80,20 +80,20 @@ component main() -> () {
   }
   control {
     seq {
-      @pos(0) let0;
+      @pos{0} let0;
       repeat 128 {
         seq {
           par {
-            @pos(1) let1;
-            @pos(2) let2;
+            @pos{1} let1;
+            @pos{2} let2;
           }
           par {
-            @pos(3) upd0;
-            @pos(4) let3;
-            @pos(5) let4;
+            @pos{3} upd0;
+            @pos{4} let3;
+            @pos{5} let4;
           }
-          @pos(6) upd1;
-          @pos(0) upd2;
+          @pos{6} upd1;
+          @pos{0} upd2;
         }
       }
     }

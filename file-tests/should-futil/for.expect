@@ -45,12 +45,12 @@ component main() -> () {
   }
   control {
     seq {
-      @pos(0) let0;
+      @pos{0} let0;
       repeat 10 {
         seq {
-          @pos(1) let1;
-          @pos(2) upd0;
-          @pos(0) upd1;
+          @pos{1} let1;
+          @pos{2} upd0;
+          @pos{0} upd1;
         }
       }
     }

@@ -14,7 +14,7 @@ component foo(x: 8) -> (@stable(1) out: 8) {
     out = y_0.out;
   }
   control {
-    @pos(0) let0;
+    @pos{0} let0;
   }
 }
 component main() -> () {
@@ -38,9 +38,9 @@ component main() -> () {
   }
   control {
     seq {
-      @pos(1) let1;
+      @pos{1} let1;
       invoke foo0(x=x_0.out)();
-      @pos(2) let2;
+      @pos{2} let2;
     }
   }
 }

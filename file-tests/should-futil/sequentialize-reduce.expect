@@ -55,18 +55,18 @@ component main() -> () {
   }
   control {
     seq {
-      @pos(0) let0;
+      @pos{0} let0;
       repeat 10 {
         seq {
-          @pos(1) let1;
-          @pos(2) let2;
+          @pos{1} let1;
+          @pos{2} let2;
           repeat 10 {
             seq {
-              @pos(3) upd0;
-              @pos(2) upd1;
+              @pos{3} upd0;
+              @pos{2} upd1;
             }
           }
-          @pos(0) upd2;
+          @pos{0} upd2;
         }
       }
     }

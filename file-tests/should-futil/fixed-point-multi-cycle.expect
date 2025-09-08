@@ -47,10 +47,10 @@ component main() -> () {
   }
   control {
     seq {
-      @pos(0) let0;
-      @pos(0) let1;
-      @pos(1) let2;
-      @pos(1) upd0;
+      @pos{0} let0;
+      @pos{0} let1;
+      @pos{1} let2;
+      @pos{1} upd0;
     }
   }
 }

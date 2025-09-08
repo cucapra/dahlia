@@ -36,10 +36,10 @@ component main() -> () {
   }
   control {
     par {
-      @pos(0) let0;
-      @pos(1) let1;
-      @pos(2) let2;
-      @pos(3) let3;
+      @pos{0} let0;
+      @pos{1} let1;
+      @pos{2} let2;
+      @pos{3} let3;
     }
   }
 }
