@@ -68,19 +68,19 @@ component use_plus_equals() -> () {
   }
   control {
     seq {
-      @pos(0) let0;
+      @pos{0} let0;
       repeat 1 {
         seq {
-          @pos(1) let1;
-          @pos(2) let2;
+          @pos{1} let1;
+          @pos{2} let2;
           repeat 2 {
             seq {
-              let3;
-              upd0;
-              @pos(2) upd1;
+              @pos{3} let3;
+              @pos{3} upd0;
+              @pos{2} upd1;
             }
           }
-          @pos(0) upd2;
+          @pos{0} upd2;
         }
       }
     }
@@ -103,4 +103,5 @@ metadata #{
   0:   for (let __i: ubit<1> = 0..1) {
   1:     let __x: fix<32,16> = (2.0 as fix<32,16>);
   2:     for (let __j: ubit<2> = 0..2) {
+  3:       x2[__i][__j] += __x;
 }#

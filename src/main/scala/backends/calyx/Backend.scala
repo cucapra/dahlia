@@ -987,14 +987,18 @@ private class CalyxBackendHelper {
 
         e1 match {
           case _: EVar =>
-            emitCmd(CUpdate(e1, EBinop(NumOp(op, numOp), e1, e2)))
+            val varCmd: Command = CUpdate(e1, EBinop(NumOp(op, numOp), e1, e2))
+            varCmd.withPos(c)
+            emitCmd(varCmd)
           case ea: EArrAccess => {
             // Create a binding for the memory read.
             val name = Id(genName("red_read").name)
             val bind = CLet(name, ea.typ, Some(ea))
+            bind.withPos(c)
             val nLhs = EVar(name)
             nLhs.typ = ea.typ;
             val upd = CUpdate(e1, EBinop(NumOp(op, numOp), nLhs, e2))
+            upd.withPos(c)
             emitCmd(CSeq.smart(Seq(bind, upd)))
           }
           case e =>

@@ -43,7 +43,7 @@ object Calyx:
     // Add position information to the metadata.
     if pos.line != 0 && pos.column != 0 then
       val count = meta.addPos(pos)
-      text("@pos") <> parens(text(count.toString)) <> space
+      text("@pos") <> braces(text(count.toString)) <> space
     else emptyDoc
     /* (if (pos.line == 0 && pos.column == 0) {
        emptyDoc

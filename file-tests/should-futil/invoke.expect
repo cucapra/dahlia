@@ -15,7 +15,7 @@ component foo(a: 32) -> (@stable(1) out: 32) {
     out = temp_0.out;
   }
   control {
-    @pos(0) let0;
+    @pos{0} let0;
   }
 }
 component main() -> () {
@@ -46,11 +46,11 @@ component main() -> () {
   }
   control {
     seq {
-      @pos(1) let1;
+      @pos{1} let1;
       invoke foo0(a=b_0.out)();
-      @pos(2) let2;
+      @pos{2} let2;
       invoke sqrt0(in=c_0.out)();
-      @pos(3) let3;
+      @pos{3} let3;
     }
   }
 }
