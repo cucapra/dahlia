@@ -15,25 +15,28 @@ object Calyx:
   case class Metadata(
       // the name of the file
       filename: File,
-      // Mapping from position to the value of the counter
-      map: MutableMap[Position, Int] = MutableMap(),
-      var counter: Int = 0
+      // metadata: Mapping from longString to value of the counter
+      metadataMap: MutableMap[String, Int] = MutableMap(),
+      // Mapping from line number to the value of the counter
+      sourceLocMap: MutableMap[Int, Int] = MutableMap(),
+      var counter: Int = 0,
   ) extends Emitable:
     def addPos(pos: Position): Int =
-      val key = pos
-      if !this.map.contains(key) then
-        this.map.update(key, this.counter)
+      val key = pos.line
+      if !this.sourceLocMap.contains(key) then
+        this.sourceLocMap.update(pos.line, this.counter)
+        this.metadataMap.update(pos.longString, this.counter)
         this.counter = this.counter + 1
-      this.map(key)
+      this.sourceLocMap(key)
 
     override def doc(): Doc =
       text("metadata") <+> scope(
         vsep(
-          this.map.toSeq
+          this.metadataMap.toSeq
             .sortBy(_._2)
-            .map({ case (pos, c) =>
+            .map({ case (longString, c) =>
               text(c.toString()) <> text(":") <+> text(
-                pos.longString.split("\n")(0)
+                longString.split("\n")(0)
               )
             })
         ),
@@ -53,13 +56,12 @@ object Calyx:
         line
         <>
         vsep(
-            this.map.toSeq
+            this.sourceLocMap.toSeq
             .sortBy(_._2)
-            .map({ case (pos, c) =>
+            .map({ case (linenum, c) =>
               text(c.toString()) <> text(":") <+> text("0") <+> text(
-                pos.line.toString()
+                linenum.toString()
               )
-              <+> text(pos.column.toString())
             })
         ),
         left = text("#") <> lbrace,
