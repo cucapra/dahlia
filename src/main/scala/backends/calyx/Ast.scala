@@ -59,6 +59,7 @@ object Calyx:
               text(c.toString()) <> text(":") <+> text("0") <+> text(
                 pos.line.toString()
               )
+              <+> text(pos.column.toString())
             })
         ),
         left = text("#") <> lbrace,
