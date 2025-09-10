@@ -13,22 +13,22 @@ component main() -> () {
     fp_const3 = std_const(15,19968);
   }
   wires {
-    group let0<"promotable"=1> {
+    group let0<"promotable"=1, "pos"={0}> {
       a_0.in = fp_const0.out;
       a_0.write_en = 1'd1;
       let0[done] = a_0.done;
     }
-    group let1<"promotable"=1> {
+    group let1<"promotable"=1, "pos"={1}> {
       b_0.in = fp_const1.out;
       b_0.write_en = 1'd1;
       let1[done] = b_0.done;
     }
-    group let2<"promotable"=1> {
+    group let2<"promotable"=1, "pos"={2}> {
       c_0.in = fp_const2.out;
       c_0.write_en = 1'd1;
       let2[done] = c_0.done;
     }
-    group let3<"promotable"=1> {
+    group let3<"promotable"=1, "pos"={3}> {
       d_0.in = fp_const3.out;
       d_0.write_en = 1'd1;
       let3[done] = d_0.done;
@@ -36,10 +36,10 @@ component main() -> () {
   }
   control {
     par {
-      @pos(0) let0;
-      @pos(1) let1;
-      @pos(2) let2;
-      @pos(3) let3;
+      @pos{0} let0;
+      @pos{1} let1;
+      @pos{2} let2;
+      @pos{3} let3;
     }
   }
 }
@@ -48,4 +48,13 @@ metadata #{
   1: let b: fix<4, 2> = (-2.25 as fix<4, 2>); // 7
   2: let c: ufix<15, 3> = (3.125 as ufix<15, 3>); // 12800
   3: let d: fix<15, 3> = (-3.125 as fix<15, 3>); // 19668
+}#
+sourceinfo #{
+  FILES
+  0: file-tests/should-futil/fixed-point-constant.fuse
+  POSITIONS
+  0: 0 7
+  1: 0 8
+  2: 0 10
+  3: 0 11
 }#

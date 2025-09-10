@@ -11,41 +11,41 @@ component main() -> () {
     const2 = std_const(4,0);
     const3 = std_const(4,1);
     const4 = std_const(4,1);
-    i0 = std_reg(4);
-    j0 = std_reg(4);
-    x_0 = std_reg(4);
+    @pos{0} i0 = std_reg(4);
+    @pos{1} j0 = std_reg(4);
+    @pos{2} x_0 = std_reg(4);
   }
   wires {
-    group let0<"promotable"=1> {
+    group let0<"promotable"=1, "pos"={0}> {
       i0.in = const0.out;
       i0.write_en = 1'd1;
       let0[done] = i0.done;
     }
-    group let1<"promotable"=1> {
+    group let1<"promotable"=1, "pos"={2}> {
       x_0.in = const1.out;
       x_0.write_en = 1'd1;
       let1[done] = x_0.done;
     }
-    group let2<"promotable"=1> {
+    group let2<"promotable"=1, "pos"={1}> {
       j0.in = const2.out;
       j0.write_en = 1'd1;
       let2[done] = j0.done;
     }
-    group upd0<"promotable"=1> {
+    group upd0<"promotable"=1, "pos"={3}> {
       x_0.write_en = 1'd1;
       add0.left = x_0.out;
       add0.right = j0.out;
       x_0.in = add0.out;
       upd0[done] = x_0.done;
     }
-    group upd1<"promotable"=1> {
+    group upd1<"promotable"=1, "pos"={1}> {
       j0.write_en = 1'd1;
       add1.left = j0.out;
       add1.right = const3.out;
       j0.in = add1.out;
       upd1[done] = j0.done;
     }
-    group upd2<"promotable"=1> {
+    group upd2<"promotable"=1, "pos"={0}> {
       i0.write_en = 1'd1;
       add2.left = i0.out;
       add2.right = const4.out;
@@ -55,18 +55,18 @@ component main() -> () {
   }
   control {
     seq {
-      @pos(0) let0;
+      @pos{0} let0;
       repeat 10 {
         seq {
-          @pos(1) let1;
-          @pos(2) let2;
+          @pos{2} let1;
+          @pos{1} let2;
           repeat 10 {
             seq {
-              @pos(3) upd0;
-              @pos(2) upd1;
+              @pos{3} upd0;
+              @pos{1} upd1;
             }
           }
-          @pos(0) upd2;
+          @pos{0} upd2;
         }
       }
     }
@@ -74,7 +74,16 @@ component main() -> () {
 }
 metadata #{
   0: for (let i: ubit<4> = 0..10) {
-  1:   let x: ubit<4> = 0;
-  2:   for (let j: ubit<4> = 0..10) {
+  1:   for (let j: ubit<4> = 0..10) {
+  2:   let x: ubit<4> = 0;
   3:     x += j;
+}#
+sourceinfo #{
+  FILES
+  0: file-tests/should-futil/sequentialize-reduce.fuse
+  POSITIONS
+  0: 0 1
+  1: 0 3
+  2: 0 2
+  3: 0 4
 }#

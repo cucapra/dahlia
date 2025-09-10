@@ -3,9 +3,9 @@ import "primitives/memories/seq.futil";
 import "primitives/binary_operators.futil";
 component main() -> () {
   cells {
-    @external(1) A = seq_mem_d2(32,10,2,4,2);
-    A_read0_0 = std_reg(32);
-    @external(1) B = seq_mem_d2(32,10,2,4,2);
+    @pos{0} @external(1) A = seq_mem_d2(32,10,2,4,2);
+    @pos{1} A_read0_0 = std_reg(32);
+    @pos{2} @external(1) B = seq_mem_d2(32,10,2,4,2);
     add0 = std_sadd(32);
     add1 = std_add(2);
     add2 = std_add(4);
@@ -14,21 +14,21 @@ component main() -> () {
     const2 = std_const(32,1);
     const3 = std_const(2,1);
     const4 = std_const(4,1);
-    i0 = std_reg(4);
-    j0 = std_reg(2);
+    @pos{3} i0 = std_reg(4);
+    @pos{4} j0 = std_reg(2);
   }
   wires {
-    group let0<"promotable"=1> {
+    group let0<"promotable"=1, "pos"={3}> {
       i0.in = const0.out;
       i0.write_en = 1'd1;
       let0[done] = i0.done;
     }
-    group let1<"promotable"=1> {
+    group let1<"promotable"=1, "pos"={4}> {
       j0.in = const1.out;
       j0.write_en = 1'd1;
       let1[done] = j0.done;
     }
-    group let2<"promotable"=2> {
+    group let2<"promotable"=2, "pos"={1}> {
       A_read0_0.in = A.read_data;
       A_read0_0.write_en = A.done;
       let2[done] = A_read0_0.done;
@@ -36,7 +36,7 @@ component main() -> () {
       A.addr1 = j0.out;
       A.addr0 = i0.out;
     }
-    group upd0<"promotable"=1> {
+    group upd0<"promotable"=1, "pos"={1}> {
       B.content_en = 1'd1;
       B.addr1 = j0.out;
       B.addr0 = i0.out;
@@ -46,14 +46,14 @@ component main() -> () {
       B.write_data = add0.out;
       upd0[done] = B.done;
     }
-    group upd1<"promotable"=1> {
+    group upd1<"promotable"=1, "pos"={4}> {
       j0.write_en = 1'd1;
       add1.left = j0.out;
       add1.right = const3.out;
       j0.in = add1.out;
       upd1[done] = j0.done;
     }
-    group upd2<"promotable"=1> {
+    group upd2<"promotable"=1, "pos"={3}> {
       i0.write_en = 1'd1;
       add2.left = i0.out;
       add2.right = const4.out;
@@ -63,26 +63,37 @@ component main() -> () {
   }
   control {
     seq {
-      @pos(0) let0;
+      @pos{3} let0;
       repeat 10 {
         seq {
-          @pos(1) let1;
+          @pos{4} let1;
           repeat 2 {
             seq {
-              @pos(2) let2;
-              @pos(3) upd0;
-              @pos(1) upd1;
+              @pos{1} let2;
+              @pos{1} upd0;
+              @pos{4} upd1;
             }
           }
-          @pos(0) upd2;
+          @pos{3} upd2;
         }
       }
     }
   }
 }
 metadata #{
-  0: for (let i: ubit<4> = 0..10) {
-  1:   for (let j: ubit<2> = 0..2){
-  2:     B[i][j] := A[i][j] + 1;
-  3:     B[i][j] := A[i][j] + 1;
+  0: decl A: bit<32>[10][2];
+  1:     B[i][j] := A[i][j] + 1;
+  2: decl B: bit<32>[10][2];
+  3: for (let i: ubit<4> = 0..10) {
+  4:   for (let j: ubit<2> = 0..2){
+}#
+sourceinfo #{
+  FILES
+  0: file-tests/should-futil/for-multi-dim.fuse
+  POSITIONS
+  0: 0 1
+  1: 0 6
+  2: 0 2
+  3: 0 4
+  4: 0 5
 }#

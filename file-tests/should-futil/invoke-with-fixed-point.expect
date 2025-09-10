@@ -6,7 +6,7 @@ component foo(x: 8) -> (@stable(1) out: 8) {
     y_0 = std_reg(8);
   }
   wires {
-    group let0<"promotable"=1> {
+    group let0<"promotable"=1, "pos"={0}> {
       y_0.in = x;
       y_0.write_en = 1'd1;
       let0[done] = y_0.done;
@@ -14,7 +14,7 @@ component foo(x: 8) -> (@stable(1) out: 8) {
     out = y_0.out;
   }
   control {
-    @pos(0) let0;
+    @pos{0} let0;
   }
 }
 component main() -> () {
@@ -25,12 +25,12 @@ component main() -> () {
     x_0 = std_reg(8);
   }
   wires {
-    group let1<"promotable"=1> {
+    group let1<"promotable"=1, "pos"={1}> {
       x_0.in = fp_const0.out;
       x_0.write_en = 1'd1;
       let1[done] = x_0.done;
     }
-    group let2 {
+    group let2<"pos"={2}> {
       tmp_0.in = foo0.out;
       tmp_0.write_en = 1'd1;
       let2[done] = tmp_0.done;
@@ -38,9 +38,9 @@ component main() -> () {
   }
   control {
     seq {
-      @pos(1) let1;
+      @pos{1} let1;
       invoke foo0(x=x_0.out)();
-      @pos(2) let2;
+      @pos{2} let2;
     }
   }
 }
@@ -48,4 +48,12 @@ metadata #{
   0:   let y: ufix<8, 4> = x;
   1: let x: ufix<8, 4> = (1.0 as ufix<8, 4>);
   2: let tmp: ufix<8, 4> = foo(x);
+}#
+sourceinfo #{
+  FILES
+  0: file-tests/should-futil/invoke-with-fixed-point.fuse
+  POSITIONS
+  0: 0 2
+  1: 0 6
+  2: 0 7
 }#

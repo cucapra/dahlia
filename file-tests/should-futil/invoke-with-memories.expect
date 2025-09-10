@@ -6,23 +6,23 @@ component mem_copy() -> () {
     ref dest = seq_mem_d1(32,1,1);
     ref src = seq_mem_d1(32,1,1);
     const0 = std_const(1,0);
-    src_read0_0 = std_reg(32);
-    zero_0 = std_reg(1);
+    @pos{0} src_read0_0 = std_reg(32);
+    @pos{1} zero_0 = std_reg(1);
   }
   wires {
-    group let0<"promotable"=1> {
+    group let0<"promotable"=1, "pos"={1}> {
       zero_0.in = const0.out;
       zero_0.write_en = 1'd1;
       let0[done] = zero_0.done;
     }
-    group let1<"promotable"=2> {
+    group let1<"promotable"=2, "pos"={0}> {
       src_read0_0.in = src.read_data;
       src_read0_0.write_en = src.done;
       let1[done] = src_read0_0.done;
       src.content_en = 1'd1;
       src.addr0 = zero_0.out;
     }
-    group upd0<"promotable"=1> {
+    group upd0<"promotable"=1, "pos"={0}> {
       dest.content_en = 1'd1;
       dest.addr0 = zero_0.out;
       dest.write_en = 1'd1;
@@ -32,17 +32,17 @@ component mem_copy() -> () {
   }
   control {
     seq {
-      @pos(0) let0;
-      @pos(1) let1;
-      @pos(2) upd0;
+      @pos{1} let0;
+      @pos{0} let1;
+      @pos{0} upd0;
     }
   }
 }
 component main() -> () {
   cells {
-    @external(1) d = seq_mem_d1(32,1,1);
+    @pos{2} @external(1) d = seq_mem_d1(32,1,1);
     mem_copy0 = mem_copy();
-    @external(1) s = seq_mem_d1(32,1,1);
+    @pos{3} @external(1) s = seq_mem_d1(32,1,1);
   }
   wires {
   }
@@ -53,7 +53,17 @@ component main() -> () {
   }
 }
 metadata #{
-  0:   let zero = (0 as ubit<1>);
-  1:   dest[zero] := src[zero];
-  2:   dest[zero] := src[zero];
+  0:   dest[zero] := src[zero];
+  1:   let zero = (0 as ubit<1>);
+  2: decl d: ubit<32>[1];
+  3: decl s: ubit<32>[1];
+}#
+sourceinfo #{
+  FILES
+  0: file-tests/should-futil/invoke-with-memories.fuse
+  POSITIONS
+  0: 0 3
+  1: 0 2
+  2: 0 7
+  3: 0 6
 }#

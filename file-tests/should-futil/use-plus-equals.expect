@@ -4,8 +4,8 @@ import "primitives/binary_operators.futil";
 component use_plus_equals() -> () {
   cells {
     ref x2 = seq_mem_d2(32,1,2,1,2);
-    __i0 = std_reg(1);
-    __j0 = std_reg(2);
+    @pos{0} __i0 = std_reg(1);
+    @pos{1} __j0 = std_reg(2);
     __x_0 = std_reg(32);
     add0 = std_fp_sadd(32,16,16);
     add1 = std_add(2);
@@ -18,22 +18,22 @@ component use_plus_equals() -> () {
     red_read00 = std_reg(32);
   }
   wires {
-    group let0<"promotable"=1> {
+    group let0<"promotable"=1, "pos"={0}> {
       __i0.in = const0.out;
       __i0.write_en = 1'd1;
       let0[done] = __i0.done;
     }
-    group let1<"promotable"=1> {
+    group let1<"promotable"=1, "pos"={2}> {
       __x_0.in = fp_const0.out;
       __x_0.write_en = 1'd1;
       let1[done] = __x_0.done;
     }
-    group let2<"promotable"=1> {
+    group let2<"promotable"=1, "pos"={1}> {
       __j0.in = const1.out;
       __j0.write_en = 1'd1;
       let2[done] = __j0.done;
     }
-    group let3<"promotable"=2> {
+    group let3<"promotable"=2, "pos"={3}> {
       red_read00.in = x2.read_data;
       red_read00.write_en = x2.done;
       let3[done] = red_read00.done;
@@ -41,7 +41,7 @@ component use_plus_equals() -> () {
       x2.addr1 = __j0.out;
       x2.addr0 = __i0.out;
     }
-    group upd0<"promotable"=1> {
+    group upd0<"promotable"=1, "pos"={3}> {
       x2.content_en = 1'd1;
       x2.addr1 = __j0.out;
       x2.addr0 = __i0.out;
@@ -51,14 +51,14 @@ component use_plus_equals() -> () {
       x2.write_data = add0.out;
       upd0[done] = x2.done;
     }
-    group upd1<"promotable"=1> {
+    group upd1<"promotable"=1, "pos"={1}> {
       __j0.write_en = 1'd1;
       add1.left = __j0.out;
       add1.right = const2.out;
       __j0.in = add1.out;
       upd1[done] = __j0.done;
     }
-    group upd2<"promotable"=1> {
+    group upd2<"promotable"=1, "pos"={0}> {
       __i0.write_en = 1'd1;
       add2.left = __i0.out;
       add2.right = const3.out;
@@ -68,19 +68,19 @@ component use_plus_equals() -> () {
   }
   control {
     seq {
-      @pos(0) let0;
+      @pos{0} let0;
       repeat 1 {
         seq {
-          @pos(1) let1;
-          @pos(2) let2;
+          @pos{2} let1;
+          @pos{1} let2;
           repeat 2 {
             seq {
-              @pos(3) let3;
-              @pos(3) upd0;
-              @pos(2) upd1;
+              @pos{3} let3;
+              @pos{3} upd0;
+              @pos{1} upd1;
             }
           }
-          @pos(0) upd2;
+          @pos{0} upd2;
         }
       }
     }
@@ -88,7 +88,7 @@ component use_plus_equals() -> () {
 }
 component main() -> () {
   cells {
-    @external(1) A = seq_mem_d2(32,1,2,1,2);
+    @pos{4} @external(1) A = seq_mem_d2(32,1,2,1,2);
     use_plus_equals0 = use_plus_equals();
   }
   wires {
@@ -101,7 +101,18 @@ component main() -> () {
 }
 metadata #{
   0:   for (let __i: ubit<1> = 0..1) {
-  1:     let __x: fix<32,16> = (2.0 as fix<32,16>);
-  2:     for (let __j: ubit<2> = 0..2) {
+  1:     for (let __j: ubit<2> = 0..2) {
+  2:     let __x: fix<32,16> = (2.0 as fix<32,16>);
   3:       x2[__i][__j] += __x;
+  4: decl A: fix<32,16>[1][2];
+}#
+sourceinfo #{
+  FILES
+  0: file-tests/should-futil/use-plus-equals.fuse
+  POSITIONS
+  0: 0 2
+  1: 0 4
+  2: 0 3
+  3: 0 5
+  4: 0 10
 }#

@@ -4,10 +4,10 @@ import "primitives/binary_operators.futil";
 import "primitives/math.futil";
 component foo(a: 32) -> (@stable(1) out: 32) {
   cells {
-    temp_0 = std_reg(32);
+    @pos{0} temp_0 = std_reg(32);
   }
   wires {
-    group let0<"promotable"=1> {
+    group let0<"promotable"=1, "pos"={0}> {
       temp_0.in = a;
       temp_0.write_en = 1'd1;
       let0[done] = temp_0.done;
@@ -15,12 +15,12 @@ component foo(a: 32) -> (@stable(1) out: 32) {
     out = temp_0.out;
   }
   control {
-    @pos(0) let0;
+    @pos{0} let0;
   }
 }
 component main() -> () {
   cells {
-    b_0 = std_reg(32);
+    @pos{1} b_0 = std_reg(32);
     c_0 = std_reg(32);
     const0 = std_const(32,1);
     d_0 = std_reg(32);
@@ -28,17 +28,17 @@ component main() -> () {
     sqrt0 = sqrt(32);
   }
   wires {
-    group let1<"promotable"=1> {
+    group let1<"promotable"=1, "pos"={1}> {
       b_0.in = const0.out;
       b_0.write_en = 1'd1;
       let1[done] = b_0.done;
     }
-    group let2 {
+    group let2<"pos"={2}> {
       c_0.in = foo0.out;
       c_0.write_en = 1'd1;
       let2[done] = c_0.done;
     }
-    group let3 {
+    group let3<"pos"={3}> {
       d_0.in = sqrt0.out;
       d_0.write_en = 1'd1;
       let3[done] = d_0.done;
@@ -46,11 +46,11 @@ component main() -> () {
   }
   control {
     seq {
-      @pos(1) let1;
+      @pos{1} let1;
       invoke foo0(a=b_0.out)();
-      @pos(2) let2;
+      @pos{2} let2;
       invoke sqrt0(in=c_0.out)();
-      @pos(3) let3;
+      @pos{3} let3;
     }
   }
 }
@@ -59,4 +59,13 @@ metadata #{
   1: let b: ubit<32> = (1 as ubit<32>);
   2: let c: ubit<32> = foo(b);
   3: let d: ubit<32> = sqrt(c);
+}#
+sourceinfo #{
+  FILES
+  0: file-tests/should-futil/invoke.fuse
+  POSITIONS
+  0: 0 4
+  1: 0 8
+  2: 0 9
+  3: 0 10
 }#

@@ -3,30 +3,30 @@ import "primitives/memories/seq.futil";
 import "primitives/binary_operators.futil";
 component main() -> () {
   cells {
-    @external(1) A = seq_mem_d1(32,10,4);
-    A_read0_0 = std_reg(32);
-    @external(1) B = seq_mem_d1(32,10,4);
+    @pos{0} @external(1) A = seq_mem_d1(32,10,4);
+    @pos{1} A_read0_0 = std_reg(32);
+    @pos{2} @external(1) B = seq_mem_d1(32,10,4);
     add0 = std_sadd(32);
     add1 = std_add(4);
     const0 = std_const(4,0);
     const1 = std_const(32,1);
     const2 = std_const(4,1);
-    i0 = std_reg(4);
+    @pos{3} i0 = std_reg(4);
   }
   wires {
-    group let0<"promotable"=1> {
+    group let0<"promotable"=1, "pos"={3}> {
       i0.in = const0.out;
       i0.write_en = 1'd1;
       let0[done] = i0.done;
     }
-    group let1<"promotable"=2> {
+    group let1<"promotable"=2, "pos"={1}> {
       A_read0_0.in = A.read_data;
       A_read0_0.write_en = A.done;
       let1[done] = A_read0_0.done;
       A.content_en = 1'd1;
       A.addr0 = i0.out;
     }
-    group upd0<"promotable"=1> {
+    group upd0<"promotable"=1, "pos"={1}> {
       B.content_en = 1'd1;
       B.addr0 = i0.out;
       B.write_en = 1'd1;
@@ -35,7 +35,7 @@ component main() -> () {
       B.write_data = add0.out;
       upd0[done] = B.done;
     }
-    group upd1<"promotable"=1> {
+    group upd1<"promotable"=1, "pos"={3}> {
       i0.write_en = 1'd1;
       add1.left = i0.out;
       add1.right = const2.out;
@@ -45,19 +45,29 @@ component main() -> () {
   }
   control {
     seq {
-      @pos(0) let0;
+      @pos{3} let0;
       repeat 10 {
         seq {
-          @pos(1) let1;
-          @pos(2) upd0;
-          @pos(0) upd1;
+          @pos{1} let1;
+          @pos{1} upd0;
+          @pos{3} upd1;
         }
       }
     }
   }
 }
 metadata #{
-  0: for (let i: ubit<4> = 0..10) {
+  0: decl A: bit<32>[10];
   1:   B[i] := A[i] + 1;
-  2:   B[i] := A[i] + 1;
+  2: decl B: bit<32>[10];
+  3: for (let i: ubit<4> = 0..10) {
+}#
+sourceinfo #{
+  FILES
+  0: file-tests/should-futil/for.fuse
+  POSITIONS
+  0: 0 1
+  1: 0 5
+  2: 0 2
+  3: 0 4
 }#
