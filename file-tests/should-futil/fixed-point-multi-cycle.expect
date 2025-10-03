@@ -54,11 +54,6 @@ component main() -> () {
     }
   }
 }
-metadata #{
-  0: let d: ufix<2, 1>[1];
-  1: let b: ufix<2, 1> = (1.0 as ufix<2, 1>) * (1.0 as ufix<2, 1>);
-  2: d[0] := (1.0 as ufix<2, 1>) * (1.0 as ufix<2, 1>);
-}#
 sourceinfo #{
   FILES
   0: file-tests/should-futil/fixed-point-multi-cycle.fuse

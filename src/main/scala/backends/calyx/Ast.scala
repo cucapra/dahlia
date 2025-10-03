@@ -15,8 +15,6 @@ object Calyx:
   case class Metadata(
       // the name of the file
       filename: File,
-      // metadata: Mapping from longString to value of the counter
-      metadataMap: MutableMap[String, Int] = MutableMap(),
       // Mapping from line number to the value of the counter
       sourceLocMap: MutableMap[Int, Int] = MutableMap(),
       var counter: Int = 0,
@@ -25,27 +23,10 @@ object Calyx:
       val key = pos.line
       if !this.sourceLocMap.contains(key) then
         this.sourceLocMap.update(pos.line, this.counter)
-        this.metadataMap.update(pos.longString, this.counter)
         this.counter = this.counter + 1
       this.sourceLocMap(key)
 
     override def doc(): Doc =
-      text("metadata") <+> scope(
-        vsep(
-          this.metadataMap.toSeq
-            .sortBy(_._2)
-            .map({ case (longString, c) =>
-              text(c.toString()) <> text(":") <+> text(
-                longString.split("\n")(0)
-              )
-            })
-        ),
-        left = text("#") <> lbrace,
-        right = rbrace <> text("#")
-      )
-      <>
-      line
-      <>
       text("sourceinfo") <+> scope(
         text("FILES")
         <> line <>

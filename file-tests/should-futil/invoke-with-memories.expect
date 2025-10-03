@@ -52,12 +52,6 @@ component main() -> () {
     }
   }
 }
-metadata #{
-  0:   dest[zero] := src[zero];
-  1:   let zero = (0 as ubit<1>);
-  2: decl d: ubit<32>[1];
-  3: decl s: ubit<32>[1];
-}#
 sourceinfo #{
   FILES
   0: file-tests/should-futil/invoke-with-memories.fuse

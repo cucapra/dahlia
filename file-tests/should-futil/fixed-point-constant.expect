@@ -43,12 +43,6 @@ component main() -> () {
     }
   }
 }
-metadata #{
-  0: let a: ufix<4, 2> = (2.25 as ufix<4, 2>); // 9
-  1: let b: fix<4, 2> = (-2.25 as fix<4, 2>); // 7
-  2: let c: ufix<15, 3> = (3.125 as ufix<15, 3>); // 12800
-  3: let d: fix<15, 3> = (-3.125 as fix<15, 3>); // 19668
-}#
 sourceinfo #{
   FILES
   0: file-tests/should-futil/fixed-point-constant.fuse

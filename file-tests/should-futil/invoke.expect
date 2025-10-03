@@ -54,12 +54,6 @@ component main() -> () {
     }
   }
 }
-metadata #{
-  0:   let temp: ubit<32> = a;
-  1: let b: ubit<32> = (1 as ubit<32>);
-  2: let c: ubit<32> = foo(b);
-  3: let d: ubit<32> = sqrt(c);
-}#
 sourceinfo #{
   FILES
   0: file-tests/should-futil/invoke.fuse

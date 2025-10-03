@@ -56,12 +56,6 @@ component main() -> () {
     }
   }
 }
-metadata #{
-  0: decl A: bit<32>[10];
-  1:   B[i] := A[i] + 1;
-  2: decl B: bit<32>[10];
-  3: for (let i: ubit<4> = 0..10) {
-}#
 sourceinfo #{
   FILES
   0: file-tests/should-futil/for.fuse

@@ -80,13 +80,6 @@ component main() -> () {
     }
   }
 }
-metadata #{
-  0: decl A: bit<32>[10][2];
-  1:     B[i][j] := A[i][j] + 1;
-  2: decl B: bit<32>[10][2];
-  3: for (let i: ubit<4> = 0..10) {
-  4:   for (let j: ubit<2> = 0..2){
-}#
 sourceinfo #{
   FILES
   0: file-tests/should-futil/for-multi-dim.fuse

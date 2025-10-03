@@ -99,15 +99,6 @@ component main() -> () {
     }
   }
 }
-metadata #{
-  0: decl a: bit<10>[128];
-  1:   c[i] := a[i] & b[i]; // This should not be emit signed Calyx primitive
-  2:   d[i] := a[i] + b[i]; // This should emit a signed Calyx primitive
-  3: decl b: bit<10>[128];
-  4: decl c: bit<10>[128];
-  5: decl d: bit<10>[128];
-  6: for (let i:bit<8>=0..128) {
-}#
 sourceinfo #{
   FILES
   0: file-tests/should-futil/emit-signed-op.fuse

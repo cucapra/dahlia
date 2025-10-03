@@ -72,12 +72,6 @@ component main() -> () {
     }
   }
 }
-metadata #{
-  0: for (let i: ubit<4> = 0..10) {
-  1:   for (let j: ubit<4> = 0..10) {
-  2:   let x: ubit<4> = 0;
-  3:     x += j;
-}#
 sourceinfo #{
   FILES
   0: file-tests/should-futil/sequentialize-reduce.fuse

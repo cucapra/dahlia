@@ -44,11 +44,6 @@ component main() -> () {
     }
   }
 }
-metadata #{
-  0:   let y: ufix<8, 4> = x;
-  1: let x: ufix<8, 4> = (1.0 as ufix<8, 4>);
-  2: let tmp: ufix<8, 4> = foo(x);
-}#
 sourceinfo #{
   FILES
   0: file-tests/should-futil/invoke-with-fixed-point.fuse
