@@ -213,7 +213,7 @@ private class CalyxBackendHelper {
     val compInstArgs = getCompInstArgs(app.func)
     // Define a new cell for the function instance
     val decl =
-      Cell(declName, CompInst(functionName, compInstArgs), false, List())
+      Cell(declName, CompInst(functionName, compInstArgs), false, List()).withPos(app)
 
     // Compile all arguments to the function and get the relevant ports
     val (argPorts, argSt) = app.args
@@ -244,13 +244,16 @@ private class CalyxBackendHelper {
   /** `emitDecl(d)` computes the structure that is needed to represent the
     * declaration `d`. Simply returns a `List[Structure]`.
     */
-  def emitDecl(d: Decl): Structure = d.typ match {
+  def emitDecl(d: Decl): Structure =
+    val struct = d.typ match {
     case tarr: TArray => emitArrayDecl(tarr, d.id, List("external" -> 1))
     case _: TBool => Stdlib.register(CompVar(s"${d.id}"), 1)
     case TSizedInt(size, _) => Stdlib.register(CompVar(s"${d.id}"), size)
     case TFixed(ltotal, _, _) => Stdlib.register(CompVar(s"${d.id}"), ltotal)
     case x => throw NotImplemented(s"Type $x not implemented for decls.", x.pos)
-  }
+    }
+    struct.withPos(d)
+    struct
 
   /** `emitBinop` is a helper function to generate the structure for `e1 binop
     * e2`. The return type is described in `emitExpr`.
@@ -288,7 +291,7 @@ private class CalyxBackendHelper {
       case (e1Bits, None) => {
         val isSigned = signed(e1.typ, op)
         val binOp = Stdlib.binop(s"$compName", e1Bits, isSigned)
-        val comp = Cell(genName(compName), binOp, false, List())
+        val comp = Cell(genName(compName), binOp, false, List()).withPos(e1)
         val struct = List(
           comp,
           Assign(e1Out.port, comp.name.port("left")),
@@ -325,7 +328,7 @@ private class CalyxBackendHelper {
             fracBit1,
             isSigned
           );
-        val comp = Cell(genName(compName), binOp, false, List())
+        val comp = Cell(genName(compName), binOp, false, List()).withPos(e1)
         val struct = List(
           comp,
           Assign(e1Out.port, comp.name.port("left")),
@@ -399,7 +402,7 @@ private class CalyxBackendHelper {
         throw NotImplemented(s"Multi-cycle binary operation with type: $e1.typ")
     }
     val compVar = genName(compName)
-    val comp = Cell(compVar, binOp, false, List())
+    val comp = Cell(compVar, binOp, false, List()).withPos(e1)
     val struct = List(
       comp,
       Assign(e1Out.port, comp.name.port("left")),
@@ -531,7 +534,7 @@ private class CalyxBackendHelper {
             Stdlib.constant(typ_b, v),
             false,
             List()
-          )
+          ).withPos(expr)
         EmitOutput(
           const.name.port("out"),
           None,
@@ -547,7 +550,7 @@ private class CalyxBackendHelper {
             Stdlib.constant(1, if v then 1 else 0),
             false,
             List()
-          )
+          ).withPos(expr)
         EmitOutput(
           const.name.port("out"),
           None,
@@ -754,8 +757,10 @@ private class CalyxBackendHelper {
       }
       case CLet(id, Some(tarr: TArray), None) => {
         val arr = CompVar(s"$id")
+        val array_decl = emitArrayDecl(tarr, id, List())
+        array_decl.withPos(c)
         (
-          List(emitArrayDecl(tarr, id, List())),
+          List(array_decl),
           Empty,
           store + (arr -> (arr, LocalVar))
         )
@@ -781,6 +786,7 @@ private class CalyxBackendHelper {
             doneHole
           )
         val (group, st) = Group.fromStructure(groupName, struct, None, false)
+        group.withPos(c)
         val control = SeqComp(
           List(
             invokeControl,
@@ -816,8 +822,10 @@ private class CalyxBackendHelper {
             writeEnableSrcPort.getOrElse(ConstantPort(1, 1)),
             reg.name.port("write_en")
           ) :: doneHole :: out.structure
-        val (group, st) =
+        val (group, st) = {
           Group.fromStructure(groupName, struct, delay, false)
+        }
+        group.withPos(c)
         (
           reg :: group :: st,
           Enable(group.id).withPos(c),
@@ -828,6 +836,8 @@ private class CalyxBackendHelper {
         val (typ_b, _) = bitsForType(typ, c.pos)
         val reg =
           Stdlib.register(genName(s"$id"), typ_b)
+
+        reg.withPos(c)
         // XXX(rachit): Why is multiCycleInfo ignored here?
         val EmitOutput(port, done, structure, delay, _) = emitExpr(e)(store)
         val groupName = genName("let")
@@ -842,6 +852,7 @@ private class CalyxBackendHelper {
           ) :: doneHole :: structure
         val (group, st) =
           Group.fromStructure(groupName, struct, delay.map(_ + 1), false)
+        group.withPos(c)
         (
           reg :: group :: st,
           Enable(group.id).withPos(c),
@@ -899,6 +910,7 @@ private class CalyxBackendHelper {
 
         val (group, other_st) =
           Group.fromStructure(groupName, struct, lOut.delay, false)
+        group.withPos(c) // adding position to the generated group as well
         (group :: other_st, Enable(group.id).withPos(c), store)
       }
       case CIf(cond, tbranch, fbranch) => {
@@ -1038,7 +1050,7 @@ private class CalyxBackendHelper {
 
   def emitProg(p: Prog, c: Config): String = {
 
-    implicit val meta = Metadata()
+    implicit val meta = Metadata(c.srcFile)
 
     val importDefinitions = p.includes.flatMap(_.defs).toList
     val definitions =
@@ -1055,6 +1067,7 @@ private class CalyxBackendHelper {
         }
       )
 
+    // TODO: emit position info for function definitions and parameters
     val functionDefinitions: List[Component] =
       for (
         case (id, FuncDef(_, params, retType, Some(body))) <- id2FuncDef.toList

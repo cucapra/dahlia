@@ -3,56 +3,56 @@ import "primitives/memories/seq.futil";
 import "primitives/binary_operators.futil";
 component main() -> () {
   cells {
-    @external(1) a = seq_mem_d1(10,128,8);
-    a_read0_0 = std_reg(10);
-    a_read1_0 = std_reg(10);
+    @pos{0} @external(1) a = seq_mem_d1(10,128,8);
+    @pos{1} a_read0_0 = std_reg(10);
+    @pos{2} a_read1_0 = std_reg(10);
     add0 = std_sadd(10);
     add1 = std_sadd(8);
     and0 = std_and(10);
-    @external(1) b = seq_mem_d1(10,128,8);
-    b_read0_0 = std_reg(10);
-    b_read1_0 = std_reg(10);
-    @external(1) c = seq_mem_d1(10,128,8);
+    @pos{3} @external(1) b = seq_mem_d1(10,128,8);
+    @pos{1} b_read0_0 = std_reg(10);
+    @pos{2} b_read1_0 = std_reg(10);
+    @pos{4} @external(1) c = seq_mem_d1(10,128,8);
     const0 = std_const(8,0);
     const1 = std_const(8,1);
-    @external(1) d = seq_mem_d1(10,128,8);
-    i0 = std_reg(8);
+    @pos{5} @external(1) d = seq_mem_d1(10,128,8);
+    @pos{6} i0 = std_reg(8);
   }
   wires {
-    group let0<"promotable"=1> {
+    group let0<"promotable"=1, "pos"={6}> {
       i0.in = const0.out;
       i0.write_en = 1'd1;
       let0[done] = i0.done;
     }
-    group let1<"promotable"=2> {
+    group let1<"promotable"=2, "pos"={1}> {
       a_read0_0.in = a.read_data;
       a_read0_0.write_en = a.done;
       let1[done] = a_read0_0.done;
       a.content_en = 1'd1;
       a.addr0 = i0.out;
     }
-    group let2<"promotable"=2> {
+    group let2<"promotable"=2, "pos"={1}> {
       b_read0_0.in = b.read_data;
       b_read0_0.write_en = b.done;
       let2[done] = b_read0_0.done;
       b.content_en = 1'd1;
       b.addr0 = i0.out;
     }
-    group let3<"promotable"=2> {
+    group let3<"promotable"=2, "pos"={2}> {
       a_read1_0.in = a.read_data;
       a_read1_0.write_en = a.done;
       let3[done] = a_read1_0.done;
       a.content_en = 1'd1;
       a.addr0 = i0.out;
     }
-    group let4<"promotable"=2> {
+    group let4<"promotable"=2, "pos"={2}> {
       b_read1_0.in = b.read_data;
       b_read1_0.write_en = b.done;
       let4[done] = b_read1_0.done;
       b.content_en = 1'd1;
       b.addr0 = i0.out;
     }
-    group upd0<"promotable"=1> {
+    group upd0<"promotable"=1, "pos"={1}> {
       c.content_en = 1'd1;
       c.addr0 = i0.out;
       c.write_en = 1'd1;
@@ -61,7 +61,7 @@ component main() -> () {
       c.write_data = and0.out;
       upd0[done] = c.done;
     }
-    group upd1<"promotable"=1> {
+    group upd1<"promotable"=1, "pos"={2}> {
       d.content_en = 1'd1;
       d.addr0 = i0.out;
       d.write_en = 1'd1;
@@ -70,7 +70,7 @@ component main() -> () {
       d.write_data = add0.out;
       upd1[done] = d.done;
     }
-    group upd2<"promotable"=1> {
+    group upd2<"promotable"=1, "pos"={6}> {
       i0.write_en = 1'd1;
       add1.left = i0.out;
       add1.right = const1.out;
@@ -80,31 +80,34 @@ component main() -> () {
   }
   control {
     seq {
-      @pos{0} let0;
+      @pos{6} let0;
       repeat 128 {
         seq {
           par {
             @pos{1} let1;
-            @pos{2} let2;
+            @pos{1} let2;
           }
           par {
-            @pos{3} upd0;
-            @pos{4} let3;
-            @pos{5} let4;
+            @pos{1} upd0;
+            @pos{2} let3;
+            @pos{2} let4;
           }
-          @pos{6} upd1;
-          @pos{0} upd2;
+          @pos{2} upd1;
+          @pos{6} upd2;
         }
       }
     }
   }
 }
-metadata #{
-  0: for (let i:bit<8>=0..128) {
-  1:   c[i] := a[i] & b[i]; // This should not be emit signed Calyx primitive
-  2:   c[i] := a[i] & b[i]; // This should not be emit signed Calyx primitive
-  3:   c[i] := a[i] & b[i]; // This should not be emit signed Calyx primitive
-  4:   d[i] := a[i] + b[i]; // This should emit a signed Calyx primitive
-  5:   d[i] := a[i] + b[i]; // This should emit a signed Calyx primitive
-  6:   d[i] := a[i] + b[i]; // This should emit a signed Calyx primitive
+sourceinfo #{
+  FILES
+  0: file-tests/should-futil/emit-signed-op.fuse
+  POSITIONS
+  0: 0 1
+  1: 0 7
+  2: 0 8
+  3: 0 2
+  4: 0 3
+  5: 0 4
+  6: 0 6
 }#

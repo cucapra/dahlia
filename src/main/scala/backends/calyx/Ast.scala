@@ -1,47 +1,60 @@
 package fuselang.backend.calyx
 
+import java.io.File
 import scala.math.BigInt
 import fuselang.common.PrettyPrint.Doc
 import Doc._
 import scala.util.parsing.input.Position
 import fuselang.common.Syntax
 import scala.collection.mutable.{Map => MutableMap}
+import fuselang.common.PrettyPrint.DocBreak
 
 object Calyx:
 
   // Track metadata while generating Calyx code.
   case class Metadata(
-      // Mapping from position to the value of the counter
-      map: MutableMap[Position, Int] = MutableMap(),
-      var counter: Int = 0
+      // the name of the file
+      filename: File,
+      // Mapping from line number to the value of the counter
+      sourceLocMap: MutableMap[Int, Int] = MutableMap(),
+      var counter: Int = 0,
   ) extends Emitable:
     def addPos(pos: Position): Int =
-      val key = pos
-      if !this.map.contains(key) then
-        this.map.update(key, this.counter)
+      val key = pos.line
+      if !this.sourceLocMap.contains(key) then
+        this.sourceLocMap.update(pos.line, this.counter)
         this.counter = this.counter + 1
-      this.map(key)
+      this.sourceLocMap(key)
 
     override def doc(): Doc =
-      text("metadata") <+> scope(
+      text("sourceinfo") <+> scope(
+        text("FILES")
+        <> line <>
+        text("0:") <+> text(this.filename.toString())
+        <> line <>
+        text("POSITIONS")
+        <>
+        line
+        <>
         vsep(
-          this.map.toSeq
+            this.sourceLocMap.toSeq
             .sortBy(_._2)
-            .map({ case (pos, c) =>
-              text(c.toString()) <> text(":") <+> text(
-                pos.longString.split("\n")(0)
+            .map({ case (linenum, c) =>
+              text(c.toString()) <> text(":") <+> text("0") <+> text(
+                linenum.toString()
               )
             })
         ),
         left = text("#") <> lbrace,
         right = rbrace <> text("#")
       )
+  
 
   private def emitPos(pos: Position, @annotation.unused span: Int)(implicit
       meta: Metadata
   ): Doc =
     // Add position information to the metadata.
-    if pos.line != 0 && pos.column != 0 then
+    if isValidPos(pos) then
       val count = meta.addPos(pos)
       text("@pos") <> braces(text(count.toString)) <> space
     else emptyDoc
@@ -58,15 +71,27 @@ object Calyx:
          emptyDoc
        }) */
 
-  def emitCompStructure(structs: List[Structure]): Doc =
+  private def isValidPos(pos: Position): Boolean = {
+    pos.line != 0 && pos.column != 0
+  }
+
+  private def emitGroupComponentPos(pos: Position, @annotation.unused span: Int)(implicit
+   meta: Metadata
+  ): Doc =
+    if isValidPos(pos) then
+      val count = meta.addPos(pos)
+      text("\"pos\"=") <> braces(text(count.toString))
+    else emptyDoc
+
+  def emitCompStructure(structs: List[Structure])(using meta: Metadata): Doc =
     val (cells, connections) = structs.partition(st =>
       st match {
         case _: Cell => true
         case _ => false
       }
     )
-    text("cells") <+> scope(vsep(cells.map(_.doc()))) <@>
-      text("wires") <+> scope(vsep(connections.map(_.doc())))
+    text("cells") <+> scope(vsep(cells.map(_.doc(meta)))) <@>
+      text("wires") <+> scope(vsep(connections.map(_.doc(meta))))
 
   sealed trait Emitable:
     def doc(): Doc
@@ -160,9 +185,9 @@ object Calyx:
   case class HolePort(id: CompVar, name: String) extends Port
   case class ConstantPort(width: Int, value: BigInt) extends Port
 
-  sealed trait Structure extends Emitable with Ordered[Structure]:
-    override def doc(): Doc = this match
-      case Cell(id, comp, ref, attrs) => {
+  sealed trait Structure extends Ordered[Structure]:
+    def doc(implicit meta: Metadata): Doc = this match
+      case c @ Cell(id, comp, ref, attrs) => {
         val attrDoc =
           hsep(
             attrs
@@ -171,22 +196,27 @@ object Calyx:
               })
           ) <> (if attrs.isEmpty then emptyDoc else space)
 
-        attrDoc <> (if ref then text("ref") <> space else emptyDoc) <>
+        emitPos(c.pos, c.span) <> attrDoc <> (if ref then text("ref") <> space else emptyDoc) <>
           id.doc() <+> equal <+> comp.doc() <> semi
       }
       case Assign(src, dest, True) =>
         dest.doc() <+> equal <+> src.doc() <> semi
       case Assign(src, dest, guard) =>
         dest.doc() <+> equal <+> guard.doc() <+> text("?") <+> src.doc() <> semi
-      case Group(id, conns, delay, comb) =>
+      case g @ Group(id, conns, delay, comb) =>
         (if comb then text("comb ") else emptyDoc) <>
           text("group") <+> id.doc() <>
-          (if delay.isDefined then
+          (if delay.isDefined && isValidPos(g.pos) then
              angles(
-               text("\"promotable\"") <> equal <> text(delay.get.toString())
+               commaSep(List(text("\"promotable\"") <> equal <> text(delay.get.toString()),
+                 emitGroupComponentPos(g.pos, g.span)))
              )
-           else emptyDoc) <+>
-          scope(vsep(conns.map(_.doc())))
+          else if delay.isDefined then
+            angles(
+              text("\"promotable\"") <> equal <> text(delay.get.toString())
+            )
+          else angles(emitGroupComponentPos(g.pos, g.span))) <+>
+          scope(vsep(conns.map(_.doc(meta))))
 
     def compare(that: Structure): Int =
       (this, that) match
@@ -207,18 +237,18 @@ object Calyx:
       comp: CompInst,
       ref: Boolean,
       attributes: List[(String, Int)]
-  ) extends Structure
+  ) extends Structure with Syntax.PositionalWithSpan
   case class Group(
       id: CompVar,
       connections: List[Assign],
       staticDelay: Option[Int],
       // True if the group is combinational
       comb: Boolean
-  ) extends Structure
+  ) extends Structure with Syntax.PositionalWithSpan
   case class Assign(src: Port, dest: Port, guard: GuardExpr = True)
       extends Structure
 
-  object Group:
+  object Group extends Syntax.PositionalWithSpan:
     def fromStructure(
         id: CompVar,
         structure: List[Structure],
