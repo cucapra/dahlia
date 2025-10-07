@@ -79,15 +79,15 @@ component main() -> () {
     }
   }
   control {
-    seq {
+    @pos{6} seq {
       @pos{6} let0;
-      repeat 128 {
-        seq {
-          par {
+      @pos{6} repeat 128 {
+        @pos{6} seq {
+          @pos{1} par {
             @pos{1} let1;
             @pos{1} let2;
           }
-          par {
+          @pos{2} par {
             @pos{1} upd0;
             @pos{2} let3;
             @pos{2} let4;

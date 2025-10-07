@@ -67,14 +67,14 @@ component use_plus_equals() -> () {
     }
   }
   control {
-    seq {
+    @pos{0} seq {
       @pos{0} let0;
-      repeat 1 {
-        seq {
+      @pos{0} repeat 1 {
+        @pos{0} seq {
           @pos{2} let1;
           @pos{1} let2;
-          repeat 2 {
-            seq {
+          @pos{1} repeat 2 {
+            @pos{1} seq {
               @pos{3} let3;
               @pos{3} upd0;
               @pos{1} upd1;

@@ -46,7 +46,7 @@ component main() -> () {
     }
   }
   control {
-    seq {
+    @pos{2} seq {
       @pos{1} let0;
       @pos{1} let1;
       @pos{2} let2;

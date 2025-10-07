@@ -62,13 +62,13 @@ component main() -> () {
     }
   }
   control {
-    seq {
+    @pos{3} seq {
       @pos{3} let0;
-      repeat 10 {
-        seq {
+      @pos{3} repeat 10 {
+        @pos{3} seq {
           @pos{4} let1;
-          repeat 2 {
-            seq {
+          @pos{4} repeat 2 {
+            @pos{4} seq {
               @pos{1} let2;
               @pos{1} upd0;
               @pos{4} upd1;
