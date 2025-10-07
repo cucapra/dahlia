@@ -971,6 +971,7 @@ private class CalyxBackendHelper {
                 condOut.delay,
                 true
               )
+            condGroup.withPos(wh)
             val control = While(condOut.port, condGroup.id, bodyCon)
             control.attributes = wh.attributes
             (condGroup :: bodyStruct ++ condDefs, control, st)

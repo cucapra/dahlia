@@ -215,7 +215,9 @@ object Calyx:
             angles(
               text("\"promotable\"") <> equal <> text(delay.get.toString())
             )
-          else angles(emitGroupComponentPos(g.pos, g.span))) <+>
+          else if isValidPos(g.pos) then
+            angles(emitGroupComponentPos(g.pos, g.span))
+          else emptyDoc) <+>
           scope(vsep(conns.map(_.doc(meta))))
 
     def compare(that: Structure): Int =
