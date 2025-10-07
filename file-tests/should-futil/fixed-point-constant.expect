@@ -35,7 +35,7 @@ component main() -> () {
     }
   }
   control {
-    par {
+    @pos{3} par {
       @pos{0} let0;
       @pos{1} let1;
       @pos{2} let2;

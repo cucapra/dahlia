@@ -31,7 +31,7 @@ component mem_copy() -> () {
     }
   }
   control {
-    seq {
+    @pos{0} seq {
       @pos{1} let0;
       @pos{0} let1;
       @pos{0} upd0;

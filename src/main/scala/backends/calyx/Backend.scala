@@ -931,9 +931,12 @@ private class CalyxBackendHelper {
                 condOut.delay,
                 false
               )
+            val newIf = If(condOut.port, group.id, tCon, fCon)
+            newIf.withPos(c)
             val control = SeqComp(
-              List(Enable(group.id), If(condOut.port, group.id, tCon, fCon))
+              List(Enable(group.id), newIf)
             )
+            control.withPos(c)
             (group :: st ++ struct, control, store)
           }
           case None => {
@@ -944,7 +947,9 @@ private class CalyxBackendHelper {
                 condOut.delay,
                 true
               )
+            group.withPos(c)
             val control = If(condOut.port, group.id, tCon, fCon)
+            control.withPos(c)
             (group :: st ++ struct, control, store)
           }
         }
@@ -955,6 +960,7 @@ private class CalyxBackendHelper {
         wh.attributes.get("bound") match {
           case Some(count) => {
             val control = Repeat(count, bodyCon)
+            control.withPos(wh)
             (bodyStruct, control, st)
           }
           case None => {
@@ -973,6 +979,7 @@ private class CalyxBackendHelper {
               )
             condGroup.withPos(wh)
             val control = While(condOut.port, condGroup.id, bodyCon)
+            control.withPos(wh)
             control.attributes = wh.attributes
             (condGroup :: bodyStruct ++ condDefs, control, st)
           }

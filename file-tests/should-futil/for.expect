@@ -44,10 +44,10 @@ component main() -> () {
     }
   }
   control {
-    seq {
+    @pos{3} seq {
       @pos{3} let0;
-      repeat 10 {
-        seq {
+      @pos{3} repeat 10 {
+        @pos{3} seq {
           @pos{1} let1;
           @pos{1} upd0;
           @pos{3} upd1;
