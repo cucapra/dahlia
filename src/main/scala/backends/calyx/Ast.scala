@@ -296,24 +296,30 @@ object Calyx:
 
   /** *** control ****
     */
-  sealed trait Control:
+  sealed trait Control extends Syntax.PositionalWithSpan:
     var attributes = Map[String, Int]()
 
-    def seq(c: Control): Control = (this, c) match
-      case (Empty, c) => c
-      case (c, Empty) => c
-      case (seq0: SeqComp, seq1: SeqComp) => SeqComp(seq0.stmts ++ seq1.stmts)
-      case (seq: SeqComp, _) => SeqComp(seq.stmts ++ List(c))
-      case (_, seq: SeqComp) => SeqComp(this :: seq.stmts)
-      case _ => SeqComp(List(this, c))
+    def seq(c: Control): Control =
+      val controlSeq = (this, c) match
+        case (Empty, c) => c
+        case (c, Empty) => c
+        case (seq0: SeqComp, seq1: SeqComp) => SeqComp(seq0.stmts ++ seq1.stmts)
+        case (seq: SeqComp, _) => SeqComp(seq.stmts ++ List(c))
+        case (_, seq: SeqComp) => SeqComp(this :: seq.stmts)
+        case _ => SeqComp(List(this, c))
+      controlSeq.withPos(c)
+      controlSeq
 
-    def par(c: Control): Control = (this, c) match
-      case (Empty, c) => c
-      case (c, Empty) => c
-      case (par0: ParComp, par1: ParComp) => ParComp(par0.stmts ++ par1.stmts)
-      case (par0: ParComp, par1) => ParComp(par0.stmts ++ List(par1))
-      case (par0, par1: ParComp) => ParComp(par0 :: par1.stmts)
-      case _ => ParComp(List(this, c))
+    def par(c: Control): Control =
+      val controlPar = (this, c) match
+        case (Empty, c) => c
+        case (c, Empty) => c
+        case (par0: ParComp, par1: ParComp) => ParComp(par0.stmts ++ par1.stmts)
+        case (par0: ParComp, par1) => ParComp(par0.stmts ++ List(par1))
+        case (par0, par1: ParComp) => ParComp(par0 :: par1.stmts)
+        case _ => ParComp(List(this, c))
+      controlPar.withPos(c)
+      controlPar
 
     def attributesDoc(): Doc =
       if this.attributes.isEmpty then emptyDoc
@@ -324,24 +330,24 @@ object Calyx:
 
     def doc(implicit meta: Metadata): Doc =
       val controlDoc = this match
-        case SeqComp(stmts) =>
-          text("seq") <+> scope(vsep(stmts.map(_.doc)))
-        case ParComp(stmts) =>
-          text("par") <+> scope(vsep(stmts.map(_.doc)))
-        case If(port, cond, trueBr, falseBr) =>
-          text("if") <+> port.doc() <+> text("with") <+>
+        case s @ SeqComp(stmts) =>
+          emitPos(s.pos, s.span) <> text("seq") <+> scope(vsep(stmts.map(_.doc)))
+        case p @ ParComp(stmts) =>
+          emitPos(p.pos, p.span) <> text("par") <+> scope(vsep(stmts.map(_.doc)))
+        case i @ If(port, cond, trueBr, falseBr) =>
+          emitPos(i.pos, i.span) <> text("if") <+> port.doc() <+> text("with") <+>
             cond.doc() <+>
             scope(trueBr.doc) <> (
               if falseBr == Empty then emptyDoc
               else space <> text("else") <+> scope(falseBr.doc)
             )
-        case While(port, cond, body) => {
-          text("while") <+> port.doc() <+> text("with") <+>
+        case wh @ While(port, cond, body) => {
+          emitPos(wh.pos, wh.span) <> text("while") <+> port.doc() <+> text("with") <+>
             cond.doc() <+>
             scope(body.doc(meta))
         }
-        case Repeat(count, body) => {
-          text("repeat") <+> text(count.toString) <+>
+        case r @ Repeat(count, body) => {
+          emitPos(r.pos, r.span) <> text("repeat") <+> text(count.toString) <+>
             scope(body.doc(meta))
         }
         case e @ Enable(id) => {
@@ -373,14 +379,13 @@ object Calyx:
       extends Control
   case class While(port: Port, cond: CompVar, body: Control) extends Control
   case class Repeat(count: Int, body: Control) extends Control
-  case class Enable(id: CompVar) extends Control with Syntax.PositionalWithSpan
+  case class Enable(id: CompVar) extends Control
   case class Invoke(
       id: CompVar,
       refCells: List[(String, CompVar)],
       inConnects: List[(String, Port)],
       outConnects: List[(String, Port)]
   ) extends Control
-      with Syntax.PositionalWithSpan
   case object Empty extends Control
 
 /** Construct primitives in Calyx. */
