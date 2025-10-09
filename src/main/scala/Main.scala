@@ -47,6 +47,11 @@ object Main:
       .action((f, c) => c.copy(output = Some(f)))
       .text("Output code in a file. Default: use stdout.")
 
+    opt[String]("path-descriptor")
+      .valueName("<jsonFile>")
+      .action((f, c) => c.copy(pathDescriptorPath = Some(f)))
+      .text("file to write path descriptor mapping JSON to. (MUST be absolute path)")
+
     opt[String]('n', "name")
       .valueName("<kernel>")
       .validate(x =>
@@ -120,7 +125,6 @@ object Main:
     val prog = Files.exists(path) match
       case true => Right(new String(Files.readAllBytes(path)))
       case false => Left(s"$path: No such file in working directory")
-
     
     val cppPath: Either[ErrString, Option[Path]] = prog.flatMap(prog =>
       conf.output match {

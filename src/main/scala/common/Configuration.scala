@@ -43,5 +43,6 @@ object Configuration:
       logLevel: scribe.Level = scribe.Level.Warn,
       enableLowering: Boolean = false, // Enable lowering passes
       memoryInterface: MemoryInterface = Axi, // The memory interface to use for vivado
+      pathDescriptorPath: Option[String] = None, // Path to write path descriptor mapping to
   )
 

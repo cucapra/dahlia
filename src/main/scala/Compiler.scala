@@ -30,24 +30,26 @@ object Compiler:
       "Add bitwidth" -> (passes.AddBitWidth, true)
     )
 
-  def showCommandAstHelper(cmd: Command, current_id: String, descriptorMap: Map[Int, String]): Map[Int, String] = {
+  def assignPathDescriptors(cmd: Command, current_id: String, descriptorMap: Map[Int, String]): Map[Int, String] = {
     cmd match {
       case CSeq(seq) => {
         val seqId = current_id + "-"
-        val (_, finalMap) = seq.foldLeft((1, descriptorMap))((acc, seqChild) =>
+        val dmWithSeqId = descriptorMap + (cmd.pos.line -> seqId)
+        val (_, finalMap) = seq.foldLeft((1, dmWithSeqId))((acc, seqChild) =>
           val (id, dm) = acc
           val childId = seqId + id
-          val newDm = dm ++ showCommandAstHelper(seqChild, childId, dm)
+          val newDm = dm ++ assignPathDescriptors(seqChild, childId, dm)
           (id + 1, newDm)
         )
         finalMap
       }
       case CPar(par) => {
         val parId = current_id + "-"
-        val (_, finalMap) = par.foldLeft((1, descriptorMap))((acc, parChild) =>
+        val dmWithParId = descriptorMap + (cmd.pos.line -> parId)
+        val (_, finalMap) = par.foldLeft((1, dmWithParId))((acc, parChild) =>
           val (id, dm) = acc
           val childId = parId + id
-          val newDm = dm ++ showCommandAstHelper(parChild, childId, descriptorMap)
+          val newDm = dm ++ assignPathDescriptors(parChild, childId, descriptorMap)
           (id + 1, newDm)
         )
         finalMap
@@ -56,36 +58,32 @@ object Compiler:
         val forId = current_id + "-"
         val parId = forId + "pb"
         val combineId = forId + "cb"
-        val parDm = showCommandAstHelper(par, parId, descriptorMap)
-        showCommandAstHelper(combine, combineId, parDm)
+        val parDm = assignPathDescriptors(par, parId, descriptorMap + (cmd.pos.line -> forId))
+        assignPathDescriptors(combine, combineId, parDm)
       }
       case CIf(_, cons, alt) => {
         val ifId = current_id + "-"
         val consId = ifId + "t"
         val altId = ifId + "f"
-        val consDm = showCommandAstHelper(cons, consId, descriptorMap)
-        showCommandAstHelper(alt, altId, consDm)
+        val consDm = assignPathDescriptors(cons, consId, descriptorMap + (cmd.pos.line -> ifId))
+        assignPathDescriptors(alt, altId, consDm)
       }
       case CBlock(b) => {
         val blockId = current_id + "-"
-        showCommandAstHelper(b, blockId, descriptorMap)
+        assignPathDescriptors(b, blockId, descriptorMap + (cmd.pos.line -> blockId))
       }
       case CEmpty => {descriptorMap}
       case _ => {
-        println(List(cmd.pos.line.toString, cmd.pos.column.toString, cmd, current_id).mkString(" "));
         descriptorMap + (cmd.pos.line -> current_id)
       }
     }
   }
 
-  def showCommandAst(prog: Prog, c: Config): Unit = {
-    if c.passDebug then {
-
-      val cmd = prog.cmd
-      val descriptorMap = showCommandAstHelper(cmd, "main.", Map())
-      println("================DESCRIPTORMAP===================")
-      println(upickle.default.write(descriptorMap))
-    }
+  def writePathDescriptors(prog: Prog, pathString: String): Unit = {
+    val cmd = prog.cmd
+    val descriptorMap = assignPathDescriptors(cmd, "main.", Map())
+    val p = os.Path(pathString)
+    os.write(p, upickle.default.write(descriptorMap))
   }
 
   def showDebug(ast: Prog, pass: String, c: Config): Unit =
@@ -103,7 +101,13 @@ object Compiler:
   def checkStringWithError(prog: String, c: Config = emptyConf) =
     val preAst = Parser(prog).parse()
 
-    showCommandAst(preAst, c)
+    c.pathDescriptorPath match {
+      case Some(pathString) => {
+//        val p = Paths.get(pathString)
+        writePathDescriptors(preAst, pathString)
+      }
+      case None => {}
+    }
     showDebug(preAst, "Original", c)
 
     // Run pre transformers if lowering is enabled
@@ -206,4 +210,3 @@ object Compiler:
         StandardOpenOption.WRITE
       )
     })
-
