@@ -10,9 +10,7 @@ libraryDependencies ++= Seq(
   "com.lihaoyi" %% "fastparse" % "3.0.2",
   "com.github.scopt" %% "scopt" % "4.0.1",
   "com.outr" %% "scribe" % "3.5.5",
-  "com.lihaoyi" %% "sourcecode" % "0.2.7",
-  "com.lihaoyi" %% "upickle" % "4.1.0",
-  "com.lihaoyi" %% "os-lib" % "0.11.3"
+  "com.lihaoyi" %% "sourcecode" % "0.2.7"
 )
 
 scalacOptions ++= Seq(

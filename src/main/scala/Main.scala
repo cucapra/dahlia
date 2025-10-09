@@ -47,11 +47,6 @@ object Main:
       .action((f, c) => c.copy(output = Some(f)))
       .text("Output code in a file. Default: use stdout.")
 
-    opt[String]("path-descriptor")
-      .valueName("<jsonFile>")
-      .action((f, c) => c.copy(pathDescriptorPath = Some(f)))
-      .text("file to write path descriptor mapping JSON to. (MUST be absolute path)")
-
     opt[String]('n', "name")
       .valueName("<kernel>")
       .validate(x =>
@@ -88,6 +83,11 @@ object Main:
     opt[Unit]("pass-debug")
       .action((_, c) => c.copy(passDebug = true))
       .text("Show the AST after every compiler pass. Default: false.")
+
+    opt[String]("parent-map")
+      .valueName("<jsonFile>")
+      .action((f, c) => c.copy(parentMapPath = Some(f)))
+      .text("File to write parent line mapping JSON to. The map indicates which while/for/if blocks a statement may be nested in.")
 
     opt[String]("memory-interface")
       .validate(b =>

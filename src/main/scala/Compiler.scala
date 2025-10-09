@@ -3,13 +3,13 @@ package fuselang
 import scala.util.parsing.input.Position
 import scala.util.Try
 import scala.io.Source
-import java.nio.file.{Files, Paths, Path, StandardOpenOption}
-
-import common._
-import Configuration._
-import Syntax._
+import java.nio.file.{Files, Path, Paths, StandardOpenOption}
+import common.*
+import Configuration.*
+import Syntax.*
 import Transformer.{PartialTransformer, TypedPartialTransformer}
-import upickle.default.*
+
+import java.io.{File, PrintWriter}
 
 object Compiler:
 
@@ -29,40 +29,10 @@ object Compiler:
       "Rewrite views" -> (passes.RewriteView, false),
       "Add bitwidth" -> (passes.AddBitWidth, true)
     )
-
-  def getVerticalSpan(cmd: Command): Unit =
-    cmd match {
-      case CSeq(seq) => {
-        println(List("seq", cmd.pos.line, cmd.vspan))
-        seq.map(c => getVerticalSpan(c))
-      }
-      case CPar(par) => {
-        println(List("par", cmd.pos.line, cmd.vspan))
-        par.map(c => getVerticalSpan(c))
-      }
-      case CFor(_,_,par,combine) => {
-        println(List("for", cmd.pos.line, cmd.vspan))
-        getVerticalSpan(par)
-        getVerticalSpan(combine)
-      }
-      case CIf(_,t,f) => {
-        println(List("if", cmd.pos.line, cmd.vspan))
-        getVerticalSpan(t)
-        getVerticalSpan(f)
-      }
-      case _ => {}
-    }
-
-  def computeAncestors(cmd: Command, parentLineOpt: Option[String], linumToAncestors: Map[String, List[String]]): Map[String, List[String]] = {
-    val prefix =
-      cmd match {
-        case CSeq(_) => "seq@"
-        case CPar(_) => "par@"
-        case CFor(_,_,_,_) => "for@"
-        case CIf(_,_,_) => "if@"
-        case _ => ""
-      }
-    val currSymbol = prefix + cmd.pos.line
+  
+  def computeAncestors(cmd: Command, parentLineOpt: Option[Int], linumToAncestors: Map[Int, List[Int]]): Map[Int, List[Int]] = {
+    // create a version of the map that contains the current element.
+    val currSymbol = cmd.pos.line
     val currSymbolOpt = Some(currSymbol)
     val currAdded = parentLineOpt match {
       case Some(parentLine) => {
@@ -72,17 +42,21 @@ object Compiler:
         linumToAncestors + (currSymbol -> List.empty)
       }
     }
-//    println(currSymbol + " " + currAdded)
     cmd match {
       case CSeq(seq) => {
-        seq.foldLeft(currAdded)((map, seqChild) =>
-          computeAncestors(seqChild, currSymbolOpt, map)
+        // ignore seqs in this mapping for now, by using the original parentLineOpt and linumToAncestors
+        seq.foldLeft(linumToAncestors)((map, seqChild) =>
+          computeAncestors(seqChild, parentLineOpt, map)
         )
       }
       case CPar(par) => {
-        par.foldLeft(currAdded)((map, parChild) =>
-          computeAncestors(parChild, currSymbolOpt, map)
+        // ignore pars in this mapping for now, by using the original parentLineOpt and linumToAncestors
+        par.foldLeft(linumToAncestors)((map, parChild) =>
+          computeAncestors(parChild, parentLineOpt, map)
         )
+      }
+      case CWhile(_, _, body) => {
+        computeAncestors(body, currSymbolOpt, currAdded)
       }
       case CFor(_, _, par, combine) => {
         val parAdded = computeAncestors(par, currSymbolOpt, currAdded)
@@ -148,16 +122,18 @@ object Compiler:
     }
   }
 
-  def writePathDescriptors(prog: Prog, pathString: String): Unit = {
+  def writeParentMap(prog: Prog, pathString: String): Unit = {
     val cmd = prog.cmd
-    println(cmd)
     val linumToParentsMap = computeAncestors(cmd, None, Map())
-    println(linumToParentsMap)
 
-    val descriptorMap = assignPathDescriptors(cmd, "main.", Map())
-    getVerticalSpan(cmd)
-    val p = os.Path(pathString)
-    os.write(p, upickle.default.write(descriptorMap))
+    // write map to file
+    val writer = new PrintWriter(new File(pathString))
+    writer.println("{")
+    for ((k, v) <- linumToParentsMap) {
+      writer.println(s"  ${k}: [${v.mkString(",")}],")
+    }
+    writer.println("}")
+    writer.close()
   }
 
   def showDebug(ast: Prog, pass: String, c: Config): Unit =
@@ -175,10 +151,9 @@ object Compiler:
   def checkStringWithError(prog: String, c: Config = emptyConf) =
     val preAst = Parser(prog).parse()
 
-    c.pathDescriptorPath match {
+    c.parentMapPath match {
       case Some(pathString) => {
-//        val p = Paths.get(pathString)
-        writePathDescriptors(preAst, pathString)
+        writeParentMap(preAst, pathString)
       }
       case None => {}
     }
