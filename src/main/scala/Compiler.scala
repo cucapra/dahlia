@@ -29,7 +29,15 @@ object Compiler:
       "Rewrite views" -> (passes.RewriteView, false),
       "Add bitwidth" -> (passes.AddBitWidth, true)
     )
-  
+
+  /**
+   * Creates a map between commands and their ancestor commands (from immediate parent to ancestors).
+   * Parent commands contain CWhile, CFor, and CIf (CSeq and CPar are elided).
+   * @param cmd The current command.
+   * @param parentLineOpt The parent command's line number. (None if there's no parent)
+   * @param linumToAncestors A map from a command's line number to a list of ancestor commands' line numbers.
+   * @return A map that adds the current command's mapping on top of the preexisting linumToAncestors
+   */
   def computeAncestors(cmd: Command, parentLineOpt: Option[Int], linumToAncestors: Map[Int, List[Int]]): Map[Int, List[Int]] = {
     // create a version of the map that contains the current element.
     val currSymbol = cmd.pos.line
@@ -70,55 +78,6 @@ object Compiler:
         // don't care about empty commands for now, so we'll return the original map unmodified
         linumToAncestors}
       case _ => {currAdded}
-    }
-  }
-
-  def assignPathDescriptors(cmd: Command, current_id: String, descriptorMap: Map[Int, String]): Map[Int, String] = {
-    cmd match {
-      case CSeq(seq) => {
-        val seqId = current_id + "-"
-        val dmWithSeqId = descriptorMap + (cmd.pos.line -> seqId)
-        val (_, finalMap) = seq.foldLeft((1, dmWithSeqId))((acc, seqChild) =>
-          val (id, dm) = acc
-          val childId = seqId + id
-          val newDm = dm ++ assignPathDescriptors(seqChild, childId, dm)
-          (id + 1, newDm)
-        )
-        finalMap
-      }
-      case CPar(par) => {
-        val parId = current_id + "-"
-        val dmWithParId = descriptorMap + (cmd.pos.line -> parId)
-        val (_, finalMap) = par.foldLeft((1, dmWithParId))((acc, parChild) =>
-          val (id, dm) = acc
-          val childId = parId + id
-          val newDm = dm ++ assignPathDescriptors(parChild, childId, descriptorMap)
-          (id + 1, newDm)
-        )
-        finalMap
-      }
-      case CFor(r, p, par, combine) => {
-        val forId = current_id + "-"
-        val parId = forId + "pb"
-        val combineId = forId + "cb"
-        val parDm = assignPathDescriptors(par, parId, descriptorMap + (cmd.pos.line -> forId))
-        assignPathDescriptors(combine, combineId, parDm)
-      }
-      case CIf(_, cons, alt) => {
-        val ifId = current_id + "-"
-        val consId = ifId + "t"
-        val altId = ifId + "f"
-        val consDm = assignPathDescriptors(cons, consId, descriptorMap + (cmd.pos.line -> ifId))
-        assignPathDescriptors(alt, altId, consDm)
-      }
-      case CBlock(b) => {
-        val blockId = current_id + "-"
-        assignPathDescriptors(b, blockId, descriptorMap + (cmd.pos.line -> blockId))
-      }
-      case CEmpty => {descriptorMap}
-      case _ => {
-        descriptorMap + (cmd.pos.line -> current_id)
-      }
     }
   }
 
