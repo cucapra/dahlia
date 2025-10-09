@@ -1,5 +1,6 @@
 package fuselang
 
+import scala.util.parsing.input.Position
 import scala.util.Try
 import scala.io.Source
 import java.nio.file.{Files, Paths, Path, StandardOpenOption}
@@ -8,6 +9,7 @@ import common._
 import Configuration._
 import Syntax._
 import Transformer.{PartialTransformer, TypedPartialTransformer}
+import upickle.default.*
 
 object Compiler:
 
@@ -28,6 +30,64 @@ object Compiler:
       "Add bitwidth" -> (passes.AddBitWidth, true)
     )
 
+  def showCommandAstHelper(cmd: Command, current_id: String, descriptorMap: Map[Int, String]): Map[Int, String] = {
+    cmd match {
+      case CSeq(seq) => {
+        val seqId = current_id + "-"
+        val (_, finalMap) = seq.foldLeft((1, descriptorMap))((acc, seqChild) =>
+          val (id, dm) = acc
+          val childId = seqId + id
+          val newDm = dm ++ showCommandAstHelper(seqChild, childId, dm)
+          (id + 1, newDm)
+        )
+        finalMap
+      }
+      case CPar(par) => {
+        val parId = current_id + "-"
+        val (_, finalMap) = par.foldLeft((1, descriptorMap))((acc, parChild) =>
+          val (id, dm) = acc
+          val childId = parId + id
+          val newDm = dm ++ showCommandAstHelper(parChild, childId, descriptorMap)
+          (id + 1, newDm)
+        )
+        finalMap
+      }
+      case CFor(r, p, par, combine) => {
+        val forId = current_id + "-"
+        val parId = forId + "pb"
+        val combineId = forId + "cb"
+        val parDm = showCommandAstHelper(par, parId, descriptorMap)
+        showCommandAstHelper(combine, combineId, parDm)
+      }
+      case CIf(_, cons, alt) => {
+        val ifId = current_id + "-"
+        val consId = ifId + "t"
+        val altId = ifId + "f"
+        val consDm = showCommandAstHelper(cons, consId, descriptorMap)
+        showCommandAstHelper(alt, altId, consDm)
+      }
+      case CBlock(b) => {
+        val blockId = current_id + "-"
+        showCommandAstHelper(b, blockId, descriptorMap)
+      }
+      case CEmpty => {descriptorMap}
+      case _ => {
+        println(List(cmd.pos.line.toString, cmd.pos.column.toString, cmd, current_id).mkString(" "));
+        descriptorMap + (cmd.pos.line -> current_id)
+      }
+    }
+  }
+
+  def showCommandAst(prog: Prog, c: Config): Unit = {
+    if c.passDebug then {
+
+      val cmd = prog.cmd
+      val descriptorMap = showCommandAstHelper(cmd, "main.", Map())
+      println("================DESCRIPTORMAP===================")
+      println(upickle.default.write(descriptorMap))
+    }
+  }
+
   def showDebug(ast: Prog, pass: String, c: Config): Unit =
     if c.passDebug then
       val top = ("=" * 15) + pass + ("=" * 15)
@@ -43,6 +103,7 @@ object Compiler:
   def checkStringWithError(prog: String, c: Config = emptyConf) =
     val preAst = Parser(prog).parse()
 
+    showCommandAst(preAst, c)
     showDebug(preAst, "Original", c)
 
     // Run pre transformers if lowering is enabled

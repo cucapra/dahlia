@@ -121,6 +121,7 @@ object Main:
       case true => Right(new String(Files.readAllBytes(path)))
       case false => Left(s"$path: No such file in working directory")
 
+    
     val cppPath: Either[ErrString, Option[Path]] = prog.flatMap(prog =>
       conf.output match {
         case Some(out) =>
