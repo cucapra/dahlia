@@ -30,6 +30,75 @@ object Compiler:
       "Add bitwidth" -> (passes.AddBitWidth, true)
     )
 
+  def getVerticalSpan(cmd: Command): Unit =
+    cmd match {
+      case CSeq(seq) => {
+        println(List("seq", cmd.pos.line, cmd.vspan))
+        seq.map(c => getVerticalSpan(c))
+      }
+      case CPar(par) => {
+        println(List("par", cmd.pos.line, cmd.vspan))
+        par.map(c => getVerticalSpan(c))
+      }
+      case CFor(_,_,par,combine) => {
+        println(List("for", cmd.pos.line, cmd.vspan))
+        getVerticalSpan(par)
+        getVerticalSpan(combine)
+      }
+      case CIf(_,t,f) => {
+        println(List("if", cmd.pos.line, cmd.vspan))
+        getVerticalSpan(t)
+        getVerticalSpan(f)
+      }
+      case _ => {}
+    }
+
+  def computeAncestors(cmd: Command, parentLineOpt: Option[String], linumToAncestors: Map[String, List[String]]): Map[String, List[String]] = {
+    val prefix =
+      cmd match {
+        case CSeq(_) => "seq@"
+        case CPar(_) => "par@"
+        case CFor(_,_,_,_) => "for@"
+        case CIf(_,_,_) => "if@"
+        case _ => ""
+      }
+    val currSymbol = prefix + cmd.pos.line
+    val currSymbolOpt = Some(currSymbol)
+    val currAdded = parentLineOpt match {
+      case Some(parentLine) => {
+        linumToAncestors + (currSymbol -> (parentLine :: linumToAncestors(parentLine)))
+      }
+      case None => {
+        linumToAncestors + (currSymbol -> List.empty)
+      }
+    }
+//    println(currSymbol + " " + currAdded)
+    cmd match {
+      case CSeq(seq) => {
+        seq.foldLeft(currAdded)((map, seqChild) =>
+          computeAncestors(seqChild, currSymbolOpt, map)
+        )
+      }
+      case CPar(par) => {
+        par.foldLeft(currAdded)((map, parChild) =>
+          computeAncestors(parChild, currSymbolOpt, map)
+        )
+      }
+      case CFor(_, _, par, combine) => {
+        val parAdded = computeAncestors(par, currSymbolOpt, currAdded)
+        computeAncestors(combine, currSymbolOpt, parAdded)
+      }
+      case CIf(_, t, f) => {
+        val tAdded = computeAncestors(t, currSymbolOpt, currAdded)
+        computeAncestors(f, currSymbolOpt, tAdded)
+      }
+      case CEmpty => {
+        // don't care about empty commands for now, so we'll return the original map unmodified
+        linumToAncestors}
+      case _ => {currAdded}
+    }
+  }
+
   def assignPathDescriptors(cmd: Command, current_id: String, descriptorMap: Map[Int, String]): Map[Int, String] = {
     cmd match {
       case CSeq(seq) => {
@@ -81,7 +150,12 @@ object Compiler:
 
   def writePathDescriptors(prog: Prog, pathString: String): Unit = {
     val cmd = prog.cmd
+    println(cmd)
+    val linumToParentsMap = computeAncestors(cmd, None, Map())
+    println(linumToParentsMap)
+
     val descriptorMap = assignPathDescriptors(cmd, "main.", Map())
+    getVerticalSpan(cmd)
     val p = os.Path(pathString)
     os.write(p, upickle.default.write(descriptorMap))
   }
