@@ -74,8 +74,9 @@ object Compiler:
         val tAdded = computeAncestors(t, currSymbolOpt, currAdded)
         computeAncestors(f, currSymbolOpt, tAdded)
       }
-      case CEmpty => {
-        // don't care about empty commands for now, so we'll return the original map unmodified
+      case CEmpty | CView(_,_,_) | CDecorate(_) => {
+        // commands that we don't need to record 
+        // return the original map unmodified
         linumToAncestors}
       case _ => {currAdded}
     }
@@ -85,13 +86,13 @@ object Compiler:
     val cmd = prog.cmd
     val linumToParentsMap = computeAncestors(cmd, None, Map())
 
-    // write map to file
+    // write map to json file
     val writer = new PrintWriter(new File(pathString))
     writer.println("{")
-    for ((k, v) <- linumToParentsMap) {
-      writer.println(s"  ${k}: [${v.mkString(",")}],")
-    }
-    writer.println("}")
+    var count = 0
+    val outStrList = linumToParentsMap.map((k, v) => s"  \"${k}\": [${v.mkString(",")}]");
+    writer.print(outStrList.mkString(",\n"))
+    writer.println("\n}")
     writer.close()
   }
 
