@@ -9,14 +9,20 @@ import Configuration.BackendOption
 object Syntax:
 
   trait PositionalWithSpan extends Positional:
-    var span: Int = 0
+    var span: Int = 0 // horizontal span (columns)
+    var vspan: Int = 0 // vertical span (lines)
 
     def setSpan(span: Int): this.type =
       this.span = span
       this
+      
+    def setVspan(vspan: Int): this.type = {
+      this.vspan = vspan
+      this
+    }
 
     def withPos[T <: PositionalWithSpan](other: T): this.type =
-      this.setPos(other.pos).setSpan(other.span)
+      this.setPos(other.pos).setSpan(other.span).setVspan(other.vspan)
       this
 
   /**

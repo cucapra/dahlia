@@ -1,13 +1,15 @@
 package fuselang
 
+import scala.util.parsing.input.Position
 import scala.util.Try
 import scala.io.Source
-import java.nio.file.{Files, Paths, Path, StandardOpenOption}
-
-import common._
-import Configuration._
-import Syntax._
+import java.nio.file.{Files, Path, Paths, StandardOpenOption}
+import common.*
+import Configuration.*
+import Syntax.*
 import Transformer.{PartialTransformer, TypedPartialTransformer}
+
+import java.io.{File, PrintWriter}
 
 object Compiler:
 
@@ -28,6 +30,72 @@ object Compiler:
       "Add bitwidth" -> (passes.AddBitWidth, true)
     )
 
+  /**
+   * Creates a map between commands and their ancestor commands (from immediate parent to ancestors).
+   * Parent commands contain CWhile, CFor, and CIf (CSeq and CPar are elided).
+   * @param cmd The current command.
+   * @param parentLineOpt The parent command's line number. (None if there's no parent)
+   * @param linumToAncestors A map from a command's line number to a list of ancestor commands' line numbers.
+   * @return A map that adds the current command's mapping on top of the preexisting linumToAncestors
+   */
+  def computeAncestors(cmd: Command, parentLineOpt: Option[Int], linumToAncestors: Map[Int, List[Int]]): Map[Int, List[Int]] = {
+    // create a version of the map that contains the current element.
+    val currSymbol = cmd.pos.line
+    val currSymbolOpt = Some(currSymbol)
+    val currAdded = parentLineOpt match {
+      case Some(parentLine) => {
+        linumToAncestors + (currSymbol -> (parentLine :: linumToAncestors(parentLine)))
+      }
+      case None => {
+        linumToAncestors + (currSymbol -> List.empty)
+      }
+    }
+    cmd match {
+      case CSeq(seq) => {
+        // ignore seqs in this mapping for now, by using the original parentLineOpt and linumToAncestors
+        seq.foldLeft(linumToAncestors)((map, seqChild) =>
+          computeAncestors(seqChild, parentLineOpt, map)
+        )
+      }
+      case CPar(par) => {
+        // ignore pars in this mapping for now, by using the original parentLineOpt and linumToAncestors
+        par.foldLeft(linumToAncestors)((map, parChild) =>
+          computeAncestors(parChild, parentLineOpt, map)
+        )
+      }
+      case CWhile(_, _, body) => {
+        computeAncestors(body, currSymbolOpt, currAdded)
+      }
+      case CFor(_, _, par, combine) => {
+        val parAdded = computeAncestors(par, currSymbolOpt, currAdded)
+        computeAncestors(combine, currSymbolOpt, parAdded)
+      }
+      case CIf(_, t, f) => {
+        val tAdded = computeAncestors(t, currSymbolOpt, currAdded)
+        computeAncestors(f, currSymbolOpt, tAdded)
+      }
+      case CEmpty | CView(_,_,_) | CDecorate(_) => {
+        // commands that we don't need to record 
+        // return the original map unmodified
+        linumToAncestors}
+      case _ => {currAdded}
+    }
+  }
+
+  def writeParentMap(prog: Prog, pathString: String): Unit = {
+    val cmd = prog.cmd
+    val linumToParentsMap = computeAncestors(cmd, None, Map())
+
+    // write map to json file
+    val writer = new PrintWriter(new File(pathString))
+    writer.println("{")
+    var count = 0
+    val outStrList = linumToParentsMap.map((k, v) => s"  \"${k}\": [${v.mkString(",")}]");
+    writer.print(outStrList.mkString(",\n"))
+    writer.println("\n}")
+    writer.close()
+  }
+
   def showDebug(ast: Prog, pass: String, c: Config): Unit =
     if c.passDebug then
       val top = ("=" * 15) + pass + ("=" * 15)
@@ -43,6 +111,12 @@ object Compiler:
   def checkStringWithError(prog: String, c: Config = emptyConf) =
     val preAst = Parser(prog).parse()
 
+    c.parentMapPath match {
+      case Some(pathString) => {
+        writeParentMap(preAst, pathString)
+      }
+      case None => {}
+    }
     showDebug(preAst, "Original", c)
 
     // Run pre transformers if lowering is enabled
@@ -145,4 +219,3 @@ object Compiler:
         StandardOpenOption.WRITE
       )
     })
-
