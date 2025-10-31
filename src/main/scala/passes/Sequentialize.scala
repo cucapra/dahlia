@@ -77,39 +77,56 @@ object Sequentialize extends PartialTransformer:
       val allUses: SetM[Id] = SetM()
       var curDefines: SetM[Id] = SetM()
       var curUses: SetM[Id] = SetM()
-      val newSeq: Buffer[Buffer[Command]] = Buffer(Buffer())
+      // the set of parallel commands, along with the defines and uses
+      val newSeq: Buffer[(Buffer[Command], SetM[Id], SetM[Id])] = Buffer((Buffer(), SetM(), SetM()))
 
       for cmd <- cmds do
         val (nCmd, e1) = rewriteC(cmd)(emptyEnv)
-        /* System.err.println(Pretty.emitCmd(cmd)(false).pretty)
-        System.err.println(s"""
-        uses: ${e1.uses}
-        defines: ${e1.defines}
-        curDefines: ${curDefines}
-        curUses: ${curUses}
-        conflicts: ${curDefines.intersect(e1.uses) union curUses.intersect(
-          e1.defines
-        )}
-        =====================
-        """) */
+        var added: Boolean = false
+        for (pars, curDefines, curUses) <- newSeq do {
+          /* System.err.println(Pretty.emitCmd(cmd)(false).pretty)
+          System.err.println(s"""
+          uses: ${e1.uses}
+          defines: ${e1.defines}
+          curDefines: ${curDefines}
+          curUses: ${curUses}
+          conflicts: ${curDefines.intersect(e1.uses) union curUses.intersect(
+            e1.defines
+          )}
+          =====================
+          """) */
+          if !added && curDefines.intersect(e1.uses).isEmpty && curUses.intersect(e1.defines).isEmpty then {
+            pars += nCmd
+            curDefines ++= e1.defines
+            curUses ++= e1.uses
+            added = true
+          }
+          else if !added then {
+            // There was *some* conflict, so nCmd will be added to a "later" block.
+            // We still need to update curDefines and curUses since cmds that come after nCmd should have the same
+            // conflicts
+            curDefines ++= e1.defines
+            curUses ++= e1.uses
+          }
+        }
+        // All of the parallel blocks had conflicts in them
+        if !added then {
+          val currDefines: SetM[Id] = SetM()
+          val currUses: SetM[Id] = SetM()
+          currDefines ++= e1.defines
+          currUses ++= e1.uses
+          val newEntry: (Buffer[Command], SetM[Id], SetM[Id]) = (Buffer(nCmd), currDefines, currUses)
+          newSeq += newEntry
+        }
         // If there are no conflicts, add this to the current parallel
         // block.
-        if curDefines.intersect(e1.uses).isEmpty &&
-            curUses.intersect(e1.defines).isEmpty then
-          newSeq.last += nCmd
-        else
-          curUses = SetM()
-          curDefines = SetM()
-          newSeq += Buffer(nCmd)
-        curUses ++= e1.uses
-        curDefines ++= e1.defines
         allDefines ++= e1.defines
         allUses ++= e1.uses
 
       // Add all the uses and defines from this loop into the summary.
       val allEnv = SeqEnv(allUses.toSet, allDefines.toSet, false).merge(env)
 
-      CSeq.smart(newSeq.map(ps => CPar.smart(ps.toSeq)).toSeq) -> allEnv
+      CSeq.smart(newSeq.map((ps, _, _) => CPar.smart(ps.toSeq)).toSeq) -> allEnv
     }
 
   override def rewriteC(cmd: Command)(implicit env: Env) =
