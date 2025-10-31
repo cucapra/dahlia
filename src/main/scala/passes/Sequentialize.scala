@@ -84,7 +84,8 @@ object Sequentialize extends PartialTransformer:
         val (nCmd, e1) = rewriteC(cmd)(emptyEnv)
         var added: Boolean = false
         for (pars, curDefines, curUses) <- newSeq do {
-          /* System.err.println(Pretty.emitCmd(cmd)(false).pretty)
+          /*
+          System.err.println(Pretty.emitCmd(cmd)(false).pretty)
           System.err.println(s"""
           uses: ${e1.uses}
           defines: ${e1.defines}
@@ -94,7 +95,8 @@ object Sequentialize extends PartialTransformer:
             e1.defines
           )}
           =====================
-          """) */
+          """)
+          */
           if !added && curDefines.intersect(e1.uses).isEmpty && curUses.intersect(e1.defines).isEmpty then {
             pars += nCmd
             curDefines ++= e1.defines
