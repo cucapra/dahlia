@@ -8,30 +8,30 @@ void kernel(vector<int> &a, vector<int> &b) {
   int x_ = a[(unsigned int)b_read0_];
   //---
   int a_read0_ = a[(unsigned int)0];
+  int bin_read0_ = ((int)10 * (int)12);
+  //---
+  int w_ = b[(unsigned int)bin_read0_];
+  int bin_read1_ = (((int)0 - (int)1) * (int)1);
+  //---
+  int bin_read2_ = ((int)2 * (int)2);
+  //---
+  int bin_read3_ = (bin_read2_ * (int)2);
+  //---
+  int bin_read4_ = ((int)1 * (int)1);
+  //---
+  int bin_read5_ = ((int)1 * (int)2);
+  //---
+  unsigned int k_ = (unsigned int)(((bin_read1_ + bin_read3_) - bin_read4_) - bin_read5_);
   //---
   int y_ = ((int)10 + a_read0_);
   //---
-  int bin_read0_ = (x_ * (int)10);
+  int bin_read6_ = (x_ * (int)10);
   //---
-  int bin_read1_ = (y_ * (int)20);
+  int bin_read7_ = (y_ * (int)20);
   //---
-  int bin_read2_ = (bin_read0_ / (bin_read1_ - (int)15));
+  int bin_read8_ = (bin_read6_ / (bin_read7_ - (int)15));
   //---
-  int z_ = bin_read2_;
-  int bin_read3_ = ((int)10 * (int)12);
-  //---
-  int w_ = b[(unsigned int)bin_read3_];
-  int bin_read4_ = (((int)0 - (int)1) * (int)1);
-  //---
-  int bin_read5_ = ((int)2 * (int)2);
-  //---
-  int bin_read6_ = (bin_read5_ * (int)2);
-  //---
-  int bin_read7_ = ((int)1 * (int)1);
-  //---
-  int bin_read8_ = ((int)1 * (int)2);
-  //---
-  unsigned int k_ = (unsigned int)(((bin_read4_ + bin_read6_) - bin_read7_) - bin_read8_);
+  int z_ = bin_read8_;
   json_t __;
   __["a"] = a;
   __["b"] = b;

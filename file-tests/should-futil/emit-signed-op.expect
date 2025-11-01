@@ -83,16 +83,16 @@ component main() -> () {
       @pos{6} let0;
       @pos{6} repeat 128 {
         @pos{6} seq {
-          @pos{1} par {
+          @pos{2} par {
             @pos{1} let1;
             @pos{1} let2;
-          }
-          @pos{2} par {
-            @pos{1} upd0;
             @pos{2} let3;
             @pos{2} let4;
           }
-          @pos{2} upd1;
+          @pos{2} par {
+            @pos{1} upd0;
+            @pos{2} upd1;
+          }
           @pos{6} upd2;
         }
       }
