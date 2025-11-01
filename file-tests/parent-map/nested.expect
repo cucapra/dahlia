@@ -1,0 +1,221 @@
+import "primitives/core.futil";
+import "primitives/memories/seq.futil";
+import "primitives/binary_operators.futil";
+component main() -> () {
+  cells {
+    @pos{0} a0_0 = seq_mem_d2(32,8,8,4,4);
+    add0 = std_add(4);
+    add1 = std_add(4);
+    add2 = std_add(4);
+    add3 = std_add(4);
+    @pos{1} b0_0 = seq_mem_d2(32,8,8,4,4);
+    @pos{2} bin_read0_0 = std_reg(4);
+    @pos{3} bin_read1_0 = std_reg(4);
+    const0 = std_const(4,0);
+    const1 = std_const(4,0);
+    const10 = std_const(4,2);
+    const11 = std_const(4,0);
+    const12 = std_const(32,1);
+    const13 = std_const(32,0);
+    const14 = std_const(4,1);
+    const15 = std_const(4,1);
+    const2 = std_const(4,2);
+    const3 = std_const(4,0);
+    const4 = std_const(32,0);
+    const5 = std_const(32,1);
+    const6 = std_const(4,1);
+    const7 = std_const(4,1);
+    const8 = std_const(4,0);
+    const9 = std_const(4,0);
+    @pos{2} div_pipe0 = std_div_pipe(4);
+    @pos{3} div_pipe1 = std_div_pipe(4);
+    eq0 = std_eq(4);
+    eq1 = std_eq(4);
+    @pos{4} i0 = std_reg(4);
+    @pos{5} i1 = std_reg(4);
+    @pos{6} j0 = std_reg(4);
+    @pos{7} j1 = std_reg(4);
+  }
+  wires {
+    comb group cond0<"pos"={2}> {
+      eq0.left = bin_read0_0.out;
+      eq0.right = const3.out;
+    }
+    comb group cond1<"pos"={3}> {
+      eq1.left = bin_read1_0.out;
+      eq1.right = const11.out;
+    }
+    group let0<"promotable"=1, "pos"={4}> {
+      i0.in = const0.out;
+      i0.write_en = 1'd1;
+      let0[done] = i0.done;
+    }
+    group let1<"promotable"=1, "pos"={6}> {
+      j0.in = const1.out;
+      j0.write_en = 1'd1;
+      let1[done] = j0.done;
+    }
+    group let2<"pos"={2}> {
+      bin_read0_0.in = div_pipe0.out_remainder;
+      bin_read0_0.write_en = div_pipe0.done;
+      let2[done] = bin_read0_0.done;
+      div_pipe0.left = i0.out;
+      div_pipe0.right = const2.out;
+      div_pipe0.go = !div_pipe0.done ? 1'd1;
+    }
+    group let3<"promotable"=1, "pos"={5}> {
+      i1.in = const8.out;
+      i1.write_en = 1'd1;
+      let3[done] = i1.done;
+    }
+    group let4<"promotable"=1, "pos"={7}> {
+      j1.in = const9.out;
+      j1.write_en = 1'd1;
+      let4[done] = j1.done;
+    }
+    group let5<"pos"={3}> {
+      bin_read1_0.in = div_pipe1.out_remainder;
+      bin_read1_0.write_en = div_pipe1.done;
+      let5[done] = bin_read1_0.done;
+      div_pipe1.left = i1.out;
+      div_pipe1.right = const10.out;
+      div_pipe1.go = !div_pipe1.done ? 1'd1;
+    }
+    group upd0<"promotable"=1, "pos"={8}> {
+      a0_0.content_en = 1'd1;
+      a0_0.addr1 = j0.out;
+      a0_0.addr0 = i0.out;
+      a0_0.write_en = 1'd1;
+      a0_0.write_data = const4.out;
+      upd0[done] = a0_0.done;
+    }
+    group upd1<"promotable"=1, "pos"={9}> {
+      a0_0.content_en = 1'd1;
+      a0_0.addr1 = j0.out;
+      a0_0.addr0 = i0.out;
+      a0_0.write_en = 1'd1;
+      a0_0.write_data = const5.out;
+      upd1[done] = a0_0.done;
+    }
+    group upd2<"promotable"=1, "pos"={6}> {
+      j0.write_en = 1'd1;
+      add0.left = j0.out;
+      add0.right = const6.out;
+      j0.in = add0.out;
+      upd2[done] = j0.done;
+    }
+    group upd3<"promotable"=1, "pos"={4}> {
+      i0.write_en = 1'd1;
+      add1.left = i0.out;
+      add1.right = const7.out;
+      i0.in = add1.out;
+      upd3[done] = i0.done;
+    }
+    group upd4<"promotable"=1, "pos"={10}> {
+      b0_0.content_en = 1'd1;
+      b0_0.addr1 = j1.out;
+      b0_0.addr0 = i1.out;
+      b0_0.write_en = 1'd1;
+      b0_0.write_data = const12.out;
+      upd4[done] = b0_0.done;
+    }
+    group upd5<"promotable"=1, "pos"={11}> {
+      b0_0.content_en = 1'd1;
+      b0_0.addr1 = j1.out;
+      b0_0.addr0 = i1.out;
+      b0_0.write_en = 1'd1;
+      b0_0.write_data = const13.out;
+      upd5[done] = b0_0.done;
+    }
+    group upd6<"promotable"=1, "pos"={7}> {
+      j1.write_en = 1'd1;
+      add2.left = j1.out;
+      add2.right = const14.out;
+      j1.in = add2.out;
+      upd6[done] = j1.done;
+    }
+    group upd7<"promotable"=1, "pos"={5}> {
+      i1.write_en = 1'd1;
+      add3.left = i1.out;
+      add3.right = const15.out;
+      i1.in = add3.out;
+      upd7[done] = i1.done;
+    }
+  }
+  control {
+    @pos{5} par {
+      @pos{4} seq {
+        @pos{4} let0;
+        @pos{4} repeat 8 {
+          @pos{4} seq {
+            @pos{6} let1;
+            @pos{6} repeat 8 {
+              @pos{6} seq {
+                @pos{2} let2;
+                @pos{2} if eq0.out with cond0 {
+                  @pos{8} upd0;
+                } else {
+                  @pos{9} upd1;
+                }
+                @pos{6} upd2;
+              }
+            }
+            @pos{4} upd3;
+          }
+        }
+      }
+      @pos{5} seq {
+        @pos{5} let3;
+        @pos{5} repeat 8 {
+          @pos{5} seq {
+            @pos{7} let4;
+            @pos{7} repeat 8 {
+              @pos{7} seq {
+                @pos{3} let5;
+                @pos{3} if eq1.out with cond1 {
+                  @pos{10} upd4;
+                } else {
+                  @pos{11} upd5;
+                }
+                @pos{7} upd6;
+              }
+            }
+            @pos{5} upd7;
+          }
+        }
+      }
+    }
+  }
+}
+sourceinfo #{
+  FILES
+  0: file-tests/parent-map/nested.fuse
+  POSITIONS
+  0: 0 1
+  1: 0 2
+  2: 0 6
+  3: 0 16
+  4: 0 4
+  5: 0 14
+  6: 0 5
+  7: 0 15
+  8: 0 7
+  9: 0 9
+  10: 0 17
+  11: 0 19
+}#
+---STDERR---
+{
+  "1": [],
+  "2": [],
+  "4": [],
+  "5": [4],
+  "6": [5,4],
+  "7": [6,5,4],
+  "9": [6,5,4],
+  "14": [],
+  "15": [14],
+  "16": [15,14],
+  "17": [16,15,14],
+  "19": [16,15,14]
+}

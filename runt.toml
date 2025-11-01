@@ -28,6 +28,13 @@ paths = [ "file-tests/should-fail/*.fuse" ]
 cmd = "./fuse {}"
 
 [[tests]]
+name = "parent map"
+paths = [ "file-tests/parent-map/*.fuse" ]
+cmd = """
+./fuse {} --lower -b futil -l error --parent-map {}.tmp_err_file | tail -n+2 ; cat {}.tmp_err_file 1>&2; rm {}.tmp_err_file
+"""
+
+[[tests]]
 name = "run"
 paths = [ "file-tests/should-run/*.fuse" ]
 cmd = """

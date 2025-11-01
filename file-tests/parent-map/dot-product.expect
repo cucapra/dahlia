@@ -1,0 +1,115 @@
+import "primitives/core.futil";
+import "primitives/memories/seq.futil";
+import "primitives/binary_operators.futil";
+component main() -> () {
+  cells {
+    @pos{0} @external(1) A = seq_mem_d1(32,8,4);
+    @pos{1} A_read0_0 = std_reg(32);
+    @pos{2} @external(1) B = seq_mem_d1(32,8,4);
+    @pos{1} B_read0_0 = std_reg(32);
+    add0 = std_add(32);
+    add1 = std_add(4);
+    @pos{1} bin_read0_0 = std_reg(32);
+    const0 = std_const(4,0);
+    const1 = std_const(1,0);
+    const2 = std_const(1,0);
+    const3 = std_const(4,1);
+    @pos{1} dot_0 = std_reg(32);
+    @pos{3} i0 = std_reg(4);
+    mult_pipe0 = std_mult_pipe(32);
+    @pos{4} red_read00 = std_reg(32);
+    @pos{5} @external(1) v = seq_mem_d1(32,1,1);
+  }
+  wires {
+    group let0<"promotable"=1, "pos"={3}> {
+      i0.in = const0.out;
+      i0.write_en = 1'd1;
+      let0[done] = i0.done;
+    }
+    group let1<"promotable"=2, "pos"={1}> {
+      A_read0_0.in = A.read_data;
+      A_read0_0.write_en = A.done;
+      let1[done] = A_read0_0.done;
+      A.content_en = 1'd1;
+      A.addr0 = i0.out;
+    }
+    group let2<"promotable"=2, "pos"={1}> {
+      B_read0_0.in = B.read_data;
+      B_read0_0.write_en = B.done;
+      let2[done] = B_read0_0.done;
+      B.content_en = 1'd1;
+      B.addr0 = i0.out;
+    }
+    group let3<"promotable"=4, "pos"={1}> {
+      bin_read0_0.in = mult_pipe0.out;
+      bin_read0_0.write_en = mult_pipe0.done;
+      let3[done] = bin_read0_0.done;
+      mult_pipe0.left = A_read0_0.out;
+      mult_pipe0.right = B_read0_0.out;
+      mult_pipe0.go = !mult_pipe0.done ? 1'd1;
+    }
+    group let4<"promotable"=1, "pos"={1}> {
+      dot_0.in = bin_read0_0.out;
+      dot_0.write_en = 1'd1;
+      let4[done] = dot_0.done;
+    }
+    group let5<"promotable"=2, "pos"={4}> {
+      red_read00.in = v.read_data;
+      red_read00.write_en = v.done;
+      let5[done] = red_read00.done;
+      v.content_en = 1'd1;
+      v.addr0 = const1.out;
+    }
+    group upd0<"promotable"=1, "pos"={4}> {
+      v.content_en = 1'd1;
+      v.addr0 = const2.out;
+      v.write_en = 1'd1;
+      add0.left = red_read00.out;
+      add0.right = dot_0.out;
+      v.write_data = add0.out;
+      upd0[done] = v.done;
+    }
+    group upd1<"promotable"=1, "pos"={3}> {
+      i0.write_en = 1'd1;
+      add1.left = i0.out;
+      add1.right = const3.out;
+      i0.in = add1.out;
+      upd1[done] = i0.done;
+    }
+  }
+  control {
+    @pos{3} seq {
+      @pos{3} let0;
+      @pos{3} repeat 8 {
+        @pos{3} seq {
+          @pos{1} par {
+            @pos{1} let1;
+            @pos{1} let2;
+          }
+          @pos{1} let3;
+          @pos{1} let4;
+          @pos{4} let5;
+          @pos{4} upd0;
+          @pos{3} upd1;
+        }
+      }
+    }
+  }
+}
+sourceinfo #{
+  FILES
+  0: file-tests/parent-map/dot-product.fuse
+  POSITIONS
+  0: 0 1
+  1: 0 6
+  2: 0 2
+  3: 0 5
+  4: 0 8
+  5: 0 3
+}#
+---STDERR---
+{
+  "5": [],
+  "6": [5],
+  "8": [5]
+}

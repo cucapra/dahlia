@@ -84,6 +84,11 @@ object Main:
       .action((_, c) => c.copy(passDebug = true))
       .text("Show the AST after every compiler pass. Default: false.")
 
+    opt[String]("parent-map")
+      .valueName("<jsonFile>")
+      .action((f, c) => c.copy(parentMapPath = Some(f)))
+      .text("File to write parent line mapping JSON to. The map indicates which while/for/if blocks a statement may be nested in.")
+
     opt[String]("memory-interface")
       .validate(b =>
         if memoryInterfaces.contains(b) then success
@@ -120,7 +125,7 @@ object Main:
     val prog = Files.exists(path) match
       case true => Right(new String(Files.readAllBytes(path)))
       case false => Left(s"$path: No such file in working directory")
-
+    
     val cppPath: Either[ErrString, Option[Path]] = prog.flatMap(prog =>
       conf.output match {
         case Some(out) =>
