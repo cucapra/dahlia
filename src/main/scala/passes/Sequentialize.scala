@@ -75,8 +75,6 @@ object Sequentialize extends PartialTransformer:
     case (CPar(cmds), env) => {
       val allDefines: SetM[Id] = SetM()
       val allUses: SetM[Id] = SetM()
-      var curDefines: SetM[Id] = SetM()
-      var curUses: SetM[Id] = SetM()
       // the set of parallel commands, along with the defines and uses
       val newSeq: Buffer[(Buffer[Command], SetM[Id], SetM[Id])] = Buffer((Buffer(), SetM(), SetM()))
 
