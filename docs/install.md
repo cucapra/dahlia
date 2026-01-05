@@ -11,7 +11,7 @@ The compiler is written in [Scala][].
 To get things running, you will need a Java runtime, Scala itself, and [sbt][].
 Here's what you need to do:
 
-- Get Java if you don't already have it. On macOS with [Homebrew][], for example, you can use `brew cask install adoptopenjdk`.
+- Get Java if you don't already have it. On macOS with [Homebrew][], for example, you can use `brew install --cask temurin`.
 - Install Scala and sbt. On macOS, use `brew install scala sbt`. For debian/Ubuntu see [this](https://www.scala-sbt.org/1.x/docs/Installing-sbt-on-Linux.html#Ubuntu+and+other+Debian-based+distributions).
 
 Now you can compile the compiler by typing `sbt compile`.

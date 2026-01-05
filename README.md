@@ -24,7 +24,7 @@ To get things running, you will need a Java runtime, Scala itself, and [sbt][].
 Here's what you need to do:
 
 - Get Java if you don't already have it.
-  - For MAC OS: `brew tap AdoptOpenJDK/openjdk && brew cask install adoptopenjdk8`.
+  - For MAC OS: `brew install --cask temurin`.
   - **NOTE**: The default adoptopenjdk (Java 13) version does not work with SBT.
 - Install Scala and sbt. On macOS, use `brew install scala sbt`.
 - Install [Runt][] to run integration tests:
